@@ -1,0 +1,35 @@
+.container {
+  padding: 2rem;
+}
+
+.title {
+  @apply text-2xl font-bold text-center mb-8;
+}
+
+.list {
+  @apply grid gap-4;
+}
+
+.item {
+  @apply p-4 border rounded-lg bg-white shadow-sm;
+
+  .name {
+    @apply font-bold mb-2;
+  }
+
+  .actions {
+    @apply flex gap-2;
+  }
+}
+
+.buttonStart {
+  @apply bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600;
+}
+
+.buttonEnd {
+  @apply bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600;
+}
+
+.loading {
+  @apply text-center p-4;
+}

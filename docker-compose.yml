@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  database:
+    image: mariadb:10.11
+    container_name: stf_db
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MARIADB_ROOT_PASSWORD: "!Pl@yT0W!n"
+      MARIADB_DATABASE: stf_db
+      MARIADB_USER: MrScrupulus
+      MARIADB_PASSWORD: "!Pl@yT0W!n"
+    ports:
+      - "3312:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - stf_network
+
+volumes:
+  mariadb_data:
+    name: stf_mariadb_data
+
+networks:
+  stf_network:
+    driver: bridge

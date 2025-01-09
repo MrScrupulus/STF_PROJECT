@@ -1,0 +1,39 @@
+.container {
+  @apply max-w-6xl mx-auto px-4 py-8;
+}
+
+.hero {
+  @apply text-center py-16;
+
+  .title {
+    @apply text-4xl md:text-6xl font-bold mb-4;
+  }
+
+  .subtitle {
+    @apply text-xl text-gray-600;
+  }
+}
+
+.features {
+  @apply py-12;
+
+  .sectionTitle {
+    @apply text-3xl font-bold text-center mb-8;
+  }
+
+  .grid {
+    @apply grid md:grid-cols-3 gap-8;
+  }
+
+  .feature {
+    @apply p-6 bg-white rounded-lg shadow-sm;
+
+    h3 {
+      @apply text-xl font-bold mb-2;
+    }
+
+    p {
+      @apply text-gray-600;
+    }
+  }
+}
