@@ -11,6 +11,7 @@ api_register:
 
 api_login_check:
   path: /api/auth/login
+  controller: App\Controller\Security\AuthController::login
   methods: [POST]
 
 api_token_refresh:

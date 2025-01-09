@@ -1,78 +1,73 @@
-import { api } from "./api";
-
-const PASSWORD_REGEX =
-  /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^[0-9]{10}$/;
+import api from "./api";
 
 export const authService = {
-  async register(userData) {
+  login: async (credentials) => {
     try {
-      // Validation côté client
-      if (!EMAIL_REGEX.test(userData.email)) {
-        throw new Error("Format d'email invalide");
+      const response = await api.post("/auth/login", credentials);
+      console.log("Response:", response);
+      if (response?.success && response?.data?.token) {
+        localStorage.setItem("token", response.data.token);
+        window.location.href = "/";
+        return response.data;
       }
-
-      if (!PASSWORD_REGEX.test(userData.password)) {
-        throw new Error(
-          "Le mot de passe doit contenir au moins une lettre, un chiffre et un caractère spécial"
-        );
-      }
-
-      if (!PHONE_REGEX.test(userData.phoneNumber)) {
-        throw new Error("Le numéro de téléphone doit contenir 10 chiffres");
-      }
-
-      // Formatage des données pour l'API
-      const formattedData = {
-        email: userData.email,
-        password: userData.password,
-        firstname: userData.firstName,
-        lastname: userData.lastName,
-        phone_number: userData.phoneNumber.replace(/\D/g, ""),
-        birthdate: userData.birthDate,
-        country: userData.country,
-        subscriber_number: userData.subscriber_number,
-      };
-
-      console.log("Sending registration data:", formattedData);
-      const response = await api.post("/api/auth/register", formattedData);
-
-      if (!response.success) {
-        throw new Error(response.message || "Erreur lors de l'inscription");
-      }
-
-      return response;
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
-    }
-  },
-
-  async login(credentials) {
-    try {
-      const response = await api.post("/api/auth/login", credentials);
-      if (response.token) {
-        localStorage.setItem("token", response.token);
-      }
-      return response;
+      throw new Error(response.message || "Token non reçu");
     } catch (error) {
       console.error("Login error:", error);
       throw error;
     }
   },
 
-  async verifyEmail(token) {
+  register: async (userData) => {
     try {
-      const response = await api.get(`/api/auth/verify-email/${token}`);
-      return response;
+      const response = await api.post("/auth/register", userData);
+      console.log("Register response:", response);
+      if (response.success) {
+        return response;
+      }
+      throw new Error(response.message || "Erreur lors de l'inscription");
     } catch (error) {
-      console.error("Erreur lors de la vérification de l'email:", error);
+      console.error("Register error:", error);
       throw error;
     }
   },
 
-  logout() {
+  verifyEmail: async (token) => {
+    try {
+      const response = await api.post(`/auth/verify-email/${token}`);
+      if (response.success) {
+        return response;
+      }
+      throw new Error(
+        response.message || "Erreur lors de la vérification de l'email"
+      );
+    } catch (error) {
+      console.error("Email verification error:", error);
+      throw error;
+    }
+  },
+
+  getCurrentUser: async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No token found");
+      }
+
+      const response = await api.get("/auth/me");
+      return response.user;
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      throw error;
+    }
+  },
+
+  isAuthenticated: () => {
+    const token = localStorage.getItem("token");
+    return !!token;
+  },
+
+  logout: () => {
     localStorage.removeItem("token");
+    window.location.href = "/login";
   },
 };

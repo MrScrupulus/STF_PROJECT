@@ -17,6 +17,10 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\Exception\ConnectionException;
 use Symfony\Component\Validator\Constraints as Assert;
 use Psr\Log\LoggerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
+use App\Repository\Security\UserRepository;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route('/auth', name: 'app_auth_')]
 final class AuthController extends AbstractController
@@ -26,6 +30,7 @@ final class AuthController extends AbstractController
         private readonly EmailService $emailService,
         private readonly ValidatorInterface $validator,
         private readonly LoggerInterface $logger,
+        private readonly UserRepository $userRepository,
     ) {}
 
     #[Route('/register', name: 'register', methods: ['POST'])]
@@ -67,7 +72,17 @@ final class AuthController extends AbstractController
             }
 
             // Validation des données requises
-            $requiredFields = ['email', 'password', 'firstname', 'lastname', 'phone_number', 'birthdate', 'country', 'subscriber_number'];
+            $requiredFields = [
+                'email',
+                'password',
+                'firstname',
+                'lastname',
+                'phone_number',
+                'birthdate',
+                'country',
+                'subscriber_number'
+            ];
+
             foreach ($requiredFields as $field) {
                 if (!isset($data[$field]) || empty($data[$field])) {
                     return $this->json([
@@ -164,12 +179,52 @@ final class AuthController extends AbstractController
         }
     }
 
-    #[Route('/login', name: 'app_auth_login', methods: ['POST'])]
-    public function login(): JsonResponse
-    {
-        throw new \RuntimeException(
-            'Cette méthode ne devrait jamais être appelée. Voir security.yaml',
-        );
+    #[Route('/login', name: 'api_login_check', methods: ['POST'])]
+    public function login(
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        JWTTokenManagerInterface $jwtManager
+    ): JsonResponse {
+        try {
+            $data = json_decode($request->getContent(), true);
+            $this->logger->info('Tentative de connexion', ['email' => $data['email']]);
+
+            $user = $this->userRepository->findOneBy(['email' => $data['email']]);
+
+            if (!$user || !$passwordHasher->isPasswordValid($user, $data['password'])) {
+                $this->logger->warning('Échec de connexion: identifiants invalides');
+                return $this->json([
+                    'message' => 'Email ou mot de passe incorrect'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            if (!$user->isVerified()) {
+                $this->logger->warning('Échec de connexion: email non vérifié');
+                return $this->json([
+                    'message' => 'Veuillez vérifier votre email avant de vous connecter'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            $this->logger->info('Connexion réussie', ['email' => $data['email']]);
+            return $this->json([
+                'success' => true,
+                'data' => [
+                    'token' => $jwtManager->create($user),
+                    'user' => [
+                        'email' => $user->getEmail(),
+                        'roles' => $user->getRoles()
+                    ]
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la connexion', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'message' => 'Une erreur est survenue lors de la connexion'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/me', name: 'app_auth_me', methods: ['GET'])]
@@ -188,5 +243,45 @@ final class AuthController extends AbstractController
                 'subscriberNumber' => $user->getSubscriberNumber(),
             ],
         ]);
+    }
+
+    #[Route('/verify-email/{token}', name: 'verify_email', methods: ['POST'])]
+    public function verifyEmail(string $token): JsonResponse
+    {
+        try {
+            $user = $this->userRepository->findOneBy(['verification_token' => $token]);
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Token de vérification invalide'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            if ($user->isVerified()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cet email a déjà été vérifié'
+                ]);
+            }
+
+            $user->setIsVerified(true);
+            $user->setVerificationToken(null);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Email vérifié avec succès'
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la vérification de l\'email', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la vérification'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

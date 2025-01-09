@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const PHONE_REGEX = /^[0-9]{10}$/;
 
@@ -24,6 +25,10 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Nettoyage du localStorage au montage du composant
   useEffect(() => {
@@ -40,6 +45,10 @@ export default function RegisterPage() {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Email invalide";
       case "password":
         return value.length >= 8 ? "" : "Minimum 8 caractères";
+      case "confirmPassword":
+        return value === formData.password
+          ? ""
+          : "Les mots de passe ne correspondent pas";
       default:
         return "";
     }
@@ -50,27 +59,45 @@ export default function RegisterPage() {
     setError("");
     setIsLoading(true);
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
-      setIsLoading(false);
-      return;
-    }
+    // Transformer les données pour correspondre au format attendu par le backend
+    const transformedData = {
+      email: formData.email,
+      password: formData.password,
+      firstname: formData.firstName, // Changement de firstName à firstname
+      lastname: formData.lastName, // Changement de lastName à lastname
+      phone_number: formData.phoneNumber,
+      birthdate: formData.birthDate,
+      country: formData.country,
+      subscriber_number: formData.subscriber_number,
+    };
 
     try {
-      const response = await authService.register(formData);
+      const response = await authService.register(transformedData);
       console.log("Registration successful:", response);
-      router.push("/login?registered=true");
+      setSuccess(true);
+      setMessage(
+        "Pour valider votre inscription, veuillez vérifier votre adresse email en vous rendant sur votre boîte mail."
+      );
     } catch (error) {
       console.error("Registration failed:", error);
-      setError(
-        error.message === "Failed to fetch"
-          ? "Impossible de contacter le serveur. Veuillez vérifier votre connexion."
-          : error.message
-      );
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Ajout de l'effet pour le scroll
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,6 +111,18 @@ export default function RegisterPage() {
       ...prev,
       [name]: error,
     }));
+
+    // Vérifier aussi confirmPassword si on modifie password
+    if (name === "password") {
+      const confirmError = validateField(
+        "confirmPassword",
+        formData.confirmPassword
+      );
+      setFieldErrors((prev) => ({
+        ...prev,
+        confirmPassword: confirmError,
+      }));
+    }
   };
 
   const resetForm = () => {
@@ -100,6 +139,41 @@ export default function RegisterPage() {
     });
     setError("");
   };
+
+  const togglePasswordVisibility = (field) => {
+    if (field === "password") {
+      setShowPassword(!showPassword);
+    } else {
+      setShowConfirmPassword(!showConfirmPassword);
+    }
+  };
+
+  // Réorganisation des champs du formulaire
+  const formFields = [
+    { name: "email", label: "Email", type: "email", autocomplete: "off" },
+    { name: "firstName", label: "Prénom", type: "text" },
+    { name: "lastName", label: "Nom", type: "text" },
+    { name: "subscriber_number", label: "Numéro d'adhérent", type: "text" },
+    { name: "phoneNumber", label: "Téléphone", type: "tel" },
+    { name: "birthDate", label: "Date de naissance", type: "date" },
+    { name: "country", label: "Pays", type: "text" },
+    {
+      name: "password",
+      label: "Mot de passe",
+      type: showPassword ? "text" : "password",
+      autocomplete: "new-password",
+      icon: true,
+      showPassword: showPassword,
+    },
+    {
+      name: "confirmPassword",
+      label: "Confirmer le mot de passe",
+      type: showConfirmPassword ? "text" : "password",
+      autocomplete: "new-password",
+      icon: true,
+      showPassword: showConfirmPassword,
+    },
+  ];
 
   return createElement(
     "div",
@@ -129,32 +203,12 @@ export default function RegisterPage() {
         onReset: resetForm,
         className: "max-w-md mx-auto mt-8 space-y-6",
       },
-      [
-        { name: "email", label: "Email", type: "email", autocomplete: "off" },
-        {
-          name: "password",
-          label: "Mot de passe",
-          type: "password",
-          autocomplete: "new-password",
-        },
-        {
-          name: "confirmPassword",
-          label: "Confirmer le mot de passe",
-          type: "password",
-          autocomplete: "new-password",
-        },
-        { name: "firstName", label: "Prénom", type: "text" },
-        { name: "lastName", label: "Nom", type: "text" },
-        { name: "phoneNumber", label: "Téléphone", type: "tel" },
-        { name: "birthDate", label: "Date de naissance", type: "date" },
-        { name: "country", label: "Pays", type: "text" },
-        { name: "subscriber_number", label: "Numéro d'adhérent", type: "text" },
-      ].map((field) =>
+      formFields.map((field) =>
         createElement(
           "div",
           {
             key: field.name,
-            className: "mb-4",
+            className: "mb-4 relative",
           },
           createElement(
             "label",
@@ -164,19 +218,40 @@ export default function RegisterPage() {
             },
             field.label
           ),
-          createElement("input", {
-            type: field.type,
-            id: field.name,
-            name: field.name,
-            value: formData[field.name],
-            onChange: handleChange,
-            className: `w-full p-2 border ${
-              fieldErrors[field.name] ? "border-red-500" : "border-gray-300"
-            } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`,
-            required: true,
-            disabled: isLoading,
-            autoComplete: field.autocomplete || "on",
-          }),
+          createElement(
+            "div",
+            {
+              className: "relative",
+            },
+            createElement("input", {
+              type: field.type,
+              id: field.name,
+              name: field.name,
+              value: formData[field.name],
+              onChange: handleChange,
+              className: `w-full p-2 border ${
+                fieldErrors[field.name] ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                field.icon ? "pr-10" : ""
+              }`,
+              required: true,
+              disabled: isLoading,
+              autoComplete: field.autocomplete || "on",
+            }),
+            field.icon &&
+              createElement(
+                "button",
+                {
+                  type: "button",
+                  className:
+                    "absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-800",
+                  onClick: () => togglePasswordVisibility(field.name),
+                },
+                createElement(field.showPassword ? FaEyeSlash : FaEye, {
+                  className: "h-5 w-5",
+                })
+              )
+          ),
           fieldErrors[field.name] &&
             createElement(
               "p",
@@ -215,6 +290,19 @@ export default function RegisterPage() {
           "Réinitialiser"
         )
       )
+    ),
+    success && (
+      <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded relative max-w-md mx-auto">
+        <p className="text-center">{message}</p>
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => (window.location.href = "/login")}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Aller à la page de connexion
+          </button>
+        </div>
+      </div>
     )
   );
 }

@@ -15,11 +15,20 @@ export function Header() {
         setLoading(true);
         setError(null);
         console.log("Fetching user data...");
+        if (!authService.isAuthenticated()) {
+          console.log("No token found, user not authenticated");
+          setUser(null);
+          return;
+        }
         const userData = await authService.getCurrentUser();
         console.log("User data received:", userData);
         setUser(userData);
       } catch (err) {
         console.error("Error fetching user:", err);
+        if (err.message.includes("401") || err.message.includes("JSON")) {
+          localStorage.removeItem("token");
+          setUser(null);
+        }
         setError(err.message);
       } finally {
         setLoading(false);

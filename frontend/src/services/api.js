@@ -1,68 +1,75 @@
-const API_BASE_URL = "https://127.0.0.1:8000";
+const API_URL = "https://127.0.0.1:8000";
 
-export const ApiService = {
-  async request(method, endpoint, data = null) {
-    const apiEndpoint = `${API_BASE_URL}${endpoint}`;
-    console.log(`Sending request to: ${apiEndpoint}`);
-
+const api = {
+  post: async (endpoint, data) => {
     try {
-      const options = {
-        method,
+      console.log("Sending request to:", API_URL + endpoint);
+      console.log("Request data:", data);
+
+      const response = await fetch(API_URL + endpoint, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
         },
-      };
+        body: JSON.stringify(data),
+      });
 
-      if (data && method !== "GET") {
-        options.body = JSON.stringify(data);
-      }
-
-      console.log("Request options:", options);
-      const response = await fetch(apiEndpoint, options);
       console.log("Response status:", response.status);
-
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type");
-        console.log("Response content-type:", contentType);
-        if (contentType && contentType.includes("application/json")) {
-          const errorData = await response.json();
-          console.log("Error data:", errorData);
-          throw new Error(errorData.message || `Erreur ${response.status}`);
-        } else {
-          throw new Error(`Erreur ${response.status}`);
-        }
-      }
       const responseData = await response.json();
       console.log("Response data:", responseData);
 
+      if (!response.ok) {
+        throw new Error(responseData.message || `Error ${response.status}`);
+      }
+
       return responseData;
     } catch (error) {
-      console.error("Request error:", error);
+      console.error("API error:", error);
       throw error;
     }
   },
 
-  // Méthodes génériques CRUD
-  get(endpoint) {
-    return this.request("GET", endpoint);
-  },
+  get: async (endpoint) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+      };
 
-  post(endpoint, data) {
-    return this.request("POST", endpoint, data);
-  },
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
 
-  put(endpoint, data) {
-    return this.request("PUT", endpoint, data);
-  },
+      const response = await fetch(API_URL + endpoint, {
+        method: "GET",
+        headers,
+      });
 
-  patch(endpoint, data) {
-    return this.request("PATCH", endpoint, data);
-  },
+      // Vérifier si la réponse est du JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("La réponse n'est pas au format JSON");
+      }
 
-  delete(endpoint) {
-    return this.request("DELETE", endpoint);
+      const responseData = await response.json();
+      console.log("Response status:", response.status);
+      console.log("Response data:", responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.message || `Error ${response.status}`);
+      }
+
+      return responseData;
+    } catch (error) {
+      if (error.message === "La réponse n'est pas au format JSON") {
+        // Si le token est invalide, déconnectez l'utilisateur
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
+      console.error("API error:", error);
+      throw error;
+    }
   },
 };
 
-export const api = ApiService;
+export default api;
