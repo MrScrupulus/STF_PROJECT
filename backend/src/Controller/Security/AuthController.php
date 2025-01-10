@@ -180,51 +180,12 @@ final class AuthController extends AbstractController
     }
 
     #[Route('/login', name: 'login', methods: ['POST'])]
-    public function login(
-        Request $request,
-        UserPasswordHasherInterface $passwordHasher,
-        JWTTokenManagerInterface $jwtManager
-    ): JsonResponse {
-        try {
-            $data = json_decode($request->getContent(), true);
-            $this->logger->info('Tentative de connexion', ['email' => $data['email']]);
-
-            $user = $this->userRepository->findOneBy(['email' => $data['email']]);
-
-            if (!$user || !$passwordHasher->isPasswordValid($user, $data['password'])) {
-                $this->logger->warning('Échec de connexion: identifiants invalides');
-                return $this->json([
-                    'message' => 'Email ou mot de passe incorrect'
-                ], Response::HTTP_UNAUTHORIZED);
-            }
-
-            if (!$user->isVerified()) {
-                $this->logger->warning('Échec de connexion: email non vérifié');
-                return $this->json([
-                    'message' => 'Veuillez vérifier votre email avant de vous connecter'
-                ], Response::HTTP_UNAUTHORIZED);
-            }
-
-            $this->logger->info('Connexion réussie', ['email' => $data['email']]);
-            return $this->json([
-                'success' => true,
-                'data' => [
-                    'token' => $jwtManager->create($user),
-                    'user' => [
-                        'email' => $user->getEmail(),
-                        'roles' => $user->getRoles()
-                    ]
-                ]
-            ]);
-        } catch (\Exception $e) {
-            $this->logger->error('Erreur lors de la connexion', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return $this->json([
-                'message' => 'Une erreur est survenue lors de la connexion'
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+    public function login(Request $request): JsonResponse
+    {
+        // Cette méthode peut être vide car le JWT est géré par le firewall
+        return $this->json([
+            'user' => $this->getUser() ? $this->getUser()->getUserIdentifier() : null
+        ]);
     }
 
     #[Route('/me', name: 'me', methods: ['GET'])]
@@ -241,6 +202,7 @@ final class AuthController extends AbstractController
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
                 'subscriberNumber' => $user->getSubscriberNumber(),
+                'roles' => $user->getRoles(),
             ],
         ]);
     }

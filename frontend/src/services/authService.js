@@ -4,12 +4,22 @@ export const authService = {
   login: async (credentials) => {
     try {
       const response = await api.post("/auth/login", credentials);
-      if (response?.success && response?.data?.token) {
-        localStorage.setItem("token", response.data.token);
-        window.location.href = "/";
-        return response.data;
+      if (response?.token) {
+        localStorage.setItem("token", response.token);
+
+        // Récupérer les informations de l'utilisateur
+        const userData = await authService.getCurrentUser();
+
+        // Redirection basée sur le rôle
+        if (userData.roles && userData.roles.includes("ROLE_ADMIN")) {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/profile"; // Pour les utilisateurs normaux
+        }
+
+        return response;
       }
-      throw new Error(response.message || "Token non reçu");
+      throw new Error("Token non reçu");
     } catch (error) {
       console.error("Login error:", error);
       throw error;
