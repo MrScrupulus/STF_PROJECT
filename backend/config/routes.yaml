@@ -27,3 +27,9 @@ app_auth_verify_email:
   path: /auth/verify-email/{token}
   controller: App\Controller\Security\AuthController::verifyEmail
   methods: [POST]
+
+api_route_options:
+  path: /{any}
+  methods: [OPTIONS]
+  requirements:
+    any: ".*"
