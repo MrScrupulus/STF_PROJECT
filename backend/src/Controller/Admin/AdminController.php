@@ -33,6 +33,7 @@ class AdminController extends AbstractController
                 'country' => $user->getCountry(),
                 'phoneNumber' => $user->getPhoneNumber(),
                 'isVerified' => $user->isVerified(),
+                'birthdate' => $user->getBirthdate() ? $user->getBirthdate()->format('Y-m-d') : null,
             ];
         }, $users);
 
