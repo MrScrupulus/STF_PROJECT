@@ -4,15 +4,15 @@ controllers:
     namespace: App\Controller
   type: attribute
 
-api_register:
-  path: /api/auth/register
-  controller: App\Controller\Security\AuthController::register
-  methods: [POST]
+# api_register:
+#   path: /api/auth/register
+#   controller: App\Controller\Security\AuthController::register
+#   methods: [POST]
 
-api_login_check:
-  path: /api/auth/login
-  controller: App\Controller\Security\AuthController::login
-  methods: [POST]
+# api_login_check:
+#   path: /api/auth/login
+#   controller: App\Controller\Security\AuthController::login
+#   methods: [POST]
 
 api_token_refresh:
   path: /api/auth/token/refresh
@@ -22,3 +22,8 @@ api_verify_email:
   path: /api/auth/verify-email/{token}
   controller: App\Controller\Security\EmailVerificationController::verifyEmail
   methods: [GET]
+
+app_auth_verify_email:
+  path: /auth/verify-email/{token}
+  controller: App\Controller\Security\AuthController::verifyEmail
+  methods: [POST]

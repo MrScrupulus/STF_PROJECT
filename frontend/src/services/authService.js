@@ -4,7 +4,6 @@ export const authService = {
   login: async (credentials) => {
     try {
       const response = await api.post("/auth/login", credentials);
-      console.log("Response:", response);
       if (response?.success && response?.data?.token) {
         localStorage.setItem("token", response.data.token);
         window.location.href = "/";
@@ -20,7 +19,6 @@ export const authService = {
   register: async (userData) => {
     try {
       const response = await api.post("/auth/register", userData);
-      console.log("Register response:", response);
       if (response.success) {
         return response;
       }
@@ -33,26 +31,16 @@ export const authService = {
 
   verifyEmail: async (token) => {
     try {
-      const response = await api.post(`/auth/verify-email/${token}`);
-      if (response.success) {
-        return response;
-      }
-      throw new Error(
-        response.message || "Erreur lors de la vérification de l'email"
-      );
+      const response = await api.post(`/auth/verify-email/${token}`, {});
+      return response;
     } catch (error) {
-      console.error("Email verification error:", error);
+      console.error("Erreur lors de la vérification de l'email:", error);
       throw error;
     }
   },
 
   getCurrentUser: async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No token found");
-      }
-
       const response = await api.get("/auth/me");
       return response.user;
     } catch (error) {

@@ -18,10 +18,13 @@ export default function VerifyEmailClient({ token }) {
       }
 
       try {
+        console.log("Tentative de vérification avec le token:", token);
         const response = await authService.verifyEmail(token);
+        console.log("Réponse de vérification:", response);
         setStatus("success");
         setMessage("Votre email a été vérifié avec succès !");
       } catch (error) {
+        console.error("Erreur de vérification:", error);
         setStatus("error");
         setMessage(
           error.message || "Une erreur est survenue lors de la vérification"

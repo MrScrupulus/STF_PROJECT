@@ -1,4 +1,4 @@
-const API_URL = "https://127.0.0.1:8000";
+const API_URL = "https://localhost:8000";
 
 const api = {
   post: async (endpoint, data) => {
@@ -10,7 +10,9 @@ const api = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -43,6 +45,7 @@ const api = {
       const response = await fetch(API_URL + endpoint, {
         method: "GET",
         headers,
+        credentials: "include",
       });
 
       // Vérifier si la réponse est du JSON

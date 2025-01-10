@@ -179,7 +179,7 @@ final class AuthController extends AbstractController
         }
     }
 
-    #[Route('/login', name: 'api_login_check', methods: ['POST'])]
+    #[Route('/login', name: 'login', methods: ['POST'])]
     public function login(
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
@@ -227,7 +227,7 @@ final class AuthController extends AbstractController
         }
     }
 
-    #[Route('/me', name: 'app_auth_me', methods: ['GET'])]
+    #[Route('/me', name: 'me', methods: ['GET'])]
     public function me(): JsonResponse
     {
         /** @var User $user */
@@ -283,5 +283,11 @@ final class AuthController extends AbstractController
                 'message' => 'Une erreur est survenue lors de la vérification'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private function generateVerificationUrl(string $token): string
+    {
+        // Utilisez HTTPS au lieu de HTTP
+        return "https://localhost:3000/verify-email/{$token}";
     }
 }

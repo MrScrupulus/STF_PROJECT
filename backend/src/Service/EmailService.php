@@ -29,7 +29,7 @@ final class EmailService
         error_log("Construction du lien de vérification pour: " . $user->getEmail());
         error_log("Avec le token: " . $user->getVerificationToken());
 
-        $verificationUrl = $this->frontendUrl . '/verify-email/' . $user->getVerificationToken();
+        $verificationUrl = "https://localhost:3000/verify-email/" . $user->getVerificationToken();
         error_log("URL complète: " . $verificationUrl);
 
         try {
