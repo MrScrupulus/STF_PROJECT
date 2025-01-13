@@ -1,8 +1,11 @@
-import { api } from "./api";
+import api from "./api";
 import { ENDPOINTS } from "./endpoints";
 
 export const competitionsService = {
-  getAll: () => api.get(ENDPOINTS.competitions.list),
+  getAll: async () => {
+    const response = await api.get("/competitions");
+    return response;
+  },
 
   getOne: (id) => api.get(ENDPOINTS.competitions.detail(id)),
 

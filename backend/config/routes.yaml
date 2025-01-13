@@ -33,3 +33,8 @@ api_route_options:
   methods: [OPTIONS]
   requirements:
     any: ".*"
+
+admin_competition_delete:
+  path: /admin/competitions/{id}
+  controller: App\Controller\Admin\Competition\AdminCompetitionController::delete
+  methods: [DELETE]

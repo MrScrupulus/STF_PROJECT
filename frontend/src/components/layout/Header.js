@@ -94,6 +94,11 @@ export function Header() {
               </li>
             </>
           )}
+          {user && user.roles?.includes("ROLE_ADMIN") && (
+            <li>
+              <a href="/dashboard">Bureau de l'ombre</a>
+            </li>
+          )}
         </ul>
       </nav>
     </header>

@@ -1,9 +1,12 @@
-import { api } from "./api";
+import api from "./api";
 
 export const competitionService = {
-  getAll: () => api.get("/competitions"),
-  getById: (id) => api.get(`/competitions/${id}`),
-  create: (data) => api.post("/competitions", data),
-  update: (id, data) => api.put(`/competitions/${id}`, data),
-  delete: (id) => api.delete(`/competitions/${id}`),
+  getAll: async () => {
+    const response = await api.get("/admin/competitions");
+    return response.competitions;
+  },
+  getById: (id) => api.get(`/admin/competitions/${id}`),
+  create: (data) => api.post("/admin/competitions", data),
+  update: (id, data) => api.put(`/admin/competitions/${id}`, data),
+  delete: (id) => api.delete(`/admin/competitions/${id}`),
 };

@@ -20,10 +20,19 @@ class Competition
     private ?string $name = null;
 
     #[ORM\Column(type: 'datetime')]
-    private ?\DateTime $startDate = null;
+    private ?\DateTimeInterface $startDate = null;
 
     #[ORM\Column(type: 'datetime')]
-    private ?\DateTime $endDate = null;
+    private ?\DateTimeInterface $endDate = null;
+
+    #[ORM\Column(type: 'integer')]
+    private ?int $teamSize = null;
+
+    #[ORM\Column(length: 50)]
+    private ?string $type = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $maxParticipants = null;
 
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
@@ -49,23 +58,23 @@ class Competition
         return $this;
     }
 
-    public function getStartDate(): ?\DateTime
+    public function getStartDate(): ?\DateTimeInterface
     {
         return $this->startDate;
     }
 
-    public function setStartDate(\DateTime $startDate): static
+    public function setStartDate(\DateTimeInterface $startDate): static
     {
         $this->startDate = $startDate;
         return $this;
     }
 
-    public function getEndDate(): ?\DateTime
+    public function getEndDate(): ?\DateTimeInterface
     {
         return $this->endDate;
     }
 
-    public function setEndDate(\DateTime $endDate): static
+    public function setEndDate(\DateTimeInterface $endDate): static
     {
         $this->endDate = $endDate;
         return $this;
@@ -95,6 +104,39 @@ class Competition
                 $team->setCompetition(null);
             }
         }
+        return $this;
+    }
+
+    public function getTeamSize(): ?int
+    {
+        return $this->teamSize;
+    }
+
+    public function setTeamSize(int $teamSize): self
+    {
+        $this->teamSize = $teamSize;
+        return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): self
+    {
+        $this->type = $type;
+        return $this;
+    }
+
+    public function getMaxParticipants(): ?int
+    {
+        return $this->maxParticipants;
+    }
+
+    public function setMaxParticipants(?int $maxParticipants): self
+    {
+        $this->maxParticipants = $maxParticipants;
         return $this;
     }
 }
