@@ -16,11 +16,11 @@ class Species
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\Column]
-    private ?float $coefficient = null;
+    #[ORM\Column(type: 'float')]
+    private float $coefficient = 1.0;
 
     #[ORM\Column]
-    private ?int $basePoints = 50;
+    private int $basePoints = 50;
 
     public function getId(): ?int
     {
@@ -35,21 +35,26 @@ class Species
     public function setName(string $name): self
     {
         $this->name = $name;
+        if (strtolower($name) === 'espèce bonus') {
+            $this->coefficient = 1.0;
+        }
         return $this;
     }
 
-    public function getCoefficient(): ?float
+    public function getCoefficient(): float
     {
         return $this->coefficient;
     }
 
     public function setCoefficient(float $coefficient): self
     {
-        $this->coefficient = $coefficient;
+        if (strtolower($this->name) !== 'espèce bonus') {
+            $this->coefficient = $coefficient;
+        }
         return $this;
     }
 
-    public function getBasePoints(): ?int
+    public function getBasePoints(): int
     {
         return $this->basePoints;
     }
@@ -58,5 +63,10 @@ class Species
     {
         $this->basePoints = $basePoints;
         return $this;
+    }
+
+    public function isBonus(): bool
+    {
+        return strtolower($this->name) === 'espèce bonus';
     }
 }

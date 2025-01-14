@@ -5,6 +5,7 @@ import { competitionService } from "@/services/competitionService";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Link from "next/link";
+import { speciesService } from "@/services/speciesService";
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
@@ -19,6 +20,9 @@ export default function Dashboard() {
   const [showCompetitionModal, setShowCompetitionModal] = useState(false);
   const [searchCategory, setSearchCategory] = useState("all");
   const [filteredCompetitions, setFilteredCompetitions] = useState([]);
+  const [species, setSpecies] = useState([]);
+  const [selectedSpecies, setSelectedSpecies] = useState(null);
+  const [showSpeciesModal, setShowSpeciesModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -78,12 +82,14 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [usersData, competitionsData] = await Promise.all([
+      const [usersData, competitionsData, speciesData] = await Promise.all([
         adminService.getUsers(),
         competitionService.getAll(),
+        speciesService.getAll(),
       ]);
       setUsers(usersData);
       setCompetitions(competitionsData);
+      setSpecies(speciesData);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -136,6 +142,17 @@ export default function Dashboard() {
       fetchData();
     } catch (error) {
       console.error("Error deleting competition:", error);
+    }
+  };
+
+  const handleDeleteSpecies = async (speciesId) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette espèce ?")) {
+      try {
+        await speciesService.delete(speciesId);
+        fetchData();
+      } catch (error) {
+        console.error("Error deleting species:", error);
+      }
     }
   };
 
@@ -348,6 +365,177 @@ export default function Dashboard() {
                 Fermer
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const SpeciesDetailsModal = ({ species, onClose }) => {
+    const [editMode, setEditMode] = useState(!species);
+    const [editData, setEditData] = useState({
+      name: species?.name || "",
+      coefficient: species?.coefficient || 1,
+      basePoints: species?.basePoints || 50,
+    });
+
+    const handleUpdate = async () => {
+      try {
+        const dataToSend = {
+          name: editData.name,
+          coefficient:
+            editData.name.toLowerCase() === "espèce bonus"
+              ? 1
+              : parseFloat(editData.coefficient),
+          basePoints: editData.name.toLowerCase() === "espèce bonus" ? 50 : 50,
+        };
+
+        if (species) {
+          await speciesService.update(species.id, dataToSend);
+        } else {
+          await speciesService.create(dataToSend);
+        }
+        fetchData();
+        onClose();
+      } catch (error) {
+        console.error("Error updating/creating species:", error);
+      }
+    };
+
+    const isBonus = editData.name.toLowerCase() === "espèce bonus";
+
+    return (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
+        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">
+              {species ? "Modifier l'espèce" : "Ajouter une espèce"}
+            </h3>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+
+          {editMode ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Nom de l'espèce
+                </label>
+                <input
+                  type="text"
+                  value={editData.name}
+                  onChange={(e) =>
+                    setEditData({ ...editData, name: e.target.value })
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {!isBonus && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Coefficient
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={editData.coefficient}
+                    onChange={(e) =>
+                      setEditData({ ...editData, coefficient: e.target.value })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    required
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    Ce coefficient sera multiplié par la taille du poisson
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <p className="font-semibold text-gray-700">
+                  Nom : <span className="text-green-600">{species.name}</span>
+                </p>
+              </div>
+              {species.name.toLowerCase() !== "espèce bonus" && (
+                <div>
+                  <p className="font-semibold text-gray-700">
+                    Coefficient :{" "}
+                    <span className="text-green-600">
+                      {species.coefficient}
+                    </span>
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="font-semibold text-gray-700">
+                  Points de base : <span className="text-green-600">50</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end space-x-3">
+            {editMode ? (
+              <>
+                <button
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  onClick={handleUpdate}
+                >
+                  Enregistrer
+                </button>
+                <button
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  onClick={() => setEditMode(false)}
+                >
+                  Annuler
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  onClick={() => setEditMode(true)}
+                >
+                  Modifier
+                </button>
+                <button
+                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (
+                      window.confirm(
+                        "Êtes-vous sûr de vouloir supprimer cette espèce ?"
+                      )
+                    ) {
+                      handleDeleteSpecies(species.id);
+                      onClose();
+                    }
+                  }}
+                >
+                  Supprimer
+                </button>
+                <button
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  onClick={onClose}
+                >
+                  Fermer
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -570,6 +758,79 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Section Espèces */}
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Espèces</h2>
+            <button
+              onClick={() => {
+                setSelectedSpecies(null);
+                setShowSpeciesModal(true);
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Ajouter une espèce
+            </button>
+          </div>
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Nom
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Coefficient
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Points de base
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {species.map((specie) => (
+                  <tr
+                    key={specie.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      setSelectedSpecies(specie);
+                      setShowSpeciesModal(true);
+                    }}
+                  >
+                    <td className="px-6 py-4">{specie.name}</td>
+                    <td className="px-6 py-4">{specie.coefficient}</td>
+                    <td className="px-6 py-4">{specie.basePoints}</td>
+                    <td className="px-6 py-4">
+                      <button
+                        className="text-blue-600 hover:text-blue-900 mr-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSpecies(specie);
+                          setShowSpeciesModal(true);
+                        }}
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-900"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSpecies(specie.id);
+                        }}
+                      >
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Modals */}
         {showCompetitionModal && (
           <CompetitionDetailsModal
@@ -577,6 +838,15 @@ export default function Dashboard() {
             onClose={() => {
               setShowCompetitionModal(false);
               setSelectedCompetition(null);
+            }}
+          />
+        )}
+        {showSpeciesModal && (
+          <SpeciesDetailsModal
+            species={selectedSpecies}
+            onClose={() => {
+              setShowSpeciesModal(false);
+              setSelectedSpecies(null);
             }}
           />
         )}
