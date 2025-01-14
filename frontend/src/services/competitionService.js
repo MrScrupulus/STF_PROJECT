@@ -1,12 +1,12 @@
 import api from "./api";
 
 export const competitionService = {
-  getAll: async () => {
-    const response = await api.get("/admin/competitions");
-    return response.competitions;
-  },
-  getById: (id) => api.get(`/admin/competitions/${id}`),
-  create: (data) => api.post("/admin/competitions", data),
-  update: (id, data) => api.put(`/admin/competitions/${id}`, data),
-  delete: (id) => api.delete(`/admin/competitions/${id}`),
+  // Route publique pour tous les utilisateurs
+  getAll: () => api.get("/api/competitions"),
+
+  // Routes admin protégées
+  getAllAdmin: () => api.get("/api/admin/competitions"),
+  create: (data) => api.post("/api/admin/competitions", data),
+  update: (id, data) => api.put(`/api/admin/competitions/${id}`, data),
+  delete: (id) => api.delete(`/api/admin/competitions/${id}`),
 };

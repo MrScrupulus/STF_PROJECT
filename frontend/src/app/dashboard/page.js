@@ -36,7 +36,7 @@ export default function Dashboard() {
   const filterData = () => {
     if (!searchTerm) {
       setFilteredUsers(users);
-      setFilteredCompetitions(competitions);
+      setFilteredCompetitions(competitions || []);
       return;
     }
 
@@ -70,12 +70,14 @@ export default function Dashboard() {
     }
 
     if (searchCategory === "all" || searchCategory === "competitions") {
-      const filteredComps = competitions.filter((comp) => {
-        return (
-          comp.name.toLowerCase().includes(term) ||
-          comp.type.toLowerCase().includes(term)
-        );
-      });
+      const filteredComps = Array.isArray(competitions)
+        ? competitions.filter((comp) => {
+            return (
+              comp.name.toLowerCase().includes(term) ||
+              comp.type.toLowerCase().includes(term)
+            );
+          })
+        : [];
       setFilteredCompetitions(filteredComps);
     }
   };
@@ -84,11 +86,11 @@ export default function Dashboard() {
     try {
       const [usersData, competitionsData, speciesData] = await Promise.all([
         adminService.getUsers(),
-        competitionService.getAll(),
+        competitionService.getAllAdmin(),
         speciesService.getAll(),
       ]);
       setUsers(usersData);
-      setCompetitions(competitionsData);
+      setCompetitions(competitionsData.competitions || []);
       setSpecies(speciesData);
       setLoading(false);
     } catch (error) {
@@ -623,52 +625,53 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredCompetitions.map((competition) => (
-                  <tr
-                    key={competition.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedCompetition(competition);
-                      setShowCompetitionModal(true);
-                    }}
-                  >
-                    <td className="px-6 py-4">{competition.name}</td>
-                    <td className="px-6 py-4">
-                      {new Date(competition.startDate).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      {new Date(competition.endDate).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">{competition.type}</td>
-                    <td className="px-6 py-4">
-                      <button
-                        className="text-blue-600 hover:text-blue-900 mr-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCompetition(competition);
-                          setShowCompetitionModal(true);
-                        }}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (
-                            window.confirm(
-                              "Êtes-vous sûr de vouloir supprimer cette compétition ?"
-                            )
-                          ) {
-                            handleDeleteCompetition(competition.id);
-                          }
-                        }}
-                      >
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {Array.isArray(filteredCompetitions) &&
+                  filteredCompetitions.map((competition) => (
+                    <tr
+                      key={competition.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setSelectedCompetition(competition);
+                        setShowCompetitionModal(true);
+                      }}
+                    >
+                      <td className="px-6 py-4">{competition.name}</td>
+                      <td className="px-6 py-4">
+                        {new Date(competition.startDate).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        {new Date(competition.endDate).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">{competition.type}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          className="text-blue-600 hover:text-blue-900 mr-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCompetition(competition);
+                            setShowCompetitionModal(true);
+                          }}
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-900"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm(
+                                "Êtes-vous sûr de vouloir supprimer cette compétition ?"
+                              )
+                            ) {
+                              handleDeleteCompetition(competition.id);
+                            }
+                          }}
+                        >
+                          Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

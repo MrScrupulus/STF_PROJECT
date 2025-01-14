@@ -1,90 +1,60 @@
 "use client";
+import { useState, useEffect } from "react";
+import { competitionService } from "@/services/competitionService";
+import Link from "next/link";
 
-import { createElement } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { competitionsService } from "../../services/competitions";
+export default function CompetitionsList() {
+  const [competitions, setCompetitions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-export default function CompetitionsPage() {
-  const queryClient = useQueryClient();
+  useEffect(() => {
+    const fetchCompetitions = async () => {
+      try {
+        const response = await competitionService.getAll();
+        setCompetitions(response.competitions || []);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching competitions:", error);
+        setLoading(false);
+      }
+    };
 
-  const { data: competitions, isLoading } = useQuery({
-    queryKey: ["competitions"],
-    queryFn: competitionsService.getAll,
-  });
+    fetchCompetitions();
+  }, []);
 
-  const startMutation = useMutation({
-    mutationFn: competitionsService.start,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["competitions"] });
-    },
-  });
+  if (loading) return <div>Chargement...</div>;
 
-  const endMutation = useMutation({
-    mutationFn: competitionsService.end,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["competitions"] });
-    },
-  });
-
-  if (isLoading) return createElement("div", null, "Chargement...");
-
-  return createElement(
-    "div",
-    {
-      className: "container mx-auto px-4",
-    },
-    createElement(
-      "h1",
-      {
-        className: "text-2xl font-bold text-center mt-8",
-      },
-      "Compétitions"
-    ),
-    createElement(
-      "ul",
-      {
-        className: "mt-4 space-y-4",
-      },
-      competitions?.map((comp) =>
-        createElement(
-          "li",
-          {
-            key: comp.id,
-            className: "p-4 border rounded bg-white shadow-sm",
-          },
-          createElement(
-            "div",
-            {
-              className: "font-bold mb-2",
-            },
-            comp.name
-          ),
-          createElement(
-            "div",
-            {
-              className: "flex gap-2",
-            },
-            createElement(
-              "button",
-              {
-                onClick: () => startMutation.mutate(comp.id),
-                className:
-                  "bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600",
-              },
-              "Démarrer"
-            ),
-            createElement(
-              "button",
-              {
-                onClick: () => endMutation.mutate(comp.id),
-                className:
-                  "bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600",
-              },
-              "Terminer"
-            )
-          )
-        )
-      )
-    )
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Compétitions</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.isArray(competitions) &&
+          competitions.map((competition) => (
+            <div
+              key={competition.id}
+              className="bg-white p-4 rounded-lg shadow"
+            >
+              <h3 className="text-lg font-semibold mb-2">{competition.name}</h3>
+              <div className="space-y-2">
+                <p className="text-gray-600">{competition.description}</p>
+                <p>
+                  <span className="font-medium">Type:</span> {competition.type}
+                </p>
+                <p>
+                  <span className="font-medium">Dates:</span>{" "}
+                  {new Date(competition.startDate).toLocaleDateString()} -{" "}
+                  {new Date(competition.endDate).toLocaleDateString()}
+                </p>
+                <Link
+                  href={`/competitions/${competition.id}/register`}
+                  className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                  S'inscrire
+                </Link>
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
   );
 }

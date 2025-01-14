@@ -16,28 +16,12 @@ const getHeaders = () => {
 export default {
   get: async (endpoint) => {
     try {
-      const token = localStorage.getItem("token");
-      const headers = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
       const response = await fetch(API_URL + endpoint, {
         method: "GET",
-        headers,
+        headers: getHeaders(),
         credentials: "include",
         mode: "cors",
       });
-
-      // Vérifier si la réponse est du JSON
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("La réponse n'est pas au format JSON");
-      }
 
       const responseData = await response.json();
       console.log("Response status:", response.status);
@@ -49,11 +33,6 @@ export default {
 
       return responseData;
     } catch (error) {
-      if (error.message === "La réponse n'est pas au format JSON") {
-        // Si le token est invalide, déconnectez l'utilisateur
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-      }
       console.error("API error:", error);
       throw error;
     }
