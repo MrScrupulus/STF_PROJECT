@@ -34,6 +34,9 @@ class Competition
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $maxParticipants = null;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $hasNoLimit = false;
+
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
@@ -140,6 +143,17 @@ class Competition
     public function setMaxParticipants(?int $maxParticipants): self
     {
         $this->maxParticipants = $maxParticipants;
+        return $this;
+    }
+
+    public function getHasNoLimit(): bool
+    {
+        return $this->hasNoLimit;
+    }
+
+    public function setHasNoLimit(bool $hasNoLimit): self
+    {
+        $this->hasNoLimit = $hasNoLimit;
         return $this;
     }
 

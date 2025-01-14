@@ -1,24 +1,26 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { competitionService } from "@/services/competitionService";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function CreateCompetition() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    title: "",
-    startAt: "",
-    endAt: "",
+    name: "",
+    startDate: "",
+    endDate: "",
     teamSize: "",
     type: "street",
     maxParticipants: "",
     hasNoLimit: false,
+    description: "",
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log("Sending data:", formData); // Debug
       await competitionService.create(formData);
       router.push("/dashboard");
     } catch (error) {
@@ -38,9 +40,9 @@ export default function CreateCompetition() {
               </label>
               <input
                 type="text"
-                value={formData.title}
+                value={formData.name}
                 onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
+                  setFormData({ ...formData, name: e.target.value })
                 }
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 required
@@ -54,9 +56,9 @@ export default function CreateCompetition() {
                 </label>
                 <input
                   type="datetime-local"
-                  value={formData.startAt}
+                  value={formData.startDate}
                   onChange={(e) =>
-                    setFormData({ ...formData, startAt: e.target.value })
+                    setFormData({ ...formData, startDate: e.target.value })
                   }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
@@ -68,14 +70,28 @@ export default function CreateCompetition() {
                 </label>
                 <input
                   type="datetime-local"
-                  value={formData.endAt}
+                  value={formData.endDate}
                   onChange={(e) =>
-                    setFormData({ ...formData, endAt: e.target.value })
+                    setFormData({ ...formData, endDate: e.target.value })
                   }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                rows="4"
+              />
             </div>
 
             <div>
