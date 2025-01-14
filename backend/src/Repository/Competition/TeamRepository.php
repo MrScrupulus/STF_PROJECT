@@ -12,4 +12,13 @@ class TeamRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Team::class);
     }
+
+    public function findByCompetition(int $competitionId): array
+    {
+        return $this->createQueryBuilder('t')
+            ->where('t.competition = :competitionId')
+            ->setParameter('competitionId', $competitionId)
+            ->getQuery()
+            ->getResult();
+    }
 }
