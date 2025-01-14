@@ -34,6 +34,9 @@ class Competition
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $maxParticipants = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $description = null;
+
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
@@ -137,6 +140,17 @@ class Competition
     public function setMaxParticipants(?int $maxParticipants): self
     {
         $this->maxParticipants = $maxParticipants;
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
         return $this;
     }
 }

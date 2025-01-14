@@ -37,6 +37,8 @@ security:
     - { path: ^/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/admin, roles: ROLE_ADMIN }
     - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/admin, roles: ROLE_ADMIN }
+    - { path: ^/api/competitions, roles: PUBLIC_ACCESS }
 
 when@test:
   security:

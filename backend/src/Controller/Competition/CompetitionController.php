@@ -8,31 +8,67 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/competitions')]
+#[Route('/api')]
 class CompetitionController extends AbstractController
 {
-    #[Route('', name: 'get_competitions', methods: ['GET'])]
-    public function getCompetitions(CompetitionRepository $competitionRepository): JsonResponse
+    #[Route('/admin/competitions', name: 'app_admin_competitions_list', methods: ['GET'])]
+    public function adminList(CompetitionRepository $repository): JsonResponse
     {
-        $competitions = $competitionRepository->findAll();
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        return $this->json([
-            'competitions' => array_map(function (Competition $competition) {
+            $competitions = $repository->findAll();
+
+            // Transformer les données pour éviter les références circulaires
+            $data = array_map(function ($competition) {
                 return [
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
+                    'type' => $competition->getType(),
                     'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
                     'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
-                    'teams' => array_map(function ($team) {
-                        return [
-                            'id' => $team->getId(),
-                            'name' => $team->getName(),
-                            'totalScore' => $team->getTotalScore(),
-                        ];
-                    }, $competition->getTeams()->toArray()),
+                    'description' => $competition->getDescription(),
+                    'maxParticipants' => $competition->getMaxParticipants(),
                 ];
-            }, $competitions)
-        ]);
+            }, $competitions);
+
+            return $this->json([
+                'competitions' => $data
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Une erreur est survenue',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/competitions', name: 'app_competitions_list', methods: ['GET'])]
+    public function list(CompetitionRepository $repository): JsonResponse
+    {
+        try {
+            $competitions = $repository->findAll();
+
+            $data = array_map(function ($competition) {
+                return [
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                    'type' => $competition->getType(),
+                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
+                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'description' => $competition->getDescription(),
+                ];
+            }, $competitions);
+
+            return $this->json([
+                'competitions' => $data
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Une erreur est survenue',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/{id}', name: 'get_competition', methods: ['GET'])]
