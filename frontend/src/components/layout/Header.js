@@ -13,35 +13,33 @@ export function Header() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        setError(null);
         console.log("Fetching user data...");
-        if (!authService.isAuthenticated()) {
-          console.log("No token found, user not authenticated");
+
+        // Vérifier d'abord s'il y a un token
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("No token found");
           setUser(null);
+          setLoading(false);
           return;
         }
+
         const userData = await authService.getCurrentUser();
         console.log("User data received:", userData);
         setUser(userData);
-      } catch (err) {
-        console.error("Error fetching user:", err);
-        if (err.message.includes("401") || err.message.includes("JSON")) {
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        // Si erreur d'authentification, supprimer le token
+        if (error.message.includes("Invalid credentials")) {
           localStorage.removeItem("token");
-          setUser(null);
         }
-        setError(err.message);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
-    const token = localStorage.getItem("token");
-    console.log("Token found:", !!token);
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
+    fetchUser();
   }, []);
 
   const handleLogout = () => {

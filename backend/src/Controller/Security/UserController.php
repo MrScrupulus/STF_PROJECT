@@ -14,7 +14,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/profile')]
-class ProfileController extends AbstractController
+class UserController extends AbstractController
 {
     #[Route('', name: 'profile_get', methods: ['GET'])]
     public function getProfile(): JsonResponse
