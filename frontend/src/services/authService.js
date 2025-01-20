@@ -14,7 +14,7 @@ export const authService = {
         if (userData.roles && userData.roles.includes("ROLE_ADMIN")) {
           window.location.href = "/dashboard";
         } else {
-          window.location.href = "/profile"; // Pour les utilisateurs normaux
+          window.location.href = "/"; // Redirection vers l'accueil pour les utilisateurs normaux
         }
 
         return response;

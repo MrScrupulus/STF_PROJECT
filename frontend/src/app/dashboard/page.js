@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Link from "next/link";
 import { speciesService } from "@/services/speciesService";
+import styles from "@/styles/pages/dashboard.module.scss";
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
@@ -550,24 +551,24 @@ export default function Dashboard() {
 
   return (
     <ProtectedRoute requiredRole="ROLE_ADMIN">
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Bureau de l'ombre</h1>
+      <div className={styles.dashboardContainer}>
+        <h1 className={styles.title}>Bureau de l'ombre</h1>
 
         {/* Barre de recherche globale */}
-        <div className="bg-white shadow-lg rounded-lg p-4 mb-8">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
+        <div className={styles.searchSection}>
+          <div className={styles.searchBar}>
+            <div className={styles.searchInput}>
               <input
                 type="text"
                 placeholder="Rechercher dans les compétitions et utilisateurs..."
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={styles.searchInput}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
+            <div className={styles.searchSelect}>
               <select
-                className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={styles.searchSelect}
                 value={searchCategory}
                 onChange={(e) => setSearchCategory(e.target.value)}
               >
@@ -577,7 +578,7 @@ export default function Dashboard() {
               </select>
               {searchCategory !== "competitions" && (
                 <select
-                  className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={styles.searchSelect}
                   value={searchBy}
                   onChange={(e) => setSearchBy(e.target.value)}
                 >
@@ -593,152 +594,141 @@ export default function Dashboard() {
         </div>
 
         {/* Section Compétitions */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Compétitions</h2>
-            <Link
-              href="/dashboard/competitions/create"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Créer une compétition
-            </Link>
-          </div>
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Nom
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Date de début
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Date de fin
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {Array.isArray(filteredCompetitions) &&
-                  filteredCompetitions.map((competition) => (
-                    <tr
-                      key={competition.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => {
-                        setSelectedCompetition(competition);
-                        setShowCompetitionModal(true);
-                      }}
-                    >
-                      <td className="px-6 py-4">{competition.name}</td>
-                      <td className="px-6 py-4">
-                        {new Date(competition.startDate).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        {new Date(competition.endDate).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">{competition.type}</td>
-                      <td className="px-6 py-4">
-                        <button
-                          className="text-blue-600 hover:text-blue-900 mr-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCompetition(competition);
-                            setShowCompetitionModal(true);
-                          }}
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          className="text-red-600 hover:text-red-900"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (
-                              window.confirm(
-                                "Êtes-vous sûr de vouloir supprimer cette compétition ?"
-                              )
-                            ) {
-                              handleDeleteCompetition(competition.id);
-                            }
-                          }}
-                        >
-                          Supprimer
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Section Utilisateurs */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Utilisateurs</h2>
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="overflow-x-auto">
-              <table className="min-w-full table-auto">
+        <div className={styles.contentGrid}>
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>
+              <h2>Compétitions</h2>
+              <Link
+                href="/dashboard/competitions/create"
+                className={styles.createButton}
+              >
+                Créer une compétition
+              </Link>
+            </div>
+            <div className={styles.table}>
+              <table>
                 <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-4 py-2">Email</th>
-                    <th className="px-4 py-2">Nom</th>
-                    <th className="px-4 py-2">Prénom</th>
-                    <th className="px-4 py-2">N° Adhérent</th>
-                    <th className="px-4 py-2">Vérifié</th>
-                    <th className="px-4 py-2">Rôle Admin</th>
+                  <tr>
+                    <th className={styles.tableHeader}>Nom</th>
+                    <th className={styles.tableHeader}>Date de début</th>
+                    <th className={styles.tableHeader}>Date de fin</th>
+                    <th className={styles.tableHeader}>Type</th>
+                    <th className={styles.tableHeader}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.isArray(filteredCompetitions) &&
+                    filteredCompetitions.map((competition) => (
+                      <tr
+                        key={competition.id}
+                        className={styles.tableRow}
+                        onClick={() => {
+                          setSelectedCompetition(competition);
+                          setShowCompetitionModal(true);
+                        }}
+                      >
+                        <td className={styles.tableCell}>{competition.name}</td>
+                        <td className={styles.tableCell}>
+                          {new Date(competition.startDate).toLocaleString()}
+                        </td>
+                        <td className={styles.tableCell}>
+                          {new Date(competition.endDate).toLocaleString()}
+                        </td>
+                        <td className={styles.tableCell}>{competition.type}</td>
+                        <td className={styles.tableCell}>
+                          <button
+                            className={styles.editButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCompetition(competition);
+                              setShowCompetitionModal(true);
+                            }}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            className={styles.deleteButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (
+                                window.confirm(
+                                  "Êtes-vous sûr de vouloir supprimer cette compétition ?"
+                                )
+                              ) {
+                                handleDeleteCompetition(competition.id);
+                              }
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section Utilisateurs */}
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Utilisateurs</h2>
+            <div className={styles.table}>
+              <table>
+                <thead>
+                  <tr>
+                    <th className={styles.tableHeader}>Email</th>
+                    <th className={styles.tableHeader}>Nom</th>
+                    <th className={styles.tableHeader}>Prénom</th>
+                    <th className={styles.tableHeader}>N° Adhérent</th>
+                    <th className={styles.tableHeader}>Vérifié</th>
+                    <th className={styles.tableHeader}>Rôle Admin</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className="border-b hover:bg-gray-50 cursor-pointer"
+                      className={styles.tableRow}
                       onClick={() => {
                         setSelectedUser(user);
                         setShowModal(true);
                       }}
                     >
-                      <td className="px-4 py-2">{user.email}</td>
-                      <td className="px-4 py-2">{user.lastname}</td>
-                      <td className="px-4 py-2">{user.firstname}</td>
-                      <td className="px-4 py-2">{user.subscriberNumber}</td>
-                      <td className="px-4 py-2">
+                      <td className={styles.tableCell}>{user.email}</td>
+                      <td className={styles.tableCell}>{user.lastname}</td>
+                      <td className={styles.tableCell}>{user.firstname}</td>
+                      <td className={styles.tableCell}>
+                        {user.subscriberNumber}
+                      </td>
+                      <td className={styles.tableCell}>
                         {user.isVerified ? (
-                          <span className="text-green-600">✓</span>
+                          <span className={styles.verified}>✓</span>
                         ) : (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleVerifyUser(user.id);
                             }}
-                            className="text-blue-500 hover:text-blue-700 underline"
+                            className={styles.verifyButton}
                           >
                             Valider
                           </button>
                         )}
                       </td>
-                      <td
-                        className="px-4 py-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <label className="relative inline-flex items-center cursor-pointer">
+                      <td className={styles.tableCell} onClick={(e) => e.stopPropagation()}>
+                        <label className={styles.checkboxLabel}>
                           <input
                             type="checkbox"
-                            className="sr-only peer"
+                            className={styles.checkbox}
                             checked={user.roles.includes("ROLE_ADMIN")}
                             onChange={() => handleToggleRole(user.id)}
                           />
-                          <div className="w-11 h-6 bg-red-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                          <span className="ml-3 text-sm font-medium">
+                          <div className={styles.checkboxBackground}></div>
+                          <span className={styles.checkboxText}>
                             {user.roles.includes("ROLE_ADMIN") ? (
-                              <span className="text-green-600">Admin</span>
+                              <span className={styles.adminText}>Admin</span>
                             ) : (
-                              <span className="text-red-600">User</span>
+                              <span className={styles.userText}>User</span>
                             )}
                           </span>
                         </label>
@@ -748,89 +738,81 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+
+            {showModal && (
+              <UserDetailsModal
+                user={selectedUser}
+                onClose={() => {
+                  setShowModal(false);
+                  setSelectedUser(null);
+                }}
+              />
+            )}
           </div>
 
-          {showModal && (
-            <UserDetailsModal
-              user={selectedUser}
-              onClose={() => {
-                setShowModal(false);
-                setSelectedUser(null);
-              }}
-            />
-          )}
-        </div>
-
-        {/* Section Espèces */}
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Espèces</h2>
-            <button
-              onClick={() => {
-                setSelectedSpecies(null);
-                setShowSpeciesModal(true);
-              }}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Ajouter une espèce
-            </button>
-          </div>
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Nom
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Coefficient
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Points de base
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {species.map((specie) => (
-                  <tr
-                    key={specie.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setSelectedSpecies(specie);
-                      setShowSpeciesModal(true);
-                    }}
-                  >
-                    <td className="px-6 py-4">{specie.name}</td>
-                    <td className="px-6 py-4">{specie.coefficient}</td>
-                    <td className="px-6 py-4">{specie.basePoints}</td>
-                    <td className="px-6 py-4">
-                      <button
-                        className="text-blue-600 hover:text-blue-900 mr-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedSpecies(specie);
-                          setShowSpeciesModal(true);
-                        }}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="text-red-600 hover:text-red-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSpecies(specie.id);
-                        }}
-                      >
-                        Supprimer
-                      </button>
-                    </td>
+          {/* Section Espèces */}
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>
+              <h2>Espèces</h2>
+              <button
+                onClick={() => {
+                  setSelectedSpecies(null);
+                  setShowSpeciesModal(true);
+                }}
+                className={styles.createButton}
+              >
+                Ajouter une espèce
+              </button>
+            </div>
+            <div className={styles.table}>
+              <table>
+                <thead>
+                  <tr>
+                    <th className={styles.tableHeader}>Nom</th>
+                    <th className={styles.tableHeader}>Coefficient</th>
+                    <th className={styles.tableHeader}>Points de base</th>
+                    <th className={styles.tableHeader}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {species.map((specie) => (
+                    <tr
+                      key={specie.id}
+                      className={styles.tableRow}
+                      onClick={() => {
+                        setSelectedSpecies(specie);
+                        setShowSpeciesModal(true);
+                      }}
+                    >
+                      <td className={styles.tableCell}>{specie.name}</td>
+                      <td className={styles.tableCell}>{specie.coefficient}</td>
+                      <td className={styles.tableCell}>{specie.basePoints}</td>
+                      <td className={styles.tableCell}>
+                        <button
+                          className={styles.editButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSpecies(specie);
+                            setShowSpeciesModal(true);
+                          }}
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          className={styles.deleteButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSpecies(specie.id);
+                          }}
+                        >
+                          Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

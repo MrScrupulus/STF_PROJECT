@@ -1,35 +1,78 @@
 .header {
-  @apply bg-white shadow-sm px-4 py-3 flex justify-between items-center;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
 
-  .logo {
-    @apply text-xl font-bold;
+.logo {
+  position: absolute;
+  left: 1rem;
+  font-weight: bold;
+  font-size: 1.25rem;
 
-    a {
-      @apply text-blue-600 hover:text-blue-800;
+  a {
+    color: #2563eb;
+    &:hover {
+      color: #1e40af;
+    }
+  }
+}
+
+.nav {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mainNav {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+
+  a {
+    color: #4b5563;
+    &:hover {
+      color: #111827;
     }
   }
 
-  .nav {
-    ul {
-      @apply flex gap-6 items-center;
-
-      li {
-        a {
-          @apply text-gray-600 hover:text-gray-900;
-        }
-
-        button {
-          @apply text-red-600 hover:text-red-800;
-        }
-      }
+  button {
+    color: #dc2626;
+    &:hover {
+      color: #b91c1c;
     }
+  }
+}
+
+.adminNav {
+  position: absolute;
+  right: 1rem;
+}
+
+.adminLink {
+  color: #059669 !important;
+  font-weight: 600;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #047857 !important;
   }
 }
 
 .loading {
-  @apply text-center p-4 text-gray-600;
+  text-align: center;
+  padding: 1rem;
+  color: #4b5563;
 }
 
 .error {
-  @apply text-center p-4 text-red-600;
+  text-align: center;
+  padding: 1rem;
+  color: #dc2626;
 }

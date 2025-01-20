@@ -1,14 +1,22 @@
-import { api } from "./api";
+import api from "./api";
 import { ENDPOINTS } from "./endpoints";
 
 export const teamsService = {
-  getAll: () => api.get(ENDPOINTS.teams.list),
+  getAll: async () => {
+    try {
+      const response = await api.get("/teams");
+      return response;
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      throw error;
+    }
+  },
 
-  getOne: (id) => api.get(ENDPOINTS.teams.detail(id)),
+  getOne: (id) => api.get(`/teams/${id}`),
 
-  create: (data) => api.post(ENDPOINTS.teams.list, data),
+  create: (data) => api.post("/teams", data),
 
-  update: (id, data) => api.put(ENDPOINTS.teams.detail(id), data),
+  update: (id, data) => api.put(`/teams/${id}`, data),
 
-  delete: (id) => api.delete(ENDPOINTS.teams.detail(id)),
+  delete: (id) => api.delete(`/teams/${id}`),
 };

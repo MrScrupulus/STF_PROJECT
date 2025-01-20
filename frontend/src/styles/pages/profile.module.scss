@@ -1,0 +1,43 @@
+.profileContainer {
+  @apply container mx-auto p-4;
+
+  .title {
+    @apply text-2xl font-bold mb-6;
+  }
+
+  .card {
+    @apply bg-white shadow rounded-lg p-6;
+
+    .gridLayout {
+      @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+    }
+
+    .section {
+      .sectionTitle {
+        @apply text-xl font-semibold mb-4;
+      }
+
+      .fieldList {
+        @apply space-y-3;
+
+        .field {
+          .label {
+            @apply block text-sm font-medium text-gray-600;
+          }
+
+          .value {
+            @apply mt-1;
+          }
+
+          .verified {
+            @apply text-green-600 font-medium;
+          }
+
+          .notVerified {
+            @apply text-red-600 font-medium;
+          }
+        }
+      }
+    }
+  }
+}

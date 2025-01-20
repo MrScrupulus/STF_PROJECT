@@ -65,7 +65,7 @@ export function Header() {
         <a href="/">Street Fishing</a>
       </div>
       <nav className={styles.nav}>
-        <ul>
+        <ul className={styles.mainNav}>
           <li>
             <a href="/">Accueil</a>
           </li>
@@ -94,12 +94,16 @@ export function Header() {
               </li>
             </>
           )}
-          {user && user.roles?.includes("ROLE_ADMIN") && (
-            <li>
-              <a href="/dashboard">Bureau de l'ombre</a>
-            </li>
-          )}
         </ul>
+        {user && user.roles?.includes("ROLE_ADMIN") && (
+          <ul className={styles.adminNav}>
+            <li>
+              <a href="/dashboard" className={styles.adminLink}>
+                Bureau de l'ombre
+              </a>
+            </li>
+          </ul>
+        )}
       </nav>
     </header>
   );

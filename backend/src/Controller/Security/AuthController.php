@@ -201,7 +201,13 @@ final class AuthController extends AbstractController
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
+                'firstname' => $user->getFirstname(),
+                'lastname' => $user->getLastname(),
                 'subscriberNumber' => $user->getSubscriberNumber(),
+                'phoneNumber' => $user->getPhoneNumber(),
+                'country' => $user->getCountry(),
+                'birthdate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
+                'isVerified' => $user->isVerified(),
                 'roles' => $user->getRoles(),
             ],
         ]);

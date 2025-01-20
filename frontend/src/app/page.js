@@ -1,12 +1,13 @@
 "use client";
 
 import { createElement } from "react";
+import styles from "@/styles/pages/home.module.scss";
 
 export default function HomePage() {
   return createElement(
     "div",
     {
-      className: "container mx-auto px-4",
+      className: styles.homeContainer,
     },
     createElement(
       "section",
@@ -25,7 +26,7 @@ export default function HomePage() {
         {
           className: "text-xl text-gray-600",
         },
-        "Bienvenue sur la plateforme de gestion des compétitions de pêche urbaine"
+        "Bienvenue sur STF Project"
       )
     ),
     createElement(
@@ -38,7 +39,7 @@ export default function HomePage() {
         {
           className: "text-3xl font-bold text-center mb-8",
         },
-        "Fonctionnalités"
+        "À quoi ça sert?"
       ),
       createElement(
         "div",
@@ -48,11 +49,12 @@ export default function HomePage() {
         [
           {
             title: "Compétitions",
-            description: "Gérez vos compétitions de pêche en temps réel",
+            description:
+              "Inscrivez-vous à une compétition, suivez vos résultats en direct",
           },
           {
             title: "Équipes",
-            description: "Suivez les performances des équipes participantes",
+            description: "Créez votre équipe, invitez vos amis.",
           },
           {
             title: "Prises",

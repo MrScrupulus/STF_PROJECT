@@ -1,0 +1,35 @@
+.homeContainer {
+  @apply container mx-auto p-4;
+
+  .hero {
+    @apply text-center py-12;
+
+    .title {
+      @apply text-4xl font-bold mb-4;
+    }
+
+    .subtitle {
+      @apply text-xl text-gray-600 mb-8;
+    }
+
+    .ctaButton {
+      @apply bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors;
+    }
+  }
+
+  .featuresGrid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-8 mt-12;
+
+    .featureCard {
+      @apply bg-white p-6 rounded-lg shadow;
+
+      .featureTitle {
+        @apply text-xl font-semibold mb-3;
+      }
+
+      .featureDescription {
+        @apply text-gray-600;
+      }
+    }
+  }
+}

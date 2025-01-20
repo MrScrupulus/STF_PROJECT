@@ -1,0 +1,72 @@
+.header {
+  @apply bg-white/95 w-full;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+
+  .logo {
+    @apply text-xl font-bold absolute left-4;
+
+    a {
+      @apply text-blue-600 hover:text-blue-800;
+    }
+  }
+
+  .nav {
+    @apply w-full flex justify-center items-center;
+
+    ul {
+      @apply flex gap-8 items-center;
+
+      li {
+        a {
+          @apply text-gray-600 hover:text-gray-900;
+        }
+
+        button {
+          @apply text-red-600 hover:text-red-800;
+        }
+      }
+    }
+  }
+
+  .mainNav {
+    @apply flex gap-8 items-center justify-center mx-auto;
+  }
+
+  .adminNav {
+    @apply absolute right-4;
+
+    .adminLink {
+      @apply text-green-600 font-semibold transition-colors duration-200;
+
+      &:hover {
+        @apply text-green-800;
+      }
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.loading {
+  @apply text-center p-4 text-gray-600;
+}
+
+.error {
+  @apply text-center p-4 text-red-600;
+}
