@@ -27,7 +27,7 @@ export const userService = {
   deleteAccount: async () => {
     try {
       await api.delete("/users/profile");
-      localStorage.removeItem("token");
+      localStorage.clear();
       return true;
     } catch (error) {
       console.error("Error deleting account:", error);

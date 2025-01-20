@@ -34,6 +34,8 @@ export default function Profile() {
     profile: "",
     password: "",
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -146,6 +148,22 @@ export default function Profile() {
         .replace(/\//g, "-");
     } catch (error) {
       return "Non renseignée";
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      await userService.deleteAccount();
+      // Nettoyer le localStorage
+      localStorage.removeItem("token");
+      // Rediriger vers la page d'accueil
+      window.location.href = "/"; // Utiliser window.location pour un refresh complet
+    } catch (error) {
+      setError("Erreur lors de la suppression du compte");
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -368,6 +386,47 @@ export default function Profile() {
           <p>
             <strong>Date de naissance:</strong> {formatDate(user.birthdate)}
           </p>
+        </div>
+      )}
+
+      {isEditing && (
+        <div className={styles.dangerZone}>
+          <h2>Zone dangereuse</h2>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className={styles.deleteButton}
+          >
+            Supprimer mon compte
+          </button>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h2>Confirmer la suppression</h2>
+            <p>
+              Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est
+              irréversible.
+            </p>
+            <div className={styles.modalButtons}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className={styles.cancelButton}
+                disabled={deleteLoading}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                className={styles.confirmDeleteButton}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "Suppression..." : "Confirmer la suppression"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
