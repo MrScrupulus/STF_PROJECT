@@ -31,6 +31,7 @@ final class AuthController extends AbstractController
         private readonly ValidatorInterface $validator,
         private readonly LoggerInterface $logger,
         private readonly UserRepository $userRepository,
+        private readonly JWTTokenManagerInterface $jwtManager,
     ) {}
 
     #[Route('/register', name: 'register', methods: ['POST'])]
@@ -182,9 +183,22 @@ final class AuthController extends AbstractController
     #[Route('/login', name: 'login', methods: ['POST'])]
     public function login(Request $request): JsonResponse
     {
-        // Cette méthode peut être vide car le JWT est géré par le firewall
+        /** @var User $user */
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json([
+                'message' => 'Invalid credentials'
+            ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Générer le token JWT
+        $token = $this->jwtManager->create($user);
+
         return $this->json([
-            'user' => $this->getUser() ? $this->getUser()->getUserIdentifier() : null
+            'token' => $token,
+            'user' => $user->getUserIdentifier(),
+            'roles' => $user->getRoles()
         ]);
     }
 

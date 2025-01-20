@@ -1,0 +1,51 @@
+.formContainer {
+  @apply max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md;
+
+  h1 {
+    @apply text-2xl font-bold mb-6 text-center;
+  }
+
+  .error {
+    @apply mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm;
+  }
+
+  .formInput {
+    @apply w-full mb-4 p-2 border border-gray-300 rounded-md;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500;
+    @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+  }
+
+  .submitButton {
+    @apply w-full py-2 px-4 bg-blue-600 text-white rounded-md;
+    @apply hover:bg-blue-700 transition-colors duration-200;
+    @apply disabled:bg-blue-400 disabled:cursor-not-allowed;
+    @apply flex justify-center items-center min-h-[40px];
+  }
+
+  .spinner {
+    @apply flex space-x-1;
+
+    .spinnerDot {
+      @apply w-2 h-2 bg-white rounded-full;
+      animation: bounce 0.5s infinite;
+
+      &:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 0.2s;
+      }
+    }
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
