@@ -16,18 +16,18 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
+    setError("");
 
     try {
       const response = await authService.login(formData);
-      console.log("Login response:", response);
+      router.push("/dashboard");
     } catch (error) {
-      setError(
-        error.message === "Invalid credentials"
-          ? "Email ou mot de passe incorrect"
-          : "Une erreur est survenue, veuillez réessayer"
-      );
+      if (error.message === "Invalid credentials") {
+        setError("Adresse email ou mot de passe incorrect");
+      } else {
+        setError("Une erreur est survenue lors de la connexion");
+      }
     } finally {
       setIsLoading(false);
     }

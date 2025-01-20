@@ -40,6 +40,7 @@ security:
     - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/admin, roles: ROLE_ADMIN }
     - { path: ^/api/competitions, roles: PUBLIC_ACCESS }
+    - { path: ^/users/update/password, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
   security:
