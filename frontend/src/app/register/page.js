@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
 
 const PHONE_REGEX = /^[0-9]{10}$/;
 
@@ -29,6 +29,11 @@ export default function RegisterPage() {
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStatus, setPasswordStatus] = useState({
+    isValid: false,
+    message:
+      "Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial",
+  });
 
   // Nettoyage du localStorage au montage du composant
   useEffect(() => {
@@ -43,8 +48,6 @@ export default function RegisterPage() {
           : "Le numéro doit contenir 10 chiffres";
       case "email":
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Email invalide";
-      case "password":
-        return value.length >= 8 ? "" : "Minimum 8 caractères";
       case "confirmPassword":
         return value === formData.password
           ? ""
@@ -54,33 +57,48 @@ export default function RegisterPage() {
     }
   };
 
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (!password) {
+      setPasswordStatus({
+        isValid: false,
+        message:
+          "Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial",
+      });
+      return false;
+    }
+
+    const isValid = minLength && hasLetter && hasNumber && hasSpecial;
+    setPasswordStatus({
+      isValid,
+      message: isValid
+        ? "Mot de passe validé"
+        : "Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial",
+    });
+    return isValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    // Transformer les données pour correspondre au format attendu par le backend
-    const transformedData = {
-      email: formData.email,
-      password: formData.password,
-      firstname: formData.firstName, // Changement de firstName à firstname
-      lastname: formData.lastName, // Changement de lastName à lastname
-      phone_number: formData.phoneNumber,
-      birthdate: formData.birthDate,
-      country: formData.country,
-      subscriber_number: formData.subscriber_number,
-    };
+    if (!validatePassword(formData.password)) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const response = await authService.register(transformedData);
-      console.log("Registration successful:", response);
-      setSuccess(true);
-      setMessage(
-        "Pour valider votre inscription, veuillez vérifier votre adresse email en vous rendant sur votre boîte mail."
-      );
+      await authService.register(formData);
+      router.push("/login");
     } catch (error) {
-      console.error("Registration failed:", error);
-      setError(error.message);
+      setError(
+        error.message || "Une erreur est survenue lors de l'inscription"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +123,10 @@ export default function RegisterPage() {
       ...prev,
       [name]: value,
     }));
+
+    if (name === "password") {
+      validatePassword(value);
+    }
 
     const error = validateField(name, value);
     setFieldErrors((prev) => ({
@@ -259,7 +281,19 @@ export default function RegisterPage() {
                 className: "mt-1 text-sm text-red-500",
               },
               fieldErrors[field.name]
-            )
+            ),
+          field.name === "password" && (
+            <div
+              className={`mt-1 text-sm flex items-center gap-2 ${
+                passwordStatus.isValid ? "text-green-500" : "text-red-500"
+              }`}
+            >
+              {passwordStatus.isValid && (
+                <FaCheckCircle className="text-green-500" />
+              )}
+              {passwordStatus.message}
+            </div>
+          )
         )
       ),
       createElement(

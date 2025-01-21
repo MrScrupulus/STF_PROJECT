@@ -28,7 +28,20 @@ export const authService = {
 
   register: async (userData) => {
     try {
-      const response = await api.post("/auth/register", userData);
+      // Transformer les données pour correspondre au format attendu par le backend
+      const transformedData = {
+        email: userData.email,
+        password: userData.password,
+        firstname: userData.firstName,
+        lastname: userData.lastName,
+        phone_number: userData.phoneNumber,
+        birthdate: userData.birthDate,
+        country: userData.country,
+        subscriber_number: userData.subscriber_number,
+      };
+
+      const response = await api.post("/auth/register", transformedData);
+
       if (response.success) {
         return response;
       }

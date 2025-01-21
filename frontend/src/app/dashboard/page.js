@@ -159,6 +159,20 @@ export default function Dashboard() {
     }
   };
 
+  const getCompetitionStatus = (startDate, endDate) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (now < start) {
+      return { text: "À venir", className: styles.statusUpcoming };
+    } else if (now >= start && now <= end) {
+      return { text: "En cours", className: styles.statusOngoing };
+    } else {
+      return { text: "Terminée", className: styles.statusEnded };
+    }
+  };
+
   const UserDetailsModal = ({ user, onClose }) => {
     if (!user) return null;
 
@@ -610,60 +624,49 @@ export default function Dashboard() {
                 <thead>
                   <tr>
                     <th className={styles.tableHeader}>Nom</th>
-                    <th className={styles.tableHeader}>Date de début</th>
-                    <th className={styles.tableHeader}>Date de fin</th>
                     <th className={styles.tableHeader}>Type</th>
-                    <th className={styles.tableHeader}>Actions</th>
+                    <th className={styles.tableHeader}>Date</th>
+                    <th className={styles.tableHeader}>Statut</th>
+                    <th className={styles.tableHeader}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(filteredCompetitions) &&
-                    filteredCompetitions.map((competition) => (
-                      <tr
-                        key={competition.id}
-                        className={styles.tableRow}
-                        onClick={() => {
-                          setSelectedCompetition(competition);
-                          setShowCompetitionModal(true);
-                        }}
-                      >
-                        <td className={styles.tableCell}>{competition.name}</td>
-                        <td className={styles.tableCell}>
-                          {new Date(competition.startDate).toLocaleString()}
-                        </td>
-                        <td className={styles.tableCell}>
-                          {new Date(competition.endDate).toLocaleString()}
-                        </td>
-                        <td className={styles.tableCell}>{competition.type}</td>
-                        <td className={styles.tableCell}>
-                          <button
-                            className={styles.editButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCompetition(competition);
-                              setShowCompetitionModal(true);
-                            }}
-                          >
-                            Modifier
-                          </button>
-                          <button
-                            className={styles.deleteButton}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (
-                                window.confirm(
-                                  "Êtes-vous sûr de vouloir supprimer cette compétition ?"
-                                )
-                              ) {
-                                handleDeleteCompetition(competition.id);
-                              }
-                            }}
-                          >
-                            Supprimer
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                  {filteredCompetitions.map((competition) => (
+                    <tr
+                      key={competition.id}
+                      className={styles.tableRow}
+                      onClick={() => {
+                        setSelectedCompetition(competition);
+                        setShowCompetitionModal(true);
+                      }}
+                    >
+                      <td className={styles.tableCell}>{competition.name}</td>
+                      <td className={styles.tableCell}>{competition.type}</td>
+                      <td className={styles.tableCell}>
+                        {new Date(competition.startDate).toLocaleDateString()}
+                      </td>
+                      <td className={styles.tableCell}>
+                        <span
+                          className={
+                            getCompetitionStatus(
+                              competition.startDate,
+                              competition.endDate
+                            ).className
+                          }
+                        >
+                          {
+                            getCompetitionStatus(
+                              competition.startDate,
+                              competition.endDate
+                            ).text
+                          }
+                        </span>
+                      </td>
+                      <td className={styles.tableCell}>
+                        <button className={styles.editButton}>Modifier</button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -715,7 +718,10 @@ export default function Dashboard() {
                           </button>
                         )}
                       </td>
-                      <td className={styles.tableCell} onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className={styles.tableCell}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <label className={styles.checkboxLabel}>
                           <input
                             type="checkbox"
@@ -771,7 +777,7 @@ export default function Dashboard() {
                     <th className={styles.tableHeader}>Nom</th>
                     <th className={styles.tableHeader}>Coefficient</th>
                     <th className={styles.tableHeader}>Points de base</th>
-                    <th className={styles.tableHeader}>Actions</th>
+                    <th className={styles.tableHeader}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -788,25 +794,7 @@ export default function Dashboard() {
                       <td className={styles.tableCell}>{specie.coefficient}</td>
                       <td className={styles.tableCell}>{specie.basePoints}</td>
                       <td className={styles.tableCell}>
-                        <button
-                          className={styles.editButton}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedSpecies(specie);
-                            setShowSpeciesModal(true);
-                          }}
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          className={styles.deleteButton}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteSpecies(specie.id);
-                          }}
-                        >
-                          Supprimer
-                        </button>
+                        <button className={styles.editButton}>Modifier</button>
                       </td>
                     </tr>
                   ))}

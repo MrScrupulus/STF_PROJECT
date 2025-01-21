@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { competitionService } from "@/services/competitionService";
 import Link from "next/link";
+import styles from "@/styles/pages/competitions.module.scss";
 
 export default function CompetitionsList() {
   const [competitions, setCompetitions] = useState([]);
@@ -22,6 +23,20 @@ export default function CompetitionsList() {
     fetchCompetitions();
   }, []);
 
+  const getCompetitionStatus = (startDate, endDate) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (now < start) {
+      return { text: "À venir", className: styles.statusUpcoming };
+    } else if (now >= start && now <= end) {
+      return { text: "En cours", className: styles.statusOngoing };
+    } else {
+      return { text: "Terminée", className: styles.statusEnded };
+    }
+  };
+
   if (loading) return <div>Chargement...</div>;
 
   return (
@@ -34,7 +49,24 @@ export default function CompetitionsList() {
               key={competition.id}
               className="bg-white p-4 rounded-lg shadow"
             >
-              <h3 className="text-lg font-semibold mb-2">{competition.name}</h3>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold">{competition.name}</h3>
+                <span
+                  className={
+                    getCompetitionStatus(
+                      competition.startDate,
+                      competition.endDate
+                    ).className
+                  }
+                >
+                  {
+                    getCompetitionStatus(
+                      competition.startDate,
+                      competition.endDate
+                    ).text
+                  }
+                </span>
+              </div>
               <div className="space-y-2">
                 <p className="text-gray-600">{competition.description}</p>
                 <p>
