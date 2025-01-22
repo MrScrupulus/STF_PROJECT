@@ -26,14 +26,15 @@ export function Header() {
 
         const userData = await authService.getCurrentUser();
         console.log("User data received:", userData);
-        setUser(userData);
+        if (userData) {
+          setUser(userData);
+        }
       } catch (error) {
         console.error("Error fetching user:", error);
-        // Si erreur d'authentification, supprimer le token
-        if (error.message.includes("Invalid credentials")) {
-          localStorage.removeItem("token");
+        // Ne pas afficher d'erreur si l'utilisateur n'est pas connecté
+        if (error.status !== 401) {
+          setError(error.message);
         }
-        setUser(null);
       } finally {
         setLoading(false);
       }

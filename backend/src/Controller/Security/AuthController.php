@@ -202,29 +202,44 @@ final class AuthController extends AbstractController
         ]);
     }
 
-    #[Route('/me', name: 'me', methods: ['GET'])]
-    public function me(): JsonResponse
+    #[Route('/me', name: 'auth_me', methods: ['GET'])]
+    public function getCurrentUser(): JsonResponse
     {
-        /** @var User $user */
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json(['message' => 'Non authentifié'], 401);
-        }
+        try {
+            $user = $this->getUser();
+            $this->logger->info('Tentative de récupération de l\'utilisateur courant');
 
-        return $this->json([
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'firstname' => $user->getFirstname(),
-                'lastname' => $user->getLastname(),
-                'subscriberNumber' => $user->getSubscriberNumber(),
-                'phoneNumber' => $user->getPhoneNumber(),
-                'country' => $user->getCountry(),
-                'birthdate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
-                'isVerified' => $user->isVerified(),
-                'roles' => $user->getRoles(),
-            ],
-        ]);
+            if (!$user) {
+                $this->logger->info('Aucun utilisateur connecté');
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+
+            $this->logger->info('Utilisateur trouvé', ['user_id' => $user->getId()]);
+            return $this->json([
+                'success' => true,
+                'user' => [
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'roles' => $user->getRoles(),
+                    // ... autres champs nécessaires
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération de l\'utilisateur', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la récupération de l\'utilisateur'
+            ], 500);
+        }
     }
 
     #[Route('/verify-email/{token}', name: 'verify_email', methods: ['POST'])]

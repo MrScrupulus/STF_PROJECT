@@ -45,30 +45,19 @@ class CompetitionController extends AbstractController
         }
     }
 
-    #[Route('/competitions', name: 'app_competitions_list', methods: ['GET'])]
+    #[Route('/competitions', name: 'competition_list', methods: ['GET'])]
     public function list(CompetitionRepository $repository): JsonResponse
     {
         try {
             $competitions = $repository->findAll();
-
-            $data = array_map(function ($competition) {
-                return [
-                    'id' => $competition->getId(),
-                    'name' => $competition->getName(),
-                    'type' => $competition->getType(),
-                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
-                    'description' => $competition->getDescription(),
-                ];
-            }, $competitions);
-
             return $this->json([
-                'competitions' => $data
+                'success' => true,
+                'competitions' => $competitions
             ]);
         } catch (\Exception $e) {
             return $this->json([
-                'error' => 'Une erreur est survenue',
-                'message' => $e->getMessage()
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des compétitions: ' . $e->getMessage()
             ], 500);
         }
     }

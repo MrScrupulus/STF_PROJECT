@@ -38,3 +38,8 @@ admin_competition_delete:
   path: /admin/competitions/{id}
   controller: App\Controller\Admin\Competition\AdminCompetitionController::delete
   methods: [DELETE]
+
+api_teams:
+  path: /teams
+  controller: App\Controller\Competition\TeamController::create
+  methods: [POST]

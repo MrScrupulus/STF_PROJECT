@@ -1,4 +1,4 @@
-import api from "./api";
+import { api } from "./api";
 
 export const authService = {
   login: async (credentials) => {
@@ -65,8 +65,17 @@ export const authService = {
   getCurrentUser: async () => {
     try {
       const response = await api.get("/auth/me");
+      if (!response.success) {
+        throw new Error(
+          response.message || "Erreur lors de la récupération de l'utilisateur"
+        );
+      }
       return response.user;
     } catch (error) {
+      if (error.status === 401) {
+        // L'utilisateur n'est pas connecté
+        return null;
+      }
       console.error("Error getting current user:", error);
       throw error;
     }
