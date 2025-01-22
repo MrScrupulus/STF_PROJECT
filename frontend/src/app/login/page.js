@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
 import styles from "@/styles/pages/login.module.scss";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -46,16 +48,35 @@ export default function LoginPage() {
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           disabled={isLoading}
         />
-        <input
-          type="password"
-          className={styles.formInput}
-          placeholder="Mot de passe"
-          value={formData.password}
-          onChange={(e) =>
-            setFormData({ ...formData, password: e.target.value })
-          }
-          disabled={isLoading}
-        />
+        <div className={styles.passwordContainer}>
+          <input
+            type={showPassword ? "text" : "password"}
+            className={styles.formInput}
+            placeholder="Mot de passe"
+            value={formData.password}
+            onChange={(e) =>
+              setFormData({ ...formData, password: e.target.value })
+            }
+            disabled={isLoading}
+            aria-label="Mot de passe"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className={styles.eyeButton}
+            aria-label={
+              showPassword
+                ? "Masquer le mot de passe"
+                : "Afficher le mot de passe"
+            }
+          >
+            {showPassword ? (
+              <FaEyeSlash className={styles.eyeIcon} />
+            ) : (
+              <FaEye className={styles.eyeIcon} />
+            )}
+          </button>
+        </div>
         <button
           type="submit"
           className={styles.submitButton}

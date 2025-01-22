@@ -13,6 +13,10 @@
     @apply w-full mb-4 p-2 border border-gray-300 rounded-md;
     @apply focus:outline-none focus:ring-2 focus:ring-blue-500;
     @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+    &[type="password"],
+    &[type="text"] {
+      padding-right: 40px;
+    }
   }
 
   .submitButton {
@@ -47,5 +51,33 @@
   }
   50% {
     transform: translateY(-4px);
+  }
+}
+
+.passwordContainer {
+  position: relative;
+  width: 100%;
+
+  .eyeButton {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    color: #666;
+
+    &:hover {
+      color: #333;
+    }
+
+    .eyeIcon {
+      width: 20px;
+      height: 20px;
+    }
   }
 }

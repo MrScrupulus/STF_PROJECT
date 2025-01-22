@@ -8,6 +8,7 @@ export default function TeamsPage() {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [newTeamName, setNewTeamName] = useState("");
   const [participant2Email, setParticipant2Email] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -30,7 +31,24 @@ export default function TeamsPage() {
       }
     };
 
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch("https://localhost:8000/auth/me", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setCurrentUser(data.user);
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      }
+    };
+
     fetchTeams();
+    fetchCurrentUser();
   }, []);
 
   const handleCreateTeam = async (e) => {
@@ -66,6 +84,11 @@ export default function TeamsPage() {
     } catch (error) {
       setError(error.message);
     }
+  };
+
+  const isTeamMember = (team) => {
+    if (!currentUser) return false;
+    return team.members?.some((member) => member.id === currentUser.id);
   };
 
   return (
@@ -129,12 +152,14 @@ export default function TeamsPage() {
                   {team.registrationNumber && ` - N°${team.registrationNumber}`}
                 </p>
               ) : (
-                <button
-                  onClick={() => setShowCompetitionModal(team.id)}
-                  className="mt-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                >
-                  S'inscrire à une compétition
-                </button>
+                isTeamMember(team) && (
+                  <button
+                    onClick={() => setShowCompetitionModal(team.id)}
+                    className="mt-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  >
+                    S'inscrire à une compétition
+                  </button>
+                )
               )}
             </div>
           ))}

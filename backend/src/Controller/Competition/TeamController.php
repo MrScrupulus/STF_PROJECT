@@ -71,7 +71,8 @@ class TeamController extends AbstractController
     public function create(
         Request $request,
         EntityManagerInterface $em,
-        UserRepository $userRepo
+        UserRepository $userRepo,
+        TeamRepository $teamRepo
     ): JsonResponse {
         try {
             $data = json_decode($request->getContent(), true);
@@ -100,6 +101,15 @@ class TeamController extends AbstractController
                 ], 401);
             }
 
+            // Vérifier si l'utilisateur connecté a déjà une équipe
+            $existingTeam = $teamRepo->findTeamsByMember($user);
+            if (count($existingTeam) > 0) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous êtes déjà membre d\'une équipe'
+                ], 400);
+            }
+
             // Validation du second participant
             $participant2 = $userRepo->findOneByEmail($data['participant2Email']);
             if (!$participant2) {
@@ -107,6 +117,15 @@ class TeamController extends AbstractController
                     'success' => false,
                     'message' => 'Aucun utilisateur trouvé avec cet email'
                 ], 404);
+            }
+
+            // Vérifier si le second participant a déjà une équipe
+            $existingTeam2 = $teamRepo->findTeamsByMember($participant2);
+            if (count($existingTeam2) > 0) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le second participant est déjà membre d\'une équipe'
+                ], 400);
             }
 
             if ($participant2 === $user) {
