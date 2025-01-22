@@ -9,7 +9,7 @@ export default function CreateSpecies() {
   const [formData, setFormData] = useState({
     name: "",
     coefficient: "",
-    basePoints: 50,
+    basePoints: "",
     isBonus: false,
   });
 
@@ -18,7 +18,7 @@ export default function CreateSpecies() {
     try {
       const dataToSend = {
         name: formData.name,
-        basePoints: formData.isBonus ? formData.basePoints : 50,
+        basePoints: parseInt(formData.basePoints) || 50,
         coefficient: formData.isBonus ? 1 : parseFloat(formData.coefficient),
       };
 
@@ -27,6 +27,11 @@ export default function CreateSpecies() {
     } catch (error) {
       console.error("Error creating species:", error);
     }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   return (
@@ -91,14 +96,9 @@ export default function CreateSpecies() {
                 </label>
                 <input
                   type="number"
-                  min="0"
+                  name="basePoints"
                   value={formData.basePoints}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      basePoints: parseInt(e.target.value),
-                    })
-                  }
+                  onChange={handleChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />

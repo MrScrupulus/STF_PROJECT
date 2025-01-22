@@ -389,11 +389,12 @@ export default function Dashboard() {
   };
 
   const SpeciesDetailsModal = ({ species, onClose }) => {
-    const [editMode, setEditMode] = useState(!species);
+    const [editMode, setEditMode] = useState(false);
     const [editData, setEditData] = useState({
-      name: species?.name || "",
-      coefficient: species?.coefficient || 1,
-      basePoints: species?.basePoints || 50,
+      name: species.name,
+      coefficient: species.coefficient,
+      basePoints: species.basePoints,
+      isBonus: species.name.toLowerCase() === "espèce bonus",
     });
 
     const handleUpdate = async () => {
@@ -474,11 +475,26 @@ export default function Dashboard() {
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     required
                   />
-                  <p className="mt-1 text-sm text-gray-500">
-                    Ce coefficient sera multiplié par la taille du poisson
-                  </p>
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Points bonus
+                </label>
+                <input
+                  type="number"
+                  value={editData.basePoints}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      basePoints: parseInt(e.target.value),
+                    })
+                  }
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -487,7 +503,7 @@ export default function Dashboard() {
                   Nom : <span className="text-green-600">{species.name}</span>
                 </p>
               </div>
-              {species.name.toLowerCase() !== "espèce bonus" && (
+              {!species.isBonus && (
                 <div>
                   <p className="font-semibold text-gray-700">
                     Coefficient :{" "}
@@ -499,7 +515,8 @@ export default function Dashboard() {
               )}
               <div>
                 <p className="font-semibold text-gray-700">
-                  Points de base : <span className="text-green-600">50</span>
+                  Points bonus :{" "}
+                  <span className="text-green-600">{species.basePoints}</span>
                 </p>
               </div>
             </div>
@@ -776,7 +793,7 @@ export default function Dashboard() {
                   <tr>
                     <th className={styles.tableHeader}>Nom</th>
                     <th className={styles.tableHeader}>Coefficient</th>
-                    <th className={styles.tableHeader}>Points de base</th>
+                    <th className={styles.tableHeader}>Points bonus</th>
                     <th className={styles.tableHeader}>Action</th>
                   </tr>
                 </thead>
