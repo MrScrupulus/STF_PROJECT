@@ -14,12 +14,12 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
-    birthDate: "",
-    country: "",
+    firstname: "",
+    lastname: "",
     subscriber_number: "",
+    phone_number: "",
+    country: "",
+    birth_date: "",
   });
 
   const [error, setError] = useState("");
@@ -42,7 +42,7 @@ export default function RegisterPage() {
 
   const validateField = (name, value) => {
     switch (name) {
-      case "phoneNumber":
+      case "phone_number":
         return PHONE_REGEX.test(value)
           ? ""
           : "Le numéro doit contenir 10 chiffres";
@@ -152,12 +152,12 @@ export default function RegisterPage() {
       email: "",
       password: "",
       confirmPassword: "",
-      firstName: "",
-      lastName: "",
-      phoneNumber: "",
-      birthDate: "",
-      country: "",
+      firstname: "",
+      lastname: "",
       subscriber_number: "",
+      phone_number: "",
+      country: "",
+      birth_date: "",
     });
     setError("");
   };
@@ -173,11 +173,11 @@ export default function RegisterPage() {
   // Réorganisation des champs du formulaire
   const formFields = [
     { name: "email", label: "Email", type: "email", autocomplete: "off" },
-    { name: "firstName", label: "Prénom", type: "text" },
-    { name: "lastName", label: "Nom", type: "text" },
+    { name: "firstname", label: "Prénom", type: "text" },
+    { name: "lastname", label: "Nom", type: "text" },
     { name: "subscriber_number", label: "Numéro d'adhérent", type: "text" },
-    { name: "phoneNumber", label: "Téléphone", type: "tel" },
-    { name: "birthDate", label: "Date de naissance", type: "date" },
+    { name: "phone_number", label: "Téléphone", type: "tel" },
+    { name: "birth_date", label: "Date de naissance", type: "date" },
     { name: "country", label: "Pays", type: "text" },
     {
       name: "password",

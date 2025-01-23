@@ -29,7 +29,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $password = null;
 
     #[ORM\Column(name: 'subscriber_number', length: 50, nullable: true)]
-    private ?string $subscriberNumber = null;
+    private ?string $subscriber_number = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['user:read'])]
@@ -43,10 +43,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $country = null;
 
     #[ORM\Column(length: 50, nullable: true)]
-    private ?string $phoneNumber = null;
+    private ?string $phone_number = null;
 
     #[ORM\Column(type: 'date', nullable: true)]
-    private ?\DateTimeInterface $birthDate = null;
+    private ?\DateTimeInterface $birth_date = null;
 
     #[ORM\Column(type: 'string', length: 100, nullable: true)]
     private ?string $verification_token = null;
@@ -106,12 +106,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getSubscriberNumber(): ?string
     {
-        return $this->subscriberNumber;
+        return $this->subscriber_number;
     }
 
-    public function setSubscriberNumber(?string $subscriberNumber): static
+    public function setSubscriberNumber(?string $subscriber_number): static
     {
-        $this->subscriberNumber = $subscriberNumber;
+        $this->subscriber_number = $subscriber_number;
         return $this;
     }
 
@@ -152,23 +152,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getPhoneNumber(): ?string
     {
-        return $this->phoneNumber;
+        return $this->phone_number;
     }
 
-    public function setPhoneNumber(?string $phoneNumber): static
+    public function setPhoneNumber(?string $phone_number): static
     {
-        $this->phoneNumber = $phoneNumber;
+        $this->phone_number = $phone_number;
         return $this;
     }
 
     public function getBirthDate(): ?\DateTimeInterface
     {
-        return $this->birthDate;
+        return $this->birth_date;
     }
 
-    public function setBirthDate(?\DateTimeInterface $birthDate): self
+    public function setBirthDate(?\DateTimeInterface $birth_date): self
     {
-        $this->birthDate = $birthDate;
+        $this->birth_date = $birth_date;
         return $this;
     }
 

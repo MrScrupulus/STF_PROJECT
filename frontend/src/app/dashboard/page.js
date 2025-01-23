@@ -7,12 +7,14 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Link from "next/link";
 import { speciesService } from "@/services/speciesService";
 import styles from "@/styles/pages/dashboard.module.scss";
+import { authService } from "@/services/authService";
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
   const [competitions, setCompetitions] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchBy, setSearchBy] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -27,8 +29,68 @@ export default function Dashboard() {
   const [teams, setTeams] = useState([]);
   const router = useRouter();
 
+  const fetchData = async () => {
+    try {
+      console.log("Starting to fetch admin data...");
+      const [usersData, competitionsData, speciesData, teamsData] =
+        await Promise.all([
+          adminService.getUsers(),
+          competitionService.getAllAdmin(),
+          speciesService.getAll(),
+          adminService.getTeams(),
+        ]);
+
+      console.log("Admin data received:", {
+        users: usersData,
+        competitions: competitionsData,
+        species: speciesData,
+        teams: teamsData,
+      });
+
+      setUsers(usersData || []);
+      setCompetitions(competitionsData?.competitions || []);
+      setSpecies(speciesData || []);
+      setTeams(teamsData || []);
+      setLoading(false);
+    } catch (error) {
+      console.error("Detailed fetch error:", {
+        message: error.message,
+        status: error.status,
+        fullError: error,
+      });
+      setError("Erreur lors du chargement des données");
+      setLoading(false);
+      if (error.status === 401) {
+        console.log("Authentication error during data fetch");
+        return;
+      }
+    }
+  };
+
   useEffect(() => {
-    fetchData();
+    let isMounted = true;
+    const checkAuth = async () => {
+      try {
+        const userData = await authService.getCurrentUser();
+        console.log("User data in dashboard:", userData);
+        if (!userData.success || !userData.user.roles.includes("ROLE_ADMIN")) {
+          console.log("Non admin, redirection vers login");
+          router.push("/login");
+          return;
+        }
+        console.log("Admin user confirmed, fetching data");
+        if (isMounted) {
+          await fetchData();
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+        console.log("Letting ProtectedRoute handle the error");
+      }
+    };
+    checkAuth();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -81,26 +143,6 @@ export default function Dashboard() {
           })
         : [];
       setFilteredCompetitions(filteredComps);
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      const [usersData, competitionsData, speciesData, teamsData] =
-        await Promise.all([
-          adminService.getUsers(),
-          competitionService.getAllAdmin(),
-          speciesService.getAll(),
-          adminService.getTeams(),
-        ]);
-      setUsers(usersData || []);
-      setCompetitions(competitionsData?.competitions || []);
-      setSpecies(speciesData || []);
-      setTeams(teamsData || []);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setLoading(false);
     }
   };
 
@@ -610,6 +652,8 @@ export default function Dashboard() {
                 <option value="all">Tout</option>
                 <option value="competitions">Compétitions</option>
                 <option value="users">Utilisateurs</option>
+                <option value="teams">Équipes</option>
+                <option value="species">Espèces</option>
               </select>
               {searchCategory !== "competitions" && (
                 <select
@@ -622,6 +666,9 @@ export default function Dashboard() {
                   <option value="name">Nom/Prénom</option>
                   <option value="number">N° Adhérent</option>
                   <option value="role">Rôle</option>
+                  <option value="teams">Équipes</option>
+                  <option value="species">Espèces</option>
+                  <option value="competitions">Compétitions</option>
                 </select>
               )}
             </div>

@@ -27,7 +27,7 @@ export function Header() {
         const userData = await authService.getCurrentUser();
         console.log("User data received:", userData);
         if (userData) {
-          setUser(userData);
+          setUser(userData.user);
         }
       } catch (error) {
         console.error("Error fetching user:", error);

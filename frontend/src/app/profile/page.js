@@ -12,10 +12,10 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     firstname: "",
     lastname: "",
-    phoneNumber: "",
+    phone_number: "",
     country: "",
-    subscriberNumber: "",
-    birthdate: "",
+    subscriber_number: "",
+    birth_date: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -42,23 +42,25 @@ export default function Profile() {
     const fetchUser = async () => {
       try {
         const userData = await authService.getCurrentUser();
-        setUser(userData);
+        setUser(userData.user);
         setFormData({
-          firstname: userData.firstname || "",
-          lastname: userData.lastname || "",
-          phoneNumber: userData.phoneNumber || "",
-          country: userData.country || "",
-          subscriberNumber: userData.subscriberNumber || "",
-          birthdate: userData.birthdate || "",
+          firstname: userData.user.firstname || "",
+          lastname: userData.user.lastname || "",
+          phone_number: userData.user.phone_number || "",
+          country: userData.user.country || "",
+          subscriber_number: userData.user.subscriber_number || "",
+          birth_date: userData.user.birth_date || "",
         });
+        setIsLoading(false);
       } catch (error) {
         console.error("Error fetching user:", error);
-        router.push("/login");
+        setError("Erreur lors du chargement des données utilisateur");
+        setIsLoading(false);
       }
     };
 
     fetchUser();
-  }, [router]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -231,9 +233,9 @@ export default function Profile() {
             <label>Téléphone</label>
             <input
               type="text"
-              value={formData.phoneNumber}
+              value={formData.phone_number}
               onChange={(e) =>
-                setFormData({ ...formData, phoneNumber: e.target.value })
+                setFormData({ ...formData, phone_number: e.target.value })
               }
               disabled={isLoading}
             />
@@ -253,9 +255,9 @@ export default function Profile() {
             <label>N° d'adhérent</label>
             <input
               type="text"
-              value={formData.subscriberNumber}
+              value={formData.subscriber_number}
               onChange={(e) =>
-                setFormData({ ...formData, subscriberNumber: e.target.value })
+                setFormData({ ...formData, subscriber_number: e.target.value })
               }
               disabled={isLoading}
             />
@@ -264,9 +266,9 @@ export default function Profile() {
             <label>Date de naissance</label>
             <input
               type="date"
-              value={formData.birthdate}
+              value={formData.birth_date}
               onChange={(e) =>
-                setFormData({ ...formData, birthdate: e.target.value })
+                setFormData({ ...formData, birth_date: e.target.value })
               }
               disabled={isLoading}
             />
@@ -375,17 +377,17 @@ export default function Profile() {
             <strong>Email:</strong> {user.email}
           </p>
           <p>
-            <strong>Téléphone:</strong> {user.phoneNumber || "Non renseigné"}
+            <strong>Téléphone:</strong> {user.phone_number || "Non renseigné"}
           </p>
           <p>
             <strong>Pays:</strong> {user.country || "Non renseigné"}
           </p>
           <p>
             <strong>N° d'adhérent:</strong>{" "}
-            {user.subscriberNumber || "Non renseigné"}
+            {user.subscriber_number || "Non renseigné"}
           </p>
           <p>
-            <strong>Date de naissance:</strong> {formatDate(user.birthdate)}
+            <strong>Date de naissance:</strong> {formatDate(user.birth_date)}
           </p>
           {user.team && (
             <div className={styles.teamInfo}>

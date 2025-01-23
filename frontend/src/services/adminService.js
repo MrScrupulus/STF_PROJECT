@@ -3,10 +3,12 @@ import { api } from "./api";
 export const adminService = {
   getUsers: async () => {
     try {
+      console.log("Fetching users from admin service...");
       const response = await api.get("/admin/users");
-      return response.users;
+      console.log("Users response:", response);
+      return response.users || [];
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error in getUsers:", error);
       throw error;
     }
   },
@@ -14,6 +16,7 @@ export const adminService = {
   getTeams: async () => {
     try {
       const response = await api.get("/admin/teams");
+      console.log("Teams response:", response);
       return response.teams || [];
     } catch (error) {
       console.error("Error fetching teams:", error);

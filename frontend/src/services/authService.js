@@ -11,7 +11,7 @@ export const authService = {
         const userData = await authService.getCurrentUser();
 
         // Redirection basée sur le rôle
-        if (userData.roles?.includes("ROLE_ADMIN")) {
+        if (userData.user.roles?.includes("ROLE_ADMIN")) {
           window.location.href = "/dashboard";
         } else {
           window.location.href = "/"; // Redirection vers l'accueil pour les utilisateurs normaux
@@ -67,17 +67,8 @@ export const authService = {
   getCurrentUser: async () => {
     try {
       const response = await api.get("/auth/me");
-      if (!response.success) {
-        throw new Error(
-          response.message || "Erreur lors de la récupération de l'utilisateur"
-        );
-      }
-      return response.user;
+      return response;
     } catch (error) {
-      if (error.status === 401) {
-        // L'utilisateur n'est pas connecté
-        return null;
-      }
       console.error("Error getting current user:", error);
       throw error;
     }

@@ -31,22 +31,29 @@ const handleResponse = async (response) => {
     }
 
     if (response.status === 401) {
-      localStorage.removeItem("token");
-      return null;
+      console.log("401 error:", errorMessage);
+      throw { status: 401, message: errorMessage };
     }
 
     throw new Error(errorMessage);
   }
 
-  return isJson ? response.json() : response.text();
+  const data = await response.json();
+  return isJson ? data : response.text();
 };
 
 export const api = {
   get: async (endpoint) => {
     try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      };
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "GET",
-        headers: getHeaders(),
+        headers,
         credentials: "include",
         mode: "cors",
       });
@@ -61,9 +68,15 @@ export const api = {
       console.log("Sending request to:", API_URL + endpoint);
       console.log("Request data:", data);
 
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      };
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
-        headers: getHeaders(),
+        headers,
         credentials: "include",
         mode: "cors",
         body: JSON.stringify(data),
