@@ -35,9 +35,11 @@ export const authService = {
         firstname: userData.firstName,
         lastname: userData.lastName,
         phone_number: userData.phoneNumber,
-        birthdate: userData.birthDate,
+        birthdate: userData.birthDate
+          ? new Date(userData.birthDate).toISOString().split("T")[0]
+          : null,
         country: userData.country,
-        subscriber_number: userData.subscriber_number,
+        subscriber_number: userData.subscriberNumber,
       };
 
       const response = await api.post("/auth/register", transformedData);

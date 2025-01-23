@@ -12,10 +12,15 @@
   transition: all 0.3s ease;
 
   .logo {
-    @apply text-xl font-bold absolute left-4;
+    @apply text-xl font-bold absolute left-4 flex items-center;
 
     a {
       @apply text-blue-600 hover:text-blue-800;
+      margin-right: 2rem;
+    }
+
+    .welcome {
+      @apply text-base font-normal text-gray-600;
     }
   }
 

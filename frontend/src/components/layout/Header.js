@@ -62,6 +62,9 @@ export function Header() {
     <header className={styles.header}>
       <div className={styles.logo}>
         <a href="/">Street Fishing</a>
+        {user && (
+          <span className={styles.welcome}>Bonjour {user.firstname}</span>
+        )}
       </div>
       <nav className={styles.nav}>
         <ul className={styles.mainNav}>

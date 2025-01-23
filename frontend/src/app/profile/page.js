@@ -375,17 +375,32 @@ export default function Profile() {
             <strong>Email:</strong> {user.email}
           </p>
           <p>
-            <strong>Téléphone:</strong> {user.phoneNumber}
+            <strong>Téléphone:</strong> {user.phoneNumber || "Non renseigné"}
           </p>
           <p>
-            <strong>Pays:</strong> {user.country}
+            <strong>Pays:</strong> {user.country || "Non renseigné"}
           </p>
           <p>
-            <strong>N° d'adhérent:</strong> {user.subscriberNumber}
+            <strong>N° d'adhérent:</strong>{" "}
+            {user.subscriberNumber || "Non renseigné"}
           </p>
           <p>
             <strong>Date de naissance:</strong> {formatDate(user.birthdate)}
           </p>
+          {user.team && (
+            <div className={styles.teamInfo}>
+              <h3 className={styles.teamTitle}>Mon équipe</h3>
+              <p>
+                <strong>Nom de l'équipe:</strong> {user.team.name}
+              </p>
+              {user.team.competition && (
+                <p>
+                  <strong>Compétition en cours:</strong>{" "}
+                  {user.team.competition.name}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
