@@ -11,6 +11,16 @@ export const adminService = {
     }
   },
 
+  getTeams: async () => {
+    try {
+      const response = await api.get("/admin/teams");
+      return response.teams || [];
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      throw error;
+    }
+  },
+
   updateUser: async (userId, userData) => {
     try {
       const response = await api.put(`/admin/users/${userId}`, userData);

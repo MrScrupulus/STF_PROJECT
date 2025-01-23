@@ -75,7 +75,7 @@ export function Header() {
             <a href="/competitions">Compétitions</a>
           </li>
           <li>
-            <a href="/teams">Équipes</a>
+            <a href="/teams">Équipe</a>
           </li>
           {user ? (
             <>

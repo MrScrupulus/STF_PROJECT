@@ -9,6 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Entity\Competition\Team;
 
 #[Route('/admin')]
 class AdminController extends AbstractController
@@ -109,5 +110,31 @@ class AdminController extends AbstractController
             'message' => 'Utilisateur vérifié avec succès',
             'isVerified' => true
         ]);
+    }
+
+    #[Route('/teams', name: 'admin_teams_list', methods: ['GET'])]
+    public function listTeams(): JsonResponse
+    {
+        $teams = $this->entityManager->getRepository(Team::class)->findAll();
+
+        $teamsData = array_map(function ($team) {
+            return [
+                'id' => $team->getId(),
+                'name' => $team->getName(),
+                'members' => array_map(function ($member) {
+                    return [
+                        'id' => $member->getId(),
+                        'firstname' => $member->getFirstname(),
+                        'lastname' => $member->getLastname(),
+                    ];
+                }, $team->getMembers()->toArray()),
+                'competition' => $team->getCompetition() ? [
+                    'id' => $team->getCompetition()->getId(),
+                    'name' => $team->getCompetition()->getName(),
+                ] : null,
+            ];
+        }, $teams);
+
+        return $this->json(['teams' => $teamsData]);
     }
 }

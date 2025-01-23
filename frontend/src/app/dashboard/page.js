@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [species, setSpecies] = useState([]);
   const [selectedSpecies, setSelectedSpecies] = useState(null);
   const [showSpeciesModal, setShowSpeciesModal] = useState(false);
+  const [teams, setTeams] = useState([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -85,14 +86,17 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [usersData, competitionsData, speciesData] = await Promise.all([
-        adminService.getUsers(),
-        competitionService.getAllAdmin(),
-        speciesService.getAll(),
-      ]);
-      setUsers(usersData);
-      setCompetitions(competitionsData.competitions || []);
-      setSpecies(speciesData);
+      const [usersData, competitionsData, speciesData, teamsData] =
+        await Promise.all([
+          adminService.getUsers(),
+          competitionService.getAllAdmin(),
+          speciesService.getAll(),
+          adminService.getTeams(),
+        ]);
+      setUsers(usersData || []);
+      setCompetitions(competitionsData?.competitions || []);
+      setSpecies(speciesData || []);
+      setTeams(teamsData || []);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -812,6 +816,48 @@ export default function Dashboard() {
                       <td className={styles.tableCell}>{specie.basePoints}</td>
                       <td className={styles.tableCell}>
                         <button className={styles.editButton}>Modifier</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section des équipes */}
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>
+              <h2>Équipes</h2>
+            </div>
+            <div className={styles.table}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nom de l'équipe</th>
+                    <th>Membres</th>
+                    <th>Compétition</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teams.map((team) => (
+                    <tr key={team.id}>
+                      <td>{team.name}</td>
+                      <td>
+                        {team.members
+                          .map(
+                            (member) => `${member.firstname} ${member.lastname}`
+                          )
+                          .join(", ")}
+                      </td>
+                      <td>{team.competition?.name || "Aucune"}</td>
+                      <td>
+                        <button
+                          onClick={() => handleEditTeam(team)}
+                          className={styles.editButton}
+                        >
+                          Modifier
+                        </button>
                       </td>
                     </tr>
                   ))}
