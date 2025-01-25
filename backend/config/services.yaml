@@ -5,7 +5,7 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
   app.mailer_from_email: "streetfishingroubaix@gmail.com"
-  app.frontend_url: "http://localhost:3000"
+  app.frontend_url: "https://localhost:3000"
 
 services:
   # default configuration for services in *this* file

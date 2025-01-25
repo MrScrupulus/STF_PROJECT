@@ -1,10 +1,20 @@
 .header {
-  background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  position: relative;
+  @apply fixed top-0 w-full bg-white z-50;
+  
+  .nav {
+    @apply hidden;  // Caché par défaut sur mobile
+    @apply md:flex;  // Toujours visible sur desktop
+    
+    &.open {
+      @apply flex flex-col absolute top-full left-0 w-full bg-white;
+      @apply md:flex-row md:static;  // Normal sur desktop
+    }
+  }
+  
+  .menuButton {
+    @apply block;  // Visible sur mobile
+    @apply md:hidden;  // Caché sur desktop
+  }
 }
 
 .logo {
@@ -19,13 +29,6 @@
       color: #1e40af;
     }
   }
-}
-
-.nav {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .mainNav {

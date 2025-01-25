@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
 import styles from "@/styles/pages/login.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -76,6 +77,11 @@ export default function LoginPage() {
               <FaEye className={styles.eyeIcon} />
             )}
           </button>
+        </div>
+        <div className={styles.forgotPassword}>
+          <Link href="/forgot-password" className={styles.forgotPasswordLink}>
+            Mot de passe oublié ?
+          </Link>
         </div>
         <button
           type="submit"

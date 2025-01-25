@@ -57,4 +57,33 @@ final class EmailService
             );
         }
     }
+
+    public function sendPasswordResetEmail(User $user, string $token): void
+    {
+        $resetUrl = "{$this->frontendUrl}/reset-password/{$token}";
+
+        try {
+            $email = (new Email())
+                ->from($this->fromEmail)
+                ->to($user->getEmail())
+                ->subject('Réinitialisation de votre mot de passe Street Fishing')
+                ->html(
+                    "<h1>Réinitialisation de votre mot de passe</h1>
+                    <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.</p>
+                    <p>Pour définir un nouveau mot de passe, cliquez sur ce lien : 
+                        <a href='{$resetUrl}'>Réinitialiser mon mot de passe</a>
+                    </p>
+                    <p>Ce lien est valable pendant 1 heure.</p>
+                    <p>Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>"
+                );
+
+            $this->mailer->send($email);
+        } catch (TransportExceptionInterface $e) {
+            throw new \RuntimeException(
+                'Erreur lors de l\'envoi de l\'email de réinitialisation : ' . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+    }
 }

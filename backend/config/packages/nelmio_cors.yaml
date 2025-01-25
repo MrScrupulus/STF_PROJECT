@@ -15,3 +15,7 @@ nelmio_cors:
       allow_credentials: true
       expose_headers: ["Link"]
       max_age: 3600
+    "^/password-reset/":
+      allow_origin: ["https://localhost:3000"]
+      allow_headers: ["*"]
+      allow_methods: ["POST", "PUT", "GET", "DELETE", "OPTIONS"]

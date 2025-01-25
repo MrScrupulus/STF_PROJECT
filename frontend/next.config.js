@@ -6,6 +6,10 @@ const nextConfig = {
         source: "/api/:path*",
         destination: "https://127.0.0.1:8000/:path*",
       },
+      {
+        source: "/reset-password/:token",
+        destination: "/reset-password/:token",
+      },
     ];
   },
   sassOptions: {

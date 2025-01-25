@@ -63,22 +63,26 @@ export const api = {
       throw error;
     }
   },
-  post: async (endpoint, data) => {
-    try {
-      console.log("Sending request to:", API_URL + endpoint);
-      console.log("Request data:", data);
+  post: async (endpoint, data = {}) => {
+    console.log("Sending request to:", `${API_URL}${endpoint}`);
+    console.log("Request data:", data);
 
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    if (!endpoint.startsWith("/password-reset")) {
       const token = localStorage.getItem("token");
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+    }
 
+    try {
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers,
         credentials: "include",
-        mode: "cors",
         body: JSON.stringify(data),
       });
 

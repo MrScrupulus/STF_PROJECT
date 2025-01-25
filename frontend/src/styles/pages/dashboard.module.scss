@@ -1,131 +1,51 @@
 .dashboardContainer {
-  @apply container mx-auto p-4;
-
-  .title {
-    @apply text-2xl font-bold mb-6;
+  @apply w-full p-4;  // Base mobile
+  
+  .header {
+    @apply flex flex-col gap-4;  // Empilé sur mobile
+    @apply md:flex-row md:justify-between;  // Côte à côte sur tablette+
+    
+    .title {
+      @apply text-lg font-bold;  // Plus petit sur mobile
+      @apply md:text-xl;
+      @apply lg:text-2xl;
+    }
   }
 
   .searchSection {
-    @apply mb-6;
-
-    .searchBar {
-      @apply flex gap-4 mb-4;
-
-      .searchInput {
-        @apply flex-1 p-2 border rounded;
-      }
-
-      .searchSelect {
-        @apply p-2 border rounded;
-      }
+    @apply flex flex-col gap-2;  // Empilé sur mobile
+    @apply md:flex-row;  // Côte à côte sur tablette+
+    
+    input {
+      @apply text-sm;  // Plus petit sur mobile
+      @apply md:text-base;
     }
   }
 
   .contentGrid {
-    @apply flex flex-col gap-6;
+    @apply grid gap-4;  // 1 colonne sur mobile
+    @apply grid-cols-1;
+    @apply md:grid-cols-2;  // 2 colonnes sur tablette
+    @apply lg:grid-cols-3;  // 3 colonnes sur desktop
+  }
 
-    .section {
-      @apply bg-white shadow rounded-lg p-6;
-
-      .sectionTitle {
-        @apply text-xl font-semibold mb-4 flex justify-between items-center;
-
-        .createButton {
-          @apply bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600;
-        }
-      }
-
-      .table {
-        @apply w-full overflow-x-auto;
-
-        table {
-          @apply w-full;
-        }
-
-        .tableHeader {
-          @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase;
-        }
-
-        .tableRow {
-          @apply hover:bg-gray-50 cursor-pointer;
-
-          .tableCell {
-            @apply px-6 py-4;
-
-            // Styles pour les statuts
-            .statusUpcoming {
-              @apply inline-flex px-2 py-1 rounded-full;
-              @apply bg-blue-100 text-blue-700 font-medium;
-            }
-
-            .statusOngoing {
-              @apply inline-flex px-2 py-1 rounded-full;
-              @apply bg-green-100 text-green-700 font-medium;
-            }
-
-            .statusEnded {
-              @apply inline-flex px-2 py-1 rounded-full;
-              @apply bg-red-100 text-red-700 font-medium;
-            }
-          }
-
-          .actionCell {
-            @apply flex gap-2;
-          }
-
-          .editButton {
-            @apply text-blue-600 hover:text-blue-900;
-          }
-
-          .deleteButton {
-            @apply text-red-600 hover:text-red-900;
-          }
-
-          .verifyButton {
-            @apply text-green-600 hover:text-green-800;
-          }
-
-          .verified {
-            @apply text-green-600;
-          }
-
-          .checkboxLabel {
-            @apply relative inline-flex items-center cursor-pointer;
-
-            .checkbox {
-              @apply sr-only;
-            }
-
-            .checkboxBackground {
-              @apply w-11 h-6 bg-red-500 rounded-full transition-all duration-200;
-
-              &:after {
-                content: "";
-                @apply absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-all duration-200;
-              }
-            }
-
-            .checkbox:checked + .checkboxBackground {
-              @apply bg-green-500;
-
-              &:after {
-                @apply translate-x-5;
-              }
-            }
-
-            .checkboxText {
-              @apply ml-3 text-sm;
-
-              .adminText {
-                @apply text-green-600 font-medium;
-              }
-
-              .userText {
-                @apply text-red-600 font-medium;
-              }
-            }
-          }
-        }
+  .table {
+    @apply overflow-x-auto -mx-4 px-4;  // Scroll horizontal sur mobile
+    @apply md:mx-0;  // Pas de scroll sur desktop
+    
+    th {
+      @apply hidden;  // Cacher les en-têtes sur mobile
+      @apply md:table-cell;  // Afficher sur desktop
+    }
+    
+    td {
+      @apply block w-full;  // Empilé sur mobile
+      @apply md:table-cell md:w-auto;  // Normal sur desktop
+      
+      &:before {
+        content: attr(data-label);
+        @apply font-medium mr-2;  // Label sur mobile
+        @apply md:hidden;  // Cacher sur desktop
       }
     }
   }

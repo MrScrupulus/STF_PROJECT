@@ -28,7 +28,12 @@ security:
       provider: app_user_provider
       jwt: ~
     main:
-      pattern: ^/
+      lazy: true
+      provider: app_user_provider
+      json_login:
+        check_path: /auth/login
+        username_path: email
+        password_path: password
       stateless: true
       jwt: ~
   # Easy way to control access for large sections of your site
@@ -36,12 +41,13 @@ security:
   access_control:
     # - { path: ^/admin, roles: ROLE_ADMIN }
     # - { path: ^/profile, roles: ROLE_USER }
-    - { path: ^/auth/register, roles: PUBLIC_ACCESS }
+    - { path: ^/password-reset, roles: PUBLIC_ACCESS }
     - { path: ^/auth/login, roles: PUBLIC_ACCESS }
+    - { path: ^/auth/register, roles: PUBLIC_ACCESS }
     - { path: ^/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/auth/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/admin, roles: ROLE_ADMIN }
-    - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/admin, roles: ROLE_ADMIN }
     - { path: ^/api/competitions, roles: PUBLIC_ACCESS }
     - { path: ^/users/update/password, roles: IS_AUTHENTICATED_FULLY }

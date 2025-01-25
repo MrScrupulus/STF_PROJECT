@@ -7,7 +7,20 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // vos extensions de thème
+      screens: {
+        md: "768px", // Mobile vers tablette
+        lg: "1024px", // Tablette vers desktop
+      },
+      colors: {
+        primary: {
+          DEFAULT: "#2563EB", // Bleu principal
+          dark: "#1E40AF", // Bleu foncé
+        },
+        secondary: {
+          DEFAULT: "#059669", // Vert principal
+          dark: "#047857", // Vert foncé
+        },
+      },
     },
   },
   plugins: [],

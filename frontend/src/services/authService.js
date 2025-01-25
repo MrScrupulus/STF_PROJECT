@@ -83,4 +83,27 @@ export const authService = {
     localStorage.removeItem("token");
     window.location.href = "/login";
   },
+
+  requestPasswordReset: async (email) => {
+    try {
+      const response = await api.post("/password-reset/request", { email });
+      return response;
+    } catch (error) {
+      console.error("Password reset request error:", error);
+      throw error;
+    }
+  },
+
+  resetPassword: async (token, newPassword) => {
+    try {
+      const response = await api.post("/password-reset/reset", {
+        token,
+        password: newPassword,
+      });
+      return response;
+    } catch (error) {
+      console.error("Password reset error:", error);
+      throw error;
+    }
+  },
 };
