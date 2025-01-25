@@ -174,3 +174,72 @@
     transform: scale(1);
   }
 }
+
+.passwordSection {
+  @apply mt-8;
+
+  h2 {
+    @apply text-xl font-semibold mb-4;
+  }
+
+  .passwordHint {
+    @apply text-sm text-gray-600 mb-4;
+    @apply italic;
+  }
+
+  form {
+    @apply space-y-4;
+
+    .formGroup {
+      @apply flex flex-col;
+
+      label {
+        @apply mb-1 text-sm font-medium text-gray-700;
+      }
+
+      input {
+        @apply p-2 border border-gray-300 rounded-md;
+        @apply focus:outline-none focus:ring-2 focus:ring-blue-500;
+        @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+      }
+
+      .passwordInput {
+        @apply relative;
+
+        input {
+          @apply w-full pr-10;
+        }
+
+        .eyeIcon {
+          @apply absolute top-1/2 right-3 transform -translate-y-1/2;
+          @apply text-gray-500 hover:text-gray-700 cursor-pointer;
+          @apply focus:outline-none;
+          background: none;
+          border: none;
+          padding: 0;
+
+          svg {
+            @apply w-4 h-4;
+          }
+        }
+      }
+
+      .passwordHint {
+        @apply mt-1 text-sm text-gray-500;
+        &.valid {
+          @apply text-green-600;
+        }
+      }
+
+      .passwordError {
+        @apply mt-1 text-sm text-red-500 font-medium;
+      }
+    }
+
+    button[type="submit"] {
+      @apply w-full mt-6 py-2 px-4 bg-blue-600 text-white rounded-md;
+      @apply hover:bg-blue-700 transition-colors duration-200;
+      @apply disabled:bg-blue-400 disabled:cursor-not-allowed;
+    }
+  }
+}

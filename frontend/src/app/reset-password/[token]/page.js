@@ -76,6 +76,10 @@ export default function ResetPasswordPage({ params }) {
       {!success ? (
         <form onSubmit={handleSubmit}>
           {error && <div className={styles.error}>{error}</div>}
+          <p className={styles.passwordHint}>
+            Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1
+            caractère spécial
+          </p>
           <div className={styles.passwordContainer}>
             <input
               type={showPassword ? "text" : "password"}

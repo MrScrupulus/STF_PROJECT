@@ -36,6 +36,8 @@ export default function Profile() {
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -119,21 +121,40 @@ export default function Profile() {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    setPasswordError("");
+
+    const validatePassword = (password) => {
+      const minLength = password.length >= 8;
+      const hasLetter = /[a-zA-Z]/.test(password);
+      const hasNumber = /\d/.test(password);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      if (!minLength || !hasLetter || !hasNumber || !hasSpecial) {
+        return false;
+      }
+      return true;
+    };
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (!validatePassword(passwordData.newPassword)) {
+      setPasswordError(
+        "Le mot de passe doit contenir au moins 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial"
+      );
+      return;
+    }
 
     try {
-      await userService.updatePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
+      await userService.updatePassword(passwordData);
+      setPasswordSuccess(true);
       setIsEditing(false);
     } catch (error) {
       setError(
         error.message || "Erreur lors de la mise à jour du mot de passe"
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -321,7 +342,7 @@ export default function Profile() {
               {(passwordFieldFocused || passwordData.newPassword.length > 0) &&
                 passwordData.newPassword.length < 8 && (
                   <span className={styles.passwordError}>
-                    8 caractères minimum
+                    Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial
                   </span>
                 )}
             </div>
