@@ -67,7 +67,8 @@ export const authService = {
   getCurrentUser: async () => {
     try {
       const response = await api.get("/auth/me");
-      return response;
+      console.log("Auth service response:", response); // Pour déboguer
+      return response; // Devrait retourner { success: true, user: {...} }
     } catch (error) {
       console.error("Error getting current user:", error);
       throw error;

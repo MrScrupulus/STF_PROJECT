@@ -1,4 +1,4 @@
-const API_URL = "https://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://localhost:8000";
 
 const getHeaders = () => {
   const headers = {
@@ -45,19 +45,18 @@ const handleResponse = async (response) => {
 export const api = {
   get: async (endpoint) => {
     try {
-      const token = localStorage.getItem("token");
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-      };
-
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "GET",
-        headers,
-        credentials: "include",
-        mode: "cors",
+        headers: getHeaders(),
       });
-      return handleResponse(response);
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || `Error ${response.status}`);
+      }
+
+      return responseData;
     } catch (error) {
       console.error("API error:", error);
       throw error;
@@ -82,7 +81,6 @@ export const api = {
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
         headers,
-        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -139,23 +137,15 @@ export const api = {
       const token = localStorage.getItem("token");
       const headers = {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
       };
-
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
 
       const response = await fetch(API_URL + endpoint, {
         method: "DELETE",
         headers,
-        credentials: "include",
-        mode: "cors",
       });
 
       const responseData = await response.json();
-      console.log("Response status:", response.status);
-      console.log("Response data:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || `Error ${response.status}`);

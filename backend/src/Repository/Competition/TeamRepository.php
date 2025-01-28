@@ -50,7 +50,6 @@ class TeamRepository extends ServiceEntityRepository
             ->leftJoin('t.competition', 'comp')
             ->where('m = :user')
             ->setParameter('user', $user)
-            ->orderBy('t.registrationNumber', 'ASC')
             ->getQuery()
             ->getResult();
     }
@@ -68,6 +67,18 @@ class TeamRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('t')
             ->select('t', 'm')
             ->leftJoin('t.members', 'm')
+            ->orderBy('t.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findAllWithDetails(): array
+    {
+        return $this->createQueryBuilder('t')
+            ->select('t', 'm', 'c', 's')
+            ->leftJoin('t.members', 'm')
+            ->leftJoin('t.catches', 'c')
+            ->leftJoin('c.species', 's')
             ->orderBy('t.id', 'DESC')
             ->getQuery()
             ->getResult();

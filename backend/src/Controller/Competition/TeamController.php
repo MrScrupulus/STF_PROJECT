@@ -13,12 +13,15 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\Competition\CompetitionRepository;
 use App\DTO\Competition\CreateTeamRequest;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route('/teams', name: 'team_')]
 class TeamController extends AbstractController
 {
     public function __construct(
-        private LoggerInterface $logger
+        private LoggerInterface $logger,
+        private EntityManagerInterface $entityManager,
+        private SerializerInterface $serializer
     ) {}
 
     private function isTeamMember(Team $team): bool
@@ -31,7 +34,7 @@ class TeamController extends AbstractController
     public function index(TeamRepository $repository): JsonResponse
     {
         try {
-            $teams = $repository->findAll();
+            $teams = $repository->findAllWithDetails();
 
             // Debug
             $this->logger->debug('Teams data:', [
@@ -50,7 +53,7 @@ class TeamController extends AbstractController
                 'success' => true,
                 'teams' => $teams
             ], 200, [], [
-                'groups' => ['team:read', 'user:read'],
+                'groups' => ['team:read', 'user:read', 'catch:read', 'species:read'],
                 'circular_reference_handler' => function ($object) {
                     return $object->getId();
                 }
@@ -70,9 +73,7 @@ class TeamController extends AbstractController
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(
         Request $request,
-        EntityManagerInterface $em,
-        UserRepository $userRepo,
-        TeamRepository $teamRepo
+        UserRepository $userRepository
     ): JsonResponse {
         try {
             $data = json_decode($request->getContent(), true);
@@ -102,7 +103,7 @@ class TeamController extends AbstractController
             }
 
             // Vérifier si l'utilisateur connecté a déjà une équipe
-            $existingTeam = $teamRepo->findTeamsByMember($user);
+            $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($user);
             if (count($existingTeam) > 0) {
                 return $this->json([
                     'success' => false,
@@ -111,7 +112,7 @@ class TeamController extends AbstractController
             }
 
             // Validation du second participant
-            $participant2 = $userRepo->findOneByEmail($data['participant2Email']);
+            $participant2 = $userRepository->findOneByEmail($data['participant2Email']);
             if (!$participant2) {
                 return $this->json([
                     'success' => false,
@@ -120,7 +121,7 @@ class TeamController extends AbstractController
             }
 
             // Vérifier si le second participant a déjà une équipe
-            $existingTeam2 = $teamRepo->findTeamsByMember($participant2);
+            $existingTeam2 = $this->entityManager->getRepository(Team::class)->findTeamsByMember($participant2);
             if (count($existingTeam2) > 0) {
                 return $this->json([
                     'success' => false,
@@ -141,8 +142,8 @@ class TeamController extends AbstractController
             $team->addMember($user);
             $team->addMember($participant2);
 
-            $em->persist($team);
-            $em->flush();
+            $this->entityManager->persist($team);
+            $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
@@ -229,7 +230,7 @@ class TeamController extends AbstractController
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
-    public function update(Team $team, Request $request, EntityManagerInterface $em): JsonResponse
+    public function update(Team $team, Request $request): JsonResponse
     {
         if (!$this->isTeamMember($team)) {
             return $this->json([
@@ -245,7 +246,7 @@ class TeamController extends AbstractController
                 $team->setName($data['name']);
             }
 
-            $em->flush();
+            $this->entityManager->flush();
 
             return $this->json([
                 'success' => true,
@@ -260,27 +261,54 @@ class TeamController extends AbstractController
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    public function delete(Team $team, EntityManagerInterface $em): JsonResponse
+    public function delete(Team $team): JsonResponse
     {
         if (!$this->isTeamMember($team)) {
             return $this->json([
-                'success' => false,
                 'message' => 'Vous devez être membre de l\'équipe pour la supprimer'
             ], 403);
         }
 
         try {
-            $em->remove($team);
-            $em->flush();
+            $this->entityManager->remove($team);
+            $this->entityManager->flush();
 
             return $this->json([
-                'success' => true,
                 'message' => 'Équipe supprimée avec succès'
             ]);
         } catch (\Exception $e) {
             return $this->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression de l\'équipe: ' . $e->getMessage()
+                'message' => 'Erreur lors de la suppression: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/{id}/leave', name: 'team_leave', methods: ['POST'])]
+    public function leaveTeam(Team $team): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$team->getMembers()->contains($user)) {
+            return $this->json([
+                'message' => 'Vous n\'êtes pas membre de cette équipe'
+            ], 403);
+        }
+
+        try {
+            $team->removeMember($user);
+
+            // Si l'équipe n'a plus de membres, la supprimer
+            if ($team->getMembers()->isEmpty()) {
+                $this->entityManager->remove($team);
+            }
+
+            $this->entityManager->flush();
+
+            return $this->json([
+                'message' => 'Vous avez quitté l\'équipe avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'message' => 'Erreur lors du départ de l\'équipe: ' . $e->getMessage()
             ], 500);
         }
     }

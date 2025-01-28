@@ -1,0 +1,77 @@
+.container {
+  @apply max-w-2xl mx-auto p-6;
+
+  h1 {
+    @apply text-2xl font-bold mb-6;
+  }
+
+  .errorAlert {
+    @apply mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md;
+    @apply animate-shake;
+  }
+
+  .successAlert {
+    @apply mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md;
+    @apply animate-fadeIn;
+  }
+
+  .form {
+    @apply space-y-6;
+
+    .formGroup {
+      @apply flex flex-col gap-2;
+
+      label {
+        @apply text-sm font-medium text-gray-700;
+      }
+
+      input {
+        @apply p-2 border border-gray-300 rounded-md;
+        @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+        @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+      }
+    }
+
+    .buttonGroup {
+      @apply flex justify-end gap-4 mt-6;
+
+      .cancelButton {
+        @apply px-4 py-2 bg-gray-200 text-gray-700 rounded-md;
+        @apply hover:bg-gray-300 transition-colors;
+        @apply disabled:bg-gray-100 disabled:cursor-not-allowed;
+      }
+
+      .submitButton {
+        @apply px-4 py-2 bg-blue-500 text-white rounded-md;
+        @apply hover:bg-blue-600 transition-colors;
+        @apply disabled:bg-blue-300 disabled:cursor-not-allowed;
+      }
+    }
+  }
+}
+
+// Animation pour le message d'erreur
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.6s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}

@@ -4,6 +4,7 @@ namespace App\Entity\Species;
 
 use App\Repository\Species\SpeciesRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: SpeciesRepository::class)]
 class Species
@@ -11,13 +12,16 @@ class Species
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['species:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['species:read', 'catch:read'])]
     private ?string $name = null;
 
-    #[ORM\Column(type: 'float')]
-    private float $coefficient = 1.0;
+    #[ORM\Column]
+    #[Groups(['species:read'])]
+    private ?float $coefficient = null;
 
     #[ORM\Column]
     private int $basePoints = 50;

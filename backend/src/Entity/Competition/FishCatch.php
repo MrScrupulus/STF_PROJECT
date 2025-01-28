@@ -5,79 +5,57 @@ namespace App\Entity\Competition;
 use App\Entity\Species\Species;
 use App\Repository\Competition\FishCatchRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: FishCatchRepository::class)]
+#[ORM\Table(name: 'fish_catch')]
 class FishCatch
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['catch:read'])]
     private ?int $id = null;
 
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Species $species = null;
-
-    #[ORM\Column]
-    private ?float $length = null;
-
-    #[ORM\Column]
-    private ?int $points = null;
-
-    #[ORM\ManyToOne(inversedBy: 'catches')]
+    #[ORM\ManyToOne(targetEntity: Team::class, inversedBy: 'catches')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Team $team = null;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $catchTime = null;
+    #[ORM\ManyToOne(targetEntity: Species::class)]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['catch:read'])]
+    private ?Species $species = null;
 
     #[ORM\Column]
-    private ?bool $isValidated = false;
+    #[Groups(['catch:read'])]
+    private ?float $size = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $photoUrl = null;
+    #[ORM\Column]
+    #[Groups(['catch:read'])]
+    private bool $isValidated = false;
+
+    #[ORM\Column]
+    #[Groups(['catch:read'])]
+    private ?\DateTimeImmutable $createdAt;
+
+    public function __construct()
+    {
+        $this->createdAt = new \DateTimeImmutable();
+    }
 
     public function calculatePoints(): int
     {
-        if (!$this->species || !$this->length) {
+        if (!$this->species || !$this->size) {
             return 0;
         }
 
-        return (int) ($this->length * $this->species->getCoefficient() * $this->species->getBasePoints());
+        return (int) ($this->size * $this->species->getCoefficient() * $this->species->getBasePoints());
     }
 
     // Getters et Setters...
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getSpecies(): ?Species
-    {
-        return $this->species;
-    }
-
-    public function setSpecies(?Species $species): self
-    {
-        $this->species = $species;
-        return $this;
-    }
-
-    public function getLength(): ?float
-    {
-        return $this->length;
-    }
-
-    public function setLength(float $length): self
-    {
-        $this->length = $length;
-        $this->points = $this->calculatePoints();
-        return $this;
-    }
-
-    public function getPoints(): ?int
-    {
-        return $this->points;
     }
 
     public function getTeam(): ?Team
@@ -91,18 +69,29 @@ class FishCatch
         return $this;
     }
 
-    public function getCatchTime(): ?\DateTimeImmutable
+    public function getSpecies(): ?Species
     {
-        return $this->catchTime;
+        return $this->species;
     }
 
-    public function setCatchTime(\DateTimeImmutable $catchTime): self
+    public function setSpecies(?Species $species): self
     {
-        $this->catchTime = $catchTime;
+        $this->species = $species;
         return $this;
     }
 
-    public function isValidated(): ?bool
+    public function getSize(): ?float
+    {
+        return $this->size;
+    }
+
+    public function setSize(float $size): self
+    {
+        $this->size = $size;
+        return $this;
+    }
+
+    public function isValidated(): bool
     {
         return $this->isValidated;
     }
@@ -113,14 +102,8 @@ class FishCatch
         return $this;
     }
 
-    public function getPhotoUrl(): ?string
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
-        return $this->photoUrl;
-    }
-
-    public function setPhotoUrl(?string $photoUrl): static
-    {
-        $this->photoUrl = $photoUrl;
-        return $this;
+        return $this->createdAt;
     }
 }

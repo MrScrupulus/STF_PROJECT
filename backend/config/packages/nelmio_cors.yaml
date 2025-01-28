@@ -7,15 +7,8 @@ nelmio_cors:
     expose_headers: ["Link"]
     max_age: 3600
   paths:
-    "^/":
-      origin_regex: true
-      allow_origin: ["^https?://localhost:[0-9]+"]
-      allow_headers: ["*"]
-      allow_methods: ["POST", "PUT", "GET", "DELETE", "PATCH", "OPTIONS"]
-      allow_credentials: true
-      expose_headers: ["Link"]
-      max_age: 3600
-    "^/password-reset/":
-      allow_origin: ["https://localhost:3000"]
+    "^/api/":
+      allow_origin: ["*"]
       allow_headers: ["*"]
       allow_methods: ["POST", "PUT", "GET", "DELETE", "OPTIONS"]
+      max_age: 3600

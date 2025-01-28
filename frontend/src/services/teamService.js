@@ -24,8 +24,15 @@ export const teamService = {
   },
   update: (competitionId, id, data) =>
     api.put(`/competitions/${competitionId}/teams/${id}`, data),
-  delete: (competitionId, id) =>
-    api.delete(`/competitions/${competitionId}/teams/${id}`),
+  delete: async (teamId) => {
+    try {
+      const response = await api.delete(`/teams/${teamId}`);
+      return response;
+    } catch (error) {
+      console.error("Error deleting team:", error);
+      throw error;
+    }
+  },
   getMyTeams: async () => {
     try {
       const response = await api.get("/teams/my-teams");
@@ -57,6 +64,33 @@ export const teamService = {
       return response;
     } catch (error) {
       console.error("Error registering team to competition:", error);
+      throw error;
+    }
+  },
+  inviteMember: async (teamId, email) => {
+    try {
+      const response = await api.post(`/teams/${teamId}/invite`, { email });
+      return response;
+    } catch (error) {
+      console.error("Error inviting member:", error);
+      throw error;
+    }
+  },
+  removeMember: async (teamId, userId) => {
+    try {
+      const response = await api.delete(`/teams/${teamId}/members/${userId}`);
+      return response;
+    } catch (error) {
+      console.error("Error removing member:", error);
+      throw error;
+    }
+  },
+  leaveTeam: async (teamId) => {
+    try {
+      const response = await api.post(`/teams/${teamId}/leave`);
+      return response;
+    } catch (error) {
+      console.error("Error leaving team:", error);
       throw error;
     }
   },

@@ -24,12 +24,15 @@ class Team
     private ?string $name = null;
 
     #[ORM\OneToMany(mappedBy: 'team', targetEntity: FishCatch::class)]
+    #[Groups(['team:read'])]
     private Collection $catches;
 
     #[ORM\Column]
+    #[Groups(['team:read'])]
     private ?int $totalScore = 0;
 
     #[ORM\Column]
+    #[Groups(['team:read'])]
     private ?bool $hasBonus = false;
 
     #[ORM\ManyToOne(inversedBy: 'teams')]
@@ -42,6 +45,7 @@ class Team
     private Collection $members;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['team:read'])]
     private ?int $registrationNumber = null;
 
     public function __construct()
