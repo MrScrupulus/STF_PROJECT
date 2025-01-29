@@ -32,15 +32,17 @@ export const authService = {
       const transformedData = {
         email: userData.email,
         password: userData.password,
-        firstname: userData.firstName,
-        lastname: userData.lastName,
-        phone_number: userData.phoneNumber,
-        birthdate: userData.birthDate
-          ? new Date(userData.birthDate).toISOString().split("T")[0]
+        firstname: userData.firstname,
+        lastname: userData.lastname,
+        phone_number: userData.phone_number,
+        birthdate: userData.birth_date
+          ? new Date(userData.birth_date).toISOString().split("T")[0]
           : null,
         country: userData.country,
-        subscriber_number: userData.subscriberNumber,
+        subscriber_number: userData.subscriber_number,
       };
+
+      console.log('Données transformées:', transformedData); // Pour déboguer
 
       const response = await api.post("/auth/register", transformedData);
 

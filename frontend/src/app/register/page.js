@@ -84,6 +84,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Données envoyées:', formData);
     setError("");
     setIsLoading(true);
 

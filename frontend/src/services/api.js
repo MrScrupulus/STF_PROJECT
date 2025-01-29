@@ -113,8 +113,6 @@ export const api = {
       const response = await fetch(API_URL + endpoint, {
         method: "PUT",
         headers,
-        credentials: "include",
-        mode: "cors",
         body: data ? JSON.stringify(data) : null,
       });
 
