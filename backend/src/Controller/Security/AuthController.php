@@ -202,18 +202,29 @@ final class AuthController extends AbstractController
         ]);
     }
 
-    #[Route('/me', name: 'auth_me', methods: ['GET'])]
+    #[Route('/me', name: 'auth_me', methods: ['GET', 'OPTIONS'])]
     public function getCurrentUser(): JsonResponse
     {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ], 401);
+        $response = new JsonResponse();
+        $response->headers->set('Access-Control-Allow-Origin', 'https://localhost:3000');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            return $response;
         }
 
-        return $this->json([
+        $user = $this->getUser();
+        if (!$user) {
+            $response->setData([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ]);
+            $response->setStatusCode(401);
+            return $response;
+        }
+
+        $response->setData([
             'success' => true,
             'user' => [
                 'id' => $user->getId(),
@@ -227,6 +238,8 @@ final class AuthController extends AbstractController
                 'subscriber_number' => $user->getSubscriberNumber(),
             ]
         ]);
+
+        return $response;
     }
 
     #[Route('/verify-email/{token}', name: 'verify_email', methods: ['POST'])]

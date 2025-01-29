@@ -45,12 +45,17 @@ const handleResponse = async (response) => {
 export const api = {
   get: async (endpoint) => {
     try {
+      console.log("Calling endpoint:", `${API_URL}${endpoint}`);
+      console.log("Headers:", getHeaders());
+
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "GET",
         headers: getHeaders(),
       });
 
+      console.log("Response status:", response.status);
       const responseData = await response.json();
+      console.log("Response data:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || `Error ${response.status}`);
