@@ -37,6 +37,17 @@ export default function CompetitionsList() {
     }
   };
 
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
+
   if (loading) return <div>Chargement...</div>;
 
   return (
@@ -72,11 +83,28 @@ export default function CompetitionsList() {
                 <p>
                   <span className="font-medium">Type:</span> {competition.type}
                 </p>
-                <p>
-                  <span className="font-medium">Dates:</span>{" "}
-                  {new Date(competition.startDate).toLocaleDateString()} -{" "}
-                  {new Date(competition.endDate).toLocaleDateString()}
-                </p>
+                <div className="text-sm">
+                  <p>
+                    <span className="font-medium">Début:</span>{" "}
+                    {formatDateTime(competition.startDate)}
+                  </p>
+                  <p>
+                    <span className="font-medium">Fin:</span>{" "}
+                    {formatDateTime(competition.endDate)}
+                  </p>
+                </div>
+                {competition.maxParticipants && (
+                  <p className="text-sm">
+                    <span className="font-medium">Places:</span>{" "}
+                    {competition.maxParticipants} équipes maximum
+                  </p>
+                )}
+                {competition.teamSize && (
+                  <p className="text-sm">
+                    <span className="font-medium">Taille des équipes:</span>{" "}
+                    {competition.teamSize} pêcheurs
+                  </p>
+                )}
                 <Link
                   href={`/competitions/${competition.id}/register`}
                   className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"

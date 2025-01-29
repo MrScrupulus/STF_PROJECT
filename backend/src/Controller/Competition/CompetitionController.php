@@ -50,9 +50,25 @@ class CompetitionController extends AbstractController
     {
         try {
             $competitions = $repository->findAll();
+
+            // Transformer les données comme dans la route admin
+            $data = array_map(function ($competition) {
+                return [
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                    'type' => $competition->getType(),
+                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
+                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'description' => $competition->getDescription(),
+                    'maxParticipants' => $competition->getMaxParticipants(),
+                    'teamSize' => $competition->getTeamSize(),
+                    'hasNoLimit' => $competition->getHasNoLimit(),
+                ];
+            }, $competitions);
+
             return $this->json([
                 'success' => true,
-                'competitions' => $competitions
+                'competitions' => $data
             ]);
         } catch (\Exception $e) {
             return $this->json([
