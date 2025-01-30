@@ -284,7 +284,7 @@ final class AuthController extends AbstractController
 
     private function generateVerificationUrl(string $token): string
     {
-        // Utilisez HTTPS au lieu de HTTP
+        // Utiliser HTTPS au lieu de HTTP
         return "https://localhost:3000/verify-email/{$token}";
     }
 }

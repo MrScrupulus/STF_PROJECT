@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[Route('/users/update')]
 class UpdateController extends AbstractController
@@ -19,6 +21,7 @@ class UpdateController extends AbstractController
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly EmailService $emailService,
+        private readonly ValidatorInterface $validator,
     ) {}
 
     #[Route('/profile', name: 'app_update_profile', methods: ['PUT'])]
@@ -104,6 +107,26 @@ class UpdateController extends AbstractController
             return $this->json([
                 'message' => 'Les mots de passe sont requis'
             ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validation du nouveau mot de passe
+        $constraints = new Assert\Collection([
+            'password' => [
+                new Assert\NotBlank(),
+                new Assert\Length(['min' => 8]),
+                new Assert\Regex([
+                    'pattern' => '/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/',
+                    'message' => 'Le mot de passe doit contenir au moins une lettre, un chiffre et un caractère spécial',
+                ]),
+            ],
+        ]);
+
+        $errors = $this->validator->validate(['password' => $data['newPassword']], $constraints);
+        if (count($errors) > 0) {
+            return $this->json([
+                'success' => false,
+                'message' => $errors[0]->getMessage(),
+            ], 400);
         }
 
         // Vérifier l'ancien mot de passe

@@ -1,51 +1,87 @@
 .dashboardContainer {
-  @apply w-full p-4;  // Base mobile
-  
-  .header {
-    @apply flex flex-col gap-4;  // Empilé sur mobile
-    @apply md:flex-row md:justify-between;  // Côte à côte sur tablette+
-    
-    .title {
-      @apply text-lg font-bold;  // Plus petit sur mobile
-      @apply md:text-xl;
-      @apply lg:text-2xl;
-    }
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  grid-template-areas:
+    "title title"
+    "search search"
+    "users competitions"
+    "species teams";
+
+  @media (max-width: 1024px) {
+    grid-template-areas:
+      "title"
+      "search"
+      "users"
+      "competitions"
+      "species"
+      "teams";
+  }
+
+  .title {
+    grid-area: title;
+    @apply text-2xl font-bold mb-4;
   }
 
   .searchSection {
-    @apply flex flex-col gap-2;  // Empilé sur mobile
-    @apply md:flex-row;  // Côte à côte sur tablette+
-    
-    input {
-      @apply text-sm;  // Plus petit sur mobile
-      @apply md:text-base;
-    }
+    grid-area: search;
+    @apply bg-white rounded-lg shadow p-4;
   }
 
-  .contentGrid {
-    @apply grid gap-4;  // 1 colonne sur mobile
-    @apply grid-cols-1;
-    @apply md:grid-cols-2;  // 2 colonnes sur tablette
-    @apply lg:grid-cols-3;  // 3 colonnes sur desktop
+  .usersSection {
+    grid-area: users;
+    @apply bg-white rounded-lg shadow;
   }
 
+  .competitionsSection {
+    grid-area: competitions;
+    @apply bg-white rounded-lg shadow;
+  }
+
+  .speciesSection {
+    grid-area: species;
+    @apply bg-white rounded-lg shadow;
+  }
+
+  .teamsSection {
+    grid-area: teams;
+    @apply bg-white rounded-lg shadow;
+  }
+
+  // Styles pour les tables responsives
   .table {
-    @apply overflow-x-auto -mx-4 px-4;  // Scroll horizontal sur mobile
-    @apply md:mx-0;  // Pas de scroll sur desktop
-    
-    th {
-      @apply hidden;  // Cacher les en-têtes sur mobile
-      @apply md:table-cell;  // Afficher sur desktop
+    @apply w-full overflow-x-auto;
+
+    table {
+      @apply min-w-full;
     }
-    
-    td {
-      @apply block w-full;  // Empilé sur mobile
-      @apply md:table-cell md:w-auto;  // Normal sur desktop
-      
-      &:before {
-        content: attr(data-label);
-        @apply font-medium mr-2;  // Label sur mobile
-        @apply md:hidden;  // Cacher sur desktop
+
+    @media (max-width: 768px) {
+      // Transformer les tables en cards sur mobile
+      table,
+      thead,
+      tbody,
+      tr,
+      th,
+      td {
+        @apply block;
+      }
+
+      thead tr {
+        @apply hidden;
+      }
+
+      tr {
+        @apply mb-4 rounded-lg shadow p-3 bg-white;
+      }
+
+      td {
+        @apply flex justify-between items-center py-2;
+
+        &:before {
+          content: attr(data-label);
+          @apply font-bold mr-2;
+        }
       }
     }
   }

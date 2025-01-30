@@ -36,8 +36,7 @@ security:
         password_path: password
       stateless: true
       jwt: ~
-  # Easy way to control access for large sections of your site
-  # Note: Only the *first* access control that matches will be used
+  
   access_control:
     # - { path: ^/admin, roles: ROLE_ADMIN }
     # - { path: ^/profile, roles: ROLE_USER }
@@ -57,6 +56,6 @@ when@test:
     password_hashers:
       Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
         algorithm: auto
-        cost: 4 # Lowest possible value for bcrypt
-        time_cost: 3 # Lowest possible value for argon
-        memory_cost: 10 # Lowest possible value for argon
+        cost: 4 
+        time_cost: 
+        memory_cost: 10 

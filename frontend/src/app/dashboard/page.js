@@ -631,8 +631,8 @@ export default function Dashboard() {
       <div className={styles.dashboardContainer}>
         <h1 className={styles.title}>Bureau de l'ombre</h1>
 
-        {/* Barre de recherche globale */}
         <div className={styles.searchSection}>
+          {/* Barre de recherche globale */}
           <div className={styles.searchBar}>
             <div className={styles.searchInput}>
               <input
@@ -675,242 +675,215 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Section Compétitions */}
-        <div className={styles.contentGrid}>
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>
-              <h2>Compétitions</h2>
-              <Link
-                href="/dashboard/competitions/create"
-                className={styles.createButton}
-              >
-                Créer une compétition
-              </Link>
-            </div>
-            <div className={styles.table}>
-              <table>
-                <thead>
-                  <tr>
-                    <th className={styles.tableHeader}>Nom</th>
-                    <th className={styles.tableHeader}>Type</th>
-                    <th className={styles.tableHeader}>Date</th>
-                    <th className={styles.tableHeader}>Statut</th>
-                    <th className={styles.tableHeader}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCompetitions.map((competition) => (
-                    <tr
-                      key={competition.id}
-                      className={styles.tableRow}
-                      onClick={() => {
-                        setSelectedCompetition(competition);
-                        setShowCompetitionModal(true);
-                      }}
-                    >
-                      <td className={styles.tableCell}>{competition.name}</td>
-                      <td className={styles.tableCell}>{competition.type}</td>
-                      <td className={styles.tableCell}>
-                        {new Date(competition.startDate).toLocaleDateString()}
-                      </td>
-                      <td className={styles.tableCell}>
-                        <span
-                          className={
-                            getCompetitionStatus(
-                              competition.startDate,
-                              competition.endDate
-                            ).className
-                          }
-                        >
-                          {
-                            getCompetitionStatus(
-                              competition.startDate,
-                              competition.endDate
-                            ).text
-                          }
-                        </span>
-                      </td>
-                      <td className={styles.tableCell}>
-                        <button className={styles.editButton}>Modifier</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Section Utilisateurs */}
-          <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Utilisateurs</h2>
-            <div className={styles.table}>
-              <table>
-                <thead>
-                  <tr>
-                    <th className={styles.tableHeader}>Email</th>
-                    <th className={styles.tableHeader}>Nom</th>
-                    <th className={styles.tableHeader}>Prénom</th>
-                    <th className={styles.tableHeader}>N° Adhérent</th>
-                    <th className={styles.tableHeader}>Vérifié</th>
-                    <th className={styles.tableHeader}>Rôle Admin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className={styles.tableRow}
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowModal(true);
-                      }}
-                    >
-                      <td className={styles.tableCell}>{user.email}</td>
-                      <td className={styles.tableCell}>{user.lastname}</td>
-                      <td className={styles.tableCell}>{user.firstname}</td>
-                      <td className={styles.tableCell}>
-                        {user.subscriberNumber}
-                      </td>
-                      <td className={styles.tableCell}>
-                        {user.isVerified ? (
-                          <span className={styles.verified}>✓</span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleVerifyUser(user.id);
-                            }}
-                            className={styles.verifyButton}
-                          >
-                            Valider
-                          </button>
-                        )}
-                      </td>
-                      <td
-                        className={styles.tableCell}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <label className={styles.checkboxLabel}>
-                          <input
-                            type="checkbox"
-                            className={styles.checkbox}
-                            checked={user.roles.includes("ROLE_ADMIN")}
-                            onChange={() => handleToggleRole(user.id)}
-                          />
-                          <div className={styles.checkboxBackground}></div>
-                          <span className={styles.checkboxText}>
-                            {user.roles.includes("ROLE_ADMIN") ? (
-                              <span className={styles.adminText}>Admin</span>
-                            ) : (
-                              <span className={styles.userText}>User</span>
-                            )}
-                          </span>
-                        </label>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {showModal && (
-              <UserDetailsModal
-                user={selectedUser}
-                onClose={() => {
-                  setShowModal(false);
-                  setSelectedUser(null);
-                }}
-              />
-            )}
-          </div>
-
-          {/* Section Espèces */}
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>
-              <h2>Espèces</h2>
-              <button
-                onClick={() => {
-                  setSelectedSpecies(null);
-                  setShowSpeciesModal(true);
-                }}
-                className={styles.createButton}
-              >
-                Ajouter une espèce
-              </button>
-            </div>
-            <div className={styles.table}>
-              <table>
-                <thead>
-                  <tr>
-                    <th className={styles.tableHeader}>Nom</th>
-                    <th className={styles.tableHeader}>Coefficient</th>
-                    <th className={styles.tableHeader}>Points bonus</th>
-                    <th className={styles.tableHeader}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {species.map((specie) => (
-                    <tr
-                      key={specie.id}
-                      className={styles.tableRow}
-                      onClick={() => {
-                        setSelectedSpecies(specie);
-                        setShowSpeciesModal(true);
-                      }}
-                    >
-                      <td className={styles.tableCell}>{specie.name}</td>
-                      <td className={styles.tableCell}>{specie.coefficient}</td>
-                      <td className={styles.tableCell}>{specie.basePoints}</td>
-                      <td className={styles.tableCell}>
-                        <button className={styles.editButton}>Modifier</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Section des équipes */}
-          <div className={styles.section}>
-            <div className={styles.sectionTitle}>
-              <h2>Équipes</h2>
-            </div>
-            <div className={styles.table}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nom de l'équipe</th>
-                    <th>Membres</th>
-                    <th>Compétition</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teams.map((team) => (
-                    <tr key={team.id}>
-                      <td>{team.name}</td>
-                      <td>
-                        {team.members
-                          .map(
-                            (member) => `${member.firstname} ${member.lastname}`
-                          )
-                          .join(", ")}
-                      </td>
-                      <td>{team.competition?.name || "Aucune"}</td>
-                      <td>
+        <div className={styles.usersSection}>
+          <h2>Utilisateurs</h2>
+          <div className={styles.table}>
+            <table>
+              <thead>
+                <tr>
+                  <th className={styles.tableHeader}>Email</th>
+                  <th className={styles.tableHeader}>Nom</th>
+                  <th className={styles.tableHeader}>Prénom</th>
+                  <th className={styles.tableHeader}>N° Adhérent</th>
+                  <th className={styles.tableHeader}>Vérifié</th>
+                  <th className={styles.tableHeader}>Rôle Admin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr
+                    key={user.id}
+                    className={styles.tableRow}
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setShowModal(true);
+                    }}
+                  >
+                    <td className={styles.tableCell}>{user.email}</td>
+                    <td className={styles.tableCell}>{user.lastname}</td>
+                    <td className={styles.tableCell}>{user.firstname}</td>
+                    <td className={styles.tableCell}>
+                      {user.subscriberNumber}
+                    </td>
+                    <td className={styles.tableCell}>
+                      {user.isVerified ? (
+                        <span className={styles.verified}>✓</span>
+                      ) : (
                         <button
-                          onClick={() => handleEditTeam(team)}
-                          className={styles.editButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVerifyUser(user.id);
+                          }}
+                          className={styles.verifyButton}
                         >
-                          Modifier
+                          Valider
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                    </td>
+                    <td
+                      className={styles.tableCell}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <label className={styles.checkboxLabel}>
+                        <input
+                          type="checkbox"
+                          className={styles.checkbox}
+                          checked={user.roles.includes("ROLE_ADMIN")}
+                          onChange={() => handleToggleRole(user.id)}
+                        />
+                        <div className={styles.checkboxBackground}></div>
+                        <span className={styles.checkboxText}>
+                          {user.roles.includes("ROLE_ADMIN") ? (
+                            <span className={styles.adminText}>Admin</span>
+                          ) : (
+                            <span className={styles.userText}>User</span>
+                          )}
+                        </span>
+                      </label>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {showModal && (
+            <UserDetailsModal
+              user={selectedUser}
+              onClose={() => {
+                setShowModal(false);
+                setSelectedUser(null);
+              }}
+            />
+          )}
+        </div>
+
+        <div className={styles.competitionsSection}>
+          <h2>Compétitions</h2>
+          <div className={styles.table}>
+            <table>
+              <thead>
+                <tr>
+                  <th className={styles.tableHeader}>Nom</th>
+                  <th className={styles.tableHeader}>Type</th>
+                  <th className={styles.tableHeader}>Date</th>
+                  <th className={styles.tableHeader}>Statut</th>
+                  <th className={styles.tableHeader}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCompetitions.map((competition) => (
+                  <tr
+                    key={competition.id}
+                    className={styles.tableRow}
+                    onClick={() => {
+                      setSelectedCompetition(competition);
+                      setShowCompetitionModal(true);
+                    }}
+                  >
+                    <td className={styles.tableCell}>{competition.name}</td>
+                    <td className={styles.tableCell}>{competition.type}</td>
+                    <td className={styles.tableCell}>
+                      {new Date(competition.startDate).toLocaleDateString()}
+                    </td>
+                    <td className={styles.tableCell}>
+                      <span
+                        className={
+                          getCompetitionStatus(
+                            competition.startDate,
+                            competition.endDate
+                          ).className
+                        }
+                      >
+                        {
+                          getCompetitionStatus(
+                            competition.startDate,
+                            competition.endDate
+                          ).text
+                        }
+                      </span>
+                    </td>
+                    <td className={styles.tableCell}>
+                      <button className={styles.editButton}>Modifier</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className={styles.speciesSection}>
+          <h2>Espèces</h2>
+          <div className={styles.table}>
+            <table>
+              <thead>
+                <tr>
+                  <th className={styles.tableHeader}>Nom</th>
+                  <th className={styles.tableHeader}>Coefficient</th>
+                  <th className={styles.tableHeader}>Points bonus</th>
+                  <th className={styles.tableHeader}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {species.map((specie) => (
+                  <tr
+                    key={specie.id}
+                    className={styles.tableRow}
+                    onClick={() => {
+                      setSelectedSpecies(specie);
+                      setShowSpeciesModal(true);
+                    }}
+                  >
+                    <td className={styles.tableCell}>{specie.name}</td>
+                    <td className={styles.tableCell}>{specie.coefficient}</td>
+                    <td className={styles.tableCell}>{specie.basePoints}</td>
+                    <td className={styles.tableCell}>
+                      <button className={styles.editButton}>Modifier</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className={styles.teamsSection}>
+          <h2>Équipes</h2>
+          <div className={styles.table}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Nom de l'équipe</th>
+                  <th>Membres</th>
+                  <th>Compétition</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teams.map((team) => (
+                  <tr key={team.id}>
+                    <td>{team.name}</td>
+                    <td>
+                      {team.members
+                        .map(
+                          (member) => `${member.firstname} ${member.lastname}`
+                        )
+                        .join(", ")}
+                    </td>
+                    <td>{team.competition?.name || "Aucune"}</td>
+                    <td>
+                      <button
+                        onClick={() => handleEditTeam(team)}
+                        className={styles.editButton}
+                      >
+                        Modifier
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
