@@ -6,6 +6,7 @@ use App\Entity\Security\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -39,6 +40,13 @@ class UserController extends AbstractController
                 'roles' => $user->getRoles(),
             ]
         ]);
+    }
+
+    #[Route('/profile', name: 'app_user_update', methods: ['POST'])]
+    public function updateProfile(Request $request): JsonResponse
+    {
+        // Implementation of updateProfile method
+        return $this->json(['message' => 'Update profile method not implemented']);
     }
 
     #[Route('/profile', name: 'app_user_delete', methods: ['DELETE'])]

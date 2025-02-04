@@ -285,9 +285,13 @@ export default function RegisterPage() {
             <input
               type="date"
               value={formData.birth_date}
-              onChange={(e) =>
-                setFormData({ ...formData, birth_date: e.target.value })
-              }
+              onChange={(e) => {
+                console.log("Date sélectionnée:", {
+                  rawValue: e.target.value,
+                  type: typeof e.target.value,
+                });
+                setFormData({ ...formData, birth_date: e.target.value });
+              }}
               className={styles.register__input}
               required
             />

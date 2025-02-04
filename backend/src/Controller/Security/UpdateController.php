@@ -13,8 +13,9 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Validator\Constraints as Assert;
+use Psr\Log\LoggerInterface;
 
-#[Route('/users/update')]
+#[Route('/auth')]
 class UpdateController extends AbstractController
 {
     public function __construct(
@@ -22,40 +23,58 @@ class UpdateController extends AbstractController
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly EmailService $emailService,
         private readonly ValidatorInterface $validator,
+        private readonly LoggerInterface $logger,
     ) {}
 
-    #[Route('/profile', name: 'app_update_profile', methods: ['PUT'])]
+    #[Route('/profile', name: 'update_profile', methods: ['POST'])]
     public function updateProfile(Request $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $this->getUser();
-        $data = json_decode($request->getContent(), true);
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé'
+                ], Response::HTTP_NOT_FOUND);
+            }
 
-        // Mise à jour des informations de base
-        if (isset($data['firstname'])) $user->setFirstname($data['firstname']);
-        if (isset($data['lastname'])) $user->setLastname($data['lastname']);
-        if (isset($data['phoneNumber'])) $user->setPhoneNumber($data['phoneNumber']);
-        if (isset($data['country'])) $user->setCountry($data['country']);
-        if (isset($data['birthdate'])) $user->setBirthDate(new \DateTime($data['birthdate']));
-        if (isset($data['subscriberNumber'])) $user->setSubscriberNumber($data['subscriberNumber']);
+            $data = json_decode($request->getContent(), true);
+            $this->logger->info('Données reçues pour mise à jour:', ['data' => $data]);
 
-        $this->entityManager->flush();
+            if (isset($data['firstname'])) $user->setFirstname($data['firstname']);
+            if (isset($data['lastname'])) $user->setLastname($data['lastname']);
+            if (isset($data['email'])) $user->setEmail($data['email']);
+            if (isset($data['phone_number'])) $user->setPhoneNumber($data['phone_number']);
+            if (isset($data['birthdate'])) {
+                $birthdate = $data['birthdate'] ? new \DateTime($data['birthdate']) : null;
+                $user->setBirthDate($birthdate);
+            }
+            if (isset($data['country'])) $user->setCountry($data['country']);
+            if (isset($data['subscriber_number'])) $user->setSubscriberNumber($data['subscriber_number']);
 
-        return $this->json([
-            'message' => 'Profil mis à jour avec succès',
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'firstname' => $user->getFirstname(),
-                'lastname' => $user->getLastname(),
-                'subscriberNumber' => $user->getSubscriberNumber(),
-                'phoneNumber' => $user->getPhoneNumber(),
-                'country' => $user->getCountry(),
-                'birthdate' => $user->getBirthDate()?->format('Y-m-d'),
-                'isVerified' => $user->isVerified(),
-                'roles' => $user->getRoles(),
-            ]
-        ]);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Profil mis à jour avec succès',
+                'user' => [
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'email' => $user->getEmail(),
+                    'phone_number' => $user->getPhoneNumber(),
+                    'birth_date' => $user->getBirthDate()?->format('Y-m-d'),
+                    'country' => $user->getCountry(),
+                    'subscriber_number' => $user->getSubscriberNumber()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur mise à jour profil:', ['error' => $e->getMessage()]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour du profil'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/email', name: 'app_update_email', methods: ['PUT'])]

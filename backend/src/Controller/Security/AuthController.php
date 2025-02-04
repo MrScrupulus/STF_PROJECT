@@ -34,7 +34,7 @@ final class AuthController extends AbstractController
         private readonly JWTTokenManagerInterface $jwtManager,
     ) {}
 
-    #[Route('/register', name: 'register', methods: ['POST'])]
+    #[Route('/register', name: 'auth_register', methods: ['POST'])]
     public function register(
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
@@ -43,7 +43,7 @@ final class AuthController extends AbstractController
         try {
             $this->logger->info('Début de la requête register');
             $data = json_decode($request->getContent(), true);
-            $this->logger->debug('Données reçues', ['data' => $data]);
+            $this->logger->info('Données reçues:', ['data' => $data]);
 
             if (!is_array($data)) {
                 return $this->json([
@@ -110,13 +110,44 @@ final class AuthController extends AbstractController
             }
 
             // Validation du format de la date
-            try {
-                new \DateTime($data['birthdate']);
-            } catch (\Exception $e) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Format de date invalide',
-                ], 400);
+            $this->logger->info('Date reçue:', ['birthdate' => $data['birthdate'] ?? null]);
+            if (isset($data['birthdate']) && $data['birthdate']) {
+                try {
+                    $birthDate = new \DateTime($data['birthdate']);
+                    $this->logger->info('Date convertie:', ['date' => $birthDate->format('Y-m-d')]);
+                    $user = new User();
+                    $user->setEmail($data['email']);
+                    $user->setPassword($passwordHasher->hashPassword($user, $data['password']));
+                    $user->setFirstname($data['firstname']);
+                    $user->setLastname($data['lastname']);
+                    $user->setPhoneNumber($data['phone_number'] ?? null);
+                    $user->setCountry($data['country'] ?? null);
+                    $user->setBirthDate($birthDate);
+                    $user->setSubscriberNumber($data['subscriber_number']);
+                    $verificationToken = bin2hex(random_bytes(32));
+                    error_log("Longueur du token généré: " . strlen($verificationToken));
+                    error_log("Token généré lors de l'inscription: " . $verificationToken);
+                    $user->setVerificationToken($verificationToken);
+                    $user->setIsVerified(false);
+                    $user->setRoles(['ROLE_USER']);
+
+                    $this->entityManager->persist($user);
+                    $this->entityManager->flush();
+
+                    error_log("Envoi de l'email avec le token: " . $verificationToken);
+                    $this->emailService->sendVerificationEmail($user);
+
+                    return $this->json([
+                        'success' => true,
+                        'message' => 'Inscription réussie. Veuillez vérifier votre email.',
+                    ]);
+                } catch (\Exception $e) {
+                    $this->logger->error('Erreur conversion date:', ['error' => $e->getMessage()]);
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Une erreur est survenue lors de la conversion de la date',
+                    ], 500);
+                }
             }
 
             $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
@@ -312,12 +343,4 @@ final class AuthController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-
-    private function generateVerificationUrl(string $token): string
-    {
-        // Utiliser HTTPS au lieu de HTTP
-        return "https://localhost:3000/verify-email/{$token}";
-    }
-
-    
 }

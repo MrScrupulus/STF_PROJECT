@@ -5,138 +5,119 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 import styles from "@/styles/pages/account.module.scss";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import Modal from "@/components/ui/Modal";
 
 export default function AccountPage() {
   const router = useRouter();
-  const [userData, setUserData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await authService.getCurrentUser();
         if (response.success) {
-          setUserData(response.user);
-        } else {
-          setError("Impossible de récupérer les informations du compte");
+          setUser(response.user);
         }
       } catch (error) {
-        setError(error.message || "Une erreur est survenue");
+        setError(error.message);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchUserData();
-  }, []);
+  }, []); // Dépendances vides pour n'exécuter qu'une seule fois
 
-  if (isLoading) return <div className={styles.loading}>Chargement...</div>;
-  if (error) return <div className={styles.error}>{error}</div>;
-  if (!userData) return null;
+  const handleDeleteAccount = async () => {
+    try {
+      await authService.deleteAccount();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>Erreur: {error}</div>;
+  if (!user) return <div>Utilisateur non trouvé</div>;
 
   return (
     <ProtectedRoute>
       <div className={styles.account__container}>
-        <h1 className={styles.account__title}>Mon Compte</h1>
-
-        <div className={styles.account__card}>
-          <section className={styles.account__section}>
-            <h2 className={styles.account__section_title}>
-              Informations personnelles
-            </h2>
-            <div className={styles.account__grid}>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>Prénom</span>
-                <div className={styles.account__value}>
-                  {userData.firstname}
-                </div>
-              </div>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>Nom</span>
-                <div className={styles.account__value}>{userData.lastname}</div>
-              </div>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>Email</span>
-                <div className={styles.account__value}>{userData.email}</div>
-              </div>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>Téléphone</span>
-                <div className={styles.account__value}>
-                  {userData.phone_number || "Non renseigné"}
-                </div>
-              </div>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>Pays</span>
-                <div className={styles.account__value}>
-                  {userData.country || "Non renseigné"}
-                </div>
-              </div>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>Date de naissance</span>
-                <div className={styles.account__value}>
-                  {userData.birth_date
-                    ? new Date(userData.birth_date).toLocaleDateString()
-                    : "Non renseigné"}
-                </div>
-              </div>
-              <div className={styles.account__field}>
-                <span className={styles.account__label}>N° Adhérent</span>
-                <div className={styles.account__value}>
-                  {userData.subscriber_number || "Non renseigné"}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.account__section}>
-            <h2 className={styles.account__section_title}>Statistiques</h2>
-            <div className={styles.account__stats}>
-              <div className={styles.account__stat}>
-                <div className={styles.account__stat_value}>
-                  {userData.competitions?.length || 0}
-                </div>
-                <div className={styles.account__stat_label}>Compétitions</div>
-              </div>
-              <div className={styles.account__stat}>
-                <div className={styles.account__stat_value}>
-                  {userData.catches?.length || 0}
-                </div>
-                <div className={styles.account__stat_label}>Prises</div>
-              </div>
-              <div className={styles.account__stat}>
-                <div className={styles.account__stat_value}>
-                  {userData.teams?.length || 0}
-                </div>
-                <div className={styles.account__stat_label}>Équipes</div>
-              </div>
-            </div>
-          </section>
-
-          <div className={styles.account__actions}>
-            <button
-              onClick={() => router.push("/account/edit")}
-              className={`${styles.account__button} ${styles["account__button--edit"]}`}
-            >
-              Modifier le profil
-            </button>
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Êtes-vous sûr de vouloir supprimer votre compte ?"
-                  )
-                ) {
-                  // TODO: Implémenter la suppression du compte
-                }
-              }}
-              className={`${styles.account__button} ${styles["account__button--delete"]}`}
-            >
-              Supprimer le compte
-            </button>
+        <h1 className={styles.account__title}>Mon Profil</h1>
+        <div className={styles.account__content}>
+          <div className={styles.account__info}>
+            <p>
+              <strong>Nom:</strong> {user.lastname}
+            </p>
+            <p>
+              <strong>Prénom:</strong> {user.firstname}
+            </p>
+            <p>
+              <strong>Email:</strong> {user.email}
+            </p>
+            <p>
+              <strong>Téléphone:</strong> {user.phone_number || "Non renseigné"}
+            </p>
+            <p>
+              <strong>Date de naissance:</strong>{" "}
+              {user.birth_date || "Non renseigné"}
+            </p>
+            <p>
+              <strong>Pays:</strong> {user.country || "Non renseigné"}
+            </p>
+            <p>
+              <strong>Numéro de licence:</strong>{" "}
+              {user.subscriber_number || "Non renseigné"}
+            </p>
           </div>
+          <button
+            onClick={() => router.push("/account/edit")}
+            className={styles.account__edit_button}
+          >
+            Modifier mon profil
+          </button>
+        </div>
+        <div className={styles.account__danger_zone}>
+          <h2>Zone dangereuse</h2>
+          <p>
+            La suppression de votre compte est irréversible. Toutes vos données
+            seront définitivement effacées.
+          </p>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className={styles.account__danger_zone_button}
+          >
+            Supprimer mon compte
+          </button>
         </div>
       </div>
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Confirmer la suppression"
+      >
+        <p>
+          Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est
+          irréversible.
+        </p>
+        <div className={styles.modal__actions}>
+          <button
+            onClick={() => setShowDeleteModal(false)}
+            className={styles.modal__button_cancel}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            className={styles.modal__button_confirm}
+          >
+            Confirmer la suppression
+          </button>
+        </div>
+      </Modal>
     </ProtectedRoute>
   );
 }

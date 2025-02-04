@@ -76,23 +76,26 @@ export function Header() {
 
   const fetchUser = async () => {
     try {
-      console.log("Fetching user data...");
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log("No token found, skipping user fetch");
+        console.log("🔒 Aucun token trouvé, utilisateur non connecté");
         setLoading(false);
         return;
       }
 
-      const response = await authService.getCurrentUser();
-      // Stocker uniquement l'objet user, pas la réponse complète
-      setUser(response.user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      if (error.status === 401) {
-        localStorage.removeItem("token");
+      const userData = await authService.getCurrentUser();
+      if (userData.success) {
+        setUser(userData.user);
       }
-      setError(error);
+    } catch (error) {
+      // Ne pas afficher d'erreur si c'est juste que l'utilisateur n'est pas connecté
+      if (error.message !== "Invalid credentials.") {
+        console.error(
+          "❌ Erreur lors de la récupération de l'utilisateur:",
+          error
+        );
+        setError(error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -114,7 +117,7 @@ export function Header() {
   }
 
   if (error) {
-    return <div className={styles.error}>Erreur: {error.message}</div>;
+    return <div className={styles.error}>Erreur: {error}</div>;
   }
 
   // Rendu conditionnel du menu selon la taille d'écran
