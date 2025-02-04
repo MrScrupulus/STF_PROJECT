@@ -1,6 +1,7 @@
 "use client";
 
 import { createElement } from "react";
+import styles from "@/styles/components/Navigation.module.scss";
 
 export default function Navigation() {
   const navItems = [
@@ -14,20 +15,33 @@ export default function Navigation() {
     { href: "/competitions", text: "Compétitions" },
   ];
 
-  return createElement("nav", {
-    className: "bg-gray-800 text-white p-4",
-    children: createElement("ul", {
-      className: "flex space-x-4",
-      children: navItems.map((item) =>
-        createElement("li", {
-          key: item.href,
-          children: createElement("a", {
-            href: item.href,
-            className: "hover:text-gray-300",
-            children: item.text,
-          }),
-        })
-      ),
-    }),
-  });
+  return createElement(
+    "nav",
+    {
+      className: styles.nav,
+    },
+    createElement(
+      "ul",
+      {
+        className: styles.nav__list,
+      },
+      navItems.map((item) =>
+        createElement(
+          "li",
+          {
+            key: item.href,
+            className: styles.nav__item,
+          },
+          createElement(
+            "a",
+            {
+              href: item.href,
+              className: styles.nav__link,
+            },
+            item.text
+          )
+        )
+      )
+    )
+  );
 }

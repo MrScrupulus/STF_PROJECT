@@ -1,34 +1,62 @@
 .homeContainer {
-  @apply container mx-auto p-4;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
 
   .hero {
-    @apply text-center py-12;
+    text-align: center;
+    padding: 3rem 0;
 
     .title {
-      @apply text-4xl font-bold mb-4;
+      font-size: 2.25rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
     }
 
     .subtitle {
-      @apply text-xl text-gray-600 mb-8;
+      font-size: 1.25rem;
+      color: #666;
+      margin-bottom: 2rem;
     }
 
     .ctaButton {
-      @apply bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors;
+      background-color: #3b82f6;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #2563eb;
+      }
     }
   }
 
   .featuresGrid {
-    @apply grid grid-cols-1 md:grid-cols-3 gap-8 mt-12;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 3rem;
+    
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
 
     .featureCard {
-      @apply bg-white p-6 rounded-lg shadow;
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
       .featureTitle {
-        @apply text-xl font-semibold mb-3;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
       }
 
       .featureDescription {
-        @apply text-gray-600;
+        color: #666;
       }
     }
   }

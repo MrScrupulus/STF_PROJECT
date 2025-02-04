@@ -8,6 +8,32 @@ import Link from "next/link";
 import { speciesService } from "@/services/speciesService";
 import styles from "@/styles/pages/dashboard.module.scss";
 import { authService } from "@/services/authService";
+import { createElement } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+// Définir les en-têtes pour chaque section
+const TABLE_HEADERS = {
+  users: [
+    { id: "name", label: "Nom" },
+    { id: "firstname", label: "Prénom" },
+    { id: "email", label: "Email" },
+    { id: "role", label: "Rôle" },
+    { id: "verified", label: "Statut Email" },
+  ],
+  competitions: [
+    { id: "name", label: "Titre" },
+    { id: "startDate", label: "Date et heure" },
+    { id: "status", label: "Statut" },
+  ],
+  species: [
+    { id: "name", label: "Nom" },
+    { id: "coefficient", label: "Coefficient" },
+  ],
+  teams: [
+    { id: "name", label: "Nom de l'équipe" },
+    { id: "size", label: "Membres" },
+  ],
+};
 
 export default function Dashboard() {
   const [users, setUsers] = useState([]);
@@ -27,7 +53,33 @@ export default function Dashboard() {
   const [selectedSpecies, setSelectedSpecies] = useState(null);
   const [showSpeciesModal, setShowSpeciesModal] = useState(false);
   const [teams, setTeams] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [showTeamModal, setShowTeamModal] = useState(false);
   const router = useRouter();
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: () => ({
+      users: {
+        total: users.length,
+        active: users.filter((u) => u.isVerified).length,
+      },
+      competitions: {
+        total: competitions.length,
+        active: competitions.filter((c) => new Date(c.endDate) > new Date())
+          .length,
+      },
+      teams: {
+        total: teams.length,
+        registered: teams.filter((t) => t.isRegistered).length,
+      },
+      species: {
+        total: species.length,
+        bonus: species.filter((s) => s.isBonus).length,
+      },
+    }),
+  });
 
   const fetchData = async () => {
     try {
@@ -40,30 +92,43 @@ export default function Dashboard() {
           adminService.getTeams(),
         ]);
 
-      console.log("Admin data received:", {
-        users: usersData,
-        competitions: competitionsData,
-        species: speciesData,
-        teams: teamsData,
+      // Logs détaillés pour chaque réponse
+      console.log("Users raw data:", usersData);
+      console.log("Competitions raw data:", competitionsData);
+      console.log("Species raw data:", speciesData);
+      console.log("Teams raw data:", teamsData);
+
+      // Extraction des données avec vérification de la structure
+      const processedUsers = Array.isArray(usersData)
+        ? usersData
+        : usersData?.users || [];
+      const processedCompetitions = competitionsData?.competitions || [];
+      const processedSpecies = Array.isArray(speciesData)
+        ? speciesData
+        : speciesData?.data || [];
+      const processedTeams = Array.isArray(teamsData)
+        ? teamsData
+        : teamsData?.teams || [];
+
+      // Log des données traitées
+      console.log("Processed data:", {
+        users: processedUsers,
+        competitions: processedCompetitions,
+        species: processedSpecies,
+        teams: processedTeams,
       });
 
-      setUsers(usersData || []);
-      setCompetitions(competitionsData?.competitions || []);
-      setSpecies(speciesData || []);
-      setTeams(teamsData || []);
+      // Mise à jour du state avec vérification
+      setUsers(processedUsers);
+      setCompetitions(processedCompetitions);
+      setSpecies(processedSpecies);
+      setTeams(processedTeams);
+
       setLoading(false);
     } catch (error) {
-      console.error("Detailed fetch error:", {
-        message: error.message,
-        status: error.status,
-        fullError: error,
-      });
+      console.error("Fetch error:", error);
       setError("Erreur lors du chargement des données");
       setLoading(false);
-      if (error.status === 401) {
-        console.log("Authentication error during data fetch");
-        return;
-      }
     }
   };
 
@@ -147,17 +212,11 @@ export default function Dashboard() {
   };
 
   const handleToggleRole = async (userId) => {
-    if (
-      window.confirm(
-        "Êtes-vous sûr de vouloir modifier le rôle de cet utilisateur ?"
-      )
-    ) {
-      try {
-        await adminService.toggleUserRole(userId);
-        fetchData();
-      } catch (error) {
-        console.error("Error toggling role:", error);
-      }
+    try {
+      await adminService.toggleUserRole(userId);
+      fetchData();
+    } catch (error) {
+      console.error("Error toggling role:", error);
     }
   };
 
@@ -219,694 +278,894 @@ export default function Dashboard() {
     }
   };
 
-  const UserDetailsModal = ({ user, onClose }) => {
-    if (!user) return null;
+  const RoleSwitch = ({ isAdmin, onToggle }) => {
+    return createElement(
+      "div",
+      { className: styles.switch__container },
+      createElement("button", {
+        className: `${styles.switch__toggle} ${
+          isAdmin ? styles["switch__toggle--admin"] : ""
+        }`,
+        onClick: onToggle,
+        "aria-label": "Toggle role",
+      }),
+      createElement(
+        "span",
+        { className: styles.switch__label },
+        isAdmin ? "Admin" : "User"
+      )
+    );
+  };
 
-    return (
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Détails de l'utilisateur</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
+  const ConfirmModal = ({ message, onConfirm, onCancel }) => {
+    return createElement(
+      "div",
+      {
+        className: styles.modal__overlay,
+        onClick: (e) => {
+          if (e.target === e.currentTarget) onCancel();
+        },
+      },
+      createElement(
+        "div",
+        { className: styles.modal__content },
+        createElement(
+          "div",
+          { className: styles.modal__header },
+          createElement("h2", null, "Confirmation")
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__body },
+          createElement("p", null, message)
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__actions },
+          createElement(
+            "button",
+            {
+              onClick: onConfirm,
+              className: `${styles.modal__button} ${styles["modal__button--confirm"]}`,
+            },
+            "Confirmer"
+          ),
+          createElement(
+            "button",
+            {
+              onClick: onCancel,
+              className: `${styles.modal__button} ${styles["modal__button--cancel"]}`,
+            },
+            "Annuler"
+          )
+        )
+      )
+    );
+  };
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="font-semibold mb-2">Informations personnelles</h3>
-              <p>
-                <span className="font-medium">Email:</span> {user.email}
-              </p>
-              <p>
-                <span className="font-medium">Nom:</span> {user.lastname}
-              </p>
-              <p>
-                <span className="font-medium">Prénom:</span> {user.firstname}
-              </p>
-              <p>
-                <span className="font-medium">N° Adhérent:</span>{" "}
-                {user.subscriberNumber}
-              </p>
-              <p>
-                <span className="font-medium">Date de naissance:</span>{" "}
-                {user.birthdate
-                  ? new Date(user.birthdate).toLocaleDateString()
-                  : "Non renseignée"}
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Coordonnées</h3>
-              <p>
-                <span className="font-medium">Pays:</span> {user.country}
-              </p>
-              <p>
-                <span className="font-medium">Téléphone:</span>{" "}
-                {user.phoneNumber}
-              </p>
-              <p>
-                <span className="font-medium">Statut:</span>{" "}
-                {user.isVerified ? (
-                  <span className="text-green-600">Vérifié</span>
-                ) : (
-                  <span className="text-red-600">Non vérifié</span>
-                )}
-              </p>
-              <p>
-                <span className="font-medium">Rôle:</span>{" "}
-                {user.roles.join(", ")}
-              </p>
-            </div>
-          </div>
+  const UserDetailsModal = ({ user, onClose, onDelete, onUpdate }) => {
+    const [isAdminLocal, setIsAdminLocal] = useState(
+      user.roles?.includes("ROLE_ADMIN")
+    );
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-          <div className="mt-6 flex justify-end items-center space-x-3">
-            {!user.isVerified && (
-              <button
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Êtes-vous sûr de vouloir valider ce profil ?"
-                    )
-                  ) {
-                    handleVerifyUser(user.id);
-                    onClose();
-                  }
-                }}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-              >
-                Valider le profil
-              </button>
-            )}
-            <button
-              onClick={() => {
-                router.push(`/dashboard/users/${user.id}/edit`);
-                onClose();
-              }}
-              className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-            >
-              Modifier
-            </button>
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Êtes-vous sûr de vouloir supprimer cet utilisateur ?"
-                  )
-                ) {
-                  handleDeleteUser(user.id);
-                  onClose();
-                }
-              }}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Supprimer
-            </button>
-            <button
-              onClick={onClose}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      </div>
+    const handleRoleToggle = () => {
+      setShowConfirm(true);
+    };
+
+    const handleDelete = () => {
+      setShowDeleteConfirm(true);
+    };
+
+    const handleConfirmToggle = async () => {
+      try {
+        await handleToggleRole(user.id);
+        setIsAdminLocal(!isAdminLocal);
+        setShowConfirm(false);
+        onClose();
+      } catch (error) {
+        console.error("Error toggling role:", error);
+      }
+    };
+
+    const handleConfirmDelete = async () => {
+      try {
+        await onDelete(user.id);
+        setShowDeleteConfirm(false);
+        onClose();
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      }
+    };
+
+    useEffect(() => {
+      setIsAdminLocal(user.roles?.includes("ROLE_ADMIN"));
+    }, [user]);
+
+    const userFields = [
+      { label: "Prénom", value: user.firstname },
+      { label: "Nom", value: user.lastname },
+      { label: "Email", value: user.email },
+      { label: "N° Adhérent", value: user.subscriberNumber },
+      { label: "Rôles", value: user.roles?.join(", ") },
+      { label: "Téléphone", value: user.phoneNumber },
+      { label: "Pays", value: user.country },
+      {
+        label: "Date de naissance",
+        value: user.birthdate
+          ? new Date(user.birthdate).toLocaleDateString()
+          : "",
+      },
+      { label: "Statut", value: user.isVerified ? "Vérifié" : "Non vérifié" },
+    ];
+
+    return createElement(
+      "div",
+      { className: styles.modal__overlay },
+      createElement(
+        "div",
+        { className: styles.modal__content },
+        createElement(
+          "div",
+          { className: styles.modal__header },
+          createElement("h2", null, "Détails de l'utilisateur"),
+          createElement(
+            "button",
+            { onClick: onClose, className: styles.modal__close },
+            "×"
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__body },
+          createElement(
+            "div",
+            { className: styles.user__details },
+            userFields.map((field) =>
+              createElement(
+                "div",
+                { key: field.label, className: styles.user__field },
+                createElement(
+                  "span",
+                  { className: styles.user__label },
+                  field.label
+                ),
+                createElement(
+                  "span",
+                  { className: styles.user__value },
+                  field.value || "Non renseigné"
+                )
+              )
+            )
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__actions },
+          createElement(RoleSwitch, {
+            isAdmin: isAdminLocal,
+            onToggle: handleRoleToggle,
+          }),
+          createElement(
+            "div",
+            { className: styles.modal__buttons },
+            createElement(
+              "button",
+              {
+                onClick: () => onUpdate(user),
+                className: `${styles.modal__button} ${styles["modal__button--primary"]}`,
+              },
+              "Modifier"
+            ),
+            createElement(
+              "button",
+              {
+                onClick: handleDelete,
+                className: `${styles.modal__button} ${styles["modal__button--danger"]}`,
+              },
+              "Supprimer"
+            )
+          )
+        )
+      ),
+      showConfirm &&
+        createElement(ConfirmModal, {
+          message: `Êtes-vous sûr de vouloir ${
+            isAdminLocal ? "retirer" : "ajouter"
+          } les droits administrateur pour cet utilisateur ?`,
+          onConfirm: handleConfirmToggle,
+          onCancel: () => setShowConfirm(false),
+        }),
+      showDeleteConfirm &&
+        createElement(ConfirmModal, {
+          message: "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
+          onConfirm: handleConfirmDelete,
+          onCancel: () => setShowDeleteConfirm(false),
+        })
     );
   };
 
   const CompetitionDetailsModal = ({ competition, onClose }) => {
-    return (
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold">{competition.name}</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="font-semibold text-gray-700">Dates :</p>
-              <p>
-                Début :{" "}
-                <span className="text-green-600">
-                  {new Date(competition.startDate).toLocaleString()}
-                </span>
-              </p>
-              <p>
-                Fin :{" "}
-                <span className="text-green-600">
-                  {new Date(competition.endDate).toLocaleString()}
-                </span>
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-700">
-                Type :{" "}
-                <span className="text-green-600">{competition.type}</span>
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-700">
-                Taille des équipes :{" "}
-                <span className="text-green-600">{competition.teamSize}</span>
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-700">
-                Nombre maximum de participants :{" "}
-                <span className="text-green-600">
-                  {competition.maxParticipants || "Sans limite"}
-                </span>
-              </p>
-            </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // TODO: Ajouter la logique de modification
-                }}
-              >
-                Modifier
-              </button>
-              <button
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (
-                    window.confirm(
-                      "Êtes-vous sûr de vouloir supprimer cette compétition ?"
-                    )
-                  ) {
-                    handleDeleteCompetition(competition.id);
-                    onClose();
-                  }
-                }}
-              >
-                Supprimer
-              </button>
-              <button
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                onClick={onClose}
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    const [showConfirm, setShowConfirm] = useState(false);
+    const status = getCompetitionStatus(
+      competition.startDate,
+      competition.endDate
+    );
+
+    const handleDelete = () => {
+      setShowConfirm(true);
+    };
+
+    const handleConfirmDelete = async () => {
+      try {
+        await handleDeleteCompetition(competition.id);
+        setShowConfirm(false);
+        onClose();
+      } catch (error) {
+        console.error("Error deleting competition:", error);
+      }
+    };
+
+    const competitionFields = [
+      { label: "Titre", value: competition.name },
+      {
+        label: "Date de début",
+        value: new Date(competition.startDate).toLocaleString(),
+      },
+      {
+        label: "Date de fin",
+        value: new Date(competition.endDate).toLocaleString(),
+      },
+      { label: "Type", value: competition.type },
+      {
+        label: "Statut",
+        value: status.text,
+        className: status.className,
+      },
+      {
+        label: "Taille des équipes",
+        value:
+          typeof competition.teamSize === "number"
+            ? `${competition.teamSize} pêcheur${
+                competition.teamSize > 1 ? "s" : ""
+              }`
+            : "Non définie",
+      },
+      {
+        label: "Participants max",
+        value: competition.maxParticipants
+          ? `${competition.maxParticipants} équipes`
+          : "Sans limite",
+      },
+    ];
+
+    return createElement(
+      "div",
+      { className: styles.modal__overlay },
+      createElement(
+        "div",
+        { className: styles.modal__content },
+        createElement(
+          "div",
+          { className: styles.modal__header },
+          createElement("h2", null, "Détails de la compétition"),
+          createElement(
+            "button",
+            { onClick: onClose, className: styles.modal__close },
+            "×"
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__body },
+          competitionFields.map((field) =>
+            createElement(
+              "div",
+              { key: field.label, className: styles.user__field },
+              createElement(
+                "span",
+                { className: styles.user__label },
+                field.label
+              ),
+              createElement(
+                "span",
+                {
+                  className: `${styles.user__value} ${field.className || ""}`,
+                },
+                field.value || "Non renseigné"
+              )
+            )
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__actions },
+          createElement(
+            "div",
+            { className: styles.modal__buttons },
+            createElement(
+              "button",
+              {
+                onClick: () =>
+                  router.push(`/dashboard/competitions/${competition.id}/edit`),
+                className: `${styles.modal__button} ${styles["modal__button--primary"]}`,
+              },
+              "Modifier"
+            ),
+            createElement(
+              "button",
+              {
+                onClick: handleDelete,
+                className: `${styles.modal__button} ${styles["modal__button--danger"]}`,
+              },
+              "Supprimer"
+            )
+          )
+        )
+      ),
+      showConfirm &&
+        createElement(ConfirmModal, {
+          message: "Êtes-vous sûr de vouloir supprimer cette compétition ?",
+          onConfirm: handleConfirmDelete,
+          onCancel: () => setShowConfirm(false),
+        })
     );
   };
 
   const SpeciesDetailsModal = ({ species, onClose }) => {
-    const [editMode, setEditMode] = useState(false);
     const [editData, setEditData] = useState({
-      name: species.name,
-      coefficient: species.coefficient,
-      basePoints: species.basePoints,
-      isBonus: species.name.toLowerCase() === "espèce bonus",
+      name: species?.name || "",
+      coefficient: species?.coefficient?.toString() || "0",
+      basePoints: species?.basePoints?.toString() || "50",
     });
+    const [showConfirm, setShowConfirm] = useState(false);
+    const isCreating = !species;
 
-    const handleUpdate = async () => {
+    const handleSave = () => {
+      setShowConfirm(true);
+    };
+
+    const handleConfirmSave = async () => {
       try {
         const dataToSend = {
           name: editData.name,
-          coefficient:
-            editData.name.toLowerCase() === "espèce bonus"
-              ? 1
-              : parseFloat(editData.coefficient),
-          basePoints: editData.name.toLowerCase() === "espèce bonus" ? 50 : 50,
+          coefficient: parseFloat(editData.coefficient) || 0,
+          basePoints: parseInt(editData.basePoints) || 50,
         };
 
-        if (species) {
-          await speciesService.update(species.id, dataToSend);
-        } else {
+        if (isCreating) {
           await speciesService.create(dataToSend);
+        } else {
+          await speciesService.update(species.id, dataToSend);
         }
         fetchData();
+        setShowConfirm(false);
         onClose();
       } catch (error) {
-        console.error("Error updating/creating species:", error);
+        console.error("Error saving species:", error);
       }
     };
 
-    const isBonus = editData.name.toLowerCase() === "espèce bonus";
-
-    return (
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold">
-              {species ? "Modifier l'espèce" : "Ajouter une espèce"}
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-
-          {editMode ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Nom de l'espèce
-                </label>
-                <input
-                  type="text"
-                  value={editData.name}
-                  onChange={(e) =>
-                    setEditData({ ...editData, name: e.target.value })
-                  }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              {!isBonus && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Coefficient
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={editData.coefficient}
-                    onChange={(e) =>
-                      setEditData({ ...editData, coefficient: e.target.value })
-                    }
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Points bonus
-                </label>
-                <input
-                  type="number"
-                  value={editData.basePoints}
-                  onChange={(e) =>
+    return createElement(
+      "div",
+      { className: styles.modal__overlay },
+      createElement(
+        "div",
+        { className: styles.modal__content },
+        createElement(
+          "div",
+          { className: styles.species_modal__header },
+          createElement("h2", null, "Détails de l'espèce"),
+          createElement(
+            "button",
+            { onClick: onClose, className: styles.modal__close },
+            "×"
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.species_modal__body },
+          createElement(
+            "div",
+            { className: styles.species_modal__form },
+            createElement(
+              "div",
+              { className: styles.species_modal__field },
+              createElement(
+                "label",
+                { className: styles.species_modal__label },
+                "Nom de l'espèce"
+              ),
+              createElement("input", {
+                type: "text",
+                value: editData.name,
+                onChange: (e) =>
+                  setEditData({ ...editData, name: e.target.value }),
+                className: styles.species_modal__input,
+              })
+            ),
+            !isCreating &&
+              createElement(
+                "div",
+                { className: styles.species_modal__field },
+                createElement(
+                  "label",
+                  { className: styles.species_modal__label },
+                  "Coefficient"
+                ),
+                createElement("input", {
+                  type: "number",
+                  step: "0.1",
+                  min: "0",
+                  value: editData.coefficient,
+                  onChange: (e) =>
                     setEditData({
                       ...editData,
-                      basePoints: parseInt(e.target.value),
-                    })
-                  }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <p className="font-semibold text-gray-700">
-                  Nom : <span className="text-green-600">{species.name}</span>
-                </p>
-              </div>
-              {!species.isBonus && (
-                <div>
-                  <p className="font-semibold text-gray-700">
-                    Coefficient :{" "}
-                    <span className="text-green-600">
-                      {species.coefficient}
-                    </span>
-                  </p>
-                </div>
-              )}
-              <div>
-                <p className="font-semibold text-gray-700">
-                  Points bonus :{" "}
-                  <span className="text-green-600">{species.basePoints}</span>
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-6 flex justify-end space-x-3">
-            {editMode ? (
-              <>
-                <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                  onClick={handleUpdate}
-                >
-                  Enregistrer
-                </button>
-                <button
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                  onClick={() => setEditMode(false)}
-                >
-                  Annuler
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                  onClick={() => setEditMode(true)}
-                >
-                  Modifier
-                </button>
-                <button
-                  className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (
-                      window.confirm(
-                        "Êtes-vous sûr de vouloir supprimer cette espèce ?"
-                      )
-                    ) {
-                      handleDeleteSpecies(species.id);
-                      onClose();
-                    }
-                  }}
-                >
-                  Supprimer
-                </button>
-                <button
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                  onClick={onClose}
-                >
-                  Fermer
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+                      coefficient: e.target.value || "0",
+                    }),
+                  className: styles.species_modal__input,
+                })
+              ),
+            createElement(
+              "div",
+              { className: styles.species_modal__field },
+              createElement(
+                "label",
+                { className: styles.species_modal__label },
+                "Points bonus"
+              ),
+              createElement("input", {
+                type: "number",
+                value: editData.basePoints,
+                onChange: (e) =>
+                  setEditData({
+                    ...editData,
+                    basePoints: parseInt(e.target.value),
+                  }),
+                className: styles.species_modal__input,
+              })
+            )
+          ),
+          createElement(
+            "div",
+            { className: styles.species_modal__actions },
+            createElement(
+              "button",
+              {
+                onClick: handleSave,
+                className: `${styles.species_modal__button} ${styles["modal__button--primary"]}`,
+              },
+              isCreating ? "Créer" : "Enregistrer"
+            )
+          )
+        )
+      ),
+      showConfirm &&
+        createElement(ConfirmModal, {
+          message: isCreating
+            ? "Êtes-vous sûr de vouloir créer cette espèce ?"
+            : "Êtes-vous sûr de vouloir modifier cette espèce ?",
+          onConfirm: handleConfirmSave,
+          onCancel: () => setShowConfirm(false),
+        })
     );
   };
+
+  const TeamDetailsModal = ({ team, onClose }) => {
+    const [editData, setEditData] = useState({
+      name: team?.name || "",
+      members: team?.members || [],
+    });
+    const [showConfirm, setShowConfirm] = useState(false);
+    const isCreating = !team;
+
+    const handleSave = () => {
+      setShowConfirm(true);
+    };
+
+    const handleConfirmSave = async () => {
+      try {
+        const dataToSend = {
+          name: editData.name,
+          members: editData.members,
+        };
+
+        if (isCreating) {
+          await teamService.create(dataToSend);
+        } else {
+          await teamService.update(team.id, dataToSend);
+        }
+        fetchData();
+        setShowConfirm(false);
+        onClose();
+      } catch (error) {
+        console.error("Error saving team:", error);
+      }
+    };
+
+    return createElement(
+      "div",
+      { className: styles.modal__overlay },
+      createElement(
+        "div",
+        { className: styles.modal__content },
+        createElement(
+          "div",
+          { className: styles.modal__header },
+          createElement("h2", null, "Détails de l'équipe"),
+          createElement(
+            "button",
+            { onClick: onClose, className: styles.modal__close },
+            "×"
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__body },
+          createElement(
+            "div",
+            { className: styles.user__details },
+            [
+              { label: "Nom", value: team.name },
+              {
+                label: "Membres",
+                value: team.members
+                  ?.map((m) => `${m.firstname} ${m.lastname}`)
+                  .join(", "),
+              },
+              {
+                label: "Compétition",
+                value: team.competition
+                  ? team.competition.name
+                  : "Non inscrite",
+              },
+              {
+                label: "N° d'inscription",
+                value: team.registrationNumber || "Non attribué",
+              },
+            ].map((field) =>
+              createElement(
+                "div",
+                { key: field.label, className: styles.user__field },
+                createElement(
+                  "span",
+                  { className: styles.user__label },
+                  field.label
+                ),
+                createElement(
+                  "span",
+                  { className: styles.user__value },
+                  field.value || "Non renseigné"
+                )
+              )
+            )
+          )
+        ),
+        createElement(
+          "div",
+          { className: styles.modal__actions },
+          createElement(
+            "button",
+            {
+              onClick: handleSave,
+              className: `${styles.modal__button} ${styles["modal__button--primary"]}`,
+            },
+            isCreating ? "Créer" : "Enregistrer"
+          )
+        )
+      ),
+      showConfirm &&
+        createElement(ConfirmModal, {
+          message: isCreating
+            ? "Êtes-vous sûr de vouloir créer cette équipe ?"
+            : "Êtes-vous sûr de vouloir modifier cette équipe ?",
+          onConfirm: handleConfirmSave,
+          onCancel: () => setShowConfirm(false),
+        })
+    );
+  };
+
+  // Fonction pour rendre le contenu des cellules
+  const renderCellContent = (item, fieldId) => {
+    if (!item) return "";
+
+    switch (fieldId) {
+      case "name":
+        return item.lastname || item.name || "";
+      case "firstname":
+        return item.firstname || "";
+      case "email":
+        return item.email || "";
+      case "startDate":
+        return item.startDate ? new Date(item.startDate).toLocaleString() : "";
+      case "coefficient":
+        return item.coefficient || "0";
+      case "status":
+        if (item.startDate && item.endDate) {
+          const status = getCompetitionStatus(item.startDate, item.endDate);
+          return createElement(
+            "span",
+            { className: status.className },
+            status.text
+          );
+        }
+        return "";
+      case "size":
+        return item.members?.length || "0";
+      case "role":
+        const isAdmin = item.roles?.includes("ROLE_ADMIN");
+        return createElement(
+          "span",
+          { className: isAdmin ? styles.roleAdmin : styles.roleUser },
+          isAdmin ? "Admin" : "User"
+        );
+      case "verified":
+        return item.isVerified ? (
+          <span className={styles.verified}>Vérifié ✓</span>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleVerifyUser(item.id);
+            }}
+            className={styles.verifyButton}
+          >
+            Valider
+          </button>
+        );
+      default:
+        return item[fieldId] || "";
+    }
+  };
+
+  // Fonction de rendu générique pour les tableaux
+  const renderTable = (items = [], headers, onItemClick) => {
+    if (!Array.isArray(items)) {
+      console.error("Items is not an array:", items);
+      return null;
+    }
+
+    return createElement(
+      "table",
+      { className: styles.dashboard__users_table },
+      createElement(
+        "thead",
+        null,
+        createElement(
+          "tr",
+          null,
+          headers.map((header) =>
+            createElement("th", { key: header.id }, header.label)
+          )
+        )
+      ),
+      createElement(
+        "tbody",
+        null,
+        items.map((item) =>
+          createElement(
+            "tr",
+            {
+              key: item.id,
+              onClick: () => onItemClick(item),
+            },
+            headers.map((header) =>
+              createElement(
+                "td",
+                { key: `${item.id}-${header.id}` },
+                renderCellContent(item, header.id)
+              )
+            )
+          )
+        )
+      )
+    );
+  };
+
+  const toggleTheme = () => {
+    setIsDarkTheme((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") || "light";
+    setIsDarkTheme(savedTheme === "dark");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
+    const dashboard = document.querySelector(`.${styles.dashboard}`);
+    if (dashboard) {
+      dashboard.setAttribute("data-theme", isDarkTheme ? "dark" : "light");
+    }
+  }, [isDarkTheme]);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  return (
-    <ProtectedRoute requiredRole="ROLE_ADMIN">
-      <div className={styles.dashboardContainer}>
-        <h1 className={styles.title}>Bureau de l'ombre</h1>
+  console.log("Users data:", users);
 
-        <div className={styles.searchSection}>
-          {/* Barre de recherche globale */}
-          <div className={styles.searchBar}>
-            <div className={styles.searchInput}>
-              <input
-                type="text"
-                placeholder="Rechercher dans les compétitions et utilisateurs..."
-                className={styles.searchInput}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className={styles.searchSelect}>
-              <select
-                className={styles.searchSelect}
-                value={searchCategory}
-                onChange={(e) => setSearchCategory(e.target.value)}
-              >
-                <option value="all">Tout</option>
-                <option value="competitions">Compétitions</option>
-                <option value="users">Utilisateurs</option>
-                <option value="teams">Équipes</option>
-                <option value="species">Espèces</option>
-              </select>
-              {searchCategory !== "competitions" && (
-                <select
-                  className={styles.searchSelect}
-                  value={searchBy}
-                  onChange={(e) => setSearchBy(e.target.value)}
-                >
-                  <option value="all">Tous les champs</option>
-                  <option value="email">Email</option>
-                  <option value="name">Nom/Prénom</option>
-                  <option value="number">N° Adhérent</option>
-                  <option value="role">Rôle</option>
-                  <option value="teams">Équipes</option>
-                  <option value="species">Espèces</option>
-                  <option value="competitions">Compétitions</option>
-                </select>
-              )}
-            </div>
-          </div>
-        </div>
+  return createElement(
+    ProtectedRoute,
+    { requiredRole: "ROLE_ADMIN" },
+    createElement(
+      "div",
+      { className: styles.dashboard__container },
+      createElement(
+        "div",
+        { className: styles.dashboard__header },
+        createElement(
+          "div",
+          { className: styles.dashboard__header_content },
+          createElement(
+            "h1",
+            { className: styles.dashboard__title },
+            "Tableau de bord"
+          )
+        )
+      ),
+      createElement(
+        "div",
+        { className: styles.dashboard__grid },
+        // Section Utilisateurs
+        createElement(
+          "div",
+          { className: styles.dashboard__card },
+          createElement(
+            "h2",
+            { className: styles.dashboard__section_title },
+            "Utilisateurs"
+          ),
+          createElement(
+            "div",
+            { className: styles.dashboard__users_list },
+            renderTable(users, TABLE_HEADERS.users, (user) => {
+              setSelectedUser(user);
+              setShowModal(true);
+            })
+          )
+        ),
 
-        <div className={styles.usersSection}>
-          <h2>Utilisateurs</h2>
-          <div className={styles.table}>
-            <table>
-              <thead>
-                <tr>
-                  <th className={styles.tableHeader}>Email</th>
-                  <th className={styles.tableHeader}>Nom</th>
-                  <th className={styles.tableHeader}>Prénom</th>
-                  <th className={styles.tableHeader}>N° Adhérent</th>
-                  <th className={styles.tableHeader}>Vérifié</th>
-                  <th className={styles.tableHeader}>Rôle Admin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className={styles.tableRow}
-                    onClick={() => {
-                      setSelectedUser(user);
-                      setShowModal(true);
-                    }}
-                  >
-                    <td className={styles.tableCell}>{user.email}</td>
-                    <td className={styles.tableCell}>{user.lastname}</td>
-                    <td className={styles.tableCell}>{user.firstname}</td>
-                    <td className={styles.tableCell}>
-                      {user.subscriberNumber}
-                    </td>
-                    <td className={styles.tableCell}>
-                      {user.isVerified ? (
-                        <span className={styles.verified}>✓</span>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVerifyUser(user.id);
-                          }}
-                          className={styles.verifyButton}
-                        >
-                          Valider
-                        </button>
-                      )}
-                    </td>
-                    <td
-                      className={styles.tableCell}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={user.roles.includes("ROLE_ADMIN")}
-                          onChange={() => handleToggleRole(user.id)}
-                        />
-                        <div className={styles.checkboxBackground}></div>
-                        <span className={styles.checkboxText}>
-                          {user.roles.includes("ROLE_ADMIN") ? (
-                            <span className={styles.adminText}>Admin</span>
-                          ) : (
-                            <span className={styles.userText}>User</span>
-                          )}
-                        </span>
-                      </label>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        // Section Compétitions
+        createElement(
+          "div",
+          { className: styles.dashboard__card },
+          createElement(
+            "div",
+            { className: styles.dashboard__section_header },
+            createElement(
+              "h2",
+              { className: styles.dashboard__section_title },
+              "Compétitions"
+            ),
+            createElement(
+              "button",
+              {
+                className: styles.dashboard__create_button,
+                onClick: () => router.push("/dashboard/competitions/create"),
+              },
+              "Créer une compétition"
+            )
+          ),
+          createElement(
+            "div",
+            { className: styles.dashboard__users_list },
+            renderTable(
+              competitions,
+              TABLE_HEADERS.competitions,
+              (competition) => {
+                setSelectedCompetition(competition);
+                setShowCompetitionModal(true);
+              }
+            )
+          )
+        ),
 
-          {showModal && (
-            <UserDetailsModal
-              user={selectedUser}
-              onClose={() => {
-                setShowModal(false);
-                setSelectedUser(null);
-              }}
-            />
-          )}
-        </div>
+        // Section Teams
+        createElement(
+          "div",
+          { className: styles.dashboard__card },
+          createElement(
+            "h2",
+            { className: styles.dashboard__section_title },
+            "Équipes"
+          ),
+          createElement(
+            "div",
+            { className: styles.dashboard__users_list },
+            renderTable(teams, TABLE_HEADERS.teams, (team) => {
+              setSelectedTeam(team);
+              setShowTeamModal(true);
+            })
+          )
+        ),
 
-        <div className={styles.competitionsSection}>
-          <h2>Compétitions</h2>
-          <div className={styles.table}>
-            <table>
-              <thead>
-                <tr>
-                  <th className={styles.tableHeader}>Nom</th>
-                  <th className={styles.tableHeader}>Type</th>
-                  <th className={styles.tableHeader}>Date</th>
-                  <th className={styles.tableHeader}>Statut</th>
-                  <th className={styles.tableHeader}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCompetitions.map((competition) => (
-                  <tr
-                    key={competition.id}
-                    className={styles.tableRow}
-                    onClick={() => {
-                      setSelectedCompetition(competition);
-                      setShowCompetitionModal(true);
-                    }}
-                  >
-                    <td className={styles.tableCell}>{competition.name}</td>
-                    <td className={styles.tableCell}>{competition.type}</td>
-                    <td className={styles.tableCell}>
-                      {new Date(competition.startDate).toLocaleDateString()}
-                    </td>
-                    <td className={styles.tableCell}>
-                      <span
-                        className={
-                          getCompetitionStatus(
-                            competition.startDate,
-                            competition.endDate
-                          ).className
-                        }
-                      >
-                        {
-                          getCompetitionStatus(
-                            competition.startDate,
-                            competition.endDate
-                          ).text
-                        }
-                      </span>
-                    </td>
-                    <td className={styles.tableCell}>
-                      <button className={styles.editButton}>Modifier</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        // Section Species
+        createElement(
+          "div",
+          { className: styles.dashboard__card },
+          createElement(
+            "div",
+            { className: styles.dashboard__section_header },
+            createElement(
+              "h2",
+              { className: styles.dashboard__section_title },
+              "Espèces"
+            ),
+            createElement(
+              "button",
+              {
+                className: styles.dashboard__create_button,
+                onClick: () => router.push("/dashboard/species/create"),
+              },
+              "Créer une espèce"
+            )
+          ),
+          createElement(
+            "div",
+            { className: styles.dashboard__users_list },
+            renderTable(species, TABLE_HEADERS.species, (species) => {
+              setSelectedSpecies(species);
+              setShowSpeciesModal(true);
+            })
+          )
+        )
+      ),
 
-        <div className={styles.speciesSection}>
-          <h2>Espèces</h2>
-          <div className={styles.table}>
-            <table>
-              <thead>
-                <tr>
-                  <th className={styles.tableHeader}>Nom</th>
-                  <th className={styles.tableHeader}>Coefficient</th>
-                  <th className={styles.tableHeader}>Points bonus</th>
-                  <th className={styles.tableHeader}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {species.map((specie) => (
-                  <tr
-                    key={specie.id}
-                    className={styles.tableRow}
-                    onClick={() => {
-                      setSelectedSpecies(specie);
-                      setShowSpeciesModal(true);
-                    }}
-                  >
-                    <td className={styles.tableCell}>{specie.name}</td>
-                    <td className={styles.tableCell}>{specie.coefficient}</td>
-                    <td className={styles.tableCell}>{specie.basePoints}</td>
-                    <td className={styles.tableCell}>
-                      <button className={styles.editButton}>Modifier</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      // Ajout des modals
+      showModal &&
+        createElement(UserDetailsModal, {
+          user: selectedUser,
+          onClose: () => setShowModal(false),
+          onDelete: handleDeleteUser,
+          onUpdate: (user) => {
+            // Gérer la mise à jour
+            router.push(`/dashboard/users/${user.id}/edit`);
+          },
+        }),
 
-        <div className={styles.teamsSection}>
-          <h2>Équipes</h2>
-          <div className={styles.table}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Nom de l'équipe</th>
-                  <th>Membres</th>
-                  <th>Compétition</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teams.map((team) => (
-                  <tr key={team.id}>
-                    <td>{team.name}</td>
-                    <td>
-                      {team.members
-                        .map(
-                          (member) => `${member.firstname} ${member.lastname}`
-                        )
-                        .join(", ")}
-                    </td>
-                    <td>{team.competition?.name || "Aucune"}</td>
-                    <td>
-                      <button
-                        onClick={() => handleEditTeam(team)}
-                        className={styles.editButton}
-                      >
-                        Modifier
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      showCompetitionModal &&
+        createElement(CompetitionDetailsModal, {
+          competition: selectedCompetition,
+          onClose: () => setShowCompetitionModal(false),
+        }),
 
-        {/* Modals */}
-        {showCompetitionModal && (
-          <CompetitionDetailsModal
-            competition={selectedCompetition}
-            onClose={() => {
-              setShowCompetitionModal(false);
-              setSelectedCompetition(null);
-            }}
-          />
-        )}
-        {showSpeciesModal && (
-          <SpeciesDetailsModal
-            species={selectedSpecies}
-            onClose={() => {
-              setShowSpeciesModal(false);
-              setSelectedSpecies(null);
-            }}
-          />
-        )}
-      </div>
-    </ProtectedRoute>
+      showSpeciesModal &&
+        createElement(SpeciesDetailsModal, {
+          species: selectedSpecies,
+          onClose: () => setShowSpeciesModal(false),
+        }),
+
+      showTeamModal &&
+        createElement(TeamDetailsModal, {
+          team: selectedTeam,
+          onClose: () => setShowTeamModal(false),
+        })
+    )
+  );
+}
+
+// Composant utilitaire pour les statistiques
+function StatItem({ value, label }) {
+  return createElement(
+    "div",
+    {
+      className: styles.dashboard__stat,
+    },
+    createElement(
+      "div",
+      {
+        className: styles.dashboard__stat_value,
+      },
+      value
+    ),
+    createElement(
+      "div",
+      {
+        className: styles.dashboard__stat_label,
+      },
+      label
+    )
   );
 }

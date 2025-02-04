@@ -1,102 +1,111 @@
 "use client";
 
-import { createElement } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { speciesService } from "../../services/species";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { speciesService } from "@/services/speciesService";
+import styles from "@/styles/pages/species.module.scss";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function SpeciesPage() {
-  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [species, setSpecies] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const { data: species, isLoading } = useQuery({
-    queryKey: ["species"],
-    queryFn: speciesService.getAll,
-  });
+  useEffect(() => {
+    const fetchSpecies = async () => {
+      try {
+        const response = await speciesService.getAll();
+        setSpecies(response || []);
+      } catch (error) {
+        setError(
+          error.message ||
+            "Une erreur est survenue lors du chargement des espèces"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const createMutation = useMutation({
-    mutationFn: speciesService.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["species"] });
-    },
-  });
+    fetchSpecies();
+  }, []);
 
-  if (isLoading) return createElement("div", null, "Chargement...");
+  const handleDelete = async (id) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette espèce ?")) {
+      try {
+        await speciesService.delete(id);
+        setSpecies(species.filter((s) => s.id !== id));
+      } catch (error) {
+        setError("Erreur lors de la suppression de l'espèce");
+      }
+    }
+  };
 
-  return createElement(
-    "div",
-    {
-      key: "species-container",
-      className: "container mx-auto px-4",
-    },
-    createElement(
-      "h1",
-      {
-        key: "title",
-        className: "text-2xl font-bold text-center mt-8",
-      },
-      "Espèces"
-    ),
-    createElement(
-      "div",
-      {
-        key: "content",
-        className: "mt-8",
-      },
-      createElement(
-        "ul",
-        {
-          key: "species-list",
-          className: "space-y-4",
-        },
-        species?.map((s) =>
-          createElement(
-            "li",
-            {
-              key: s.id,
-              className: "p-4 border rounded",
-            },
-            createElement(
-              "div",
-              {
-                key: `name-${s.id}`,
-                className: "font-bold",
-              },
-              s.name
-            ),
-            s.scientificName &&
-              createElement(
-                "div",
-                {
-                  key: `scientific-${s.id}`,
-                  className: "text-gray-600 italic",
-                },
-                s.scientificName
-              ),
-            s.description &&
-              createElement(
-                "div",
-                {
-                  key: `description-${s.id}`,
-                  className: "mt-2 text-gray-700",
-                },
-                s.description
-              )
-          )
-        )
-      ),
-      createElement(
-        "button",
-        {
-          key: "add-button",
-          onClick: () =>
-            createMutation.mutate({
-              name: "Nouvelle espèce",
-              scientificName: "Nom scientifique",
-            }),
-          className:
-            "mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600",
-        },
-        "Ajouter une espèce"
-      )
-    )
+  if (isLoading) return <div className={styles.loading}>Chargement...</div>;
+  if (error) return <div className={styles.error}>{error}</div>;
+
+  return (
+    <ProtectedRoute>
+      <div className={styles.species__container}>
+        <div className={styles.species__header}>
+          <h1 className={styles.species__title}>Espèces</h1>
+        </div>
+
+        <div className={styles.species__grid}>
+          {species.map((specie) => (
+            <div key={specie.id} className={styles.species__card}>
+              <div className={styles.species__card_header}>
+                <h2 className={styles.species__name}>{specie.name}</h2>
+              </div>
+
+              <div className={styles.species__card_content}>
+                <div className={styles.species__info}>
+                  <div className={styles.species__field}>
+                    <div className={styles["species__field-label"]}>Type</div>
+                    <div className={styles["species__field-value"]}>
+                      <span
+                        className={`${styles.species__badge} ${
+                          specie.isBonus
+                            ? styles["species__badge--bonus"]
+                            : styles["species__badge--regular"]
+                        }`}
+                      >
+                        {specie.isBonus ? "Bonus" : "Standard"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={styles.species__field}>
+                    <div className={styles["species__field-label"]}>
+                      {specie.isBonus ? "Points bonus" : "Coefficient"}
+                    </div>
+                    <div className={styles["species__field-value"]}>
+                      {specie.isBonus
+                        ? `${specie.basePoints} points`
+                        : `×${specie.coefficient}`}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.species__actions}>
+                  <button
+                    onClick={() => router.push(`/species/${specie.id}/edit`)}
+                    className={`${styles.species__button} ${styles["species__button--edit"]}`}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    onClick={() => handleDelete(specie.id)}
+                    className={`${styles.species__button} ${styles["species__button--delete"]}`}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </ProtectedRoute>
   );
 }

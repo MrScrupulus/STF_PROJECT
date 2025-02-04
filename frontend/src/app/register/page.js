@@ -1,39 +1,35 @@
 "use client";
 
-import { createElement } from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "../../services/authService";
-import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
+import { authService } from "@/services/authService";
+import styles from "@/styles/pages/register.module.scss";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const PHONE_REGEX = /^[0-9]{10}$/;
 
 export default function RegisterPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    firstname: "",
-    lastname: "",
-    subscriber_number: "",
     phone_number: "",
-    country: "",
     birth_date: "",
+    country: "",
+    subscriber_number: "",
   });
-
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    confirm: false,
+  });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [message, setMessage] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordStatus, setPasswordStatus] = useState({
-    isValid: false,
-    message:
-      "Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial",
-  });
 
   // Nettoyage du localStorage au montage du composant
   useEffect(() => {
@@ -84,11 +80,11 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Données envoyées:', formData);
-    setError("");
     setIsLoading(true);
+    setError("");
 
-    if (!validatePassword(formData.password)) {
+    if (formData.password !== formData.confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
       setIsLoading(false);
       return;
     }
@@ -150,194 +146,207 @@ export default function RegisterPage() {
 
   const resetForm = () => {
     setFormData({
+      firstName: "",
+      lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
-      firstname: "",
-      lastname: "",
-      subscriber_number: "",
       phone_number: "",
-      country: "",
       birth_date: "",
+      country: "",
+      subscriber_number: "",
     });
     setError("");
   };
 
   const togglePasswordVisibility = (field) => {
     if (field === "password") {
-      setShowPassword(!showPassword);
+      setShowPassword({
+        ...showPassword,
+        password: !showPassword.password,
+      });
     } else {
-      setShowConfirmPassword(!showConfirmPassword);
+      setShowPassword({
+        ...showPassword,
+        confirm: !showPassword.confirm,
+      });
     }
   };
 
-  // Réorganisation des champs du formulaire
-  const formFields = [
-    { name: "email", label: "Email", type: "email", autocomplete: "off" },
-    { name: "firstname", label: "Prénom", type: "text" },
-    { name: "lastname", label: "Nom", type: "text" },
-    { name: "subscriber_number", label: "Numéro d'adhérent", type: "text" },
-    { name: "phone_number", label: "Téléphone", type: "tel" },
-    { name: "birth_date", label: "Date de naissance", type: "date" },
-    { name: "country", label: "Pays", type: "text" },
-    {
-      name: "password",
-      label: "Mot de passe",
-      type: showPassword ? "text" : "password",
-      autocomplete: "new-password",
-      icon: true,
-      showPassword: showPassword,
-    },
-    {
-      name: "confirmPassword",
-      label: "Confirmer le mot de passe",
-      type: showConfirmPassword ? "text" : "password",
-      autocomplete: "new-password",
-      icon: true,
-      showPassword: showConfirmPassword,
-    },
-  ];
+  return (
+    <div className={styles.register__container}>
+      <h1 className={styles.register__title}>Inscription</h1>
 
-  return createElement(
-    "div",
-    {
-      className: "container mx-auto px-4",
-    },
-    createElement(
-      "h1",
-      {
-        className: "text-2xl font-bold text-center mt-8",
-      },
-      "Inscription"
-    ),
-    error &&
-      createElement(
-        "div",
-        {
-          className:
-            "max-w-md mx-auto mt-4 p-4 bg-red-100 text-red-700 rounded-md",
-        },
-        error
-      ),
-    createElement(
-      "form",
-      {
-        onSubmit: handleSubmit,
-        onReset: resetForm,
-        className: "max-w-md mx-auto mt-8 space-y-6",
-      },
-      formFields.map((field) =>
-        createElement(
-          "div",
-          {
-            key: field.name,
-            className: "mb-4 relative",
-          },
-          createElement(
-            "label",
-            {
-              htmlFor: field.name,
-              className: "block text-sm font-medium text-gray-700 mb-2",
-            },
-            field.label
-          ),
-          createElement(
-            "div",
-            {
-              className: "relative",
-            },
-            createElement("input", {
-              type: field.type,
-              id: field.name,
-              name: field.name,
-              value: formData[field.name],
-              onChange: handleChange,
-              className: `w-full p-2 border ${
-                fieldErrors[field.name] ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                field.icon ? "pr-10" : ""
-              }`,
-              required: true,
-              disabled: isLoading,
-              autoComplete: field.autocomplete || "on",
-            }),
-            field.icon &&
-              createElement(
-                "button",
-                {
-                  type: "button",
-                  className:
-                    "absolute inset-y-0 right-0 pr-3 flex items-center text-gray-600 hover:text-gray-800",
-                  onClick: () => togglePasswordVisibility(field.name),
-                },
-                createElement(field.showPassword ? FaEyeSlash : FaEye, {
-                  className: "h-5 w-5",
-                })
-              )
-          ),
-          fieldErrors[field.name] &&
-            createElement(
-              "p",
-              {
-                className: "mt-1 text-sm text-red-500",
-              },
-              fieldErrors[field.name]
-            ),
-          field.name === "password" && (
-            <div
-              className={`mt-1 text-sm flex items-center gap-2 ${
-                passwordStatus.isValid ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {passwordStatus.isValid && (
-                <FaCheckCircle className="text-green-500" />
-              )}
-              {passwordStatus.message}
+      {error && <div className={styles.error}>{error}</div>}
+
+      <form onSubmit={handleSubmit} className={styles.register__form}>
+        <div className={styles.register__grid}>
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Prénom</label>
+            <input
+              type="text"
+              value={formData.firstName}
+              onChange={(e) =>
+                setFormData({ ...formData, firstName: e.target.value })
+              }
+              className={styles.register__input}
+              required
+            />
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Nom</label>
+            <input
+              type="text"
+              value={formData.lastName}
+              onChange={(e) =>
+                setFormData({ ...formData, lastName: e.target.value })
+              }
+              className={styles.register__input}
+              required
+            />
+          </div>
+
+          <div
+            className={`${styles.register__group} ${styles["register__group--full"]}`}
+          >
+            <label className={styles.register__label}>Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              className={styles.register__input}
+              required
+            />
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Mot de passe</label>
+            <div className={styles.register__password_container}>
+              <input
+                type={showPassword.password ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                className={styles.register__input}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility("password")}
+                className={styles.register__eye_button}
+              >
+                {showPassword.password ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
-          )
-        )
-      ),
-      createElement(
-        "div",
-        {
-          className: "flex gap-4",
-        },
-        createElement(
-          "button",
-          {
-            type: "submit",
-            disabled: isLoading,
-            className: `flex-1 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              isLoading
-                ? "bg-blue-300 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600"
-            } text-white`,
-          },
-          isLoading ? "Inscription en cours..." : "S'inscrire"
-        ),
-        createElement(
-          "button",
-          {
-            type: "reset",
-            className:
-              "flex-1 p-3 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300",
-          },
-          "Réinitialiser"
-        )
-      )
-    ),
-    success && (
-      <div className="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded relative max-w-md mx-auto">
-        <p className="text-center">{message}</p>
-        <div className="mt-4 flex justify-center">
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>
+              Confirmer le mot de passe
+            </label>
+            <div className={styles.register__password_container}>
+              <input
+                type={showPassword.confirm ? "text" : "password"}
+                value={formData.confirmPassword}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmPassword: e.target.value })
+                }
+                className={styles.register__input}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility("confirm")}
+                className={styles.register__eye_button}
+              >
+                {showPassword.confirm ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Téléphone</label>
+            <input
+              type="tel"
+              value={formData.phone_number}
+              onChange={(e) =>
+                setFormData({ ...formData, phone_number: e.target.value })
+              }
+              className={styles.register__input}
+            />
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Date de naissance</label>
+            <input
+              type="date"
+              value={formData.birth_date}
+              onChange={(e) =>
+                setFormData({ ...formData, birth_date: e.target.value })
+              }
+              className={styles.register__input}
+              required
+            />
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Pays</label>
+            <input
+              type="text"
+              value={formData.country}
+              onChange={(e) =>
+                setFormData({ ...formData, country: e.target.value })
+              }
+              className={styles.register__input}
+              required
+            />
+          </div>
+
+          <div className={styles.register__group}>
+            <label className={styles.register__label}>Numéro d'adhérent</label>
+            <input
+              type="text"
+              value={formData.subscriber_number}
+              onChange={(e) =>
+                setFormData({ ...formData, subscriber_number: e.target.value })
+              }
+              className={styles.register__input}
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className={styles.register__submit}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <div className={styles.register__spinner}>
+              <div className={styles.register__spinner_dot}></div>
+              <div className={styles.register__spinner_dot}></div>
+              <div className={styles.register__spinner_dot}></div>
+            </div>
+          ) : (
+            "S'inscrire"
+          )}
+        </button>
+      </form>
+
+      {success && (
+        <div className={styles.success}>
+          <p>{message}</p>
           <button
             onClick={() => (window.location.href = "/login")}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            className={styles.success__button}
           >
             Aller à la page de connexion
           </button>
         </div>
-      </div>
-    )
+      )}
+    </div>
   );
 }

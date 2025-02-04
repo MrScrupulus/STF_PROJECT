@@ -1,0 +1,144 @@
+.species {
+  &__container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 4rem auto;
+    padding: 0 1rem;
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  &__grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  &__card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.2s;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  &__card-header {
+    padding: 1.5rem;
+    background-color: #f3f4f6;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  &__card-content {
+    padding: 1.5rem;
+  }
+
+  &__info {
+    display: grid;
+    gap: 1rem;
+  }
+
+  &__field {
+    &-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+
+    &-value {
+      font-size: 1rem;
+      color: #111827;
+      font-weight: 500;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    &--bonus {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    &--regular {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  &__button {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &--edit {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+
+      &:hover {
+        background-color: #1d4ed8;
+      }
+    }
+
+    &--delete {
+      background-color: transparent;
+      color: #dc2626;
+      border: 1px solid #dc2626;
+
+      &:hover {
+        background-color: #fee2e2;
+      }
+    }
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  text-align: center;
+  color: #dc2626;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: #fee2e2;
+  border-radius: 0.25rem;
+} 

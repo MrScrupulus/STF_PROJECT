@@ -2,6 +2,10 @@
 
 import { createElement } from "react";
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { catchesService } from "../../services/catches";
+import styles from "@/styles/pages/catch.module.scss";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function CatchPage() {
   const [catches, setCatches] = useState([]);
@@ -32,24 +36,50 @@ export default function CatchPage() {
       .catch((error) => setError(error.message));
   }, []);
 
+  const { isLoading, data: queryData } = useQuery({
+    queryKey: ["catches"],
+    queryFn: () => catchesService.getAll(),
+  });
+
+  const queryClient = useQueryClient();
+
+  const validateMutation = useMutation((id) => catchesService.validate(id), {
+    onSuccess: () => {
+      queryClient.invalidateQueries(["catches"]);
+    },
+  });
+
   if (error) return createElement("div", null, error);
 
-  return createElement(
-    "div",
-    null,
-    createElement("h1", null, "Liste des captures"),
-    createElement(
-      "ul",
-      null,
-      catches.map((catchItem) =>
-        createElement(
-          "li",
-          {
-            key: catchItem.id,
-          },
-          catchItem.name
-        )
-      )
-    )
+  if (isLoading)
+    return createElement("div", { className: styles.loading }, "Chargement...");
+
+  return (
+    <ProtectedRoute>
+      <div className={styles.catch__container}>
+        <h1 className={styles.catch__title}>Prises</h1>
+        <ul className={styles.catch__list}>
+          {queryData?.map((c) =>
+            createElement(
+              "li",
+              {
+                key: c.id,
+                className: styles.catch__item,
+              },
+              createElement("span", null, `${c.species.name} - ${c.length}cm`),
+              !c.isValidated &&
+                createElement(
+                  "button",
+                  {
+                    onClick: () => validateMutation.mutate(c.id),
+                    className: styles.catch__validate - btn,
+                  },
+                  "Valider"
+                )
+            )
+          )}
+        </ul>
+      </div>
+    </ProtectedRoute>
   );
 }

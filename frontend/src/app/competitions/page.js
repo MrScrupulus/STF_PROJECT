@@ -1,120 +1,79 @@
 "use client";
-import { useState, useEffect } from "react";
-import { competitionService } from "@/services/competitionService";
-import Link from "next/link";
+
+import { createElement } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { competitionsService } from "../../services/competitions";
 import styles from "@/styles/pages/competitions.module.scss";
 
-export default function CompetitionsList() {
-  const [competitions, setCompetitions] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function CompetitionsPage() {
+  const { data: competitions, isLoading } = useQuery({
+    queryKey: ["competitions"],
+    queryFn: competitionsService.getAll,
+  });
 
-  useEffect(() => {
-    const fetchCompetitions = async () => {
-      try {
-        const response = await competitionService.getAll();
-        setCompetitions(response.competitions || []);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching competitions:", error);
-        setLoading(false);
-      }
-    };
+  if (isLoading)
+    return createElement("div", { className: styles.loading }, "Chargement...");
 
-    fetchCompetitions();
-  }, []);
-
-  const getCompetitionStatus = (startDate, endDate) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (now < start) {
-      return { text: "À venir", className: styles.statusUpcoming };
-    } else if (now >= start && now <= end) {
-      return { text: "En cours", className: styles.statusOngoing };
-    } else {
-      return { text: "Terminée", className: styles.statusEnded };
-    }
-  };
-
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
-
-  if (loading) return <div>Chargement...</div>;
-
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Compétitions</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.isArray(competitions) &&
-          competitions.map((competition) => (
-            <div
-              key={competition.id}
-              className="bg-white p-4 rounded-lg shadow"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">{competition.name}</h3>
-                <span
-                  className={
-                    getCompetitionStatus(
-                      competition.startDate,
-                      competition.endDate
-                    ).className
-                  }
-                >
-                  {
-                    getCompetitionStatus(
-                      competition.startDate,
-                      competition.endDate
-                    ).text
-                  }
-                </span>
-              </div>
-              <div className="space-y-2">
-                <p className="text-gray-600">{competition.description}</p>
-                <p>
-                  <span className="font-medium">Type:</span> {competition.type}
-                </p>
-                <div className="text-sm">
-                  <p>
-                    <span className="font-medium">Début:</span>{" "}
-                    {formatDateTime(competition.startDate)}
-                  </p>
-                  <p>
-                    <span className="font-medium">Fin:</span>{" "}
-                    {formatDateTime(competition.endDate)}
-                  </p>
-                </div>
-                {competition.maxParticipants && (
-                  <p className="text-sm">
-                    <span className="font-medium">Places:</span>{" "}
-                    {competition.maxParticipants} équipes maximum
-                  </p>
-                )}
-                {competition.teamSize && (
-                  <p className="text-sm">
-                    <span className="font-medium">Taille des équipes:</span>{" "}
-                    {competition.teamSize} pêcheurs
-                  </p>
-                )}
-                <Link
-                  href={`/competitions/${competition.id}/register`}
-                  className="inline-block mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                  S'inscrire
-                </Link>
-              </div>
-            </div>
-          ))}
-      </div>
-    </div>
+  return createElement(
+    "div",
+    {
+      className: styles.competitions__container,
+    },
+    createElement(
+      "h1",
+      {
+        className: styles.competitions__title,
+      },
+      "Compétitions"
+    ),
+    createElement(
+      "div",
+      {
+        className: styles.competitions__list,
+      },
+      competitions?.map((competition) =>
+        createElement(
+          "div",
+          {
+            key: competition.id,
+            className: styles.competitions__card,
+          },
+          createElement(
+            "h2",
+            {
+              className: styles.competitions__name,
+            },
+            competition.name
+          ),
+          createElement(
+            "div",
+            {
+              className: styles.competitions__date,
+            },
+            new Date(competition.date).toLocaleDateString()
+          ),
+          createElement(
+            "div",
+            {
+              className: styles.competitions__status,
+            },
+            createElement(
+              "span",
+              {
+                className: `${styles.competitions__status}--${competition.status}`,
+              },
+              competition.status
+            )
+          ),
+          createElement(
+            "div",
+            {
+              className: styles.competitions__teams,
+            },
+            `${competition.teams?.length || 0} équipes inscrites`
+          )
+        )
+      )
+    )
   );
 }

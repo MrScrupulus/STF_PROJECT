@@ -1,16 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {
+      'mobile': '0px',
+      'desktop': '601px',
+    },
     extend: {
-      screens: {
-        md: "768px", // Mobile vers tablette
-        lg: "1024px", // Tablette vers desktop
-      },
       colors: {
         primary: {
           DEFAULT: "#2563EB", // Bleu principal

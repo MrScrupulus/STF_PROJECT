@@ -1,61 +1,65 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
+import styles from "@/styles/components/ProtectedRoute.module.scss";
 
-const ProtectedRoute = ({ children, requiredRole }) => {
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function ProtectedRoute({ children, requiredRole = null }) {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    let isMounted = true;
     const checkAuth = async () => {
       try {
-        const userData = await authService.getCurrentUser();
-        console.log("ProtectedRoute - User data:", userData);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Non authentifié");
+        }
 
-        if (!userData || !userData.success) {
-          console.log("ProtectedRoute - No user data or unsuccessful");
-          router.push("/login");
-          return;
+        const userData = await authService.getCurrentUser();
+
+        if (!userData.success) {
+          throw new Error("Session expirée");
         }
 
         if (requiredRole && !userData.user.roles.includes(requiredRole)) {
-          console.log(
-            "ProtectedRoute - User lacks required role:",
-            requiredRole
-          );
-          router.push("/");
-          return;
+          throw new Error("Accès non autorisé");
         }
 
-        if (isMounted) {
-          console.log("ProtectedRoute - User authorized");
-          setIsAuthorized(true);
-          setLoading(false);
-        }
+        setIsLoading(false);
       } catch (error) {
-        console.error("ProtectedRoute - Auth error:", error);
-        router.push("/login");
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        console.error("Auth error:", error);
+        setError(error.message);
+        setIsLoading(false);
+
+        // Redirection différée pour éviter les problèmes de rendu
+        setTimeout(() => {
+          router.push("/login");
+        }, 100);
       }
     };
 
     checkAuth();
-    return () => {
-      isMounted = false;
-    };
   }, [router, requiredRole]);
 
-  if (loading) {
-    return <div>Chargement...</div>;
+  if (isLoading) {
+    return (
+      <div className={styles.protected__loading}>
+        Vérification de l'authentification...
+      </div>
+    );
   }
 
-  return isAuthorized ? children : null;
-};
+  if (error) {
+    return (
+      <div className={styles.protected__error}>
+        <div className={styles["protected__error-title"]}>Accès refusé</div>
+        <div className={styles["protected__error-message"]}>{error}</div>
+      </div>
+    );
+  }
 
-export default ProtectedRoute;
+  return children;
+}

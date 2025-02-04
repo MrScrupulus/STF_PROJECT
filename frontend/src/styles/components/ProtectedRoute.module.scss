@@ -1,0 +1,56 @@
+.protected {
+  &__loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    text-align: center;
+    color: #6b7280;
+  }
+
+  &__error {
+    text-align: center;
+    color: #dc2626;
+    padding: 1rem;
+    margin: 2rem auto;
+    max-width: 600px;
+    background-color: #fee2e2;
+    border-radius: 0.5rem;
+
+    &-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    &-message {
+      font-size: 0.875rem;
+    }
+  }
+
+  &__redirect {
+    text-align: center;
+    padding: 2rem;
+    
+    &-message {
+      margin-bottom: 1rem;
+      color: #4b5563;
+    }
+
+    &-button {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 0.25rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: #1d4ed8;
+      }
+    }
+  }
+} 

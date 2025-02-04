@@ -1,19 +1,40 @@
-.header {
-  @apply fixed top-0 w-full bg-white z-50;
-  
+.Header {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+
   .nav {
-    @apply hidden;  // Caché par défaut sur mobile
-    @apply md:flex;  // Toujours visible sur desktop
-    
+    display: none;
+
+    @media (min-width: 768px) {
+      display: flex;
+    }
+
     &.open {
-      @apply flex flex-col absolute top-full left-0 w-full bg-white;
-      @apply md:flex-row md:static;  // Normal sur desktop
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background-color: white;
+
+      @media (min-width: 768px) {
+        flex-direction: row;
+        position: static;
+      }
     }
   }
-  
+
   .menuButton {
-    @apply block;  // Visible sur mobile
-    @apply md:hidden;  // Caché sur desktop
+    display: block;
+
+    @media (min-width: 768px) {
+      display: none;
+    }
   }
 }
 
@@ -59,12 +80,12 @@
 }
 
 .adminLink {
-  color: #059669 !important;
+  color: #059669;
   font-weight: 600;
   transition: color 0.2s;
 
   &:hover {
-    color: #047857 !important;
+    color: #047857;
   }
 }
 

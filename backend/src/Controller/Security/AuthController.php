@@ -282,9 +282,42 @@ final class AuthController extends AbstractController
         }
     }
 
+    #[Route('/admin/verify-user/{id}', name: 'admin_verify_user', methods: ['POST'])]
+    public function adminVerifyUser(int $id): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        try {
+            $user = $this->userRepository->find($id);
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non trouvé'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $user->setIsVerified(true);
+            $user->setVerificationToken(null);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Email vérifié avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private function generateVerificationUrl(string $token): string
     {
         // Utiliser HTTPS au lieu de HTTP
         return "https://localhost:3000/verify-email/{$token}";
     }
+
+    
 }

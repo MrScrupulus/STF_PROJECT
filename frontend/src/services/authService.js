@@ -28,28 +28,21 @@ export const authService = {
 
   register: async (userData) => {
     try {
-      // Transformer les données pour correspondre au format attendu par le backend
       const transformedData = {
+        firstname: userData.firstName,
+        lastname: userData.lastName,
         email: userData.email,
         password: userData.password,
-        firstname: userData.firstname,
-        lastname: userData.lastname,
         phone_number: userData.phone_number,
-        birthdate: userData.birth_date
+        birth_date: userData.birth_date
           ? new Date(userData.birth_date).toISOString().split("T")[0]
           : null,
         country: userData.country,
         subscriber_number: userData.subscriber_number,
       };
 
-      console.log('Données transformées:', transformedData); // Pour déboguer
-
-      const response = await api.post("/auth/register", transformedData);
-
-      if (response.success) {
-        return response;
-      }
-      throw new Error(response.message || "Erreur lors de l'inscription");
+      console.log("Données transformées:", transformedData);
+      return await api.post("/auth/register", transformedData);
     } catch (error) {
       console.error("Register error:", error);
       throw error;
@@ -106,6 +99,16 @@ export const authService = {
       return response;
     } catch (error) {
       console.error("Password reset error:", error);
+      throw error;
+    }
+  },
+
+  verifyUserByAdmin: async (userId) => {
+    try {
+      const response = await api.post(`/auth/admin/verify-user/${userId}`);
+      return response;
+    } catch (error) {
+      console.error("Error verifying user:", error);
       throw error;
     }
   },

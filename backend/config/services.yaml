@@ -1,15 +1,12 @@
-
 parameters:
   app.mailer_from_email: "streetfishingroubaix@gmail.com"
   app.frontend_url: "https://localhost:3000"
 
 services:
-  
   _defaults:
     autowire: true # Automatically injects dependencies in your services.
     autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-  
   App\:
     resource: "../src/"
     exclude:
@@ -21,5 +18,3 @@ services:
   App\Service\EmailService:
     arguments:
       $mailerFromEmail: "streetfishingroubaix@gmail.com"
-
-

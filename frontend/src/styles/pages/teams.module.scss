@@ -41,3 +41,173 @@
     @apply bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors;
   }
 }
+
+.teams {
+  &__container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 4rem auto;
+    padding: 0 1rem;
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  &__create-btn {
+    padding: 0.5rem 1rem;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #1d4ed8;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  &__card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  &__card-header {
+    padding: 1.5rem;
+    background-color: #f3f4f6;
+  }
+
+  &__team-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  &__card-content {
+    padding: 1.5rem;
+  }
+
+  &__members {
+    margin-bottom: 1rem;
+  }
+
+  &__member {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__member-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    color: #4b5563;
+  }
+
+  &__member-name {
+    font-size: 0.875rem;
+    color: #4b5563;
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  &__stat {
+    text-align: center;
+
+    &-value {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #2563eb;
+    }
+
+    &-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  &__action-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &--view {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+
+      &:hover {
+        background-color: #1d4ed8;
+      }
+    }
+
+    &--edit {
+      background-color: transparent;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+
+      &:hover {
+        background-color: #eff6ff;
+      }
+    }
+  }
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  text-align: center;
+  color: #dc2626;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: #fee2e2;
+  border-radius: 0.25rem;
+}

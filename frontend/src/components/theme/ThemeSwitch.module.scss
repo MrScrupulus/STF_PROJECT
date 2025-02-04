@@ -1,0 +1,47 @@
+.theme_switch {
+  &__container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
+  }
+
+  &__toggle {
+    position: relative;
+    width: 3.5rem;
+    height: 2rem;
+    background-color: transparent;
+    border: 2px solid currentColor;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &::after {
+      content: "☀️";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0.15rem;
+      left: 0.15rem;
+      width: 1.5rem;
+      height: 1.5rem;
+      background-color: currentColor;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      font-size: 1rem;
+    }
+
+    &--dark::after {
+      content: "🌙";
+      transform: translateX(1.5rem);
+    }
+  }
+
+  &__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: currentColor;
+    user-select: none;
+  }
+} 

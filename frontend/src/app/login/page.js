@@ -37,62 +37,72 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={styles.formContainer}>
-      <h1>Connexion</h1>
-      <form onSubmit={handleSubmit}>
-        {error && <div className={styles.error}>{error}</div>}
-        <input
-          type="email"
-          className={styles.formInput}
-          placeholder="Email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          disabled={isLoading}
-        />
-        <div className={styles.passwordContainer}>
+    <div className={styles.login__container}>
+      <h1 className={styles.login__title}>Connexion</h1>
+
+      {error && <div className={styles.error}>{error}</div>}
+
+      <form onSubmit={handleSubmit} className={styles.login__form}>
+        <div className={styles.login__group}>
           <input
-            type={showPassword ? "text" : "password"}
-            className={styles.formInput}
-            placeholder="Mot de passe"
-            value={formData.password}
+            type="email"
+            className={styles.login__input}
+            placeholder="Email"
+            value={formData.email}
             onChange={(e) =>
-              setFormData({ ...formData, password: e.target.value })
+              setFormData({ ...formData, email: e.target.value })
             }
             disabled={isLoading}
-            aria-label="Mot de passe"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className={styles.eyeButton}
-            aria-label={
-              showPassword
-                ? "Masquer le mot de passe"
-                : "Afficher le mot de passe"
-            }
-          >
-            {showPassword ? (
-              <FaEyeSlash className={styles.eyeIcon} />
-            ) : (
-              <FaEye className={styles.eyeIcon} />
-            )}
-          </button>
         </div>
-        <div className={styles.forgotPassword}>
-          <Link href="/forgot-password" className={styles.forgotPasswordLink}>
+
+        <div className={styles.login__group}>
+          <div className={styles.login__password_container}>
+            <input
+              type={showPassword ? "text" : "password"}
+              className={styles.login__input}
+              placeholder="Mot de passe"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              disabled={isLoading}
+              aria-label="Mot de passe"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className={styles.login__eye_button}
+              aria-label={
+                showPassword
+                  ? "Masquer le mot de passe"
+                  : "Afficher le mot de passe"
+              }
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.login__group}>
+          <Link
+            href="/forgot-password"
+            className={styles.login__forgot_password}
+          >
             Mot de passe oublié ?
           </Link>
         </div>
+
         <button
           type="submit"
-          className={styles.submitButton}
+          className={styles.login__submit}
           disabled={isLoading}
         >
           {isLoading ? (
-            <div className={styles.spinner}>
-              <div className={styles.spinnerDot}></div>
-              <div className={styles.spinnerDot}></div>
-              <div className={styles.spinnerDot}></div>
+            <div className={styles.login__spinner}>
+              <div className={styles.login__spinner_dot}></div>
+              <div className={styles.login__spinner_dot}></div>
+              <div className={styles.login__spinner_dot}></div>
             </div>
           ) : (
             "Se connecter"

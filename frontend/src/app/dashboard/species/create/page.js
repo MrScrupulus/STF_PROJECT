@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { speciesService } from "@/services/speciesService";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import styles from "@/styles/pages/dashboard/species-create.module.scss";
 
 export default function CreateSpecies() {
   const router = useRouter();
@@ -12,9 +13,14 @@ export default function CreateSpecies() {
     basePoints: "",
     isBonus: false,
   });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
     try {
       const dataToSend = {
         name: formData.name,
@@ -25,7 +31,9 @@ export default function CreateSpecies() {
       await speciesService.create(dataToSend);
       router.push("/dashboard");
     } catch (error) {
-      console.error("Error creating species:", error);
+      setError(error.message || "Une erreur est survenue lors de la création");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -36,89 +44,99 @@ export default function CreateSpecies() {
 
   return (
     <ProtectedRoute requiredRole="ROLE_ADMIN">
-      <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">Ajouter une espèce</h1>
-        <form onSubmit={handleSubmit} className="max-w-2xl">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Nom de l'espèce
+      <div className={styles["species-create__container"]}>
+        <h1 className={styles["species-create__title"]}>Ajouter une espèce</h1>
+
+        {error && <div className={styles.error}>{error}</div>}
+
+        <form
+          onSubmit={handleSubmit}
+          className={styles["species-create__form"]}
+        >
+          <div className={styles["species-create__group"]}>
+            <label className={styles["species-create__label"]}>
+              Nom de l'espèce
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className={styles["species-create__input"]}
+              required
+            />
+          </div>
+
+          <div className={styles["species-create__checkbox-wrapper"]}>
+            <input
+              type="checkbox"
+              checked={formData.isBonus}
+              onChange={(e) =>
+                setFormData({ ...formData, isBonus: e.target.checked })
+              }
+              id="isBonus"
+            />
+            <label
+              htmlFor="isBonus"
+              className={styles["species-create__label"]}
+            >
+              Espèce bonus
+            </label>
+          </div>
+
+          {!formData.isBonus ? (
+            <div className={styles["species-create__group"]}>
+              <label className={styles["species-create__label"]}>
+                Coefficient
               </label>
               <input
-                type="text"
-                value={formData.name}
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.coefficient}
                 onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+                  setFormData({ ...formData, coefficient: e.target.value })
                 }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className={styles["species-create__input"]}
+                required
+              />
+              <p className={styles["species-create__hint"]}>
+                Ce coefficient sera multiplié par la taille du poisson
+              </p>
+            </div>
+          ) : (
+            <div className={styles["species-create__group"]}>
+              <label className={styles["species-create__label"]}>
+                Points bonus
+              </label>
+              <input
+                type="number"
+                value={formData.basePoints}
+                onChange={(e) =>
+                  setFormData({ ...formData, basePoints: e.target.value })
+                }
+                className={styles["species-create__input"]}
                 required
               />
             </div>
+          )}
 
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isBonus}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isBonus: e.target.checked })
-                  }
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-600">Espèce bonus</span>
-              </label>
-            </div>
-
-            {!formData.isBonus ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Coefficient
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.coefficient}
-                  onChange={(e) =>
-                    setFormData({ ...formData, coefficient: e.target.value })
-                  }
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Ce coefficient sera multiplié par la taille du poisson
-                </p>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Points bonus
-                </label>
-                <input
-                  type="number"
-                  name="basePoints"
-                  value={formData.basePoints}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 flex justify-end space-x-3">
+          <div className={styles["species-create__actions"]}>
             <button
               type="button"
               onClick={() => router.push("/dashboard")}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              className={`${styles["species-create__button"]} ${styles["species-create__button--cancel"]}`}
+              disabled={isLoading}
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              className={`${styles["species-create__button"]} ${styles["species-create__button--submit"]}`}
+              disabled={isLoading}
             >
-              Ajouter l'espèce
+              {isLoading ? "Création..." : "Ajouter l'espèce"}
             </button>
           </div>
         </form>
