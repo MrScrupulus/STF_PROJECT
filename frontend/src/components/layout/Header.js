@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { authService } from "../../services/authService";
-import styles from "./Header.module.scss";
-import floatingStyles from "@/styles/components/FloatingMenu.module.scss";
-import ThemeSwitch from "@/components/theme/ThemeSwitch";
+import styles from "@/styles/components/layout/Header.module.scss";
+import floatingStyles from "@/styles/components/ui/FloatingMenu.module.scss";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { usePathname } from "next/navigation";
 
 export function Header() {
   const [user, setUser] = useState(null);
@@ -14,6 +14,7 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [currentPath, setCurrentPath] = useState("/");
+  const pathname = usePathname();
 
   useEffect(() => {
     // Mettre à jour le chemin courant
@@ -172,60 +173,40 @@ export function Header() {
     }
 
     // Menu desktop existant
+    const menuItems = [
+      { path: "/", label: "Accueil" },
+      { path: "/competitions", label: "Compétitions" },
+      { path: "/teams", label: "Équipe" },
+      ...(user ? [{ path: "/account", label: "Profil" }] : []),
+      ...(user?.roles?.includes("ROLE_ADMIN")
+        ? [{ path: "/dashboard", label: "Bureau de l'ombre" }]
+        : []),
+    ];
+
     return (
       <nav className={styles.Header__nav}>
-        <ul className="Header__menu">
-          <li className="Header__menu-item">
-            <a href="/" className="Header__menu-link">
-              Accueil
-            </a>
-          </li>
-          <li className="Header__menu-item">
-            <a href="/competitions" className="Header__menu-link">
-              Compétitions
-            </a>
-          </li>
-          <li className="Header__menu-item">
-            <a href="/teams" className="Header__menu-link">
-              Équipe
-            </a>
-          </li>
-          {user ? (
-            <>
-              <li className="Header__menu-item">
-                <a href="/account" className="Header__menu-link">
-                  Profil
-                </a>
-              </li>
-              <li className="Header__menu-item">
-                <button onClick={handleLogout} className="Header__logout-btn">
-                  Déconnexion
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li className="Header__menu-item">
-                <a href="/login" className="Header__menu-link">
-                  Connexion
-                </a>
-              </li>
-              <li className="Header__menu-item">
-                <a href="/register" className="Header__menu-link">
-                  Inscription
-                </a>
-              </li>
-            </>
+        <ul className={styles.Header__menu}>
+          {menuItems.map(
+            (item) =>
+              pathname !== item.path && (
+                <li key={item.path} className={styles["Header__menu-item"]}>
+                  <a href={item.path} className={styles["Header__menu-link"]}>
+                    {item.label}
+                  </a>
+                </li>
+              )
+          )}
+          {user && (
+            <li className={styles["Header__menu-item"]}>
+              <button
+                onClick={handleLogout}
+                className={styles["Header__logout-btn"]}
+              >
+                Déconnexion
+              </button>
+            </li>
           )}
         </ul>
-
-        {user && user.roles?.includes("ROLE_ADMIN") && (
-          <div className="Header__admin">
-            <a href="/dashboard" className="Header__admin-link">
-              Bureau de l'ombre
-            </a>
-          </div>
-        )}
       </nav>
     );
   };
@@ -235,16 +216,19 @@ export function Header() {
       <div className={styles.Header__container}>
         <div className={styles.Header__logo}>
           <a href="/" className={styles.Header__logo_link}>
-            Street Fishing
+            <img
+              src="/images/logos/logo_street.png"
+              alt="Street Fishing Logo"
+              className={styles.Header__logo_image}
+            />
           </a>
           {user && (
-            <span className="Header__welcome">Bonjour {user.firstname}</span>
+            <span className={styles.Header__welcome}>
+              Bonjour {user.firstname}
+            </span>
           )}
         </div>
         {renderMenu()}
-        <div className={styles.header__actions}>
-          <ThemeSwitch />
-        </div>
       </div>
     </header>
   );

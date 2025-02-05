@@ -36,14 +36,47 @@ export default function CompetitionsPage() {
           "div",
           {
             key: competition.id,
-            className: styles.competitions__card,
+            className: styles.competition__card,
           },
           createElement(
-            "h2",
+            "h3",
             {
-              className: styles.competitions__name,
+              className: styles.competition__name,
             },
             competition.name
+          ),
+          createElement(
+            "div",
+            {
+              className: styles.competition__details,
+            },
+            createElement(
+              "div",
+              {
+                className: styles.date_range,
+              },
+              createElement(
+                "span",
+                {
+                  className: styles.date_range__item,
+                },
+                `Début: ${new Date(competition.startDate).toLocaleDateString()}`
+              ),
+              createElement(
+                "span",
+                {
+                  className: styles.date_range__item,
+                },
+                `Fin: ${new Date(competition.endDate).toLocaleDateString()}`
+              )
+            ),
+            createElement(
+              "div",
+              {
+                className: styles.competition_type,
+              },
+              competition.type || "Standard"
+            )
           ),
           createElement(
             "div",

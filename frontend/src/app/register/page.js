@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
-import styles from "@/styles/pages/register.module.scss";
+import styles from "@/styles/pages/auth/register.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const PHONE_REGEX = /^[0-9]{10}$/;

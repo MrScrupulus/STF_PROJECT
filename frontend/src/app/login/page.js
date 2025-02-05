@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
-import styles from "@/styles/pages/login.module.scss";
+import styles from "@/styles/pages/auth/login.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Link from "next/link";
 

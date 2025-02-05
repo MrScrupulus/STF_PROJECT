@@ -746,3 +746,42 @@
     background-color: #2563eb;
   }
 }
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  // Colonnes supplémentaires en desktop
+  .member-number,
+  .country {
+    display: none;
+
+    @media (min-width: 601px) {
+      display: table-cell;
+    }
+  }
+
+  // Style pour le numéro d'adhérent
+  .member-number {
+    font-family: monospace;
+    color: #4a5568;
+  }
+
+  // Style pour le pays
+  .country {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    img {
+      width: 20px;
+      height: auto;
+    }
+  }
+}

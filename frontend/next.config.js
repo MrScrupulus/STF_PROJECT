@@ -13,7 +13,7 @@ const nextConfig = {
     ];
   },
   sassOptions: {
-    includePaths: ["./src/styles"],
+    includePaths: ['./src/styles'],
   },
 };
 

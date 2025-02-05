@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { authService } from "../../services/authService";
-import "../../styles/components/auth/Login.scss";
+import styles from "@/styles/components/auth/login.module.scss";
 
 export function Login() {
   const [credentials, setCredentials] = useState({ email: "", password: "" });

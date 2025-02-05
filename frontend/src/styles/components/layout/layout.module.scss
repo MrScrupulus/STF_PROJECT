@@ -1,0 +1,27 @@
+.mainLayout {
+  @apply min-h-screen;
+  background-color: #f3f4f6;
+  padding-top: 160px;
+}
+
+.main {
+  @apply flex-grow;
+  position: relative;
+  z-index: 1;
+
+  [class*="__container"] {
+    padding-top: 2rem;
+  }
+
+  [class*="__list"],
+  [class*="__table"] {
+    margin-top: 1.5rem;
+  }
+}
+
+.themeSwitch {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 40;
+}

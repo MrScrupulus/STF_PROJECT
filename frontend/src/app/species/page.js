@@ -47,60 +47,20 @@ export default function SpeciesPage() {
   return (
     <ProtectedRoute>
       <div className={styles.species__container}>
-        <div className={styles.species__header}>
-          <h1 className={styles.species__title}>Espèces</h1>
-        </div>
+        <h1>Espèces</h1>
 
         <div className={styles.species__grid}>
-          {species.map((specie) => (
+          {species?.map((specie) => (
             <div key={specie.id} className={styles.species__card}>
-              <div className={styles.species__card_header}>
-                <h2 className={styles.species__name}>{specie.name}</h2>
-              </div>
+              <h3>{specie.name}</h3>
 
-              <div className={styles.species__card_content}>
-                <div className={styles.species__info}>
-                  <div className={styles.species__field}>
-                    <div className={styles["species__field-label"]}>Type</div>
-                    <div className={styles["species__field-value"]}>
-                      <span
-                        className={`${styles.species__badge} ${
-                          specie.isBonus
-                            ? styles["species__badge--bonus"]
-                            : styles["species__badge--regular"]
-                        }`}
-                      >
-                        {specie.isBonus ? "Bonus" : "Standard"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className={styles.species__field}>
-                    <div className={styles["species__field-label"]}>
-                      {specie.isBonus ? "Points bonus" : "Coefficient"}
-                    </div>
-                    <div className={styles["species__field-value"]}>
-                      {specie.isBonus
-                        ? `${specie.basePoints} points`
-                        : `×${specie.coefficient}`}
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.species__actions}>
-                  <button
-                    onClick={() => router.push(`/species/${specie.id}/edit`)}
-                    className={`${styles.species__button} ${styles["species__button--edit"]}`}
-                  >
-                    Modifier
-                  </button>
-                  <button
-                    onClick={() => handleDelete(specie.id)}
-                    className={`${styles.species__button} ${styles["species__button--delete"]}`}
-                  >
-                    Supprimer
-                  </button>
-                </div>
+              <div className={styles.points_info}>
+                <span className={styles.base_points}>
+                  {specie.coefficient} points
+                </span>
+                {specie.isBonus && (
+                  <span className={styles.bonus_points}>Points bonus</span>
+                )}
               </div>
             </div>
           ))}
