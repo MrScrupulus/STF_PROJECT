@@ -63,4 +63,9 @@ export const adminService = {
       throw error;
     }
   },
+
+  updateUserRole: async (userId) => {
+    const response = await api.put(`/admin/users/${userId}/toggle-role`);
+    return response;
+  },
 };

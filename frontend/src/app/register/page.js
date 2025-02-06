@@ -222,7 +222,9 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className={styles.register__group}>
+          <div
+            className={`${styles.register__group} ${styles["register__group--password"]}`}
+          >
             <label className={styles.register__label}>Mot de passe</label>
             <div className={styles.register__password_container}>
               <input

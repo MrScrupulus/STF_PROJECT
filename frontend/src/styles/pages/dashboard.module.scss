@@ -1,4 +1,4 @@
-@import "../abstracts/variables";
+@use "../abstracts/variables" as *;
 
 .dashboard {
   // Variables pour le thème clair
@@ -9,9 +9,9 @@
   --status-ended-bg: #f87171;
   --status-ended-text: #7f1d1d;
 
-  --role-user-bg: #f87171;
+  --role-user-bg: #dc2626;
   --role-user-text: #991b1b;
-  --role-admin-bg: #34d399;
+  --role-admin-bg: #059669;
   --role-admin-text: #065f46;
 
   // Quand le thème sombre est actif
@@ -23,17 +23,22 @@
     --status-ended-bg: #dc2626;
     --status-ended-text: #fca5a5;
 
-    --role-user-bg: #dc2626;
+    --role-user-bg: #b91c1c;
     --role-user-text: #fca5a5;
-    --role-admin-bg: #059669;
+    --role-admin-bg: #047857;
     --role-admin-text: #6ee7b7;
   }
 
   &__container {
-    padding: $spacing-xs;
     width: 100%;
-    box-sizing: border-box;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: $spacing-xl;
     position: relative;
+
+    @include mobile {
+      padding: $spacing-base;
+    }
   }
 
   &__header {
@@ -88,13 +93,39 @@
 
   &__grid {
     display: grid;
-    gap: $spacing-sm;
-    grid-template-columns: 100%;
-    grid-template-areas:
-      "users"
-      "competitions"
-      "teams"
-      "species";
+    gap: $spacing-lg;
+    grid-template-columns: repeat(2, 1fr);
+    transition: all 0.3s ease;
+
+    // Quand il y a une recherche active (ajoutez une classe .searching au conteneur)
+    &.searching {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+
+    @include mobile {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__section_title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 2rem;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.5rem;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%);
+      border-radius: 2px;
+    }
   }
 
   &__card {
@@ -104,41 +135,33 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     box-sizing: border-box;
     overflow: hidden;
+    transition: all 0.3s ease;
 
-    @include desktop {
-      padding: $spacing-lg;
-      transition: transform 0.2s, box-shadow 0.2s;
+    &:empty,
+    &.hidden {
+      display: none;
+    }
 
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    &.fade-out {
+      opacity: 0;
+      transform: scale(0.95);
+      height: 0;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    @include mobile {
+      margin-bottom: $spacing-base;
+
+      &__stats {
+        grid-template-columns: 1fr;
+        gap: $spacing-sm;
       }
-    }
 
-    &:nth-child(1) {
-      grid-area: users;
-    }
-    &:nth-child(2) {
-      grid-area: competitions;
-    }
-    &:nth-child(3) {
-      grid-area: teams;
-    }
-    &:nth-child(4) {
-      grid-area: species;
-    }
-
-    &__section_title {
-      font-size: $font-size-base;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 1.25rem;
-      padding-bottom: $spacing-sm;
-      border-bottom: 1px solid #e5e7eb;
-
-      @media (min-width: $breakpoint-mobile) {
-        font-size: $font-size-lg;
-        padding-bottom: $spacing-base;
+      &__actions {
+        flex-direction: column;
+        gap: $spacing-sm;
       }
     }
 
@@ -207,6 +230,16 @@
         }
       }
     }
+
+    @include desktop {
+      padding: $spacing-lg;
+      transition: transform 0.2s, box-shadow 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+    }
   }
 
   &__users_list {
@@ -219,52 +252,45 @@
 
   &__users_table {
     width: 100%;
-    min-width: 100%;
     border-collapse: collapse;
-    font-size: $font-size-xs;
 
     th,
     td {
-      padding: $spacing-xs;
+      padding: 0.75rem;
       text-align: left;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      min-width: 80px;
-    }
+      font-size: 0.875rem;
 
-    th:nth-child(1),
-    td:nth-child(1) {
-      width: 80px;
-    }
-    th:nth-child(2),
-    td:nth-child(2) {
-      width: 80px;
-    }
-    th:nth-child(3),
-    td:nth-child(3) {
-      width: auto;
-    }
-
-    th {
-      background-color: #f3f4f6;
-      font-weight: 500;
-      color: #4b5563;
-      white-space: nowrap;
-    }
-
-    td {
-      border-bottom: 1px solid #e5e7eb;
+      @include desktop {
+        font-size: 0.9375rem;
+      }
     }
 
     tbody tr {
-      cursor: pointer;
+      transition: all 0.2s ease;
 
       @include desktop {
-        transition: background-color 0.2s;
         &:hover {
-          background-color: #f9fafb;
+          background-color: rgba(255, 255, 255, 0.05);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          cursor: pointer;
+          transform: translateY(-1px);
         }
+      }
+    }
+
+    @include mobile {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+
+      th:nth-child(5),
+      td:nth-child(5) {
+        display: none;
+      }
+
+      th:nth-child(4),
+      td:nth-child(4) {
+        display: table-cell !important;
       }
     }
   }
@@ -357,6 +383,39 @@
     svg {
       width: 1rem;
       height: 1rem;
+    }
+  }
+
+  &__search {
+    position: relative;
+    margin-bottom: $spacing-lg;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto $spacing-xl;
+
+    &_input {
+      width: 100%;
+      padding: $spacing-base $spacing-xl;
+      border: 1px solid #e5e7eb;
+      border-radius: 9999px;
+      font-size: $font-size-base;
+      background-color: white;
+      transition: all 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+      }
+    }
+
+    &_icon {
+      position: absolute;
+      left: $spacing-sm;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: $font-size-lg;
     }
   }
 }
@@ -647,25 +706,118 @@
   }
 }
 
-.role {
-  &User {
-    background-color: var(--role-user-bg);
-    color: var(--role-user-text);
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 9999px;
-    font-size: $font-size-xs;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+.role_text {
+  display: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+  text-align: center;
+
+  &--admin {
+    background-color: #059669;
+    color: white;
   }
 
-  &Admin {
-    background-color: var(--role-admin-bg);
-    color: var(--role-admin-text);
-    padding: $spacing-xs $spacing-sm;
-    border-radius: 9999px;
-    font-size: $font-size-xs;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  &--user {
+    background-color: #dc2626;
+    color: white;
+  }
+}
+
+.role-switch {
+  cursor: pointer;
+  position: relative;
+  display: inline-block;
+  width: 3.5rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+  outline: none;
+  overflow: hidden;
+  position: relative;
+
+  @include mobile {
+    // Ajuster la taille pour mobile
+    width: 3rem;
+    height: 1.5rem;
+
+    &::after {
+      width: 1.1rem;
+      height: 1.1rem;
+      top: 0.2rem;
+      left: 0.2rem;
+    }
+
+    &::before {
+      font-size: 0.65rem;
+    }
+
+    &--admin::after {
+      transform: translateX(1.7rem);
+    }
+  }
+
+  &--user {
+    background-color: #ef4444 !important;
+    &:hover {
+      background-color: #dc2626;
+    }
+    &::before {
+      content: "user";
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      color: white;
+      opacity: 1;
+    }
+  }
+
+  &--admin {
+    background-color: #10b981 !important;
+    &:hover {
+      background-color: #059669;
+    }
+    &::before {
+      content: "admin";
+      position: absolute;
+      left: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      color: white;
+      opacity: 1;
+    }
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0.2rem;
+    left: 0.2rem;
+    width: 1.35rem;
+    height: 1.35rem;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+  }
+
+  &--admin::after {
+    transform: translateX(1.75rem);
+  }
+
+  &:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    &::before {
+      opacity: 1;
+    }
   }
 }
 

@@ -2,84 +2,70 @@
 
 import { createElement } from "react";
 import styles from "@/styles/pages/home.module.scss";
+import Image from "next/image";
 
 export default function HomePage() {
-  return createElement(
-    "div",
-    {
-      className: styles.homeContainer,
-    },
-    createElement(
-      "section",
-      {
-        className: "text-center py-16",
-      },
-      createElement(
-        "h1",
-        {
-          className: "text-4xl md:text-6xl font-bold mb-4",
-        },
-        "Street Fishing"
-      ),
-      createElement(
-        "p",
-        {
-          className: "text-xl text-gray-600",
-        },
-        "Bienvenue sur STF Project"
-      )
-    ),
-    createElement(
-      "section",
-      {
-        className: "py-12",
-      },
-      createElement(
-        "h2",
-        {
-          className: "text-3xl font-bold text-center mb-8",
-        },
-        "À quoi ça sert?"
-      ),
-      createElement(
-        "div",
-        {
-          className: "grid md:grid-cols-3 gap-8",
-        },
-        [
-          {
-            title: "Compétitions",
-            description:
-              "Inscrivez-vous à une compétition, suivez vos résultats en direct",
-          },
-          {
-            title: "Équipes",
-            description: "Créez votre équipe, invitez vos amis.",
-          },
-          {
-            title: "Prises",
-            description: "Enregistrez et validez les prises des pêcheurs",
-          },
-        ].map((feature) =>
-          createElement(
-            "div",
+  return (
+    <div className={styles.home}>
+      <div className={styles.home__content}>
+        <div className={styles.home__logo_container}>
+          <Image
+            src="/images/logos/logo_street_neg.png"
+            alt="Street Fishing Logo"
+            width={360}
+            height={180}
+            style={{
+              width: "360px",
+              height: "180px",
+              objectFit: "contain",
+            }}
+            priority
+          />
+        </div>
+        <div className={styles.home__welcome_container}>
+          <p className={styles.home__welcome_text}>Événement organisé par</p>
+          <Image
+            src="/images/logos/LogoMEPN_TransH.png"
+            alt="MEPN Logo"
+            width={110}
+            height={55}
+            style={{
+              width: "110px",
+              height: "55px",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+      </div>
+      <h1 className={styles.home__title}>Street Fishing</h1>
+      <p className={styles.home__subtitle}>Bienvenue sur STF Project</p>
+      <section className={styles.home__section}>
+        <h2 className={styles.home__sectionTitle}>À quoi ça sert?</h2>
+        <div className={styles.home__features}>
+          {[
             {
-              key: feature.title,
-              className: "p-6 bg-white rounded-lg shadow-sm",
+              title: "Compétitions",
+              description:
+                "Inscrivez-vous à une compétition, suivez vos résultats en direct",
             },
-            createElement(
-              "h3",
-              { className: "text-xl font-bold mb-2" },
-              feature.title
-            ),
-            createElement(
-              "p",
-              { className: "text-gray-600" },
-              feature.description
-            )
-          )
-        )
-      )
-    )
+            {
+              title: "Équipes",
+              description: "Créez votre équipe, invitez vos amis.",
+            },
+            {
+              title: "Prises",
+              description: "Enregistrez et validez les prises des pêcheurs",
+            },
+          ].map((feature) => (
+            <div key={feature.title} className={styles.home__feature}>
+              <h3 className={styles.home__featureTitle}>{feature.title}</h3>
+              <p className={styles.home__featureDescription}>
+                {feature.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

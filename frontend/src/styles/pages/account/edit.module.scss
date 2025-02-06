@@ -86,9 +86,13 @@
     }
 
     &--cancel {
-      background-color: #dc2626 !important;
+      background-color: #ef4444 !important;
       color: white;
       order: 1;
+
+      &:hover {
+        background-color: #dc2626 !important;
+      }
 
       &:active {
         background-color: #b91c1c !important;
@@ -96,9 +100,13 @@
     }
 
     &--submit {
-      background-color: #22c55e !important;
+      background-color: #10b981 !important;
       color: white;
       order: 2;
+
+      &:hover {
+        background-color: #059669 !important;
+      }
 
       &:active {
         background-color: #16a34a !important;
@@ -149,12 +157,48 @@
   }
 
   &__actions {
-    @media (max-width: 600px) {
-      flex-direction: column;
-      gap: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
 
-      button {
-        width: 100%;
+  &__button {
+    &_cancel {
+      background-color: #ef4444 !important;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 120px;
+      border: none;
+
+      &:hover {
+        background-color: #dc2626 !important;
+      }
+
+      &:active {
+        background-color: #b91c1c !important;
+      }
+    }
+
+    &_confirm {
+      background-color: #10b981 !important;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 120px;
+      border: none;
+
+      &:hover {
+        background-color: #059669 !important;
+      }
+
+      &:active {
+        background-color: #16a34a !important;
       }
     }
   }

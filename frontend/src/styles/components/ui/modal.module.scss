@@ -8,20 +8,23 @@
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     z-index: 1000;
+    cursor: pointer;
+    padding-top: 25vh;
   }
 
   &__content {
     background: white;
-    padding: 1.5rem;
+    padding: 2rem;
     border-radius: 0.5rem;
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
+    max-width: 90%;
+    max-height: 70vh;
     overflow-y: auto;
     position: relative;
-    animation: modalIn 0.3s ease-out;
+    cursor: default;
+    animation: modalIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 
   &__header {
@@ -73,25 +76,35 @@
       cursor: pointer;
       transition: all 0.2s;
       border: none;
+      min-width: 120px;
+      text-align: center;
     }
   }
 
   &__button {
     &_cancel {
-      background-color: #dc2626 !important;
+      background-color: #ef4444 !important;
       color: white;
 
       &:active {
         background-color: #b91c1c !important;
       }
+
+      &:hover {
+        background-color: #dc2626 !important;
+      }
     }
 
     &_confirm {
-      background-color: #22c55e !important;
+      background-color: #10b981 !important;
       color: white;
 
       &:active {
         background-color: #16a34a !important;
+      }
+
+      &:hover {
+        background-color: #059669 !important;
       }
     }
   }
@@ -100,7 +113,7 @@
 @keyframes modalIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-40px);
   }
   to {
     opacity: 1;

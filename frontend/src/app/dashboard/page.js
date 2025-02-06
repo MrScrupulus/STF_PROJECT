@@ -10,6 +10,7 @@ import styles from "@/styles/pages/dashboard.module.scss";
 import { authService } from "@/services/authService";
 import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { FaCheckCircle, FaTimesCircle, FaSearch } from "react-icons/fa";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -18,7 +19,7 @@ const TABLE_HEADERS = {
     { id: "firstname", label: "Prénom" },
     { id: "email", label: "Email" },
     { id: "role", label: "Rôle" },
-    { id: "verified", label: "Statut Email" },
+    { id: "verified", label: "Statut Email", desktopOnly: true },
   ],
   competitions: [
     { id: "name", label: "Titre" },
@@ -57,6 +58,15 @@ export default function Dashboard() {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const router = useRouter();
   const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [filteredData, setFilteredData] = useState({
+    users: [],
+    competitions: [],
+    teams: [],
+    species: [],
+  });
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [userToModify, setUserToModify] = useState(null);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -162,6 +172,45 @@ export default function Dashboard() {
     filterData();
   }, [searchTerm, searchBy, searchCategory, users, competitions]);
 
+  useEffect(() => {
+    const searchData = () => {
+      const term = searchTerm.toLowerCase();
+
+      const filteredUsers = users.filter((user) =>
+        Object.values(user).some((value) =>
+          String(value).toLowerCase().includes(term)
+        )
+      );
+
+      const filteredCompetitions = competitions.filter((comp) =>
+        Object.values(comp).some((value) =>
+          String(value).toLowerCase().includes(term)
+        )
+      );
+
+      const filteredTeams = teams.filter((team) =>
+        Object.values(team).some((value) =>
+          String(value).toLowerCase().includes(term)
+        )
+      );
+
+      const filteredSpecies = species.filter((spec) =>
+        Object.values(spec).some((value) =>
+          String(value).toLowerCase().includes(term)
+        )
+      );
+
+      setFilteredData({
+        users: filteredUsers,
+        competitions: filteredCompetitions,
+        teams: filteredTeams,
+        species: filteredSpecies,
+      });
+    };
+
+    searchData();
+  }, [searchTerm, users, competitions, teams, species]);
+
   const filterData = () => {
     if (!searchTerm) {
       setFilteredUsers(users);
@@ -211,12 +260,18 @@ export default function Dashboard() {
     }
   };
 
-  const handleToggleRole = async (userId) => {
+  const handleToggleRole = (user) => {
+    setUserToModify(user);
+    setShowRoleModal(true);
+  };
+
+  const confirmRoleChange = async () => {
     try {
-      await adminService.toggleUserRole(userId);
-      fetchData();
+      await adminService.toggleUserRole(userToModify.id);
+      await fetchData();
+      setShowRoleModal(false);
     } catch (error) {
-      console.error("Error toggling role:", error);
+      console.error("Erreur lors du changement de rôle:", error);
     }
   };
 
@@ -360,7 +415,7 @@ export default function Dashboard() {
 
     const handleConfirmToggle = async () => {
       try {
-        await handleToggleRole(user.id);
+        await handleToggleRole(user);
         setIsAdminLocal(!isAdminLocal);
         setShowConfirm(false);
         onClose();
@@ -895,10 +950,39 @@ export default function Dashboard() {
         return item.members?.length || "0";
       case "role":
         const isAdmin = item.roles?.includes("ROLE_ADMIN");
+        const isMobileView =
+          typeof window !== "undefined" && window.innerWidth <= 600;
+
+        if (isMobileView) {
+          return createElement(
+            "span",
+            {
+              className: `${styles.role_text} ${
+                isAdmin ? styles["role_text--admin"] : styles["role_text--user"]
+              }`,
+            },
+            isAdmin ? "Admin" : "User"
+          );
+        }
+
         return createElement(
-          "span",
-          { className: isAdmin ? styles.roleAdmin : styles.roleUser },
-          isAdmin ? "Admin" : "User"
+          "div",
+          {
+            onClick: (e) => e.stopPropagation(),
+            style: { display: "inline-block" },
+          },
+          createElement("button", {
+            className: `${styles["role-switch"]} ${
+              isAdmin
+                ? styles["role-switch--admin"]
+                : styles["role-switch--user"]
+            }`,
+            onClick: (e) => {
+              e.stopPropagation();
+              handleToggleRole(item);
+            },
+            title: isAdmin ? "Changer en User" : "Changer en Admin",
+          })
         );
       case "verified":
         return item.isVerified ? (
@@ -920,11 +1004,19 @@ export default function Dashboard() {
   };
 
   // Fonction de rendu générique pour les tableaux
-  const renderTable = (items = [], headers, onItemClick) => {
-    if (!Array.isArray(items)) {
-      console.error("Items is not an array:", items);
-      return null;
-    }
+  const renderTable = (items, columns, type) => {
+    const isMobileView =
+      typeof window !== "undefined" && window.innerWidth <= 600;
+
+    // Filtrer les colonnes selon le mode d'affichage
+    const visibleColumns = columns.filter((column) => {
+      if (isMobileView) {
+        // En mobile : seulement nom, prénom, email et rôle
+        return !column.desktopOnly;
+      }
+      // En desktop : toutes les colonnes
+      return true;
+    });
 
     return createElement(
       "table",
@@ -935,8 +1027,8 @@ export default function Dashboard() {
         createElement(
           "tr",
           null,
-          headers.map((header) =>
-            createElement("th", { key: header.id }, header.label)
+          visibleColumns.map((column) =>
+            createElement("th", { key: column.id }, column.label)
           )
         )
       ),
@@ -948,19 +1040,41 @@ export default function Dashboard() {
             "tr",
             {
               key: item.id,
-              onClick: () => onItemClick(item),
+              onClick: () => handleItemClick(item, type),
+              style: { cursor: "pointer" },
             },
-            headers.map((header) =>
+            visibleColumns.map((column) =>
               createElement(
                 "td",
-                { key: `${item.id}-${header.id}` },
-                renderCellContent(item, header.id)
+                { key: column.id },
+                renderCellContent(item, column.id)
               )
             )
           )
         )
       )
     );
+  };
+
+  const handleItemClick = (item, type) => {
+    switch (type) {
+      case "users":
+        setSelectedUser(item);
+        setShowUserModal(true);
+        break;
+      case "competitions":
+        setSelectedCompetition(item);
+        setShowCompetitionModal(true);
+        break;
+      case "teams":
+        setSelectedTeam(item);
+        setShowTeamModal(true);
+        break;
+      case "species":
+        setSelectedSpecies(item);
+        setShowSpeciesModal(true);
+        break;
+    }
   };
 
   const toggleTheme = () => {
@@ -1007,11 +1121,43 @@ export default function Dashboard() {
       ),
       createElement(
         "div",
-        { className: styles.dashboard__grid },
+        { className: styles.dashboard__search },
+        createElement(
+          "div",
+          { className: styles.dashboard__search_icon },
+          createElement(FaSearch)
+        ),
+        createElement("input", {
+          type: "text",
+          placeholder: "Rechercher dans tous les tableaux...",
+          className: styles.dashboard__search_input,
+          value: searchTerm,
+          onChange: (e) => setSearchTerm(e.target.value),
+        })
+      ),
+      createElement(
+        "div",
+        {
+          className: `${styles.dashboard__grid} ${
+            searchTerm ? styles.searching : ""
+          }`,
+        },
         // Section Utilisateurs
         createElement(
           "div",
-          { className: styles.dashboard__card },
+          {
+            className: `${styles.dashboard__card} ${
+              searchTerm && filteredData.users.length === 0
+                ? styles["fade-out"]
+                : ""
+            }`,
+            style: {
+              display:
+                searchTerm && filteredData.users.length === 0
+                  ? "none"
+                  : "block",
+            },
+          },
           createElement(
             "h2",
             { className: styles.dashboard__section_title },
@@ -1020,17 +1166,30 @@ export default function Dashboard() {
           createElement(
             "div",
             { className: styles.dashboard__users_list },
-            renderTable(users, TABLE_HEADERS.users, (user) => {
-              setSelectedUser(user);
-              setShowModal(true);
-            })
+            renderTable(
+              searchTerm ? filteredData.users : users,
+              TABLE_HEADERS.users,
+              "users"
+            )
           )
         ),
 
         // Section Compétitions
         createElement(
           "div",
-          { className: styles.dashboard__card },
+          {
+            className: `${styles.dashboard__card} ${
+              searchTerm && filteredData.competitions.length === 0
+                ? styles["fade-out"]
+                : ""
+            }`,
+            style: {
+              display:
+                searchTerm && filteredData.competitions.length === 0
+                  ? "none"
+                  : "block",
+            },
+          },
           createElement(
             "div",
             { className: styles.dashboard__section_header },
@@ -1052,12 +1211,9 @@ export default function Dashboard() {
             "div",
             { className: styles.dashboard__users_list },
             renderTable(
-              competitions,
+              searchTerm ? filteredData.competitions : competitions,
               TABLE_HEADERS.competitions,
-              (competition) => {
-                setSelectedCompetition(competition);
-                setShowCompetitionModal(true);
-              }
+              "competitions"
             )
           )
         ),
@@ -1065,7 +1221,19 @@ export default function Dashboard() {
         // Section Teams
         createElement(
           "div",
-          { className: styles.dashboard__card },
+          {
+            className: `${styles.dashboard__card} ${
+              searchTerm && filteredData.teams.length === 0
+                ? styles["fade-out"]
+                : ""
+            }`,
+            style: {
+              display:
+                searchTerm && filteredData.teams.length === 0
+                  ? "none"
+                  : "block",
+            },
+          },
           createElement(
             "h2",
             { className: styles.dashboard__section_title },
@@ -1074,17 +1242,30 @@ export default function Dashboard() {
           createElement(
             "div",
             { className: styles.dashboard__users_list },
-            renderTable(teams, TABLE_HEADERS.teams, (team) => {
-              setSelectedTeam(team);
-              setShowTeamModal(true);
-            })
+            renderTable(
+              searchTerm ? filteredData.teams : teams,
+              TABLE_HEADERS.teams,
+              "teams"
+            )
           )
         ),
 
         // Section Species
         createElement(
           "div",
-          { className: styles.dashboard__card },
+          {
+            className: `${styles.dashboard__card} ${
+              searchTerm && filteredData.species.length === 0
+                ? styles["fade-out"]
+                : ""
+            }`,
+            style: {
+              display:
+                searchTerm && filteredData.species.length === 0
+                  ? "none"
+                  : "block",
+            },
+          },
           createElement(
             "div",
             { className: styles.dashboard__section_header },
@@ -1105,19 +1286,20 @@ export default function Dashboard() {
           createElement(
             "div",
             { className: styles.dashboard__users_list },
-            renderTable(species, TABLE_HEADERS.species, (species) => {
-              setSelectedSpecies(species);
-              setShowSpeciesModal(true);
-            })
+            renderTable(
+              searchTerm ? filteredData.species : species,
+              TABLE_HEADERS.species,
+              "species"
+            )
           )
         )
       ),
 
       // Ajout des modals
-      showModal &&
+      showUserModal &&
         createElement(UserDetailsModal, {
           user: selectedUser,
-          onClose: () => setShowModal(false),
+          onClose: () => setShowUserModal(false),
           onDelete: handleDeleteUser,
           onUpdate: (user) => {
             // Gérer la mise à jour
@@ -1141,7 +1323,52 @@ export default function Dashboard() {
         createElement(TeamDetailsModal, {
           team: selectedTeam,
           onClose: () => setShowTeamModal(false),
-        })
+        }),
+
+      showRoleModal &&
+        userToModify &&
+        createElement(
+          "div",
+          { className: styles.modal__overlay },
+          createElement(
+            "div",
+            { className: styles.modal__content },
+            createElement(
+              "h3",
+              { className: styles.modal__title },
+              `Modifier le rôle de ${userToModify.firstname} ${userToModify.lastname}`
+            ),
+            createElement(
+              "p",
+              { className: styles.modal__text },
+              `Êtes-vous sûr de vouloir ${
+                userToModify.roles?.includes("ROLE_ADMIN")
+                  ? "retirer"
+                  : "ajouter"
+              } les droits administrateur ?`
+            ),
+            createElement(
+              "div",
+              { className: styles.modal__actions },
+              createElement(
+                "button",
+                {
+                  className: `${styles.modal__button} ${styles["modal__button--confirm"]}`,
+                  onClick: confirmRoleChange,
+                },
+                "Confirmer"
+              ),
+              createElement(
+                "button",
+                {
+                  className: `${styles.modal__button} ${styles["modal__button--cancel"]}`,
+                  onClick: () => setShowRoleModal(false),
+                },
+                "Annuler"
+              )
+            )
+          )
+        )
     )
   );
 }

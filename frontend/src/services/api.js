@@ -160,4 +160,36 @@ export const api = {
       throw error;
     }
   },
+  patch: async (endpoint, data = null) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(API_URL + endpoint, {
+        method: "PATCH",
+        headers,
+        body: data ? JSON.stringify(data) : null,
+      });
+
+      const responseData = await response.json();
+      console.log("Response status:", response.status);
+      console.log("Response data:", responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.message || `Error ${response.status}`);
+      }
+
+      return responseData;
+    } catch (error) {
+      console.error("API error:", error);
+      throw error;
+    }
+  },
 };

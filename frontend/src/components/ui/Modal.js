@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import styles from '@/styles/components/ui/modal.module.scss';
+import headerStyles from '@/styles/components/layout/Header.module.scss';
 
 export default function Modal({ isOpen, onClose, title, children }) {
   useEffect(() => {
@@ -14,18 +15,33 @@ export default function Modal({ isOpen, onClose, title, children }) {
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
+      const header = document.querySelector('header');
+      if (header) {
+        header.setAttribute('data-modal-open', 'true');
+      }
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
+      const header = document.querySelector('header');
+      if (header) {
+        header.setAttribute('data-modal-open', 'false');
+      }
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className={styles.modal__overlay} onClick={onClose}>
+    <div 
+      className={styles.modal__overlay} 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div 
         className={styles.modal__content}
         onClick={e => e.stopPropagation()}
