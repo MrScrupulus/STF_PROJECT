@@ -18,10 +18,12 @@ export default function ResetPasswordPage({ params }) {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (params?.token) {
-      setToken(params.token);
+    // Accès direct au token depuis l'URL
+    const pathToken = window.location.pathname.split('/').pop();
+    if (pathToken) {
+      setToken(pathToken);
     }
-  }, [params]);
+  }, []);
 
   const validatePassword = (password) => {
     const minLength = password.length >= 8;
@@ -71,16 +73,13 @@ export default function ResetPasswordPage({ params }) {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.resetPassword}>
       <h1>Réinitialisation du mot de passe</h1>
       {!success ? (
-        <form onSubmit={handleSubmit}>
+        <form className={styles.resetPassword__form} onSubmit={handleSubmit}>
           {error && <div className={styles.error}>{error}</div>}
-          <p className={styles.passwordHint}>
-            Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1
-            caractère spécial
-          </p>
-          <div className={styles.passwordContainer}>
+          <div className={styles.resetPassword__group}>
+            <label>Nouveau mot de passe</label>
             <input
               type={showPassword ? "text" : "password"}
               value={formData.password}
@@ -92,28 +91,28 @@ export default function ResetPasswordPage({ params }) {
               className={styles.input}
               disabled={isLoading}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className={styles.eyeButton}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
+            <small className={styles.resetPassword__helper}>
+              Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1
+              caractère spécial
+            </small>
           </div>
-          <input
-            type={showPassword ? "text" : "password"}
-            value={formData.confirmPassword}
-            onChange={(e) =>
-              setFormData({ ...formData, confirmPassword: e.target.value })
-            }
-            placeholder="Confirmer le mot de passe"
-            required
-            className={styles.input}
-            disabled={isLoading}
-          />
+          <div className={styles.resetPassword__group}>
+            <label>Confirmer le mot de passe</label>
+            <input
+              type={showPassword ? "text" : "password"}
+              value={formData.confirmPassword}
+              onChange={(e) =>
+                setFormData({ ...formData, confirmPassword: e.target.value })
+              }
+              placeholder="Confirmer le mot de passe"
+              required
+              className={styles.input}
+              disabled={isLoading}
+            />
+          </div>
           <button
             type="submit"
-            className={styles.submitButton}
+            className={styles.resetPassword__button}
             disabled={isLoading}
           >
             {isLoading
