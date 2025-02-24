@@ -135,7 +135,8 @@ class UpdateController extends AbstractController
                 new Assert\Length(['min' => 8]),
                 new Assert\Regex([
                     'pattern' => '/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/',
-                    'message' => 'Le mot de passe doit contenir au moins une lettre, un chiffre et un caractère spécial',
+                    'message' => 'Le mot de passe doit contenir au moins une lettre, 
+                    un chiffre et un caractère spécial',
                 ]),
             ],
         ]);

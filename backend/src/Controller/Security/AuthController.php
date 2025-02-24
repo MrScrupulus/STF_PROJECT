@@ -117,7 +117,8 @@ final class AuthController extends AbstractController
                     $this->logger->info('Date convertie:', ['date' => $birthDate->format('Y-m-d')]);
                     $user = new User();
                     $user->setEmail($data['email']);
-                    $user->setPassword($passwordHasher->hashPassword($user, $data['password']));
+                    $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
+                    $user->setPassword($hashedPassword);
                     $user->setFirstname($data['firstname']);
                     $user->setLastname($data['lastname']);
                     $user->setPhoneNumber($data['phone_number'] ?? null);
@@ -160,7 +161,8 @@ final class AuthController extends AbstractController
 
             $user = new User();
             $user->setEmail($data['email']);
-            $user->setPassword($passwordHasher->hashPassword($user, $data['password']));
+            $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
+            $user->setPassword($hashedPassword);
             $user->setFirstname($data['firstname']);
             $user->setLastname($data['lastname']);
             $user->setPhoneNumber($data['phone_number'] ?? null);
@@ -236,26 +238,16 @@ final class AuthController extends AbstractController
     #[Route('/me', name: 'auth_me', methods: ['GET', 'OPTIONS'])]
     public function getCurrentUser(): JsonResponse
     {
-        $response = new JsonResponse();
-        $response->headers->set('Access-Control-Allow-Origin', 'https://localhost:3000');
-        $response->headers->set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-            return $response;
-        }
-
         $user = $this->getUser();
+
         if (!$user) {
-            $response->setData([
+            return $this->json([
                 'success' => false,
-                'message' => 'Utilisateur non authentifié'
-            ]);
-            $response->setStatusCode(401);
-            return $response;
+                'message' => 'User not found'
+            ], 404);
         }
 
-        $response->setData([
+        return $this->json([
             'success' => true,
             'user' => [
                 'id' => $user->getId(),
@@ -263,14 +255,12 @@ final class AuthController extends AbstractController
                 'roles' => $user->getRoles(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
-                'phone_number' => $user->getPhoneNumber(),
+                'phone_number' => $user->getPhoneNumber() ?? null,
                 'birth_date' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
-                'country' => $user->getCountry(),
-                'subscriber_number' => $user->getSubscriberNumber(),
+                'country' => $user->getCountry() ?? null,
+                'subscriber_number' => $user->getSubscriberNumber() ?? null,
             ]
         ]);
-
-        return $response;
     }
 
     #[Route('/verify-email/{token}', name: 'verify_email', methods: ['POST'])]

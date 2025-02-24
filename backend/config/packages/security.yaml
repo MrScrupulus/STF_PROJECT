@@ -36,13 +36,13 @@ security:
         password_path: password
       stateless: true
       jwt: ~
-  
+
   access_control:
     # - { path: ^/admin, roles: ROLE_ADMIN }
     # - { path: ^/profile, roles: ROLE_USER }
-    - { path: ^/password-reset, roles: PUBLIC_ACCESS }
     - { path: ^/auth/login, roles: PUBLIC_ACCESS }
     - { path: ^/auth/register, roles: PUBLIC_ACCESS }
+    - { path: ^/password-reset, roles: PUBLIC_ACCESS }
     - { path: ^/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/auth/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/admin, roles: ROLE_ADMIN }
@@ -56,6 +56,6 @@ when@test:
     password_hashers:
       Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
         algorithm: auto
-        cost: 4 
-        time_cost: 
-        memory_cost: 10 
+        cost: 4
+        time_cost:
+        memory_cost: 10

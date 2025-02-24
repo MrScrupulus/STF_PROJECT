@@ -575,7 +575,7 @@ export default function Dashboard() {
       { label: "Type", value: competition.type },
       {
         label: "Statut",
-        value: status.text,
+        value: status.text,DOM,
         className: status.className,
       },
       {

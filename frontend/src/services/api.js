@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://127.0.0.1:8000";
 
 const getHeaders = () => {
   const headers = {
@@ -45,15 +45,30 @@ const handleResponse = async (response) => {
 export const api = {
   get: async (endpoint) => {
     try {
+      const headers = {
+        "Content-Type": "application/json",
+      };
+
+      // Vérifier si le serveur est accessible
+      console.log("👤 Récupération utilisateur courant");
       console.log("Calling endpoint:", `${API_URL}${endpoint}`);
-      console.log("Headers:", getHeaders());
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: "GET",
-        headers: getHeaders(),
-      });
+      if (
+        !endpoint.includes("/auth/login") &&
+        !endpoint.includes("/auth/register") &&
+        !endpoint.includes("/password-reset")
+      ) {
+        const token = localStorage.getItem("token");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+      }
 
+      console.log("Headers:", headers);
+
+      const response = await fetch(`${API_URL}${endpoint}`, { headers });
       console.log("Response status:", response.status);
+
       const responseData = await response.json();
       console.log("Response data:", responseData);
 
@@ -64,6 +79,10 @@ export const api = {
       return responseData;
     } catch (error) {
       console.error("API error:", error);
+      if (error.message === "Expired JWT Token") {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
       throw error;
     }
   },

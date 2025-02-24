@@ -64,18 +64,11 @@ class PasswordResetController extends AbstractController
 
     #[Route('/reset', name: 'reset_password', methods: ['POST'])]
     public function resetPassword(
+        string $token,
         Request $request,
-        SerializerInterface $serializer,
-        EntityManagerInterface $entityManager
+        UserPasswordHasherInterface $passwordHasher
     ): JsonResponse {
-        /** @var ResetPasswordRequest $resetRequest */
-        $resetRequest = $serializer->deserialize(
-            $request->getContent(),
-            ResetPasswordRequest::class,
-            'json'
-        );
-
-        $resetToken = $this->resetTokenRepository->findOneBy(['token' => $resetRequest->getToken()]);
+        $resetToken = $this->resetTokenRepository->findOneBy(['token' => $token]);
 
         if (!$resetToken || $resetToken->isExpired()) {
             return $this->json(
@@ -86,11 +79,17 @@ class PasswordResetController extends AbstractController
 
         $user = $resetToken->getUser();
 
-        // Hasher et mettre à jour le mot de passe
-        $hashedPassword = $this->passwordHasher->hashPassword(
-            $user,
-            $resetRequest->getPassword()
+        /** @var ResetPasswordRequest $resetRequest */
+        $resetRequest = $this->serializer->deserialize(
+            $request->getContent(),
+            ResetPasswordRequest::class,
+            'json'
         );
+
+        $newPassword = $resetRequest->getPassword();
+
+        // Hasher et mettre à jour le mot de passe
+        $hashedPassword = $passwordHasher->hashPassword($user, $newPassword);
         $user->setPassword($hashedPassword);
 
         // Supprimer le token utilisé

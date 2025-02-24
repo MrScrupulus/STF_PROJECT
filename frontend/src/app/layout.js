@@ -20,9 +20,9 @@ export default function RootLayout({ children }) {
             <div className={styles.mainLayout}>
               <Header />
               <main className={styles.main}>{children}</main>
-              <div className={styles.themeSwitch}>
+              {/* <div className={styles.themeSwitch}>
                 <ThemeSwitch />
-              </div>
+              </div> */}
             </div>
           </QueryProvider>
         </ThemeProvider>

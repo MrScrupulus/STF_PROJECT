@@ -216,4 +216,17 @@ export const authService = {
       throw error;
     }
   },
+
+  refreshToken: async () => {
+    try {
+      const response = await api.post('/auth/token/refresh', {
+        refresh_token: localStorage.getItem('refresh_token')
+      });
+      localStorage.setItem('token', response.token);
+      return response;
+    } catch (error) {
+      // Redirection vers login si refresh échoue
+      window.location.href = '/login';
+    }
+  }
 };

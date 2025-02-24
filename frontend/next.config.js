@@ -13,7 +13,15 @@ const nextConfig = {
     ];
   },
   sassOptions: {
-    includePaths: ['./src/styles'],
+    includePaths: ["./src/styles"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
+      },
+    ];
   },
 };
 

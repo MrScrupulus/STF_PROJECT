@@ -97,7 +97,7 @@
     grid-template-columns: repeat(2, 1fr);
     transition: all 0.3s ease;
 
-    // Quand il y a une recherche active (ajoutez une classe .searching au conteneur)
+    // Quand il y a une recherche ajouter une classe .searching au conteneur)
     &.searching {
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     }

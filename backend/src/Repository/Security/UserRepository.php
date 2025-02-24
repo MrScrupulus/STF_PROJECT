@@ -12,4 +12,13 @@ class UserRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, User::class);
     }
+
+    public function findByRole(string $role): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('JSON_CONTAINS(u.roles, :role) = 1')
+            ->setParameter('role', '"' . $role . '"')
+            ->getQuery()
+            ->getResult();
+    }
 }

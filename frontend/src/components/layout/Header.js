@@ -95,26 +95,21 @@ export function Header() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.log("🔒 Aucun token trouvé, utilisateur non connecté");
-        setLoading(false);
+      if (!localStorage.getItem("token")) {
+        console.log("Pas de token, utilisateur non connecté");
+        setUser(null);
         return;
       }
 
-      const userData = await authService.getCurrentUser();
-      if (userData.success) {
-        setUser(userData.user);
+      const response = await authService.getCurrentUser();
+      console.log("Réponse getCurrentUser:", response);
+
+      if (response.success) {
+        setUser(response.user);
       }
     } catch (error) {
-      // Ne pas afficher d'erreur si c'est juste que l'utilisateur n'est pas connecté
-      if (error.message !== "Invalid credentials.") {
-        console.error(
-          "❌ Erreur lors de la récupération de l'utilisateur:",
-          error
-        );
-        setError(error.message);
-      }
+      console.error("Erreur fetchUser:", error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
