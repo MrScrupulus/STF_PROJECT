@@ -15,19 +15,11 @@ export default function Modal({ isOpen, onClose, title, children }) {
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
-      const header = document.querySelector('header');
-      if (header) {
-        header.setAttribute('data-modal-open', 'true');
-      }
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
-      const header = document.querySelector('header');
-      if (header) {
-        header.setAttribute('data-modal-open', 'false');
-      }
     };
   }, [isOpen, onClose]);
 

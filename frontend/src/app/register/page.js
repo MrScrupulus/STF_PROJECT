@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 import styles from "@/styles/pages/auth/register.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import Modal from '@/components/ui/Modal';
 
 const PHONE_REGEX = /^[0-9]{10}$/;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -30,6 +32,19 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [message, setMessage] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  const handleModalClose = () => {
+    if (mounted) {
+      setShowSuccessModal(false);
+      router.push('/login');
+    }
+  };
 
   // Nettoyage du localStorage au montage du composant
   useEffect(() => {
@@ -91,7 +106,7 @@ export default function RegisterPage() {
 
     try {
       await authService.register(formData);
-      router.push("/login");
+      setShowSuccessModal(true);
     } catch (error) {
       setError(
         error.message || "Une erreur est survenue lors de l'inscription"
@@ -342,16 +357,23 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      {success && (
-        <div className={styles.success}>
-          <p>{message}</p>
-          <button
-            onClick={() => (window.location.href = "/login")}
-            className={styles.success__button}
-          >
-            Aller à la page de connexion
-          </button>
-        </div>
+      {mounted && (
+        <Modal
+          isOpen={showSuccessModal}
+          onClose={handleModalClose}
+          title="Inscription réussie !"
+        >
+          <div className={styles.success_modal}>
+            <p>Votre inscription a bien été enregistrée !</p>
+            <p>Pour finaliser votre inscription, veuillez vérifier votre boîte mail (y compris les spams) et cliquer sur le lien de confirmation qui vous a été envoyé.</p>
+            <button 
+              onClick={handleModalClose}
+              className={styles.success_modal__button}
+            >
+              Compris
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );
