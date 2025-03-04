@@ -5,6 +5,7 @@ import QueryProvider from "@/providers/QueryProvider";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import "@/styles/theme.scss";
 import ThemeSwitch from "@/components/theme/ThemeSwitch";
+import Footer from "@/components/Footer";
 
 export const metadata = {
   title: "Street Fishing",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }) {
                 <ThemeSwitch />
               </div> */}
             </div>
+            <Footer />
           </QueryProvider>
         </ThemeProvider>
       </body>

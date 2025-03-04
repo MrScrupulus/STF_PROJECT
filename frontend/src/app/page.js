@@ -37,7 +37,7 @@ export default function HomePage() {
           />
         </div>
       </div>
-      <h1 className={styles.home__title}>Street Fishing</h1>
+      {/* <h1 className={styles.home__title}>Street Fishing</h1> */}
       <p className={styles.home__subtitle}>Bienvenue sur STF Project</p>
       <section className={styles.home__section}>
         <h2 className={styles.home__sectionTitle}>À quoi ça sert?</h2>

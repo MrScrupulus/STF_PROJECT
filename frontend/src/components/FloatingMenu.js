@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import styles from '../styles/components/FloatingMenu.module.scss';
+import React, { useState } from "react";
+import styles from "../styles/components/FloatingMenu.module.scss";
 
 const FloatingMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
-      <button 
-        className={`${styles.Header__float_button} ${isOpen ? styles.is_open : ''}`}
+      <button
+        className={`${styles.Header__float_button} ${
+          isOpen ? styles.is_open : ""
+        }`}
         onClick={() => setIsOpen(true)}
         aria-label="Ouvrir le menu"
       >
@@ -16,7 +18,7 @@ const FloatingMenu = () => {
 
       {isOpen && (
         <>
-          <button 
+          <button
             className={styles.Header__close_button}
             onClick={() => setIsOpen(false)}
             aria-label="Fermer le menu"
@@ -32,4 +34,4 @@ const FloatingMenu = () => {
   );
 };
 
-export default FloatingMenu; 
+export default FloatingMenu;

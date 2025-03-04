@@ -15,4 +15,4 @@ export function useMediaQuery(query) {
   }, [matches, query]);
 
   return matches;
-} 
+}
