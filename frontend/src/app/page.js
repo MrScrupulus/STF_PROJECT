@@ -81,6 +81,28 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <section className={styles.home__section}>
+        <h2 className={styles.home__sectionTitle}>Où nous trouver ?</h2>
+        <div className={styles.home__location}>
+          <div className={styles.home__address}>
+            <h3>Maison de l'eau, de la pêche et de la nature</h3>
+            <p>202 Grande Rue</p>
+            <p>59100 Roubaix</p>
+          </div>
+          <div className={styles.home__map}>
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2525.5986557674164!2d3.1663663!3d50.6901099!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47c32899fdd0629d%3A0x1a810415c27321dd!2s202%20Grande%20Rue%2C%2059100%20Roubaix!5e0!3m2!1sfr!2sfr!4v1710835940045!5m2!1sfr!2sfr"
+              width="600"
+              height="450"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            ></iframe>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
