@@ -1,0 +1,10 @@
+.container {
+  padding-top: 200px; // Valeur par défaut pour mobile
+
+  @media (min-width: 768px) {
+    // Desktop
+    padding-top: 450px; // Augmentation significative pour desktop
+  }
+
+  // ... reste du code existant ...
+}

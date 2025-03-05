@@ -252,6 +252,8 @@ export function Header() {
     <header
       className={`${styles.Header} ${isScrolled ? styles.scrolled : ""}`}
       data-modal-open="false"
+      role="banner"
+      aria-label="En-tête du site"
     >
       <div className={styles.Header__container}>
         <div className={styles.Header__logo}>
@@ -268,7 +270,9 @@ export function Header() {
             </span>
           )}
         </div>
-        {renderMenu()}
+        <nav role="navigation" aria-label="Navigation principale">
+          {renderMenu()}
+        </nav>
       </div>
     </header>
   );

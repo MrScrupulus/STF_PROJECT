@@ -21,7 +21,7 @@ export default function Terms() {
           <h2>2. Inscription et compte utilisateur</h2>
           <p>Pour participer aux compétitions, l'utilisateur doit :</p>
           <ul>
-            <li>Être majeur</li>
+            
             <li>Posséder une licence de pêche valide</li>
             <li>Fournir des informations exactes</li>
             <li>Respecter le règlement des compétitions</li>

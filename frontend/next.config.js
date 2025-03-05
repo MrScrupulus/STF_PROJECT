@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   async rewrites() {
     return [
       {
@@ -15,13 +16,9 @@ const nextConfig = {
   sassOptions: {
     includePaths: ["./src/styles"],
   },
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: [{ key: "Access-Control-Allow-Origin", value: "*" }],
-      },
-    ];
+  images: {
+    formats: ["image/webp"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
   },
 };
 

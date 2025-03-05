@@ -1,10 +1,24 @@
-// .container {
-//   @apply max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md;
+.container {
+  padding-top: 200px;
 
-//   h1 {
-//     @apply text-2xl font-bold text-center mb-6;
-//   }
-// }
+  @media (min-width: 768px) {
+    padding-top: 450px;
+  }
+  max-width: 32rem;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+}
 
 // .form {
 //   @apply space-y-4;

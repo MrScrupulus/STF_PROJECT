@@ -1,10 +1,17 @@
 "use client";
 import Link from "next/link";
 import styles from "@/styles/components/Footer.module.scss";
+import { useState } from "react";
 
 export default function Footer() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
-    <footer className={styles.footer}>
+    <footer
+      role="contentinfo"
+      aria-label="Pied de page"
+      className={styles.footer}
+    >
       <div className={styles.footer__container}>
         <div className={styles.footer__content}>
           <div className={styles.footer__section}>
@@ -43,6 +50,35 @@ export default function Footer() {
           </p>
         </div>
       </div>
+
+      <img
+        src="/logo.png"
+        alt="Logo Street Fishing Tournament"
+        width="150"
+        height="50"
+        loading="lazy"
+      />
+
+      <div role="search">
+        <label htmlFor="search" className="sr-only">
+          Rechercher
+        </label>
+        <input
+          type="search"
+          id="search"
+          aria-label="Champ de recherche"
+          placeholder="Rechercher..."
+        />
+      </div>
+
+      <button
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        aria-expanded={isMenuOpen}
+        aria-controls="mobile-menu"
+        aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+      >
+        Menu
+      </button>
     </footer>
   );
 }

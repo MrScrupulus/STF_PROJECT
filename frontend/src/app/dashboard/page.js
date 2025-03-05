@@ -11,6 +11,8 @@ import { authService } from "@/services/authService";
 import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FaCheckCircle, FaTimesCircle, FaSearch } from "react-icons/fa";
+import classNames from "classnames";
+import layoutStyles from "@/styles/components/layout/layout.module.scss";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -575,7 +577,7 @@ export default function Dashboard() {
       { label: "Type", value: competition.type },
       {
         label: "Statut",
-        value: status.text,DOM,
+        value: status.text,
         className: status.className,
       },
       {
@@ -1100,299 +1102,220 @@ export default function Dashboard() {
 
   console.log("Users data:", users);
 
-  return createElement(
-    ProtectedRoute,
-    { requiredRole: "ROLE_ADMIN" },
-    createElement(
-      "div",
-      { className: styles.dashboard__container },
-      createElement(
-        "div",
-        { className: styles.dashboard__header },
-        createElement(
-          "div",
-          { className: styles.dashboard__header_content },
-          createElement(
-            "h1",
-            { className: styles.dashboard__title },
-            "Tableau de bord"
-          )
-        )
-      ),
-      createElement(
-        "div",
-        { className: styles.dashboard__search },
-        createElement(
-          "div",
-          { className: styles.dashboard__search_icon },
-          createElement(FaSearch)
-        ),
-        createElement("input", {
-          type: "text",
-          placeholder: "Rechercher dans tous les tableaux...",
-          className: styles.dashboard__search_input,
-          value: searchTerm,
-          onChange: (e) => setSearchTerm(e.target.value),
-        })
-      ),
-      createElement(
-        "div",
-        {
-          className: `${styles.dashboard__grid} ${
+  return (
+    <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
+      <div className={styles.dashboard__container}>
+        <div className={styles.dashboard__header}>
+          <div className={styles.dashboard__header_content}>
+            <h1 className={styles.dashboard__title}>Tableau de bord</h1>
+          </div>
+        </div>
+        <div className={styles.dashboard__search}>
+          <div className={styles.dashboard__search_icon}>
+            <FaSearch />
+          </div>
+          <input
+            type="text"
+            placeholder="Rechercher dans tous les tableaux..."
+            className={styles.dashboard__search_input}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div
+          className={`${styles.dashboard__grid} ${
             searchTerm ? styles.searching : ""
-          }`,
-        },
-        // Section Utilisateurs
-        createElement(
-          "div",
-          {
-            className: `${styles.dashboard__card} ${
+          }`}
+        >
+          {/* Section Utilisateurs */}
+          <div
+            className={`${styles.dashboard__card} ${
               searchTerm && filteredData.users.length === 0
                 ? styles["fade-out"]
                 : ""
-            }`,
-            style: {
+            }`}
+            style={{
               display:
                 searchTerm && filteredData.users.length === 0
                   ? "none"
                   : "block",
-            },
-          },
-          createElement(
-            "h2",
-            { className: styles.dashboard__section_title },
-            "Utilisateurs"
-          ),
-          createElement(
-            "div",
-            { className: styles.dashboard__users_list },
-            renderTable(
-              searchTerm ? filteredData.users : users,
-              TABLE_HEADERS.users,
-              "users"
-            )
-          )
-        ),
+            }}
+          >
+            <h2 className={styles.dashboard__section_title}>Utilisateurs</h2>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.users : users,
+                TABLE_HEADERS.users,
+                "users"
+              )}
+            </div>
+          </div>
 
-        // Section Compétitions
-        createElement(
-          "div",
-          {
-            className: `${styles.dashboard__card} ${
+          {/* Section Compétitions */}
+          <div
+            className={`${styles.dashboard__card} ${
               searchTerm && filteredData.competitions.length === 0
                 ? styles["fade-out"]
                 : ""
-            }`,
-            style: {
+            }`}
+            style={{
               display:
                 searchTerm && filteredData.competitions.length === 0
                   ? "none"
                   : "block",
-            },
-          },
-          createElement(
-            "div",
-            { className: styles.dashboard__section_header },
-            createElement(
-              "h2",
-              { className: styles.dashboard__section_title },
-              "Compétitions"
-            ),
-            createElement(
-              "button",
-              {
-                className: styles.dashboard__create_button,
-                onClick: () => router.push("/dashboard/competitions/create"),
-              },
-              "Créer une compétition"
-            )
-          ),
-          createElement(
-            "div",
-            { className: styles.dashboard__users_list },
-            renderTable(
-              searchTerm ? filteredData.competitions : competitions,
-              TABLE_HEADERS.competitions,
-              "competitions"
-            )
-          )
-        ),
+            }}
+          >
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>Compétitions</h2>
+              <button
+                className={styles.dashboard__create_button}
+                onClick={() => router.push("/dashboard/competitions/create")}
+              >
+                Créer une compétition
+              </button>
+            </div>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.competitions : competitions,
+                TABLE_HEADERS.competitions,
+                "competitions"
+              )}
+            </div>
+          </div>
 
-        // Section Teams
-        createElement(
-          "div",
-          {
-            className: `${styles.dashboard__card} ${
+          {/* Section Teams */}
+          <div
+            className={`${styles.dashboard__card} ${
               searchTerm && filteredData.teams.length === 0
                 ? styles["fade-out"]
                 : ""
-            }`,
-            style: {
+            }`}
+            style={{
               display:
                 searchTerm && filteredData.teams.length === 0
                   ? "none"
                   : "block",
-            },
-          },
-          createElement(
-            "h2",
-            { className: styles.dashboard__section_title },
-            "Équipes"
-          ),
-          createElement(
-            "div",
-            { className: styles.dashboard__users_list },
-            renderTable(
-              searchTerm ? filteredData.teams : teams,
-              TABLE_HEADERS.teams,
-              "teams"
-            )
-          )
-        ),
+            }}
+          >
+            <h2 className={styles.dashboard__section_title}>Équipes</h2>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.teams : teams,
+                TABLE_HEADERS.teams,
+                "teams"
+              )}
+            </div>
+          </div>
 
-        // Section Species
-        createElement(
-          "div",
-          {
-            className: `${styles.dashboard__card} ${
+          {/* Section Species */}
+          <div
+            className={`${styles.dashboard__card} ${
               searchTerm && filteredData.species.length === 0
                 ? styles["fade-out"]
                 : ""
-            }`,
-            style: {
+            }`}
+            style={{
               display:
                 searchTerm && filteredData.species.length === 0
                   ? "none"
                   : "block",
-            },
-          },
-          createElement(
-            "div",
-            { className: styles.dashboard__section_header },
-            createElement(
-              "h2",
-              { className: styles.dashboard__section_title },
-              "Espèces"
-            ),
-            createElement(
-              "button",
-              {
-                className: styles.dashboard__create_button,
-                onClick: () => router.push("/dashboard/species/create"),
-              },
-              "Créer une espèce"
-            )
-          ),
-          createElement(
-            "div",
-            { className: styles.dashboard__users_list },
-            renderTable(
-              searchTerm ? filteredData.species : species,
-              TABLE_HEADERS.species,
-              "species"
-            )
-          )
-        )
-      ),
+            }}
+          >
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>Espèces</h2>
+              <button
+                className={styles.dashboard__create_button}
+                onClick={() => router.push("/dashboard/species/create")}
+              >
+                Créer une espèce
+              </button>
+            </div>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.species : species,
+                TABLE_HEADERS.species,
+                "species"
+              )}
+            </div>
+          </div>
+        </div>
 
-      // Ajout des modals
-      showUserModal &&
-        createElement(UserDetailsModal, {
-          user: selectedUser,
-          onClose: () => setShowUserModal(false),
-          onDelete: handleDeleteUser,
-          onUpdate: (user) => {
-            // Gérer la mise à jour
-            router.push(`/dashboard/users/${user.id}/edit`);
-          },
-        }),
+        {/* Ajout des modals */}
+        {showUserModal && (
+          <UserDetailsModal
+            user={selectedUser}
+            onClose={() => setShowUserModal(false)}
+            onDelete={handleDeleteUser}
+            onUpdate={(user) => {
+              // Gérer la mise à jour
+              router.push(`/dashboard/users/${user.id}/edit`);
+            }}
+          />
+        )}
 
-      showCompetitionModal &&
-        createElement(CompetitionDetailsModal, {
-          competition: selectedCompetition,
-          onClose: () => setShowCompetitionModal(false),
-        }),
+        {showCompetitionModal && (
+          <CompetitionDetailsModal
+            competition={selectedCompetition}
+            onClose={() => setShowCompetitionModal(false)}
+          />
+        )}
 
-      showSpeciesModal &&
-        createElement(SpeciesDetailsModal, {
-          species: selectedSpecies,
-          onClose: () => setShowSpeciesModal(false),
-        }),
+        {showSpeciesModal && (
+          <SpeciesDetailsModal
+            species={selectedSpecies}
+            onClose={() => setShowSpeciesModal(false)}
+          />
+        )}
 
-      showTeamModal &&
-        createElement(TeamDetailsModal, {
-          team: selectedTeam,
-          onClose: () => setShowTeamModal(false),
-        }),
+        {showTeamModal && (
+          <TeamDetailsModal
+            team={selectedTeam}
+            onClose={() => setShowTeamModal(false)}
+          />
+        )}
 
-      showRoleModal &&
-        userToModify &&
-        createElement(
-          "div",
-          { className: styles.modal__overlay },
-          createElement(
-            "div",
-            { className: styles.modal__content },
-            createElement(
-              "h3",
-              { className: styles.modal__title },
-              `Modifier le rôle de ${userToModify.firstname} ${userToModify.lastname}`
-            ),
-            createElement(
-              "p",
-              { className: styles.modal__text },
-              `Êtes-vous sûr de vouloir ${
-                userToModify.roles?.includes("ROLE_ADMIN")
+        {showRoleModal && userToModify && (
+          <div className={styles.modal__overlay}>
+            <div className={styles.modal__content}>
+              <h3 className={styles.modal__title}>
+                Modifier le rôle de {userToModify.firstname}{" "}
+                {userToModify.lastname}
+              </h3>
+              <p className={styles.modal__text}>
+                Êtes-vous sûr de vouloir{" "}
+                {userToModify.roles?.includes("ROLE_ADMIN")
                   ? "retirer"
-                  : "ajouter"
-              } les droits administrateur ?`
-            ),
-            createElement(
-              "div",
-              { className: styles.modal__actions },
-              createElement(
-                "button",
-                {
-                  className: `${styles.modal__button} ${styles["modal__button--confirm"]}`,
-                  onClick: confirmRoleChange,
-                },
-                "Confirmer"
-              ),
-              createElement(
-                "button",
-                {
-                  className: `${styles.modal__button} ${styles["modal__button--cancel"]}`,
-                  onClick: () => setShowRoleModal(false),
-                },
-                "Annuler"
-              )
-            )
-          )
-        )
-    )
+                  : "ajouter"}{" "}
+                les droits administrateur ?
+              </p>
+              <div className={styles.modal__actions}>
+                <button
+                  className={`${styles.modal__button} ${styles["modal__button--confirm"]}`}
+                  onClick={confirmRoleChange}
+                >
+                  Confirmer
+                </button>
+                <button
+                  className={`${styles.modal__button} ${styles["modal__button--cancel"]}`}
+                  onClick={() => setShowRoleModal(false)}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 // Composant utilitaire pour les statistiques
 function StatItem({ value, label }) {
-  return createElement(
-    "div",
-    {
-      className: styles.dashboard__stat,
-    },
-    createElement(
-      "div",
-      {
-        className: styles.dashboard__stat_value,
-      },
-      value
-    ),
-    createElement(
-      "div",
-      {
-        className: styles.dashboard__stat_label,
-      },
-      label
-    )
+  return (
+    <div className={styles.dashboard__stat}>
+      <div className={styles.dashboard__stat_value}>{value}</div>
+      <div className={styles.dashboard__stat_label}>{label}</div>
+    </div>
   );
 }
