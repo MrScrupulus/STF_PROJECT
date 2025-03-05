@@ -9,10 +9,10 @@
 }
 
 .main {
-  padding-top: 100px;
+  padding-top: 200px;
 
   @media (min-width: 768px) {
-    padding-top: 150px;
+    padding-top: 250px;
   }
 
   &.form_page {
@@ -23,13 +23,37 @@
 
   &.team_page {
     @media (min-width: 768px) {
-      padding-top: 300px;
+      padding-top: 150px;
     }
   }
 
   &.dashboard_page {
     @media (min-width: 768px) {
       padding-top: 120px;
+    }
+  }
+
+  &.account_page {
+    padding-top: 150px;
+
+    @media (min-width: 768px) {
+      padding-top: 150px;
+    }
+  }
+
+  &.teams_page {
+    padding-top: 150px;
+
+    @media (min-width: 768px) {
+      padding-top: 150px;
+    }
+  }
+
+  &.teams_create_page {
+    padding-top: 150px;
+
+    @media (min-width: 768px) {
+      padding-top: 150px;
     }
   }
 
