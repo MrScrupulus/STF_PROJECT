@@ -1,13 +1,29 @@
 "use client";
 
-import { createElement } from "react";
+import { useState, useEffect } from "react";
 import styles from "@/styles/pages/home.module.scss";
 import Image from "next/image";
 
 export default function HomePage() {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 100);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <div className={styles.home}>
-      <div className={styles.home__content}>
+      <p className={styles.home__subtitle}>Bienvenue sur STF Project</p>
+
+      {/* Logos qui apparaissent au scroll */}
+      <div
+        className={`${styles.home__logos} ${isScrolled ? styles.visible : ""}`}
+      >
         <div className={styles.home__logo_container}>
           <Image
             src="/images/logos/logo_street_neg.png"
@@ -37,8 +53,7 @@ export default function HomePage() {
           />
         </div>
       </div>
-      {/* <h1 className={styles.home__title}>Street Fishing</h1> */}
-      <p className={styles.home__subtitle}>Bienvenue sur STF Project</p>
+
       <section className={styles.home__section}>
         <h2 className={styles.home__sectionTitle}>À quoi ça sert?</h2>
         <div className={styles.home__features}>

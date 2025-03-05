@@ -1,110 +1,146 @@
 @use "../abstracts/variables" as *;
 
-.homeContainer {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
+.home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #2a2a2a;
+  padding-top: calc($spacing-xl);
 
-  .hero {
-    text-align: center;
-    padding: 3rem 0;
+  &__header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(42, 42, 42, 0.95);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 100;
+    padding: $spacing-base 0;
 
-    .title {
-      font-size: 2.25rem;
-      font-weight: bold;
-      margin-bottom: 1rem;
+    .home__logo_container img {
+      width: 180px !important;
+      height: 90px !important;
     }
 
-    .subtitle {
-      font-size: 1.25rem;
-      color: #666;
-      margin-bottom: 2rem;
-    }
-
-    .ctaButton {
-      background-color: #3b82f6;
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
-      transition: background-color 0.2s;
-
-      &:hover {
-        background-color: #2563eb;
+    .home__welcome_container {
+      img {
+        width: 55px !important;
+        height: 27px !important;
+        // padding: 10px;
       }
+    }
+
+    &.visible {
+      transform: translateY(0);
     }
   }
 
-  .featuresGrid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
-    margin-top: 3rem;
-
-    @media (min-width: 768px) {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    .featureCard {
-      background-color: white;
-      padding: 1.5rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-
-      .featureTitle {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-      }
-
-      .featureDescription {
-        color: #666;
-      }
-    }
-  }
-
-  .home {
+  &__main {
+    width: 100%;
+    padding-top: $spacing-xl;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh;
-    padding-top: $spacing-xl * 2;
-    background-color: #2a2a2a;
+  }
 
-    &__content {
-      width: 100%;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 $spacing-base;
+  &__logo_container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 
-      @include desktop {
-        padding: 0 $spacing-xl;
-      }
+  &__welcome_container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: $spacing-base;
+
+    @media (max-width: 600px) {
+      flex-direction: column;
+      padding-right: 0;
     }
+  }
 
-    &__logo_container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
+  &__welcome_text {
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ffffff;
+  }
+
+  &__subtitle {
+    color: #ffffff;
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  &__section {
+    width: 100%;
+    max-width: 1200px;
+    padding: 2rem;
+    transition: transform 0.5s ease-in-out;
+    transform: translateY(-40px);
+    margin-top: 4rem;
+
+    .visible ~ & {
+      transform: translateY(0);
     }
+  }
 
-    &__welcome_container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1.5rem;
+  &__sectionTitle {
+    color: #ffffff;
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
 
-      @media (max-width: 600px) {
-        padding-right: 0;
-      }
+  &__features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    width: 100%;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
     }
+  }
 
-    &__welcome_text {
-      font-size: 1.2rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #ffffff;
+  &__feature {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  &__featureTitle {
+    color: white;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+  }
+
+  &__featureDescription {
+    color: #e0e0e0;
+  }
+
+  &__logos {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transform: translateY(-20px);
+    transition: all 0.5s ease-in-out;
+    margin-bottom: 0;
+    margin-top: 20vh;
+
+    &.visible {
+      opacity: 1;
+      height: auto;
+      transform: translateY(0);
+      margin-bottom: 2rem;
     }
   }
 }
