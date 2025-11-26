@@ -13,11 +13,11 @@ security:
       pattern: ^/(_(profiler|wdt)|css|images|js)/
       security: false
     login:
-      pattern: ^/auth/login
+      pattern: ^/(auth|api/auth)/login
       stateless: true
       provider: app_user_provider
       json_login:
-        check_path: /auth/login
+        check_path: /api/auth/login
         success_handler: lexik_jwt_authentication.handler.authentication_success
         failure_handler: lexik_jwt_authentication.handler.authentication_failure
         username_path: email
@@ -42,9 +42,13 @@ security:
     # - { path: ^/profile, roles: ROLE_USER }
     - { path: ^/auth/login, roles: PUBLIC_ACCESS }
     - { path: ^/auth/register, roles: PUBLIC_ACCESS }
+    - { path: ^/api/auth/login, roles: PUBLIC_ACCESS }
+    - { path: ^/api/auth/register, roles: PUBLIC_ACCESS }
+    - { path: ^/api/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/password-reset, roles: PUBLIC_ACCESS }
     - { path: ^/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/auth/me, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/auth/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/admin, roles: ROLE_ADMIN }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/admin, roles: ROLE_ADMIN }

@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { speciesService } from "@/services/speciesService";
-import styles from "@/styles/pages/species.module.scss";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { speciesService } from "../../services/speciesService";
+import styles from "../../styles/pages/species.module.scss";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
 
 export default function SpeciesPage() {
   const router = useRouter();

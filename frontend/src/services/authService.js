@@ -10,7 +10,7 @@ export const authService = {
         password: "********",
       });
 
-      const response = await api.post("/auth/login", credentials);
+      const response = await api.post("/api/auth/login", credentials);
       console.log("📥 Réponse connexion:", { ...response, token: "********" });
 
       if (response.token) {
@@ -79,7 +79,7 @@ export const authService = {
         password: "********",
       });
 
-      const response = await api.post("/auth/register", transformedData);
+      const response = await api.post("/api/auth/register", transformedData);
       console.log("📥 Réponse serveur:", response);
       console.groupEnd();
       return response;
@@ -94,7 +94,7 @@ export const authService = {
     try {
       console.group("✉️ Vérification email");
       console.log("📤 Token:", token);
-      const response = await api.post(`/auth/verify-email/${token}`, {});
+      const response = await api.post(`/api/auth/verify-email/${token}`, {});
       console.log("📥 Réponse:", response);
       console.groupEnd();
       return response;
@@ -108,7 +108,7 @@ export const authService = {
   getCurrentUser: async () => {
     try {
       console.group("👤 Récupération utilisateur courant");
-      const response = await api.get("/auth/me");
+      const response = await api.get("/api/auth/me");
       console.log("📥 Données utilisateur:", response);
       console.groupEnd();
       return response;
@@ -159,7 +159,7 @@ export const authService = {
 
   verifyUserByAdmin: async (userId) => {
     try {
-      const response = await api.post(`/auth/admin/verify-user/${userId}`);
+      const response = await api.post(`/api/auth/admin/verify-user/${userId}`);
       return response;
     } catch (error) {
       console.error("Error verifying user:", error);
@@ -187,7 +187,7 @@ export const authService = {
         subscriber_number: userData.subscriber_number,
       };
 
-      const response = await api.post("/auth/profile", transformedData);
+      const response = await api.post("/api/auth/profile", transformedData);
       console.log("📥 Réponse serveur:", response);
       console.groupEnd();
       return response;
@@ -219,7 +219,7 @@ export const authService = {
 
   refreshToken: async () => {
     try {
-      const response = await api.post('/auth/token/refresh', {
+      const response = await api.post('/api/auth/token/refresh', {
         refresh_token: localStorage.getItem('refresh_token')
       });
       localStorage.setItem('token', response.token);

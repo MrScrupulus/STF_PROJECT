@@ -19,7 +19,10 @@ class CompetitionController extends AbstractController
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-            $competitions = $repository->findAll();
+            $competitions = $repository->createQueryBuilder('c')
+                ->select('c')
+                ->getQuery()
+                ->getResult();
 
             // Transformer les données pour éviter les références circulaires
             $data = array_map(function ($competition) {

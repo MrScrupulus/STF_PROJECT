@@ -1,10 +1,10 @@
-import { Header } from "@/components/layout/Header";
-import Footer from "@/components/Footer";
-import ClientLayout from "@/components/layout/ClientLayout";
+import { Header } from "../components/layout/Header";
+import Footer from "../components/Footer";
+import ClientLayout from "../components/layout/ClientLayout";
 import "./globals.scss";
-import "@/styles/theme.scss";
-import "@/styles/components/layout/layout.module.scss";
-import styles from "@/styles/components/layout/layout.module.scss";
+import "../styles/theme.scss";
+import "../styles/components/layout/layout.module.scss";
+import styles from "../styles/components/layout/layout.module.scss";
 
 export const metadata = {
   metadataBase: new URL(

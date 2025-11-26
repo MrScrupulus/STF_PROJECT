@@ -3,7 +3,7 @@
 import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { competitionsService } from "../../services/competitions";
-import styles from "@/styles/pages/competitions.module.scss";
+import styles from "../../styles/pages/competitions.module.scss";
 
 export default function CompetitionsPage() {
   const { data: competitions, isLoading } = useQuery({

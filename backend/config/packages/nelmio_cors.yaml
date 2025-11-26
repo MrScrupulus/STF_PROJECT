@@ -1,14 +1,25 @@
 nelmio_cors:
   defaults:
     origin_regex: true
-    allow_origin: ["%env(CORS_ALLOW_ORIGIN)%"]
+    allow_origin: 
+      - "http://localhost:3000"
+      - "http://frontend:3000"
+      - "http://localhost:8081"
+      - "exp://localhost:8081"
     allow_methods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"]
-    allow_headers: ["Content-Type", "Authorization"]
+    allow_headers: ["Content-Type", "Authorization", "X-Requested-With"]
     expose_headers: ["Link"]
     max_age: 3600
+    allow_credentials: true
   paths:
     "^/api/":
-      allow_origin: ["*"]
+      allow_origin: 
+        - "http://localhost:3000"
+        - "http://frontend:3000"
+        - "http://localhost:8081"
+        - "exp://localhost:8081"
+        - "*"
       allow_headers: ["*"]
-      allow_methods: ["POST", "PUT", "GET", "DELETE", "OPTIONS"]
+      allow_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+      allow_credentials: true
       max_age: 3600

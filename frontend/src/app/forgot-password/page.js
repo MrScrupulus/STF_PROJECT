@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { authService } from "@/services/authService";
-import styles from "@/styles/pages/auth/forgot-password.module.scss";
+import { authService } from "../../services/authService";
+import styles from "../../styles/pages/auth/forgot-password.module.scss";
 import { useRouter } from "next/navigation";
 
 export default function ForgotPassword() {

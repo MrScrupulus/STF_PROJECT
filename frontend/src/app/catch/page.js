@@ -4,8 +4,8 @@ import { createElement } from "react";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { catchesService } from "../../services/catches";
-import styles from "@/styles/pages/catch.module.scss";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import styles from "../../styles/pages/catch.module.scss";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
 
 export default function CatchPage() {
   const [catches, setCatches] = useState([]);

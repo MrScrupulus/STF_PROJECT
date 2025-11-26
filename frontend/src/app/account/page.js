@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "@/services/authService";
-import styles from "@/styles/pages/account/index.module.scss";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Modal from "@/components/ui/Modal";
+import { authService } from "../../services/authService";
+import styles from "../../styles/pages/account/index.module.scss";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
+import Modal from "../../components/ui/Modal";
 import classNames from "classnames";
-import layoutStyles from "@/styles/components/layout/layout.module.scss";
+import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
 export default function AccountPage() {
   const router = useRouter();

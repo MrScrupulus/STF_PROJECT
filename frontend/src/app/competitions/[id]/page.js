@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { competitionsService } from "../../../services/competitions";
-import styles from "@/styles/pages/competitions.module.scss";
+import styles from "../../styles/pages/competitions.module.scss";
 
 export default function CompetitionDetailPage() {
   const params = useParams();

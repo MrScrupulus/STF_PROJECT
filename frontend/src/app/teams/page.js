@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { teamService } from "@/services/teamService";
-import styles from "@/styles/pages/teams.module.scss";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { teamService } from "../../services/teamService";
+import styles from "../../styles/pages/teams.module.scss";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import classNames from "classnames";
-import layoutStyles from "@/styles/components/layout/layout.module.scss";
+import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
 export default function TeamsPage() {
   const router = useRouter();

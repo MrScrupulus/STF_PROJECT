@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from 'react';
-import styles from '@/styles/components/ui/modal.module.scss';
-import headerStyles from '@/styles/components/layout/Header.module.scss';
+import styles from "../../styles/components/ui/modal.module.scss";
+import headerStyles from "../../styles/components/layout/Header.module.scss";
 
 export default function Modal({ isOpen, onClose, title, children }) {
   useEffect(() => {

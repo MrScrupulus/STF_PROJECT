@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import styles from "@/styles/components/Footer.module.scss";
+import styles from "../styles/components/Footer.module.scss";
 import { useState } from "react";
 
 export default function Footer() {
@@ -51,13 +51,6 @@ export default function Footer() {
         </div>
       </div>
 
-      <img
-        src="/logo.png"
-        alt="Logo Street Fishing Tournament"
-        width="150"
-        height="50"
-        loading="lazy"
-      />
 
       <div role="search">
         <label htmlFor="search" className="sr-only">

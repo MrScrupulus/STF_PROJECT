@@ -22,7 +22,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use App\Repository\Security\UserRepository;
 use Symfony\Component\HttpFoundation\Response;
 
-#[Route('/auth', name: 'app_auth_')]
+#[Route('/api/auth', name: 'app_auth_')]
 final class AuthController extends AbstractController
 {
     public function __construct(

@@ -1,5 +1,5 @@
 "use client";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "../contexts/ThemeContext";
 import styles from "./ThemeSwitch.module.scss";
 
 export default function ThemeSwitch() {

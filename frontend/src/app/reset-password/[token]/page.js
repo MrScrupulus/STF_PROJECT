@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "@/services/authService";
-import styles from "@/styles/pages/reset-password.module.scss";
+import { authService } from "../../services/authService";
+import styles from "../../styles/pages/reset-password.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function ResetPasswordPage({ params }) {

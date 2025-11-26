@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { speciesService } from "@/services/speciesService";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import styles from "@/styles/pages/dashboard/species-create.module.scss";
+import { speciesService } from "../../services/speciesService";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
+import styles from "../../styles/pages/dashboard/species-create.module.scss";
 
 export default function CreateSpecies() {
   const router = useRouter();

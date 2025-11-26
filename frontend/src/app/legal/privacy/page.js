@@ -1,5 +1,5 @@
 "use client";
-import styles from "@/styles/pages/legal.module.scss";
+import styles from "../../styles/pages/legal.module.scss";
 
 export default function PrivacyPolicy() {
   return (

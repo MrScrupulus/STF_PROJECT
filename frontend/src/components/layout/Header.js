@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { authService } from "../../services/authService";
-import styles from "@/styles/components/layout/Header.module.scss";
-import floatingStyles from "@/styles/components/FloatingMenu.module.scss";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import styles from "../../styles/components/layout/Header.module.scss";
+import floatingStyles from "../../styles/components/FloatingMenu.module.scss";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 

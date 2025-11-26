@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+
+# PHP
+vendor
+composer.lock
+
+# Symfony
+var/cache
+var/log
+var/sessions
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+mysql-data
+*.sql
+
+# Environment
+.env
+.env.local
+.env.*.local
+

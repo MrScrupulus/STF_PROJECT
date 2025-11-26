@@ -4,6 +4,7 @@ services:
   database:
     image: mariadb:10.11
     container_name: stf_db
+    restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MARIADB_ROOT_PASSWORD: "!Pl@yT0W!n"
@@ -13,13 +14,83 @@ services:
     ports:
       - "3312:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
     networks:
       - stf_network
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stf_backend
+    restart: unless-stopped
+    ports:
+      - "8001:80"
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/var/cache
+      - /var/www/html/var/log
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+      - DATABASE_URL=mysql://MrScrupulus:!Pl@yT0W!n@database:3306/stf_db?serverVersion=mariadb-10.11.0
+      - APP_SECRET=${APP_SECRET:-stf_dev_secret_key_2025}
+    command: ["./start-server.sh"]
+    depends_on:
+      - database
+    networks:
+      - stf_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: stf_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app:delegated
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WDS_SOCKET_HOST=0.0.0.0
+      - WDS_SOCKET_PORT=3000
+      - HOST=0.0.0.0
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+    depends_on:
+      - backend
+    networks:
+      - stf_network
+
+  mobile:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+    container_name: stf_mobile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    volumes:
+      - ./mobile:/app:delegated
+      - /app/node_modules
+      - /app/.expo
+    environment:
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
+    networks:
+      - stf_network
+    stdin_open: true
+    tty: true
+
 volumes:
-  mariadb_data:
-    name: stf_mariadb_data
+  db_data:
 
 networks:
   stf_network:

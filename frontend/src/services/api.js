@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 const getHeaders = () => {
   const headers = {
@@ -54,8 +54,8 @@ export const api = {
       console.log("Calling endpoint:", `${API_URL}${endpoint}`);
 
       if (
-        !endpoint.includes("/auth/login") &&
-        !endpoint.includes("/auth/register") &&
+        !endpoint.includes("/api/auth/login") &&
+        !endpoint.includes("/api/auth/register") &&
         !endpoint.includes("/password-reset")
       ) {
         const token = localStorage.getItem("token");

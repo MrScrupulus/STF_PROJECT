@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "@/services/authService";
-import styles from "@/styles/pages/auth/register.module.scss";
+import { authService } from "../../services/authService";
+import styles from "../../styles/pages/auth/register.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import Modal from "@/components/ui/Modal";
+import Modal from "../../components/ui/Modal";
 import classNames from "classnames";
-import layoutStyles from "@/styles/components/layout/layout.module.scss";
+import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
 const PHONE_REGEX = /^[0-9]{10}$/;
 

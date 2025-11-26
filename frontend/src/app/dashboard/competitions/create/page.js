@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { competitionService } from "@/services/competitionService";
+import { competitionService } from "../../services/competitionService";
 import { useRouter } from "next/navigation";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import styles from "@/styles/pages/dashboard/competition-create.module.scss";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
+import styles from "../../styles/pages/dashboard/competition-create.module.scss";
 
 export default function CreateCompetition() {
   const router = useRouter();

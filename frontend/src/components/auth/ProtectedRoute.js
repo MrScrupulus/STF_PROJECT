@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "@/services/authService";
-import styles from "@/styles/components/ProtectedRoute.module.scss";
+import { authService } from "../../services/authService";
+import styles from "../../styles/components/ProtectedRoute.module.scss";
 
 export default function ProtectedRoute({ children, requiredRole = null }) {
   const router = useRouter();

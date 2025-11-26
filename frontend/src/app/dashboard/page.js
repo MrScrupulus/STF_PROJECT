@@ -1,18 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
-import { adminService } from "@/services/adminService";
-import { competitionService } from "@/services/competitionService";
+import { adminService } from "../../services/adminService";
+import { competitionService } from "../../services/competitionService";
 import { useRouter } from "next/navigation";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import Link from "next/link";
-import { speciesService } from "@/services/speciesService";
-import styles from "@/styles/pages/dashboard.module.scss";
-import { authService } from "@/services/authService";
+import { speciesService } from "../../services/speciesService";
+import styles from "../../styles/pages/dashboard.module.scss";
+import { authService } from "../../services/authService";
 import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FaCheckCircle, FaTimesCircle, FaSearch } from "react-icons/fa";
 import classNames from "classnames";
-import layoutStyles from "@/styles/components/layout/layout.module.scss";
+import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {

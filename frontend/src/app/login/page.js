@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../../services/authService";
-import styles from "@/styles/pages/auth/login.module.scss";
+import styles from "../../styles/pages/auth/login.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Link from "next/link";
 import classNames from "classnames";
-import layoutStyles from "@/styles/components/layout/layout.module.scss";
+import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
 export default function Login() {
   const [formData, setFormData] = useState({

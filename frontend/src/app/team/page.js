@@ -1,4 +1,4 @@
-import styles from "@/styles/components/layout/layout.module.scss";
+import styles from "../../styles/components/layout/layout.module.scss";
 import classNames from "classnames";
 
 export default function Team() {

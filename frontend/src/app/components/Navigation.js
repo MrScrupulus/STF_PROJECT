@@ -1,7 +1,7 @@
 "use client";
 
 import { createElement } from "react";
-import styles from "@/styles/components/Navigation.module.scss";
+import styles from "../../styles/components/Navigation.module.scss";
 
 export default function Navigation() {
   const navItems = [
