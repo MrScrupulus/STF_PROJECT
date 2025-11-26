@@ -136,7 +136,12 @@ final class AuthController extends AbstractController
                     $this->entityManager->flush();
 
                     error_log("Envoi de l'email avec le token: " . $verificationToken);
-                    $this->emailService->sendVerificationEmail($user);
+                    try {
+                        $this->emailService->sendVerificationEmail($user);
+                    } catch (\Exception $emailException) {
+                        error_log("ERREUR lors de l'envoi de l'email (non bloquant): " . $emailException->getMessage());
+                        // L'utilisateur est créé même si l'email échoue
+                    }
 
                     return $this->json([
                         'success' => true,
@@ -180,7 +185,12 @@ final class AuthController extends AbstractController
             $this->entityManager->flush();
 
             error_log("Envoi de l'email avec le token: " . $verificationToken);
-            $this->emailService->sendVerificationEmail($user);
+            try {
+                $this->emailService->sendVerificationEmail($user);
+            } catch (\Exception $emailException) {
+                error_log("ERREUR lors de l'envoi de l'email (non bloquant): " . $emailException->getMessage());
+                // L'utilisateur est créé même si l'email échoue
+            }
 
             return $this->json([
                 'success' => true,

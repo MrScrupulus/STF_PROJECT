@@ -29,10 +29,13 @@ final class EmailService
         error_log("Construction du lien de vérification pour: " . $user->getEmail());
         error_log("Avec le token: " . $user->getVerificationToken());
 
-        $verificationUrl = "https://localhost:3000/verify-email/" . $user->getVerificationToken();
+        $verificationUrl = rtrim($this->frontendUrl, '/') . "/verify-email/" . $user->getVerificationToken();
         error_log("URL complète: " . $verificationUrl);
 
         try {
+            error_log("Tentative d'envoi d'email à: " . $user->getEmail());
+            error_log("Email expéditeur: " . $this->fromEmail);
+            
             $email = (new Email())
                 ->from($this->fromEmail)
                 ->to($user->getEmail())
@@ -48,13 +51,27 @@ final class EmailService
                     <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>"
                 );
 
-            $this->mailer->send($email);
+            try {
+                $this->mailer->send($email);
+                error_log("Email envoyé avec succès à: " . $user->getEmail());
+            } catch (\Exception $sendException) {
+                error_log("ERREUR lors de l'appel à mailer->send(): " . $sendException->getMessage());
+                error_log("Type d'erreur: " . get_class($sendException));
+                // Ne pas faire planter l'application si l'email échoue
+                // L'utilisateur est créé même si l'email n'est pas envoyé
+            }
         } catch (TransportExceptionInterface $e) {
+            error_log("ERREUR lors de l'envoi de l'email: " . $e->getMessage());
+            error_log("Trace: " . $e->getTraceAsString());
             throw new \RuntimeException(
                 'Erreur lors de l\'envoi de l\'email de vérification : ' . $e->getMessage(),
                 0,
                 $e
             );
+        } catch (\Exception $e) {
+            error_log("ERREUR GENERALE lors de l'envoi de l'email: " . $e->getMessage());
+            error_log("Trace: " . $e->getTraceAsString());
+            throw $e;
         }
     }
 

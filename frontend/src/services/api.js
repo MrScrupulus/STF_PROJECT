@@ -69,12 +69,33 @@ export const api = {
       const response = await fetch(`${API_URL}${endpoint}`, { headers });
       console.log("Response status:", response.status);
 
-      const responseData = await response.json();
-      console.log("Response data:", responseData);
+      const contentType = response.headers.get("content-type");
+      const isJson = contentType && contentType.includes("application/json");
 
       if (!response.ok) {
-        throw new Error(responseData.message || `Error ${response.status}`);
+        let errorMessage;
+        try {
+          if (isJson) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || `Error ${response.status}`;
+          } else {
+            const text = await response.text();
+            errorMessage = text || `Error ${response.status}: ${response.statusText}`;
+          }
+        } catch (e) {
+          errorMessage = `Error ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
+
+      let responseData;
+      try {
+        responseData = isJson ? await response.json() : await response.text();
+      } catch (e) {
+        // Si le parsing JSON échoue, essayer de lire comme texte
+        responseData = await response.text();
+      }
+      console.log("Response data:", responseData);
 
       return responseData;
     } catch (error) {

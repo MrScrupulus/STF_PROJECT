@@ -94,7 +94,7 @@ export const authService = {
     try {
       console.group("✉️ Vérification email");
       console.log("📤 Token:", token);
-      const response = await api.post(`/api/auth/verify-email/${token}`, {});
+      const response = await api.get(`/api/auth/verify-email/${token}`);
       console.log("📥 Réponse:", response);
       console.groupEnd();
       return response;

@@ -1,6 +1,6 @@
 parameters:
   app.mailer_from_email: "streetfishingroubaix@gmail.com"
-  app.frontend_url: "https://localhost:3000"
+  app.frontend_url: "http://localhost:3000"
 
 services:
   _defaults:
@@ -13,6 +13,7 @@ services:
       - "../src/DependencyInjection/"
       - "../src/Entity/"
       - "../src/Kernel.php"
+      - "../src/DTO/"
 
   # Configuration EmailService
   App\Service\EmailService:

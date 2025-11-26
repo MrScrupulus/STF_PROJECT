@@ -35,6 +35,7 @@ services:
       - APP_ENV=${APP_ENV:-dev}
       - DATABASE_URL=mysql://MrScrupulus:!Pl@yT0W!n@database:3306/stf_db?serverVersion=mariadb-10.11.0
       - APP_SECRET=${APP_SECRET:-stf_dev_secret_key_2025}
+      - MAILER_DSN=gmail://streetfishingroubaix@gmail.com:hdprsclrrjqxlovi@default
     command: ["./start-server.sh"]
     depends_on:
       - database
