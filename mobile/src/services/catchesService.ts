@@ -24,9 +24,10 @@ export interface FishCatch {
 
 export interface CreateCatchData {
   speciesId: number;
-  teamId: number;
-  length: number;
+  size: number;
   photoUrl?: string;
+  comment?: string;
+  caughtById?: number;
 }
 
 export const catchesService = {
@@ -40,9 +41,9 @@ export const catchesService = {
     return response.data;
   },
 
-  create: async (data: CreateCatchData): Promise<FishCatch> => {
-    const response = await apiClient.post(API_ENDPOINTS.catches.list, data);
-    return response.data;
+  create: async (competitionId: number, data: CreateCatchData): Promise<FishCatch> => {
+    const response = await apiClient.post(`/api/competitions/${competitionId}/catches`, data);
+    return response.data.catch || response.data;
   },
 
   update: async (id: number, data: Partial<FishCatch>): Promise<FishCatch> => {

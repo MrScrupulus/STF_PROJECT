@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { competitionsService } from "../../../services/competitions";
 import { teamService } from "../../../services/teamService";
 import { authService } from "../../../services/authService";
+import { adminService } from "../../../services/adminService";
 import styles from "../../../styles/pages/competitions.module.scss";
 import { toast } from "react-hot-toast";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
@@ -119,6 +120,33 @@ export default function CompetitionDetailPage() {
     registerMutation.mutate({ teamId: selectedTeamId, competitionId: id });
   };
 
+  // Mutation pour mettre en pause/reprendre
+  const pauseMutation = useMutation({
+    mutationFn: (isPaused) => adminService.togglePause(id, isPaused),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["competition", id] });
+      toast.success(competition?.isPaused ? "Compétition reprise" : "Compétition mise en pause");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Erreur lors de la modification");
+    },
+  });
+
+  const handleTogglePause = () => {
+    const newPauseState = !competition?.isPaused;
+    if (
+      window.confirm(
+        `Êtes-vous sûr de vouloir ${newPauseState ? "mettre en pause" : "reprendre"} cette compétition ?\n\n${
+          newPauseState
+            ? "Aucune prise ne pourra être ajoutée pendant la pause."
+            : "Les prises pourront à nouveau être ajoutées."
+        }`
+      )
+    ) {
+      pauseMutation.mutate(newPauseState);
+    }
+  };
+
   if (competitionLoading)
     return (
       <div className={classNames(layoutStyles.main, styles.loading)}>
@@ -230,8 +258,34 @@ export default function CompetitionDetailPage() {
                 </span>
               )}
             </div>
+            {competition.isPaused && (
+              <div className={styles.competitions__paused_badge}>
+                ⏸️ Compétition en pause
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Actions admin */}
+        {isAdmin && (
+          <div className={styles.competitions__admin_actions}>
+            <button
+              className={`${styles.competitions__pause_btn} ${
+                competition.isPaused
+                  ? styles.competitions__resume_btn
+                  : styles.competitions__pause_btn_active
+              }`}
+              onClick={handleTogglePause}
+              disabled={pauseMutation.isPending}
+            >
+              {pauseMutation.isPending
+                ? "..."
+                : competition.isPaused
+                ? "▶️ Reprendre la compétition"
+                : "⏸️ Mettre en pause"}
+            </button>
+          </div>
+        )}
 
         {!showRegisterForm ? (
           <div className={styles.competitions__actions}>

@@ -10,6 +10,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
+import Header from '../components/Header';
 
 export default function CompetitionsScreen() {
   const navigation = useNavigation();
@@ -37,7 +38,7 @@ export default function CompetitionsScreen() {
   const renderCompetition = ({ item }: { item: Competition }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('CompetitionDetail' as never, { id: item.id } as never)}
+      onPress={() => (navigation as any).navigate('CompetitionDetail', { id: item.id })}
     >
       <Text style={styles.cardTitle}>{item.name}</Text>
       <Text style={styles.cardDate}>
@@ -51,19 +52,22 @@ export default function CompetitionsScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={data || []}
-        renderItem={renderCompetition}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>Aucune compétition</Text>
-          </View>
-        }
-      />
-    </View>
+    <>
+      <Header title="Compétitions" showBack={true} showMenu={true} />
+      <View style={styles.container}>
+        <FlatList
+          data={data || []}
+          renderItem={renderCompetition}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text style={styles.emptyText}>Aucune compétition</Text>
+            </View>
+          }
+        />
+      </View>
+    </>
   );
 }
 

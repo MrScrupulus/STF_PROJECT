@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { catchesService } from '../services/catchesService';
+import Header from '../components/Header';
 
 export default function CatchesScreen() {
   const { data, isLoading, error } = useQuery({
@@ -46,19 +47,22 @@ export default function CatchesScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={data || []}
-        renderItem={renderCatch}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Text style={styles.emptyText}>Aucune prise enregistrée</Text>
-          </View>
-        }
-      />
-    </View>
+    <>
+      <Header title="Mes Prises" showBack={true} showMenu={true} />
+      <View style={styles.container}>
+        <FlatList
+          data={data || []}
+          renderItem={renderCatch}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text style={styles.emptyText}>Aucune prise enregistrée</Text>
+            </View>
+          }
+        />
+      </View>
+    </>
   );
 }
 

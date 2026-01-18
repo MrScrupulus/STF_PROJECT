@@ -40,6 +40,7 @@ class CompetitionController extends AbstractController
                     'description' => $competition->getDescription(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
+                    'isPaused' => $competition->getIsPaused(),
                 ];
             }, $competitions);
 
@@ -110,6 +111,7 @@ class CompetitionController extends AbstractController
                     'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
+                    'isPaused' => $competition->getIsPaused(),
                 ];
             }, $competitions);
 
@@ -223,6 +225,7 @@ class CompetitionController extends AbstractController
             'hasNoLimit' => $competition->getHasNoLimit(),
             'isEnded' => $isEnded,
             'isRankingPublic' => $competition->getIsRankingPublic(),
+            'isPaused' => $competition->getIsPaused(),
             'teams' => array_map(function ($teamOrSnapshot) use ($rankingVisible, $isAdmin, $user, $teamRepository, $useSnapshots) {
                 // Pour les utilisateurs normaux si le classement n'est pas public, ne pas retourner le score
                 if ($useSnapshots) {
@@ -307,6 +310,9 @@ class CompetitionController extends AbstractController
                     $snapshotService->createSnapshotsForCompetition($competition);
                 }
             }
+            if (isset($data['isPaused'])) {
+                $competition->setIsPaused((bool) $data['isPaused']);
+            }
 
             $entityManager->flush();
 
@@ -324,6 +330,7 @@ class CompetitionController extends AbstractController
                     'hasNoLimit' => $competition->getHasNoLimit(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
+                    'isPaused' => $competition->getIsPaused(),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -662,6 +669,46 @@ class CompetitionController extends AbstractController
             return $this->json([
                 'success' => false,
                 'error' => 'Une erreur est survenue lors de la récupération des statistiques',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Met en pause ou reprend une compétition
+     */
+    #[Route('/admin/competitions/{id}/pause', name: 'app_admin_competition_pause', methods: ['POST'])]
+    public function togglePause(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $repository->find($id);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
+
+            $data = json_decode($request->getContent(), true);
+            $isPaused = $data['isPaused'] ?? !$competition->getIsPaused();
+
+            $competition->setIsPaused($isPaused);
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => $isPaused ? 'Compétition mise en pause' : 'Compétition reprise',
+                'competition' => [
+                    'id' => $competition->getId(),
+                    'isPaused' => $competition->getIsPaused(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Une erreur est survenue',
                 'message' => $e->getMessage()
             ], 500);
         }

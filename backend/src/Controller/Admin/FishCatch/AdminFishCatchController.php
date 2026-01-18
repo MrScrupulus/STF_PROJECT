@@ -197,4 +197,125 @@ class AdminFishCatchController extends AbstractController
             ], 500);
         }
     }
+
+    /**
+     * Créer une prise en tant qu'admin (avec sélection d'équipe et membre)
+     */
+    #[Route('/create', name: 'admin_catch_create', methods: ['POST'])]
+    public function createCatch(Request $request, EntityManagerInterface $em, \App\Repository\Competition\CompetitionRepository $competitionRepository, \App\Repository\Competition\TeamRepository $teamRepository, \App\Repository\Species\SpeciesRepository $speciesRepository, \App\Repository\Security\UserRepository $userRepository): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $data = json_decode($request->getContent(), true);
+
+            // Validation des données
+            if (!isset($data['competitionId']) || !isset($data['teamId']) || !isset($data['speciesId']) || !isset($data['size'])) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Les champs competitionId, teamId, speciesId et size sont requis'
+                ], 400);
+            }
+
+            // Vérifier que la compétition existe
+            $competition = $competitionRepository->find($data['competitionId']);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
+
+            // Vérifier que la compétition n'est pas en pause
+            if ($competition->getIsPaused()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'La compétition est actuellement en pause. Il est impossible d\'ajouter des prises.'
+                ], 400);
+            }
+
+            // Vérifier que l'équipe existe et appartient à la compétition
+            $team = $teamRepository->find($data['teamId']);
+            if (!$team) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Équipe non trouvée'
+                ], 404);
+            }
+
+            if (!$team->getCompetition() || $team->getCompetition()->getId() !== $competition->getId()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette équipe n\'est pas inscrite à cette compétition'
+                ], 400);
+            }
+
+            // Vérifier que l'espèce existe
+            $species = $speciesRepository->find($data['speciesId']);
+            if (!$species) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Espèce non trouvée'
+                ], 404);
+            }
+
+            // Créer la prise
+            $catch = new \App\Entity\Competition\FishCatch();
+            $catch->setTeam($team);
+            $catch->setSpecies($species);
+            $catch->setSize((float) $data['size']);
+            $catch->setPhotoUrl($data['photoUrl'] ?? null);
+            $catch->setComment($data['comment'] ?? null);
+            $catch->setIsValidated(true); // Les prises créées par admin sont automatiquement validées
+
+            // Gérer le membre qui a fait la prise
+            if (isset($data['caughtById']) && !empty($data['caughtById'])) {
+                $caughtBy = $userRepository->find($data['caughtById']);
+                // Vérifier que le membre appartient bien à l'équipe
+                if ($caughtBy && $team->getMembers()->contains($caughtBy)) {
+                    $catch->setCaughtBy($caughtBy);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Le membre sélectionné n\'appartient pas à cette équipe'
+                    ], 400);
+                }
+            }
+
+            $em->persist($catch);
+            
+            // Recalculer le score de l'équipe
+            $team->updateTotalScore();
+            
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Prise créée avec succès',
+                'catch' => [
+                    'id' => $catch->getId(),
+                    'species' => [
+                        'id' => $species->getId(),
+                        'name' => $species->getName(),
+                        'coefficient' => $species->getCoefficient(),
+                    ],
+                    'size' => $catch->getSize(),
+                    'points' => $catch->calculatePoints(),
+                    'photoUrl' => $catch->getPhotoUrl(),
+                    'comment' => $catch->getComment(),
+                    'isValidated' => $catch->isValidated(),
+                    'caughtBy' => $catch->getCaughtBy() ? [
+                        'id' => $catch->getCaughtBy()->getId(),
+                        'firstname' => $catch->getCaughtBy()->getFirstname(),
+                        'lastname' => $catch->getCaughtBy()->getLastname(),
+                    ] : null,
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création de la prise: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

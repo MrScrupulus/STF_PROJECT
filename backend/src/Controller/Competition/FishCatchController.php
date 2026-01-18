@@ -62,11 +62,24 @@ class FishCatchController extends AbstractController
                 ], 404);
             }
 
+            // Vérifier si l'utilisateur est admin
+            $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
+            
             $now = new \DateTime();
             if ($now < $competition->getStartDate() || $now > $competition->getEndDate()) {
+                if (!$isAdmin) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Cette compétition n\'est pas en cours'
+                    ], 400);
+                }
+            }
+
+            // Vérifier si la compétition est en pause (même les admins ne peuvent pas ajouter pendant la pause)
+            if ($competition->getIsPaused()) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Cette compétition n\'est pas en cours'
+                    'message' => 'La compétition est actuellement en pause. Il est impossible d\'ajouter des prises.'
                 ], 400);
             }
 

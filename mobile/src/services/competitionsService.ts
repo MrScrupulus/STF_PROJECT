@@ -49,5 +49,10 @@ export const competitionsService = {
     const response = await apiClient.put(API_ENDPOINTS.competitions.end(id), {});
     return response.data;
   },
+
+  getPublicStats: async (id: number): Promise<any> => {
+    const response = await apiClient.get(`/api/admin/competitions/${id}/stats`);
+    return response.data;
+  },
 };
 

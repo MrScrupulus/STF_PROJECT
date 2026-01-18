@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,30 @@ import {
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { authService } from '../services/authService';
+import Header from '../components/Header';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const response = await authService.getCurrentUser();
+        const user = response.user || response;
+        setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
+      } catch (error) {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, []);
 
   return (
-    <ScrollView style={styles.container}>
+    <>
+      <Header title="Street Fishing" showBack={false} showMenu={true} />
+      <ScrollView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Street Fishing</Text>
         <Text style={styles.subtitle}>Bienvenue !</Text>
@@ -28,12 +46,42 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.card, styles.primaryCard]}
+          onPress={() => navigation.navigate('AddCatch' as never)}
+        >
+          <Text style={[styles.cardTitle, styles.primaryCardTitle]}>📷 Ajouter une prise</Text>
+          <Text style={[styles.cardDescription, styles.primaryCardDescription]}>
+            Prendre une photo et enregistrer votre prise
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.card}
           onPress={() => navigation.navigate('Catches' as never)}
         >
           <Text style={styles.cardTitle}>Mes Prises</Text>
           <Text style={styles.cardDescription}>
-            Enregistrer et voir vos prises
+            Voir toutes vos prises enregistrées
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('Teams' as never)}
+        >
+          <Text style={styles.cardTitle}>Mes Équipes</Text>
+          <Text style={styles.cardDescription}>
+            Voir et gérer vos équipes
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('Species' as never)}
+        >
+          <Text style={styles.cardTitle}>Espèces</Text>
+          <Text style={styles.cardDescription}>
+            Voir toutes les espèces disponibles
           </Text>
         </TouchableOpacity>
 
@@ -46,8 +94,21 @@ export default function HomeScreen() {
             Gérer votre profil
           </Text>
         </TouchableOpacity>
+
+        {isAdmin && (
+          <TouchableOpacity
+            style={[styles.card, styles.adminCard]}
+            onPress={() => navigation.navigate('AdminDashboard' as never)}
+          >
+            <Text style={[styles.cardTitle, styles.adminCardTitle]}>⚙️ Dashboard Admin</Text>
+            <Text style={[styles.cardDescription, styles.adminCardDescription]}>
+              Gérer les utilisateurs, compétitions et valider les prises
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -90,6 +151,26 @@ const styles = StyleSheet.create({
   cardDescription: {
     fontSize: 14,
     color: '#666',
+  },
+  primaryCard: {
+    backgroundColor: '#007AFF',
+  },
+  primaryCardTitle: {
+    color: '#fff',
+  },
+  primaryCardDescription: {
+    color: '#fff',
+    opacity: 0.9,
+  },
+  adminCard: {
+    backgroundColor: '#FF9500',
+  },
+  adminCardTitle: {
+    color: '#fff',
+  },
+  adminCardDescription: {
+    color: '#fff',
+    opacity: 0.9,
   },
 });
 

@@ -9,10 +9,10 @@ const getApiBaseUrl = () => {
     // En développement
     // Android émulateur: 10.0.2.2
     // iOS simulateur: localhost
-    // Device physique: IP de votre machine (ex: 192.168.1.100)
-    return 'http://10.0.2.2:8001'; // Pour Android émulateur
+    // Device physique: IP de votre machine
+    // return 'http://10.0.2.2:8001'; // Pour Android émulateur
     // return 'http://localhost:8001'; // Pour iOS simulateur
-    // return 'http://192.168.1.100:8001'; // Pour device physique (remplacer par votre IP)
+    return 'http://192.168.1.129:8001'; // Pour device physique (IP de votre machine)
   }
   // En production
   return 'https://api.votre-domaine.com';
@@ -40,12 +40,15 @@ export const API_ENDPOINTS = {
   teams: {
     list: '/api/teams',
     detail: (id: number) => `/api/teams/${id}`,
+    myTeams: '/api/teams/my-teams',
+    myHistory: '/api/teams/my-history',
   },
   competitions: {
     list: '/api/competitions',
     detail: (id: number) => `/api/competitions/${id}`,
     start: (id: number) => `/api/competitions/${id}/start`,
     end: (id: number) => `/api/competitions/${id}/end`,
+    stats: (id: number) => `/api/admin/competitions/${id}/stats`,
   },
 };
 

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { authService, LoginCredentials } from '../services/authService';
 
-export default function LoginScreen({ navigation }: any) {
+export default function LoginScreen({ navigation, onLogin }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,8 +27,10 @@ export default function LoginScreen({ navigation }: any) {
     try {
       const credentials: LoginCredentials = { email, password };
       await authService.login(credentials);
-      // Navigation sera gérée automatiquement par App.tsx qui détecte l'auth
-      navigation.replace('Home');
+      // Mettre à jour l'état d'authentification dans App.tsx
+      if (onLogin) {
+        onLogin();
+      }
     } catch (error: any) {
       Alert.alert('Erreur de connexion', error.message || 'Une erreur est survenue');
     } finally {
@@ -72,6 +74,15 @@ export default function LoginScreen({ navigation }: any) {
           >
             <Text style={styles.buttonText}>
               {loading ? 'Connexion...' : 'Se connecter'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.linkButton}
+            onPress={() => navigation.navigate('Register' as never)}
+          >
+            <Text style={styles.linkText}>
+              Pas encore de compte ? S'inscrire
             </Text>
           </TouchableOpacity>
         </View>
@@ -129,6 +140,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  linkButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  linkText: {
+    color: '#007AFF',
+    fontSize: 16,
   },
 });
 

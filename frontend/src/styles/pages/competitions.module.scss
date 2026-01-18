@@ -648,6 +648,56 @@
     padding: 2rem;
     color: #6b7280;
   }
+
+  &__paused_badge {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: #ff9500;
+    color: white;
+    border-radius: 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  &__admin_actions {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__pause_btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__pause_btn_active {
+    background-color: #ff9500;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #e68900;
+    }
+  }
+
+  &__resume_btn {
+    background-color: #34c759;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #2fb04a;
+    }
+  }
 }
 
 .loading {

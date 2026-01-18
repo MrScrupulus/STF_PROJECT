@@ -43,6 +43,9 @@ class Competition
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isRankingPublic = false;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isPaused = false;
+
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
@@ -179,6 +182,17 @@ class Competition
     public function setIsRankingPublic(bool $isRankingPublic): self
     {
         $this->isRankingPublic = $isRankingPublic;
+        return $this;
+    }
+
+    public function getIsPaused(): bool
+    {
+        return $this->isPaused;
+    }
+
+    public function setIsPaused(bool $isPaused): self
+    {
+        $this->isPaused = $isPaused;
         return $this;
     }
 }

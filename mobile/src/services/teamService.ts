@@ -1,0 +1,69 @@
+import apiClient from './api';
+import { API_ENDPOINTS } from '../config/api';
+
+export interface TeamMember {
+  id: number;
+  firstname: string;
+  lastname: string;
+  email: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  members: TeamMember[];
+  competition?: {
+    id: number;
+    name: string;
+    teamSize?: number;
+  };
+  totalScore?: number;
+  bonus?: number;
+  registrationNumber?: number;
+  catches?: any[];
+  isActive?: boolean;
+}
+
+export const teamService = {
+  getMyTeams: async (): Promise<{ teams: Team[] }> => {
+    const response = await apiClient.get(API_ENDPOINTS.teams.myTeams);
+    return response.data;
+  },
+
+  getOne: async (id: number): Promise<{ success: boolean; team: Team }> => {
+    const response = await apiClient.get(API_ENDPOINTS.teams.detail(id));
+    return response.data;
+  },
+
+  create: async (data: { name: string; participant2Email?: string }): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.list, data);
+    return response.data;
+  },
+
+  inviteMember: async (teamId: number, email: string): Promise<any> => {
+    const response = await apiClient.post(`/api/teams/${teamId}/invite`, { email });
+    return response.data;
+  },
+
+  leaveTeam: async (teamId: number): Promise<any> => {
+    const response = await apiClient.post(`/api/teams/${teamId}/leave`);
+    return response.data;
+  },
+
+  reactivate: async (teamId: number): Promise<any> => {
+    const response = await apiClient.post(`/api/teams/${teamId}/reactivate`);
+    return response.data;
+  },
+
+  getMyHistory: async (): Promise<any> => {
+    const response = await apiClient.get('/api/teams/my-history');
+    return response.data;
+  },
+
+  registerToCompetition: async (teamId: number, competitionId: number): Promise<any> => {
+    const response = await apiClient.post(`/api/competitions/${competitionId}/teams/register`, {
+      teamId: teamId,
+    });
+    return response.data;
+  },
+};

@@ -98,4 +98,16 @@ export const adminService = {
       throw error;
     }
   },
+
+  togglePause: async (competitionId, isPaused) => {
+    try {
+      const response = await api.post(`/api/admin/competitions/${competitionId}/pause`, {
+        isPaused,
+      });
+      return response;
+    } catch (error) {
+      console.error("Error toggling pause:", error);
+      throw error;
+    }
+  },
 };

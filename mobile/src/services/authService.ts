@@ -78,6 +78,14 @@ export const authService = {
     return response.data;
   },
 
+  async getCurrentUser() {
+    const response = await apiClient.get(API_ENDPOINTS.auth.me);
+    return {
+      success: true,
+      user: response.data.user || response.data,
+    };
+  },
+
   async refreshToken() {
     const refreshToken = await SecureStore.getItemAsync('refreshToken');
     if (!refreshToken) {
@@ -103,6 +111,10 @@ export const authService = {
   async isAuthenticated(): Promise<boolean> {
     const token = await SecureStore.getItemAsync('jwtToken');
     return !!token;
+  },
+
+  async deleteAccount(): Promise<void> {
+    await apiClient.delete('/api/auth/account');
   },
 };
 

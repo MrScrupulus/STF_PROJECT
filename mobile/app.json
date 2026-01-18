@@ -4,13 +4,7 @@
     "slug": "stf-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -19,10 +13,6 @@
       "bundleIdentifier": "com.stf.mobile"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
       "package": "com.stf.mobile",
       "permissions": [
         "CAMERA",
@@ -31,9 +21,6 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
@@ -53,9 +40,15 @@
         {
           "locationPermission": "L'application a besoin d'accéder à votre localisation pour enregistrer où vous avez pêché."
         }
-      ]
+      ],
+      "expo-router",
+      "expo-secure-store"
     ],
-    "scheme": "stf"
+    "scheme": "stf",
+    "extra": {
+      "eas": {
+        "projectId": "stf-mobile"
+      }
+    }
   }
 }
-
