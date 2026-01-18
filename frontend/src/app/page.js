@@ -40,7 +40,6 @@ export default function HomePage() {
               height: "180px",
               objectFit: "contain",
             }}
-            priority
           />
         </div>
         <div className={styles.home__welcome_container}>

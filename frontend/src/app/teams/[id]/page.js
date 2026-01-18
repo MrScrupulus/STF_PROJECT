@@ -357,9 +357,17 @@ export default function TeamDetailPage() {
                           </div>
                         )}
 
-                        {!catchItem.isValidated && (
+                        {catchItem.rejectionReason ? (
+                          <div className={styles.teams__catch_status_rejected}>
+                            ❌ Rejetée: {catchItem.rejectionReason}
+                          </div>
+                        ) : !catchItem.isValidated ? (
                           <div className={styles.teams__catch_status}>
                             ⏳ En attente de validation
+                          </div>
+                        ) : (
+                          <div className={styles.teams__catch_status_validated}>
+                            ✅ Validée
                           </div>
                         )}
                       </div>
@@ -454,9 +462,17 @@ export default function TeamDetailPage() {
                           </div>
                         )}
 
-                        {!catchItem.isValidated && (
+                        {catchItem.rejectionReason ? (
+                          <div className={styles.teams__catch_status_rejected}>
+                            ❌ Rejetée: {catchItem.rejectionReason}
+                          </div>
+                        ) : !catchItem.isValidated ? (
                           <div className={styles.teams__catch_status}>
                             ⏳ En attente de validation
+                          </div>
+                        ) : (
+                          <div className={styles.teams__catch_status_validated}>
+                            ✅ Validée
                           </div>
                         )}
                       </div>

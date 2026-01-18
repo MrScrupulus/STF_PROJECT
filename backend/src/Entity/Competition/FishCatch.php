@@ -47,6 +47,10 @@ class FishCatch
     #[Groups(['catch:read'])]
     private ?string $comment = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?string $rejectionReason = null;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true)]
     #[Groups(['catch:read'])]
@@ -152,6 +156,17 @@ class FishCatch
     public function setCaughtBy(?User $caughtBy): self
     {
         $this->caughtBy = $caughtBy;
+        return $this;
+    }
+
+    public function getRejectionReason(): ?string
+    {
+        return $this->rejectionReason;
+    }
+
+    public function setRejectionReason(?string $rejectionReason): self
+    {
+        $this->rejectionReason = $rejectionReason;
         return $this;
     }
 }

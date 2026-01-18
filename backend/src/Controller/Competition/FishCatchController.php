@@ -111,8 +111,8 @@ class FishCatchController extends AbstractController
             $catch->setSize((float) $data['size']);
             $catch->setPhotoUrl($data['photoUrl'] ?? null);
             $catch->setComment($data['comment'] ?? null);
-            // Valider automatiquement la prise pour qu'elle soit comptée dans le score
-            $catch->setIsValidated(true);
+            // Les prises ne sont plus validées automatiquement, elles doivent être validées par un admin
+            $catch->setIsValidated(false);
             
             // Gérer le membre qui a fait la prise
             if (isset($data['caughtById']) && !empty($data['caughtById'])) {

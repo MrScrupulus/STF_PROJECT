@@ -68,4 +68,34 @@ export const adminService = {
     const response = await api.put(`/admin/users/${userId}/toggle-role`);
     return response;
   },
+
+  getPendingCatches: async () => {
+    try {
+      const response = await api.get("/api/admin/catches/pending");
+      return response;
+    } catch (error) {
+      console.error("Error fetching pending catches:", error);
+      throw error;
+    }
+  },
+
+  validateCatch: async (catchId) => {
+    try {
+      const response = await api.post(`/api/admin/catches/${catchId}/validate`);
+      return response;
+    } catch (error) {
+      console.error("Error validating catch:", error);
+      throw error;
+    }
+  },
+
+  rejectCatch: async (catchId, reason) => {
+    try {
+      const response = await api.post(`/api/admin/catches/${catchId}/reject`, { reason });
+      return response;
+    } catch (error) {
+      console.error("Error rejecting catch:", error);
+      throw error;
+    }
+  },
 };

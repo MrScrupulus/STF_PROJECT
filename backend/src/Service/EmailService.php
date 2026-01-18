@@ -280,4 +280,95 @@ final class EmailService
             // Ne pas faire planter l'application si l'email échoue
         }
     }
+
+    public function sendCatchValidationEmail(\App\Entity\Competition\FishCatch $catch, bool $validated, ?string $rejectionReason = null): void
+    {
+        $user = $catch->getCaughtBy();
+        if (!$user) {
+            return; // Pas d'email si pas de pêcheur identifié
+        }
+
+        $teamName = htmlspecialchars($catch->getTeam()->getName());
+        $speciesName = htmlspecialchars($catch->getSpecies()->getName());
+        $size = $catch->getSize();
+        $points = $catch->calculatePoints();
+        $competitionName = $catch->getTeam()->getCompetition() 
+            ? htmlspecialchars($catch->getTeam()->getCompetition()->getName())
+            : 'Compétition';
+        
+        $teamUrl = rtrim($this->frontendUrl, '/') . '/teams/' . $catch->getTeam()->getId();
+
+        try {
+            if ($validated) {
+                // Email de validation
+                $email = (new Email())
+                    ->from($this->fromEmail)
+                    ->to($user->getEmail())
+                    ->subject("Votre prise a été validée - Street Fishing")
+                    ->html(
+                        "<h1>Prise validée !</h1>
+                        <p>Bonjour " . htmlspecialchars($user->getFirstname()) . ",</p>
+                        <p>Votre prise a été <strong>validée</strong> par un administrateur.</p>
+                        
+                        <h2>Détails de la prise :</h2>
+                        <ul>
+                            <li><strong>Espèce :</strong> {$speciesName}</li>
+                            <li><strong>Taille :</strong> {$size} cm</li>
+                            <li><strong>Points :</strong> {$points} pts</li>
+                            <li><strong>Équipe :</strong> {$teamName}</li>
+                            <li><strong>Compétition :</strong> {$competitionName}</li>
+                        </ul>
+                        
+                        <p>Cette prise est maintenant comptabilisée dans le score de votre équipe.</p>
+                        <p><a href='{$teamUrl}'>Voir mon équipe</a></p>
+                        
+                        <p>Bonne continuation !</p>
+                        <p>L'équipe Street Fishing</p>"
+                    );
+            } else {
+                // Email de rejet
+                $rejectionReasonHtml = $rejectionReason ? nl2br(htmlspecialchars($rejectionReason)) : 'Aucun motif spécifié.';
+                
+                $email = (new Email())
+                    ->from($this->fromEmail)
+                    ->to($user->getEmail())
+                    ->subject("Votre prise a été rejetée - Street Fishing")
+                    ->html(
+                        "<h1>Prise rejetée</h1>
+                        <p>Bonjour " . htmlspecialchars($user->getFirstname()) . ",</p>
+                        <p>Votre prise a été <strong>rejetée</strong> par un administrateur.</p>
+                        
+                        <h2>Détails de la prise :</h2>
+                        <ul>
+                            <li><strong>Espèce :</strong> {$speciesName}</li>
+                            <li><strong>Taille :</strong> {$size} cm</li>
+                            <li><strong>Points :</strong> {$points} pts</li>
+                            <li><strong>Équipe :</strong> {$teamName}</li>
+                            <li><strong>Compétition :</strong> {$competitionName}</li>
+                        </ul>
+                        
+                        <h2>Motif du rejet :</h2>
+                        <p>{$rejectionReasonHtml}</p>
+                        
+                        <p>Cette prise n'est pas comptabilisée dans le score de votre équipe.</p>
+                        <p>Si vous pensez qu'il s'agit d'une erreur, vous pouvez contacter l'administrateur.</p>
+                        <p><a href='{$teamUrl}'>Voir mon équipe</a></p>
+                        
+                        <p>Cordialement,</p>
+                        <p>L'équipe Street Fishing</p>"
+                    );
+            }
+
+            try {
+                $this->mailer->send($email);
+                error_log("Email de validation/rejet envoyé avec succès à: " . $user->getEmail());
+            } catch (\Exception $sendException) {
+                error_log("ERREUR lors de l'envoi de l'email de validation/rejet à {$user->getEmail()}: " . $sendException->getMessage());
+            }
+        } catch (TransportExceptionInterface $e) {
+            error_log("ERREUR lors de l'envoi de l'email de validation/rejet: " . $e->getMessage());
+        } catch (\Exception $e) {
+            error_log("ERREUR GENERALE lors de l'envoi de l'email de validation/rejet: " . $e->getMessage());
+        }
+    }
 }

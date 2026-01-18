@@ -598,6 +598,7 @@ class TeamController extends AbstractController
                         'photoUrl' => $catch->getPhotoUrl(),
                         'comment' => $catch->getComment(),
                         'isValidated' => $catch->isValidated(),
+                        'rejectionReason' => $catch->getRejectionReason(),
                         'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
                         'caughtBy' => $catch->getCaughtBy() ? [
                             'id' => $catch->getCaughtBy()->getId(),

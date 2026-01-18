@@ -71,6 +71,13 @@ export default function Dashboard() {
   });
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [userToModify, setUserToModify] = useState(null);
+  const [pendingCatches, setPendingCatches] = useState([]);
+  const [selectedCatch, setSelectedCatch] = useState(null);
+  const [showCatchModal, setShowCatchModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -98,12 +105,13 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       console.log("Starting to fetch admin data...");
-      const [usersData, competitionsData, speciesData, teamsData] =
+      const [usersData, competitionsData, speciesData, teamsData, pendingCatchesData] =
         await Promise.all([
           adminService.getUsers(),
           competitionService.getAllAdmin(),
           speciesService.getAll(),
           adminService.getTeams(),
+          adminService.getPendingCatches().catch(() => ({ success: true, catches: [] })),
         ]);
 
       // Logs détaillés pour chaque réponse
@@ -137,6 +145,7 @@ export default function Dashboard() {
       setCompetitions(processedCompetitions);
       setSpecies(processedSpecies);
       setTeams(processedTeams);
+      setPendingCatches(pendingCatchesData?.catches || []);
 
       setLoading(false);
     } catch (error) {
@@ -1547,6 +1556,110 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+
+          {/* Section Prises en attente de validation */}
+          <div className={styles.dashboard__card}>
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>
+                Prises en attente de validation
+                {pendingCatches.length > 0 && (
+                  <span className={styles.dashboard__badge}>
+                    {pendingCatches.length}
+                  </span>
+                )}
+              </h2>
+            </div>
+            {pendingCatches.length === 0 ? (
+              <div className={styles.dashboard__empty_state}>
+                <p>Aucune prise en attente de validation</p>
+              </div>
+            ) : (
+              <div className={styles.dashboard__catches_list}>
+                {pendingCatches.map((catchItem) => (
+                  <div key={catchItem.id} className={styles.dashboard__catch_card}>
+                    <div className={styles.dashboard__catch_header}>
+                      <div>
+                        <h3>{catchItem.species.name}</h3>
+                        <p className={styles.dashboard__catch_info}>
+                          {catchItem.size} cm - {catchItem.points} pts
+                        </p>
+                        <p className={styles.dashboard__catch_info}>
+                          Équipe: <strong>{catchItem.team.name}</strong>
+                          {catchItem.competition && (
+                            <> - {catchItem.competition.name}</>
+                          )}
+                        </p>
+                        {catchItem.caughtBy && (
+                          <p className={styles.dashboard__catch_info}>
+                            Pêché par: {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+                          </p>
+                        )}
+                        <p className={styles.dashboard__catch_date}>
+                          {new Date(catchItem.createdAt).toLocaleString("fr-FR")}
+                        </p>
+                      </div>
+                      {catchItem.photoUrl && (
+                        <div 
+                          className={styles.dashboard__catch_photo}
+                          onClick={() => {
+                            setSelectedImage(catchItem.photoUrl);
+                            setShowImageModal(true);
+                          }}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <img
+                            src={catchItem.photoUrl}
+                            alt={`${catchItem.species.name} de ${catchItem.size}cm`}
+                            style={{
+                              maxWidth: "150px",
+                              maxHeight: "150px",
+                              objectFit: "cover",
+                              borderRadius: "8px",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {catchItem.comment && (
+                      <div className={styles.dashboard__catch_comment}>
+                        <strong>Commentaire:</strong> {catchItem.comment}
+                      </div>
+                    )}
+                    <div className={styles.dashboard__catch_actions}>
+                      <button
+                        className={`${styles.dashboard__button} ${styles["dashboard__button--validate"]}`}
+                        onClick={async () => {
+                          setIsProcessing(true);
+                          try {
+                            await adminService.validateCatch(catchItem.id);
+                            toast.success("Prise validée avec succès !");
+                            fetchData();
+                          } catch (error) {
+                            toast.error(error.message || "Erreur lors de la validation");
+                          } finally {
+                            setIsProcessing(false);
+                          }
+                        }}
+                        disabled={isProcessing}
+                      >
+                        <FaCheckCircle /> Valider
+                      </button>
+                      <button
+                        className={`${styles.dashboard__button} ${styles["dashboard__button--reject"]}`}
+                        onClick={() => {
+                          setSelectedCatch(catchItem);
+                          setShowCatchModal(true);
+                        }}
+                        disabled={isProcessing}
+                      >
+                        <FaTimesCircle /> Rejeter
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Ajout des modals */}
@@ -1611,6 +1724,104 @@ export default function Dashboard() {
                   Annuler
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de rejet de prise */}
+        {showCatchModal && selectedCatch && (
+          <div className={styles.modal__overlay}>
+            <div className={styles.modal__content}>
+              <h3 className={styles.modal__title}>Rejeter la prise</h3>
+              <p className={styles.modal__text}>
+                <strong>{selectedCatch.species.name}</strong> de {selectedCatch.size} cm
+                <br />
+                Équipe: {selectedCatch.team.name}
+              </p>
+              <div className={styles.modal__form_group}>
+                <label htmlFor="rejectionReason">
+                  Motif du rejet <span style={{ color: "#dc2626" }}>*</span>
+                </label>
+                <textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Expliquez pourquoi cette prise est rejetée..."
+                  rows={4}
+                  className={styles.modal__textarea}
+                  required
+                />
+              </div>
+              <div className={styles.modal__actions}>
+                <button
+                  className={`${styles.modal__button} ${styles["modal__button--confirm"]}`}
+                  onClick={async () => {
+                    if (!rejectionReason.trim()) {
+                      toast.error("Veuillez indiquer un motif de rejet");
+                      return;
+                    }
+                    setIsProcessing(true);
+                    try {
+                      await adminService.rejectCatch(selectedCatch.id, rejectionReason);
+                      toast.success("Prise rejetée avec succès");
+                      setShowCatchModal(false);
+                      setSelectedCatch(null);
+                      setRejectionReason("");
+                      fetchData();
+                    } catch (error) {
+                      toast.error(error.message || "Erreur lors du rejet");
+                    } finally {
+                      setIsProcessing(false);
+                    }
+                  }}
+                  disabled={isProcessing || !rejectionReason.trim()}
+                >
+                  {isProcessing ? "Traitement..." : "Rejeter"}
+                </button>
+                <button
+                  className={`${styles.modal__button} ${styles["modal__button--cancel"]}`}
+                  onClick={() => {
+                    setShowCatchModal(false);
+                    setSelectedCatch(null);
+                    setRejectionReason("");
+                  }}
+                  disabled={isProcessing}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal d'image pour agrandir la photo */}
+        {showImageModal && selectedImage && (
+          <div 
+            className={styles.dashboard__image_modal_overlay}
+            onClick={() => {
+              setShowImageModal(false);
+              setSelectedImage(null);
+            }}
+          >
+            <div 
+              className={styles.dashboard__image_modal_content}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className={styles.dashboard__image_modal_close}
+                onClick={() => {
+                  setShowImageModal(false);
+                  setSelectedImage(null);
+                }}
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+              <img
+                src={selectedImage}
+                alt="Photo de la prise en grand format"
+                className={styles.dashboard__image_modal_img}
+              />
             </div>
           </div>
         )}
