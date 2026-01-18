@@ -15,7 +15,7 @@ use App\DTO\Competition\CreateTeamRequest;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 
-#[Route('/teams', name: 'team_')]
+#[Route('/api/teams', name: 'team_')]
 class TeamController extends AbstractController
 {
     public function __construct(
@@ -30,33 +30,92 @@ class TeamController extends AbstractController
         return $user && $team->getMembers()->contains($user);
     }
 
+    #[Route('/my-teams', name: 'my_teams', methods: ['GET'])]
+    public function getMyTeams(TeamRepository $repository): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            $teams = $repository->findTeamsByMember($user);
+            
+            // Retourner toutes les équipes de l'utilisateur (avec ou sans compétition)
+            // Transformer manuellement les données pour éviter les références circulaires et réduire la taille
+            $teamsData = array_map(function ($team) {
+                return [
+                    'id' => $team->getId(),
+                    'name' => $team->getName(),
+                    'totalScore' => $team->getTotalScore(),
+                    'hasBonus' => $team->getHasBonus(),
+                    'registrationNumber' => $team->getRegistrationNumber(),
+                    'members' => array_map(function ($member) {
+                        return [
+                            'id' => $member->getId(),
+                            'firstname' => $member->getFirstname(),
+                            'lastname' => $member->getLastname(),
+                            'email' => $member->getEmail(),
+                        ];
+                    }, $team->getMembers()->toArray()),
+                    'competition' => $team->getCompetition() ? [
+                        'id' => $team->getCompetition()->getId(),
+                        'name' => $team->getCompetition()->getName(),
+                        'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
+                        'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                    ] : null,
+                ];
+            }, array_values($teams));
+
+            return $this->json([
+                'success' => true,
+                'teams' => $teamsData
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des équipes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     #[Route('', name: 'list', methods: ['GET'])]
     public function index(TeamRepository $repository): JsonResponse
     {
         try {
             $teams = $repository->findAllWithDetails();
 
-            // Debug
-            $this->logger->debug('Teams data:', [
-                'first_team' => isset($teams[0]) ? [
-                    'id' => $teams[0]->getId(),
-                    'name' => $teams[0]->getName(),
-                    'members' => array_map(fn($m) => [
-                        'id' => $m->getId(),
-                        'firstname' => $m->getFirstname(),
-                        'lastname' => $m->getLastname()
-                    ], $teams[0]->getMembers()->toArray())
-                ] : null
-            ]);
+            // Transformer manuellement les données pour éviter les références circulaires et réduire la taille
+            $teamsData = array_map(function ($team) {
+                return [
+                    'id' => $team->getId(),
+                    'name' => $team->getName(),
+                    'totalScore' => $team->getTotalScore(),
+                    'hasBonus' => $team->getHasBonus(),
+                    'registrationNumber' => $team->getRegistrationNumber(),
+                    'members' => array_map(function ($member) {
+                        return [
+                            'id' => $member->getId(),
+                            'firstname' => $member->getFirstname(),
+                            'lastname' => $member->getLastname(),
+                            'email' => $member->getEmail(),
+                        ];
+                    }, $team->getMembers()->toArray()),
+                    'competition' => $team->getCompetition() ? [
+                        'id' => $team->getCompetition()->getId(),
+                        'name' => $team->getCompetition()->getName(),
+                        'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
+                        'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                    ] : null,
+                ];
+            }, $teams);
 
             return $this->json([
                 'success' => true,
-                'teams' => $teams
-            ], 200, [], [
-                'groups' => ['team:read', 'user:read', 'catch:read', 'species:read'],
-                'circular_reference_handler' => function ($object) {
-                    return $object->getId();
-                }
+                'teams' => $teamsData
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la récupération des équipes', [
@@ -145,11 +204,28 @@ class TeamController extends AbstractController
             $this->entityManager->persist($team);
             $this->entityManager->flush();
 
+            // Transformer manuellement les données pour éviter les références circulaires
+            $teamData = [
+                'id' => $team->getId(),
+                'name' => $team->getName(),
+                'totalScore' => $team->getTotalScore(),
+                'hasBonus' => $team->getHasBonus(),
+                'registrationNumber' => $team->getRegistrationNumber(),
+                'members' => array_map(function ($member) {
+                    return [
+                        'id' => $member->getId(),
+                        'firstname' => $member->getFirstname(),
+                        'lastname' => $member->getLastname(),
+                        'email' => $member->getEmail(),
+                    ];
+                }, $team->getMembers()->toArray()),
+            ];
+
             return $this->json([
                 'success' => true,
-                'team' => $team,
+                'team' => $teamData,
                 'message' => 'Équipe créée avec succès'
-            ], 201, [], ['groups' => ['team:read', 'user:read']]);
+            ], 201);
         } catch (\Exception $e) {
             // Log l'erreur pour le débogage
             $this->logger->error('Erreur lors de la création de l\'équipe', [
@@ -164,69 +240,91 @@ class TeamController extends AbstractController
         }
     }
 
-    #[Route('/competitions/{competitionId}/register', name: 'register_to_competition', methods: ['POST'])]
-    public function registerToCompetition(
-        int $competitionId,
-        Request $request,
-        CompetitionRepository $competitionRepo,
-        TeamRepository $teamRepo,
-        EntityManagerInterface $em
-    ): JsonResponse {
-        try {
-            $data = json_decode($request->getContent(), true);
-            if (!isset($data['teamId'])) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'L\'ID de l\'équipe est requis'
-                ], 400);
-            }
-
-            $competition = $competitionRepo->find($competitionId);
-            if (!$competition) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Compétition non trouvée'
-                ], 404);
-            }
-
-            $team = $teamRepo->find($data['teamId']);
-            if (!$team) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Équipe non trouvée'
-                ], 404);
-            }
-
-            if ($team->getCompetition()) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Cette équipe est déjà inscrite à une compétition'
-                ], 400);
-            }
-
-            // Attribuer le numéro d'inscription
-            $lastTeam = $teamRepo->findLastTeamNumberByCompetition($competition);
-            $team->setRegistrationNumber($lastTeam ? $lastTeam->getRegistrationNumber() + 1 : 1);
-            $team->setCompetition($competition);
-
-            $em->flush();
-
-            return $this->json([
-                'success' => true,
-                'team' => $team
-            ], 200, [], ['groups' => ['team:read', 'user:read']]);
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'inscription à la compétition: ' . $e->getMessage()
-            ], 500);
-        }
-    }
+    // Route déplacée vers CompetitionController::registerTeamToCompetition
+    // Utilisez /api/competitions/{id}/teams/register à la place
 
     #[Route('/{id}', name: 'competition_team_show', methods: ['GET'])]
-    public function show(int $competitionId, Team $team): JsonResponse
+    public function show(Team $team): JsonResponse
     {
-        return $this->json($team, 200, [], ['groups' => ['team:read', 'user:read']]);
+        // Calculer le bonus de l'équipe
+        $validatedCatches = [];
+        $uniqueSpecies = [];
+        $hasGobi = false;
+        foreach ($team->getCatches() as $catch) {
+            if ($catch->isValidated()) {
+                $validatedCatches[] = $catch;
+                $speciesId = $catch->getSpecies()->getId();
+                $uniqueSpecies[$speciesId] = true;
+                
+                // Vérifier si c'est un gobi (coefficient 0)
+                if ($catch->getSpecies()->getCoefficient() == 0) {
+                    $hasGobi = true;
+                }
+            }
+        }
+        
+        $uniqueSpeciesCount = count($uniqueSpecies);
+        $bonus = 0;
+        
+        // Cas spécial : si gobi est la seule espèce, pas de bonus
+        if ($uniqueSpeciesCount === 1 && $hasGobi) {
+            $bonus = 0;
+        } else {
+            if ($uniqueSpeciesCount >= 2) {
+                $bonus = ($uniqueSpeciesCount - 1) * 50;
+                if ($bonus > 200) {
+                    $bonus = 200;
+                }
+            }
+        }
+        
+        // Transformer manuellement les données pour éviter les références circulaires
+        return $this->json([
+            'success' => true,
+            'team' => [
+                'id' => $team->getId(),
+                'name' => $team->getName(),
+                'totalScore' => $team->getTotalScore(),
+                'hasBonus' => $team->getHasBonus(),
+                'bonus' => $bonus,
+                'registrationNumber' => $team->getRegistrationNumber(),
+                'members' => array_map(function ($member) {
+                    return [
+                        'id' => $member->getId(),
+                        'firstname' => $member->getFirstname(),
+                        'lastname' => $member->getLastname(),
+                        'email' => $member->getEmail(),
+                    ];
+                }, $team->getMembers()->toArray()),
+                'competition' => $team->getCompetition() ? [
+                    'id' => $team->getCompetition()->getId(),
+                    'name' => $team->getCompetition()->getName(),
+                    'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
+                    'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                ] : null,
+                'catches' => array_map(function ($catch) {
+                    return [
+                        'id' => $catch->getId(),
+                        'species' => [
+                            'id' => $catch->getSpecies()->getId(),
+                            'name' => $catch->getSpecies()->getName(),
+                            'coefficient' => $catch->getSpecies()->getCoefficient(),
+                        ],
+                        'size' => $catch->getSize(),
+                        'points' => $catch->calculatePoints(),
+                        'photoUrl' => $catch->getPhotoUrl(),
+                        'comment' => $catch->getComment(),
+                        'isValidated' => $catch->isValidated(),
+                        'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                        'caughtBy' => $catch->getCaughtBy() ? [
+                            'id' => $catch->getCaughtBy()->getId(),
+                            'firstname' => $catch->getCaughtBy()->getFirstname(),
+                            'lastname' => $catch->getCaughtBy()->getLastname(),
+                        ] : null,
+                    ];
+                }, $team->getCatches()->toArray()),
+            ]
+        ]);
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
@@ -248,10 +346,27 @@ class TeamController extends AbstractController
 
             $this->entityManager->flush();
 
+            // Transformer manuellement les données pour éviter les références circulaires
+            $teamData = [
+                'id' => $team->getId(),
+                'name' => $team->getName(),
+                'totalScore' => $team->getTotalScore(),
+                'hasBonus' => $team->getHasBonus(),
+                'registrationNumber' => $team->getRegistrationNumber(),
+                'members' => array_map(function ($member) {
+                    return [
+                        'id' => $member->getId(),
+                        'firstname' => $member->getFirstname(),
+                        'lastname' => $member->getLastname(),
+                        'email' => $member->getEmail(),
+                    ];
+                }, $team->getMembers()->toArray()),
+            ];
+
             return $this->json([
                 'success' => true,
-                'team' => $team
-            ], 200, [], ['groups' => ['team:read', 'user:read']]);
+                'team' => $teamData
+            ]);
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
@@ -286,28 +401,49 @@ class TeamController extends AbstractController
     #[Route('/{id}/leave', name: 'team_leave', methods: ['POST'])]
     public function leaveTeam(Team $team): JsonResponse
     {
-        $user = $this->getUser();
-        if (!$team->getMembers()->contains($user)) {
-            return $this->json([
-                'message' => 'Vous n\'êtes pas membre de cette équipe'
-            ], 403);
-        }
-
         try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            if (!$team->getMembers()->contains($user)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas membre de cette équipe'
+                ], 403);
+            }
+
+            // Retirer l'utilisateur de l'équipe
             $team->removeMember($user);
 
             // Si l'équipe n'a plus de membres, la supprimer
             if ($team->getMembers()->isEmpty()) {
                 $this->entityManager->remove($team);
+            } else {
+                // Si l'équipe avait une compétition, la désinscrire
+                if ($team->getCompetition()) {
+                    $team->setCompetition(null);
+                    $team->setRegistrationNumber(null);
+                }
             }
 
             $this->entityManager->flush();
 
             return $this->json([
+                'success' => true,
                 'message' => 'Vous avez quitté l\'équipe avec succès'
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors du départ de l\'équipe', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
+                'success' => false,
                 'message' => 'Erreur lors du départ de l\'équipe: ' . $e->getMessage()
             ], 500);
         }

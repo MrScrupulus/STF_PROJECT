@@ -39,17 +39,33 @@ class TeamRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $result['lastNumber'];
+        return $result && isset($result['lastNumber']) ? (int) $result['lastNumber'] : null;
     }
 
     public function findTeamsByMember(User $user): array
     {
-        return $this->createQueryBuilder('t')
-            ->select('t', 'm', 'comp')
+        // Trouver les IDs des équipes où l'utilisateur est membre
+        $teamIds = $this->createQueryBuilder('t')
+            ->select('DISTINCT t.id')
             ->innerJoin('t.members', 'm')
-            ->leftJoin('t.competition', 'comp')
             ->where('m = :user')
             ->setParameter('user', $user)
+            ->getQuery()
+            ->getScalarResult();
+        
+        $teamIds = array_column($teamIds, 'id');
+        
+        if (empty($teamIds)) {
+            return [];
+        }
+        
+        // Charger toutes les équipes avec tous leurs membres
+        return $this->createQueryBuilder('t')
+            ->select('t', 'm', 'comp')
+            ->leftJoin('t.members', 'm')
+            ->leftJoin('t.competition', 'comp')
+            ->where('t.id IN (:teamIds)')
+            ->setParameter('teamIds', $teamIds)
             ->getQuery()
             ->getResult();
     }

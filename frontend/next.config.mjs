@@ -6,6 +6,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Désactiver les stack traces en développement pour éviter l'erreur 431
+  reactStrictMode: true,
+  swcMinify: true,
+  
   async rewrites() {
     // En développement Docker, utiliser le nom du service
     // En développement local, utiliser localhost
@@ -19,7 +23,7 @@ const nextConfig = {
       },
     ];
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       "@": path.resolve(__dirname, "./src"),
@@ -29,6 +33,15 @@ const nextConfig = {
       ".scss",
       ".css",
     ];
+    
+    // Réduire la taille des stack traces en développement
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        minimize: false,
+      };
+    }
+    
     return config;
   },
   async headers() {

@@ -2,13 +2,42 @@ import { api } from "./api";
 
 export const speciesService = {
   getAll: async () => {
-    const response = await api.get("/species");
-    return response.data;
+    try {
+      const response = await api.get("/api/species");
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching species:", error);
+      throw error;
+    }
   },
 
-  create: (data) => api.post("/admin/species", data),
+  getOne: async (id) => {
+    try {
+      const response = await api.get(`/api/species/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching species:", error);
+      throw error;
+    }
+  },
 
-  update: (id, data) => api.put(`/admin/species/${id}`, data),
+  create: async (data) => {
+    try {
+      const response = await api.post("/api/admin/species", data);
+      return response;
+    } catch (error) {
+      console.error("Error creating species:", error);
+      throw error;
+    }
+  },
 
-  delete: (id) => api.delete(`/admin/species/${id}`),
+  update: async (id, data) => {
+    try {
+      const response = await api.put(`/api/admin/species/${id}`, data);
+      return response;
+    } catch (error) {
+      console.error("Error updating species:", error);
+      throw error;
+    }
+  },
 };

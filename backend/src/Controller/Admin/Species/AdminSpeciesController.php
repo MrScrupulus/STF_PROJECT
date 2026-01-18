@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/admin/species')]
+#[Route('/api/admin/species')]
 class AdminSpeciesController extends AbstractController
 {
     public function __construct(
@@ -31,14 +31,26 @@ class AdminSpeciesController extends AbstractController
             $species = new Species();
             $species->setName($data['name']);
 
-            // Si ce n'est pas une espèce bonus, on vérifie le coefficient
-            if (strtolower($data['name']) !== 'espèce bonus') {
+            // Déterminer si c'est une espèce bonus (par le nom ou par un champ isBonus)
+            $isBonus = isset($data['isBonus']) ? $data['isBonus'] : (strtolower($data['name']) === 'espèce bonus');
+
+            if ($isBonus) {
+                // Espèce bonus : utiliser basePoints
+                $basePoints = isset($data['basePoints']) ? (int) $data['basePoints'] : 50;
+                $species->setBasePoints($basePoints);
+                $species->setCoefficient(1.0);
+            } else {
+                // Espèce normale : utiliser coefficient
                 if (!isset($data['coefficient']) || $data['coefficient'] <= 0) {
                     return $this->json([
                         'message' => 'Un coefficient valide est requis pour les espèces non bonus'
                     ], 400);
                 }
                 $species->setCoefficient((float) $data['coefficient']);
+                // basePoints par défaut pour les espèces normales
+                if (isset($data['basePoints'])) {
+                    $species->setBasePoints((int) $data['basePoints']);
+                }
             }
 
             $this->entityManager->persist($species);
@@ -67,12 +79,29 @@ class AdminSpeciesController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
 
+            // Mettre à jour le nom si fourni
             if (isset($data['name'])) {
                 $species->setName($data['name']);
             }
 
-            if (!$species->isBonus() && isset($data['coefficient'])) {
-                $species->setCoefficient((float) $data['coefficient']);
+            // Déterminer si c'est une espèce bonus (par le nom ou par un champ isBonus)
+            $isBonus = isset($data['isBonus']) ? $data['isBonus'] : $species->isBonus();
+
+            if ($isBonus) {
+                // Espèce bonus : utiliser basePoints
+                if (isset($data['basePoints'])) {
+                    $species->setBasePoints((int) $data['basePoints']);
+                }
+                $species->setCoefficient(1.0);
+            } else {
+                // Espèce normale : utiliser coefficient
+                if (isset($data['coefficient'])) {
+                    $species->setCoefficient((float) $data['coefficient']);
+                }
+                // Mettre à jour basePoints si fourni
+                if (isset($data['basePoints'])) {
+                    $species->setBasePoints((int) $data['basePoints']);
+                }
             }
 
             $this->entityManager->flush();

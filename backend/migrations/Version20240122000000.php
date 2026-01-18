@@ -12,7 +12,7 @@ final class Version20240122000000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // Users table
-        $this->addSql('CREATE TABLE users (
+        $this->addSql('CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT NOT NULL,
             email VARCHAR(180) NOT NULL,
             roles JSON NOT NULL,
@@ -30,7 +30,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Teams table
-        $this->addSql('CREATE TABLE teams (
+        $this->addSql('CREATE TABLE IF NOT EXISTS teams (
             id INT AUTO_INCREMENT NOT NULL,
             name VARCHAR(255) NOT NULL,
             competition_id INT DEFAULT NULL,
@@ -41,7 +41,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Competition table
-        $this->addSql('CREATE TABLE competitions (
+        $this->addSql('CREATE TABLE IF NOT EXISTS competitions (
             id INT AUTO_INCREMENT NOT NULL,
             name VARCHAR(255) NOT NULL,
             start_date DATETIME NOT NULL,
@@ -55,7 +55,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Species table
-        $this->addSql('CREATE TABLE species (
+        $this->addSql('CREATE TABLE IF NOT EXISTS species (
             id INT AUTO_INCREMENT NOT NULL,
             name VARCHAR(255) NOT NULL,
             coefficient DOUBLE PRECISION NOT NULL,
@@ -65,7 +65,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Team members table
-        $this->addSql('CREATE TABLE competition_team_members (
+        $this->addSql('CREATE TABLE IF NOT EXISTS competition_team_members (
             team_id INT NOT NULL,
             user_id INT NOT NULL,
             INDEX IDX_team_members_team (team_id),
@@ -74,7 +74,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Fish catch table
-        $this->addSql('CREATE TABLE fish_catch (
+        $this->addSql('CREATE TABLE IF NOT EXISTS fish_catch (
             id INT AUTO_INCREMENT NOT NULL,
             team_id INT NOT NULL,
             species_id INT NOT NULL,
@@ -89,7 +89,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Password Reset Tokens table
-        $this->addSql('CREATE TABLE password_reset_tokens (
+        $this->addSql('CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id INT AUTO_INCREMENT NOT NULL,
             user_id INT NOT NULL,
             token VARCHAR(255) NOT NULL,
@@ -99,7 +99,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Invalidated Tokens table
-        $this->addSql('CREATE TABLE invalidated_tokens (
+        $this->addSql('CREATE TABLE IF NOT EXISTS invalidated_tokens (
             id INT AUTO_INCREMENT NOT NULL,
             jti VARCHAR(255) NOT NULL,
             expiration_date DATETIME NOT NULL,
@@ -108,7 +108,7 @@ final class Version20240122000000 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Refresh Tokens table
-        $this->addSql('CREATE TABLE refresh_tokens (
+        $this->addSql('CREATE TABLE IF NOT EXISTS refresh_tokens (
             id INT AUTO_INCREMENT NOT NULL,
             refresh_token VARCHAR(128) NOT NULL,
             username VARCHAR(255) NOT NULL,

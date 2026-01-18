@@ -3,19 +3,31 @@ import { api } from "./api";
 export const teamService = {
   getAll: async () => {
     try {
-      const response = await api.get("/teams");
+      const response = await api.get("/api/teams");
+      // La réponse peut être directement un objet avec teams ou directement un tableau
+      if (response.success && response.teams) {
+        return response;
+      }
+      // Si c'est directement un tableau ou un objet avec une propriété teams
       return response;
     } catch (error) {
       console.error("Error getting teams:", error);
       throw error;
     }
   },
-  getById: (competitionId, id) =>
-    api.get(`/competitions/${competitionId}/teams/${id}`),
+  getById: async (competitionId, id) => {
+    try {
+      const response = await api.get(`/api/teams/${id}`);
+      return response;
+    } catch (error) {
+      console.error("Error getting team:", error);
+      throw error;
+    }
+  },
   create: async (data) => {
     try {
       console.log("Creating team with data:", data); // Pour le débogage
-      const response = await api.post("/teams", data);
+      const response = await api.post("/api/teams", data);
       return response;
     } catch (error) {
       console.error("Error creating team:", error);
@@ -23,10 +35,10 @@ export const teamService = {
     }
   },
   update: (competitionId, id, data) =>
-    api.put(`/competitions/${competitionId}/teams/${id}`, data),
+    api.put(`/api/competitions/${competitionId}/teams/${id}`, data),
   delete: async (teamId) => {
     try {
-      const response = await api.delete(`/teams/${teamId}`);
+      const response = await api.delete(`/api/teams/${teamId}`);
       return response;
     } catch (error) {
       console.error("Error deleting team:", error);
@@ -35,8 +47,8 @@ export const teamService = {
   },
   getMyTeams: async () => {
     try {
-      const response = await api.get("/teams/my-teams");
-      return response.teams;
+      const response = await api.get("/api/teams/my-teams");
+      return response;
     } catch (error) {
       console.error("Error fetching teams:", error);
       throw error;
@@ -45,7 +57,7 @@ export const teamService = {
   acceptInvitation: async (invitationToken) => {
     try {
       const response = await api.post(
-        `/teams/accept-invitation/${invitationToken}`
+        `/api/teams/accept-invitation/${invitationToken}`
       );
       return response;
     } catch (error) {
@@ -56,7 +68,7 @@ export const teamService = {
   registerToCompetition: async (teamId, competitionId) => {
     try {
       const response = await api.post(
-        `/competitions/${competitionId}/teams/register`,
+        `/api/competitions/${competitionId}/teams/register`,
         {
           teamId: teamId,
         }
@@ -69,7 +81,7 @@ export const teamService = {
   },
   inviteMember: async (teamId, email) => {
     try {
-      const response = await api.post(`/teams/${teamId}/invite`, { email });
+      const response = await api.post(`/api/teams/${teamId}/invite`, { email });
       return response;
     } catch (error) {
       console.error("Error inviting member:", error);
@@ -78,7 +90,7 @@ export const teamService = {
   },
   removeMember: async (teamId, userId) => {
     try {
-      const response = await api.delete(`/teams/${teamId}/members/${userId}`);
+      const response = await api.delete(`/api/teams/${teamId}/members/${userId}`);
       return response;
     } catch (error) {
       console.error("Error removing member:", error);
@@ -87,7 +99,7 @@ export const teamService = {
   },
   leaveTeam: async (teamId) => {
     try {
-      const response = await api.post(`/teams/${teamId}/leave`);
+      const response = await api.post(`/api/teams/${teamId}/leave`);
       return response;
     } catch (error) {
       console.error("Error leaving team:", error);

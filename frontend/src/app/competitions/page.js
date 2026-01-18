@@ -4,6 +4,8 @@ import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { competitionsService } from "../../services/competitions";
 import styles from "../../styles/pages/competitions.module.scss";
+import layoutStyles from "../../styles/components/layout/layout.module.scss";
+import Link from "next/link";
 
 export default function CompetitionsPage() {
   const { data: competitions, isLoading } = useQuery({
@@ -12,12 +14,12 @@ export default function CompetitionsPage() {
   });
 
   if (isLoading)
-    return createElement("div", { className: styles.loading }, "Chargement...");
+    return createElement("div", { className: `${layoutStyles.main} ${styles.loading}` }, "Chargement...");
 
   return createElement(
     "div",
     {
-      className: styles.competitions__container,
+      className: `${layoutStyles.main} ${styles.competitions__container}`,
     },
     createElement(
       "h1",
@@ -31,7 +33,7 @@ export default function CompetitionsPage() {
       {
         className: styles.competitions__list,
       },
-      competitions?.map((competition) =>
+      (competitions || []).map((competition) =>
         createElement(
           "div",
           {
@@ -39,11 +41,18 @@ export default function CompetitionsPage() {
             className: styles.competition__card,
           },
           createElement(
-            "h3",
+            Link,
             {
-              className: styles.competition__name,
+              href: `/competitions/${competition.id}`,
+              className: styles.competition__link,
             },
-            competition.name
+            createElement(
+              "h3",
+              {
+                className: styles.competition__name,
+              },
+              competition.name
+            )
           ),
           createElement(
             "div",
@@ -78,32 +87,19 @@ export default function CompetitionsPage() {
               competition.type || "Standard"
             )
           ),
-          createElement(
+          competition.description && createElement(
             "div",
             {
-              className: styles.competitions__date,
+              className: styles.competition__description,
             },
-            new Date(competition.date).toLocaleDateString()
+            competition.description
           ),
           createElement(
             "div",
             {
-              className: styles.competitions__status,
+              className: styles.competition__info,
             },
-            createElement(
-              "span",
-              {
-                className: `${styles.competitions__status}--${competition.status}`,
-              },
-              competition.status
-            )
-          ),
-          createElement(
-            "div",
-            {
-              className: styles.competitions__teams,
-            },
-            `${competition.teams?.length || 0} équipes inscrites`
+            `Taille d'équipe: ${competition.teamSize} membre(s)`
           )
         )
       )

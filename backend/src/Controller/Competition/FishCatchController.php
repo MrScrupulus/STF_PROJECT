@@ -4,19 +4,28 @@ namespace App\Controller\Competition;
 
 use App\Entity\Competition\FishCatch;
 use App\Repository\Competition\FishCatchRepository;
+use App\Repository\Security\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/competitions/{competitionId}/catches')]
+#[Route('/api/competitions/{competitionId}/catches')]
 class FishCatchController extends AbstractController
 {
     #[Route('', name: 'competition_catch_list', methods: ['GET'])]
-    public function list(FishCatchRepository $repository): JsonResponse
+    public function list(int $competitionId, FishCatchRepository $repository): JsonResponse
     {
-        return $this->json($repository->findAll());
+        // Récupérer les prises pour cette compétition
+        $catches = $repository->createQueryBuilder('c')
+            ->join('c.team', 't')
+            ->where('t.competition = :competitionId')
+            ->setParameter('competitionId', $competitionId)
+            ->getQuery()
+            ->getResult();
+
+        return $this->json($catches);
     }
 
     #[Route('/{id}', name: 'competition_catch_show', methods: ['GET'])]
@@ -26,19 +35,136 @@ class FishCatchController extends AbstractController
     }
 
     #[Route('', name: 'competition_catch_create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
+    public function create(
+        int $competitionId,
+        Request $request,
+        EntityManagerInterface $em,
+        \App\Repository\Competition\TeamRepository $teamRepository,
+        \App\Repository\Species\SpeciesRepository $speciesRepository,
+        \App\Repository\Competition\CompetitionRepository $competitionRepository,
+        UserRepository $userRepository
+    ): JsonResponse {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
 
-        $catch = new FishCatch();
-        $catch->setLength($data['length']);
-        $catch->setPhotoUrl($data['photoUrl']);
-        // TODO: Set species and team from repositories
+            // Vérifier que la compétition existe et est en cours
+            $competition = $competitionRepository->find($competitionId);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
 
-        $em->persist($catch);
-        $em->flush();
+            $now = new \DateTime();
+            if ($now < $competition->getStartDate() || $now > $competition->getEndDate()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette compétition n\'est pas en cours'
+                ], 400);
+            }
 
-        return $this->json($catch, 201);
+            $data = json_decode($request->getContent(), true);
+
+            // Récupérer l'équipe de l'utilisateur pour cette compétition
+            $teams = $teamRepository->findTeamsByMember($user);
+            $team = null;
+            foreach ($teams as $t) {
+                if ($t->getCompetition() && $t->getCompetition()->getId() === $competitionId) {
+                    $team = $t;
+                    break;
+                }
+            }
+
+            if (!$team) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas inscrit à cette compétition'
+                ], 403);
+            }
+
+            // Validation des données
+            if (!isset($data['speciesId']) || !isset($data['size'])) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'L\'espèce et la taille sont requis'
+                ], 400);
+            }
+
+            $species = $speciesRepository->find($data['speciesId']);
+            if (!$species) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Espèce non trouvée'
+                ], 404);
+            }
+
+            $catch = new FishCatch();
+            $catch->setTeam($team);
+            $catch->setSpecies($species);
+            $catch->setSize((float) $data['size']);
+            $catch->setPhotoUrl($data['photoUrl'] ?? null);
+            $catch->setComment($data['comment'] ?? null);
+            // Valider automatiquement la prise pour qu'elle soit comptée dans le score
+            $catch->setIsValidated(true);
+            
+            // Gérer le membre qui a fait la prise
+            if (isset($data['caughtById']) && !empty($data['caughtById'])) {
+                $caughtBy = $userRepository->find($data['caughtById']);
+                // Vérifier que le membre appartient bien à l'équipe
+                if ($caughtBy && $team->getMembers()->contains($caughtBy)) {
+                    $catch->setCaughtBy($caughtBy);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Le membre sélectionné n\'appartient pas à cette équipe'
+                    ], 400);
+                }
+            } else {
+                // Par défaut, attribuer la prise à l'utilisateur connecté
+                $catch->setCaughtBy($user);
+            }
+
+            $em->persist($catch);
+            $em->flush();
+
+            // Recalculer le score de l'équipe
+            $team->updateTotalScore();
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Prise enregistrée avec succès',
+                'catch' => [
+                    'id' => $catch->getId(),
+                    'species' => [
+                        'id' => $species->getId(),
+                        'name' => $species->getName(),
+                        'coefficient' => $species->getCoefficient(),
+                    ],
+                    'size' => $catch->getSize(),
+                    'points' => $catch->calculatePoints(),
+                    'photoUrl' => $catch->getPhotoUrl(),
+                    'comment' => $catch->getComment(),
+                    'caughtBy' => $catch->getCaughtBy() ? [
+                        'id' => $catch->getCaughtBy()->getId(),
+                        'firstname' => $catch->getCaughtBy()->getFirstname(),
+                        'lastname' => $catch->getCaughtBy()->getLastname(),
+                    ] : null,
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création de la prise: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/{id}', name: 'competition_catch_update', methods: ['PUT'])]
@@ -46,11 +172,14 @@ class FishCatchController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['length'])) {
-            $catch->setLength($data['length']);
+        if (isset($data['size'])) {
+            $catch->setSize((float) $data['size']);
         }
         if (isset($data['photoUrl'])) {
             $catch->setPhotoUrl($data['photoUrl']);
+        }
+        if (isset($data['comment'])) {
+            $catch->setComment($data['comment']);
         }
 
         $em->flush();

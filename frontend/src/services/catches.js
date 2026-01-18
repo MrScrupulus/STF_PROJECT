@@ -1,16 +1,23 @@
 import { api } from "./api";
-import { ENDPOINTS } from "./endpoints";
 
 export const catchesService = {
-  getAll: () => api.get(ENDPOINTS.catches.list),
+  getAll: (competitionId) => api.get(`/api/competitions/${competitionId}/catches`),
 
-  getOne: (id) => api.get(ENDPOINTS.catches.detail(id)),
+  getOne: (competitionId, id) => api.get(`/api/competitions/${competitionId}/catches/${id}`),
 
-  create: (data) => api.post(ENDPOINTS.catches.list, data),
+  create: async (competitionId, data) => {
+    try {
+      const response = await api.post(`/api/competitions/${competitionId}/catches`, data);
+      return response;
+    } catch (error) {
+      console.error("Error creating catch:", error);
+      throw error;
+    }
+  },
 
-  update: (id, data) => api.put(ENDPOINTS.catches.detail(id), data),
+  update: (competitionId, id, data) => api.put(`/api/competitions/${competitionId}/catches/${id}`, data),
 
-  delete: (id) => api.delete(ENDPOINTS.catches.detail(id)),
+  delete: (competitionId, id) => api.delete(`/api/competitions/${competitionId}/catches/${id}`),
 
-  validate: (id) => api.put(ENDPOINTS.catches.validate(id), {}),
+  validate: (competitionId, id) => api.patch(`/api/competitions/${competitionId}/catches/${id}/validate`, {}),
 };

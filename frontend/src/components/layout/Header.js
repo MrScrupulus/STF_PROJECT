@@ -52,6 +52,7 @@ export function Header() {
       { path: "/teams", label: "Équipe", color: "#f59e0b", icon: "👥" },
       ...(user
         ? [
+            { path: "/catch/add", label: "Ajouter une prise", color: "#10b981", icon: "🐟" },
             { path: "/account", label: "Profil", color: "#8b5cf6", icon: "👤" },
             {
               label: "Déconnexion",
@@ -200,17 +201,18 @@ export function Header() {
       return renderMobileMenu();
     }
 
-    // Menu desktop existant
-    const menuItems = [
-      { path: "/", label: "Accueil" },
-      { path: "/competitions", label: "Compétitions" },
-      { path: "/teams", label: "Équipe" },
-      ...(!user ? [{ path: "/register", label: "Inscription" }] : []),
-      ...(user ? [{ path: "/account", label: "Profil" }] : []),
-      ...(user?.roles?.includes("ROLE_ADMIN")
-        ? [{ path: "/dashboard", label: "Bureau de l'ombre" }]
-        : []),
-    ];
+          // Menu desktop existant
+          const menuItems = [
+            { path: "/", label: "Accueil" },
+            { path: "/competitions", label: "Compétitions" },
+            { path: "/teams", label: "Équipe" },
+            ...(user ? [{ path: "/catch/add", label: "Ajouter une prise" }] : []),
+            ...(!user ? [{ path: "/register", label: "Inscription" }] : []),
+            ...(user ? [{ path: "/account", label: "Profil" }] : []),
+            ...(user?.roles?.includes("ROLE_ADMIN")
+              ? [{ path: "/dashboard", label: "Bureau de l'ombre" }]
+              : []),
+          ];
 
     // Filtrer l'item correspondant à la page courante
     const filteredMenuItems = menuItems.filter(

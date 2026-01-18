@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { competitionService } from "../../services/competitionService";
+import { competitionsService } from "../../../../services/competitions";
 import { useRouter } from "next/navigation";
-import ProtectedRoute from "../../components/auth/ProtectedRoute";
-import styles from "../../styles/pages/dashboard/competition-create.module.scss";
+import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
+import styles from "../../../../styles/pages/dashboard/competition-create.module.scss";
 
 export default function CreateCompetition() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function CreateCompetition() {
 
     try {
       console.log("Sending data:", formData);
-      await competitionService.create(formData);
+      await competitionsService.create(formData);
       router.push("/dashboard");
     } catch (error) {
       setError(error.message || "Une erreur est survenue lors de la création");

@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { teamService } from "../../services/teamService";
-import styles from "../../styles/pages/teams/create.module.scss";
+import { teamService } from "../../../services/teamService";
+import styles from "../../../styles/pages/teams/create.module.scss";
 import classNames from "classnames";
-import layoutStyles from "../../styles/components/layout/layout.module.scss";
+import layoutStyles from "../../../styles/components/layout/layout.module.scss";
+import ProtectedRoute from "../../../components/auth/ProtectedRoute";
 
 export default function CreateTeam() {
   const router = useRouter();
@@ -16,6 +17,28 @@ export default function CreateTeam() {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [hasExistingTeam, setHasExistingTeam] = useState(false);
+  const [existingTeam, setExistingTeam] = useState(null);
+  const [checkingTeam, setCheckingTeam] = useState(true);
+
+  useEffect(() => {
+    const checkExistingTeam = async () => {
+      try {
+        const response = await teamService.getMyTeams();
+        const teams = response?.teams || [];
+        if (teams.length > 0) {
+          setHasExistingTeam(true);
+          setExistingTeam(teams[0]);
+        }
+      } catch (error) {
+        console.error("Error checking existing team:", error);
+      } finally {
+        setCheckingTeam(false);
+      }
+    };
+
+    checkExistingTeam();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,12 +65,51 @@ export default function CreateTeam() {
     }
   };
 
+  if (checkingTeam) {
+    return (
+      <div className={classNames(layoutStyles.main, layoutStyles.teams_create_page)}>
+        <div className={styles.container}>
+          <div>Vérification...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasExistingTeam) {
+    return (
+      <ProtectedRoute>
+        <div className={classNames(layoutStyles.main, layoutStyles.teams_create_page)}>
+          <div className={styles.container}>
+            <h1>Vous avez déjà une équipe</h1>
+            <div className={styles.errorAlert} role="alert">
+              <p>
+                Vous êtes déjà membre de l'équipe <strong>{existingTeam.name}</strong>.
+              </p>
+              <p>
+                Pour créer ou rejoindre une nouvelle équipe, vous devez d'abord quitter votre équipe actuelle.
+              </p>
+            </div>
+            <div className={styles.buttonGroup}>
+              <button
+                onClick={() => router.push("/teams")}
+                className={styles.cancelButton}
+              >
+                Retour à mon équipe
+              </button>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
-    <div
-      className={classNames(layoutStyles.main, layoutStyles.teams_create_page)}
-    >
-      <div className={styles.container}>
-        <h1>Créer une équipe</h1>
+    <ProtectedRoute>
+      <div
+        className={classNames(layoutStyles.main, layoutStyles.teams_create_page)}
+      >
+        <div className={styles.container}>
+          <h1>Créer une équipe</h1>
 
         {error && (
           <div className={styles.errorAlert} role="alert">
@@ -116,5 +178,6 @@ export default function CreateTeam() {
         </form>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

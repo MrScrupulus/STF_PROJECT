@@ -3,6 +3,7 @@
 namespace App\Entity\Competition;
 
 use App\Entity\Species\Species;
+use App\Entity\Security\User;
 use App\Repository\Competition\FishCatchRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -38,6 +39,19 @@ class FishCatch
     #[Groups(['catch:read'])]
     private ?\DateTimeImmutable $createdAt;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?string $photoUrl = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?string $comment = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?User $caughtBy = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -49,7 +63,8 @@ class FishCatch
             return 0;
         }
 
-        return (int) ($this->size * $this->species->getCoefficient() * $this->species->getBasePoints());
+        // Score de base = coefficient × longueur
+        return (int) ($this->size * $this->species->getCoefficient());
     }
 
     // Getters et Setters...
@@ -105,5 +120,38 @@ class FishCatch
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getPhotoUrl(): ?string
+    {
+        return $this->photoUrl;
+    }
+
+    public function setPhotoUrl(?string $photoUrl): self
+    {
+        $this->photoUrl = $photoUrl;
+        return $this;
+    }
+
+    public function getComment(): ?string
+    {
+        return $this->comment;
+    }
+
+    public function setComment(?string $comment): self
+    {
+        $this->comment = $comment;
+        return $this;
+    }
+
+    public function getCaughtBy(): ?User
+    {
+        return $this->caughtBy;
+    }
+
+    public function setCaughtBy(?User $caughtBy): self
+    {
+        $this->caughtBy = $caughtBy;
+        return $this;
     }
 }

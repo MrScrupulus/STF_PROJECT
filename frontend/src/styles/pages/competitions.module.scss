@@ -32,7 +32,7 @@
   &__container {
     width: 100%;
     max-width: 1200px;
-    margin: 2rem auto;
+    margin: 0 auto;
     padding: 0 1rem;
   }
 
@@ -102,6 +102,204 @@
     margin-top: 1rem;
     font-size: 0.9rem;
     color: #666;
+  }
+
+  &__actions {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &__register_btn,
+  &__create_team_btn {
+    padding: 0.75rem 1.5rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+    }
+
+    &:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+  }
+
+  &__create_team_btn {
+    background-color: #10b981;
+
+    &:hover:not(:disabled) {
+      background-color: #059669;
+    }
+  }
+
+  &__single_team_info {
+    text-align: center;
+
+    p {
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+  }
+
+  &__no_teams {
+    text-align: center;
+    padding: 1.5rem;
+    background-color: #fef3c7;
+    border: 2px solid #fbbf24;
+    border-radius: 0.5rem;
+
+    p {
+      margin-bottom: 1rem;
+      color: #92400e;
+    }
+  }
+
+  &__already_registered {
+    text-align: center;
+    padding: 1.5rem;
+    background-color: #d1fae5;
+    border: 2px solid #10b981;
+    border-radius: 0.5rem;
+
+    p {
+      margin: 0;
+      color: #065f46;
+      font-weight: 600;
+    }
+  }
+
+  &__register_form {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &__form_group {
+    margin-bottom: 1.5rem;
+  }
+
+  &__select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+  }
+
+  &__team_preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+  }
+
+  &__member {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+  }
+
+  &__form_actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  &__submit_btn,
+  &__cancel_btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  &__submit_btn {
+    background-color: #10b981;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #059669;
+    }
+
+    &:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+  }
+
+  &__cancel_btn {
+    background-color: #e5e7eb;
+    color: #374151;
+
+    &:hover {
+      background-color: #d1d5db;
+    }
+  }
+
+  &__teams_list {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &__teams_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  &__team_card {
+    padding: 1rem;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    text-align: center;
+  }
+
+  &__team_number {
+    font-size: 0.875rem;
+    color: #666;
+    margin: 0.5rem 0;
+  }
+
+  &__team_score {
+    font-weight: 600;
+    color: #3b82f6;
+    margin-top: 0.5rem;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  &__description {
+    margin-top: 1rem;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  &__date {
+    margin-bottom: 0.5rem;
   }
 }
 

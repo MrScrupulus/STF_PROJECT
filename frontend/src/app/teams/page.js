@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { teamService } from "../../services/teamService";
 import styles from "../../styles/pages/teams.module.scss";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import classNames from "classnames";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
+import { toast } from "react-hot-toast";
 
 export default function TeamsPage() {
   const router = useRouter();
@@ -17,13 +19,14 @@ export default function TeamsPage() {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const response = await teamService.getAll();
-        setTeams(response.teams || []);
+        // Utiliser getMyTeams pour récupérer uniquement les équipes de l'utilisateur connecté
+        const response = await teamService.getMyTeams();
+        const teamsData = response?.teams || [];
+        setTeams(teamsData);
       } catch (error) {
-        setError(
-          error.message ||
-            "Une erreur est survenue lors du chargement des équipes"
-        );
+        // Ne pas logger l'erreur complète pour éviter les problèmes de taille
+        const errorMessage = error?.message || "Une erreur est survenue lors du chargement des équipes";
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -40,25 +43,57 @@ export default function TeamsPage() {
       .toUpperCase();
   };
 
+  const handleLeaveTeam = async (teamId) => {
+    if (!confirm("Êtes-vous sûr de vouloir quitter cette équipe ?")) {
+      return;
+    }
+
+    try {
+      await teamService.leaveTeam(teamId);
+      toast.success("Vous avez quitté l'équipe avec succès");
+      // Recharger les équipes
+      const response = await teamService.getMyTeams();
+      const teamsData = response?.teams || [];
+      setTeams(teamsData);
+    } catch (error) {
+      toast.error(error.message || "Erreur lors de la sortie de l'équipe");
+    }
+  };
+
   if (isLoading) return <div className={styles.loading}>Chargement...</div>;
   if (error) return <div className={styles.error}>{error}</div>;
+
+  const hasTeam = teams.length > 0;
 
   return (
     <div className={classNames(layoutStyles.main, layoutStyles.teams_page)}>
       <ProtectedRoute>
         <div className={styles.teams__container}>
           <div className={styles.teams__header}>
-            <h1 className={styles.teams__title}>Mes Équipes</h1>
-            <button
-              onClick={() => router.push("/teams/create")}
-              className={styles.teams__create_btn}
-            >
-              Créer une équipe
-            </button>
+            <h1 className={styles.teams__title}>Mon Équipe</h1>
+            {!hasTeam && (
+              <button
+                onClick={() => router.push("/teams/create")}
+                className={styles.teams__create_btn}
+              >
+                Créer une équipe
+              </button>
+            )}
           </div>
 
-          <div className={styles.teams__grid}>
-            {teams.map((team) => (
+          {teams.length === 0 ? (
+            <div className={styles.teams__empty}>
+              <p>Vous n'avez pas encore d'équipe.</p>
+              <button
+                onClick={() => router.push("/teams/create")}
+                className={styles.teams__create_btn}
+              >
+                Créer une équipe
+              </button>
+            </div>
+          ) : (
+            <div className={styles.teams__grid}>
+              {teams.map((team) => (
               <div key={team.id} className={styles.teams__card}>
                 <div className={styles.teams__card_header}>
                   <h2 className={styles.teams__team_name}>{team.name}</h2>
@@ -70,51 +105,66 @@ export default function TeamsPage() {
                       <div key={member.id} className={styles.teams__member}>
                         <div className={styles.teams__member_avatar}>
                           {getInitials(
-                            member.firstName + " " + member.lastName
+                            (member.firstname || member.firstName || "") + " " + (member.lastname || member.lastName || "")
                           )}
                         </div>
                         <span className={styles.teams__member_name}>
-                          {member.firstName} {member.lastName}
+                          {member.firstname || member.firstName} {member.lastname || member.lastName}
                         </span>
                       </div>
                     ))}
                   </div>
 
+                  {team.competition && (
+                    <div className={styles.teams__competition}>
+                      <strong>Inscrite à :</strong>
+                      <Link href={`/competitions/${team.competition.id}`} className={styles.teams__competition_link}>
+                        {team.competition.name}
+                      </Link>
+                      {team.registrationNumber && (
+                        <span className={styles.teams__registration_number}>
+                          (N° {team.registrationNumber})
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className={styles.teams__stats}>
                     <div className={styles.teams__stat}>
                       <div className={styles.teams__stat_value}>
-                        {team.competitions?.length || 0}
-                      </div>
-                      <div className={styles.teams__stat_label}>
-                        Compétitions
-                      </div>
-                    </div>
-                    <div className={styles.teams__stat}>
-                      <div className={styles.teams__stat_value}>
-                        {team.totalPoints || 0}
+                        {team.totalScore || 0}
                       </div>
                       <div className={styles.teams__stat_label}>Points</div>
                     </div>
                   </div>
 
                   <div className={styles.teams__actions}>
-                    <button
-                      onClick={() => router.push(`/teams/${team.id}`)}
+                    <Link
+                      href={`/teams/${team.id}`}
                       className={`${styles.teams__action_btn} ${styles["teams__action_btn--view"]}`}
                     >
-                      Voir
-                    </button>
+                      Voir les détails
+                    </Link>
+                    {team.competition && (
+                      <Link
+                        href={`/competitions/${team.competition.id}`}
+                        className={`${styles.teams__action_btn} ${styles["teams__action_btn--view"]}`}
+                      >
+                        Voir la compétition
+                      </Link>
+                    )}
                     <button
-                      onClick={() => router.push(`/teams/${team.id}/edit`)}
-                      className={`${styles.teams__action_btn} ${styles["teams__action_btn--edit"]}`}
+                      onClick={() => handleLeaveTeam(team.id)}
+                      className={`${styles.teams__action_btn} ${styles["teams__action_btn--leave"]}`}
                     >
-                      Modifier
+                      Quitter l'équipe
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </ProtectedRoute>
     </div>

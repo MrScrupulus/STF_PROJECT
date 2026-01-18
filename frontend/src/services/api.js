@@ -49,10 +49,6 @@ export const api = {
         "Content-Type": "application/json",
       };
 
-      // Vérifier si le serveur est accessible
-      console.log("👤 Récupération utilisateur courant");
-      console.log("Calling endpoint:", `${API_URL}${endpoint}`);
-
       if (
         !endpoint.includes("/api/auth/login") &&
         !endpoint.includes("/api/auth/register") &&
@@ -64,10 +60,7 @@ export const api = {
         }
       }
 
-      console.log("Headers:", headers);
-
       const response = await fetch(`${API_URL}${endpoint}`, { headers });
-      console.log("Response status:", response.status);
 
       const contentType = response.headers.get("content-type");
       const isJson = contentType && contentType.includes("application/json");
@@ -77,10 +70,21 @@ export const api = {
         try {
           if (isJson) {
             const errorData = await response.json();
-            errorMessage = errorData.message || `Error ${response.status}`;
+            errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
           } else {
             const text = await response.text();
-            errorMessage = text || `Error ${response.status}: ${response.statusText}`;
+            // Si c'est du HTML (erreur Symfony), extraire le message d'erreur
+            if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+              // Essayer d'extraire le message d'erreur du HTML
+              const match = text.match(/<!--\s*(.*?)\s*-->/);
+              if (match) {
+                errorMessage = match[1].replace(/&quot;/g, '"');
+              } else {
+                errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+              }
+            } else {
+              errorMessage = text || `Error ${response.status}: ${response.statusText}`;
+            }
           }
         } catch (e) {
           errorMessage = `Error ${response.status}: ${response.statusText}`;
@@ -90,12 +94,23 @@ export const api = {
 
       let responseData;
       try {
-        responseData = isJson ? await response.json() : await response.text();
+        if (isJson) {
+          responseData = await response.json();
+        } else {
+          // Si ce n'est pas du JSON, vérifier que ce n'est pas du HTML
+          const text = await response.text();
+          if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+            throw new Error('Réponse HTML inattendue du serveur');
+          }
+          responseData = text;
+        }
       } catch (e) {
+        if (e.message === 'Réponse HTML inattendue du serveur') {
+          throw e;
+        }
         // Si le parsing JSON échoue, essayer de lire comme texte
         responseData = await response.text();
       }
-      console.log("Response data:", responseData);
 
       return responseData;
     } catch (error) {
@@ -108,9 +123,6 @@ export const api = {
     }
   },
   post: async (endpoint, data = {}) => {
-    console.log("Sending request to:", `${API_URL}${endpoint}`);
-    console.log("Request data:", data);
-
     const headers = {
       "Content-Type": "application/json",
     };
@@ -129,9 +141,7 @@ export const api = {
         body: JSON.stringify(data),
       });
 
-      console.log("Response status:", response.status);
       const responseData = await response.json();
-      console.log("Response data:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || `Error ${response.status}`);
@@ -162,8 +172,6 @@ export const api = {
       });
 
       const responseData = await response.json();
-      console.log("Response status:", response.status);
-      console.log("Response data:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || `Error ${response.status}`);
@@ -219,8 +227,6 @@ export const api = {
       });
 
       const responseData = await response.json();
-      console.log("Response status:", response.status);
-      console.log("Response data:", responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || `Error ${response.status}`);

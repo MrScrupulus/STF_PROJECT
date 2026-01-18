@@ -107,23 +107,76 @@ class Team
 
     public function updateTotalScore(): void
     {
-        $score = 0;
+        // Récupérer toutes les prises validées
+        $validatedCatches = [];
         $uniqueSpecies = [];
+        $hasGobi = false;
 
         foreach ($this->catches as $catch) {
             if ($catch->isValidated()) {
-                $score += $catch->getPoints();
-                $uniqueSpecies[$catch->getSpecies()->getId()] = true;
+                $validatedCatches[] = $catch;
+                
+                $speciesId = $catch->getSpecies()->getId();
+                $uniqueSpecies[$speciesId] = true;
+                
+                // Vérifier si c'est un gobi (coefficient 0)
+                if ($catch->getSpecies()->getCoefficient() == 0) {
+                    $hasGobi = true;
+                }
             }
         }
 
-        // Bonus de 200 points si l'équipe a attrapé les 5 espèces
-        if (count($uniqueSpecies) === 5 && !$this->hasBonus) {
-            $score += 200;
-            $this->hasBonus = true;
+        // Si aucune prise validée, score = 0
+        if (empty($validatedCatches)) {
+            $this->totalScore = 0;
+            $this->hasBonus = false;
+            return;
         }
 
-        $this->totalScore = $score;
+        // Calculer le score de chaque prise
+        $catchScores = [];
+        foreach ($validatedCatches as $catch) {
+            $catchScores[] = [
+                'catch' => $catch,
+                'points' => $catch->calculatePoints()
+            ];
+        }
+
+        // Trier par points décroissants
+        usort($catchScores, function($a, $b) {
+            return $b['points'] <=> $a['points'];
+        });
+
+        // Prendre les 5 meilleures prises
+        $top5 = array_slice($catchScores, 0, 5);
+        
+        // Score de base = somme des 5 meilleures prises
+        $baseScore = 0;
+        foreach ($top5 as $item) {
+            $baseScore += $item['points'];
+        }
+
+        // Calculer le bonus selon le nombre d'espèces différentes
+        $uniqueSpeciesCount = count($uniqueSpecies);
+        
+        // Cas spécial : si gobi est la seule espèce, pas de bonus
+        if ($uniqueSpeciesCount === 1 && $hasGobi) {
+            $bonus = 0;
+        } else {
+            // Bonus : 0 pour 1 espèce, 50 pour 2, 100 pour 3, 150 pour 4, 200 pour 5
+            $bonus = 0;
+            if ($uniqueSpeciesCount >= 2) {
+                $bonus = ($uniqueSpeciesCount - 1) * 50;
+                // Maximum 200 points de bonus
+                if ($bonus > 200) {
+                    $bonus = 200;
+                }
+            }
+        }
+
+        // Score total = score de base + bonus
+        $this->totalScore = $baseScore + $bonus;
+        $this->hasBonus = ($bonus > 0);
     }
 
     public function getHasBonus(): ?bool
@@ -158,6 +211,12 @@ class Team
         if (!$this->members->contains($member)) {
             $this->members->add($member);
         }
+        return $this;
+    }
+
+    public function removeMember(User $member): self
+    {
+        $this->members->removeElement($member);
         return $this;
     }
 

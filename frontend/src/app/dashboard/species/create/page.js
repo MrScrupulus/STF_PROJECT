@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { speciesService } from "../../services/speciesService";
-import ProtectedRoute from "../../components/auth/ProtectedRoute";
-import styles from "../../styles/pages/dashboard/species-create.module.scss";
+import { speciesService } from "@/services/speciesService";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import styles from "@/styles/pages/dashboard/species-create.module.scss";
+import classNames from "classnames";
+import layoutStyles from "@/styles/components/layout/layout.module.scss";
 
 export default function CreateSpecies() {
   const router = useRouter();
@@ -24,6 +26,7 @@ export default function CreateSpecies() {
     try {
       const dataToSend = {
         name: formData.name,
+        isBonus: formData.isBonus,
         basePoints: parseInt(formData.basePoints) || 50,
         coefficient: formData.isBonus ? 1 : parseFloat(formData.coefficient),
       };
@@ -44,8 +47,9 @@ export default function CreateSpecies() {
 
   return (
     <ProtectedRoute requiredRole="ROLE_ADMIN">
-      <div className={styles["species-create__container"]}>
-        <h1 className={styles["species-create__title"]}>Ajouter une espèce</h1>
+      <main className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
+        <div className={styles["species-create__container"]}>
+          <h1 className={styles["species-create__title"]}>Ajouter une espèce</h1>
 
         {error && <div className={styles.error}>{error}</div>}
 
@@ -140,7 +144,8 @@ export default function CreateSpecies() {
             </button>
           </div>
         </form>
-      </div>
+        </div>
+      </main>
     </ProtectedRoute>
   );
 }
