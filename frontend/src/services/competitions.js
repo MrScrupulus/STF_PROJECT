@@ -28,4 +28,6 @@ export const competitionsService = {
   start: (id) => api.put(ENDPOINTS.competitions.start(id), {}),
 
   end: (id) => api.put(ENDPOINTS.competitions.end(id), {}),
+
+  getStats: (id) => api.get(`/api/admin/competitions/${id}/stats`),
 };

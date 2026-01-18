@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { adminService } from "../../services/adminService";
 import { competitionService } from "../../services/competitionService";
+import { competitionsService } from "../../services/competitions";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import { authService } from "../../services/authService";
 import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FaCheckCircle, FaTimesCircle, FaSearch } from "react-icons/fa";
+import { toast } from "react-hot-toast";
 import classNames from "classnames";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
@@ -146,25 +148,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     let isMounted = true;
-    const checkAuth = async () => {
+    const loadData = async () => {
       try {
-        const userData = await authService.getCurrentUser();
-        console.log("User data in dashboard:", userData);
-        if (!userData.success || !userData.user.roles.includes("ROLE_ADMIN")) {
-          console.log("Non admin, redirection vers login");
-          router.push("/login");
-          return;
-        }
-        console.log("Admin user confirmed, fetching data");
+        // ProtectedRoute gère déjà l'authentification, on charge juste les données
         if (isMounted) {
           await fetchData();
         }
       } catch (error) {
-        console.error("Auth error:", error);
-        console.log("Letting ProtectedRoute handle the error");
+        console.error("Error loading data:", error);
+        setError("Erreur lors du chargement des données");
       }
     };
-    checkAuth();
+    loadData();
     return () => {
       isMounted = false;
     };
@@ -545,10 +540,20 @@ export default function Dashboard() {
 
   const CompetitionDetailsModal = ({ competition, onClose }) => {
     const [showConfirm, setShowConfirm] = useState(false);
+    const [showStats, setShowStats] = useState(false);
+    const [stats, setStats] = useState(null);
+    const [loadingStats, setLoadingStats] = useState(false);
+    const [isRankingPublic, setIsRankingPublic] = useState(competition.isRankingPublic || false);
+    const [updatingRanking, setUpdatingRanking] = useState(false);
     const status = getCompetitionStatus(
       competition.startDate,
       competition.endDate
     );
+
+    // Mettre à jour isRankingPublic quand la compétition change
+    useEffect(() => {
+      setIsRankingPublic(competition.isRankingPublic || false);
+    }, [competition.isRankingPublic]);
 
     const handleDelete = () => {
       setShowConfirm(true);
@@ -561,6 +566,59 @@ export default function Dashboard() {
         onClose();
       } catch (error) {
         console.error("Error deleting competition:", error);
+      }
+    };
+
+    const handleLoadStats = async () => {
+      if (stats) {
+        setShowStats(!showStats);
+        return;
+      }
+      
+      setLoadingStats(true);
+      try {
+        const response = await competitionsService.getStats(competition.id);
+        if (response.success) {
+          setStats(response.stats);
+          setShowStats(true);
+        }
+      } catch (error) {
+        console.error("Error loading stats:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    const handleToggleRankingVisibility = async () => {
+      setUpdatingRanking(true);
+      const newValue = !isRankingPublic;
+      try {
+        const response = await competitionsService.update(competition.id, {
+          ...competition,
+          isRankingPublic: newValue,
+        });
+        
+        if (response.success) {
+          setIsRankingPublic(newValue);
+          // Mettre à jour la compétition dans la liste locale
+          const updatedCompetition = { ...competition, isRankingPublic: newValue };
+          setSelectedCompetition(updatedCompetition);
+          
+          // Rafraîchir les données pour mettre à jour l'affichage
+          fetchData();
+          
+          // Afficher un message de confirmation avec toast
+          toast.success(newValue 
+            ? "✅ Le classement est maintenant public et visible par tous les utilisateurs." 
+            : "🔒 Le classement est maintenant privé et visible uniquement par les administrateurs.",
+            { duration: 4000 }
+          );
+        }
+      } catch (error) {
+        console.error("Error updating ranking visibility:", error);
+        toast.error("❌ Erreur lors de la mise à jour de la visibilité du classement.");
+      } finally {
+        setUpdatingRanking(false);
       }
     };
 
@@ -633,6 +691,203 @@ export default function Dashboard() {
                 field.value || "Non renseigné"
               )
             )
+          ),
+          createElement(
+            "div",
+            { className: styles.user__field },
+            createElement(
+              "span",
+              { className: styles.user__label },
+              "Classement public"
+            ),
+            createElement(
+              "div",
+              { className: styles.competition__ranking_toggle },
+              createElement(
+                "div",
+                { className: styles.competition__ranking_status_wrapper },
+                createElement(
+                  "span",
+                  { 
+                    className: `${styles.competition__ranking_status} ${
+                      isRankingPublic ? styles["competition__ranking_status--public"] : styles["competition__ranking_status--private"]
+                    }`
+                  },
+                  isRankingPublic ? "✅ Visible par tous" : "🔒 Visible uniquement par les administrateurs"
+                ),
+                isRankingPublic && createElement(
+                  "span",
+                  { className: styles.competition__ranking_badge },
+                  "PUBLIÉ"
+                )
+              ),
+              createElement(
+                "button",
+                {
+                  onClick: handleToggleRankingVisibility,
+                  disabled: updatingRanking,
+                  className: `${styles.competition__ranking_toggle_btn} ${
+                    isRankingPublic ? styles["competition__ranking_toggle_btn--active"] : ""
+                  }`,
+                },
+                updatingRanking ? "..." : (isRankingPublic ? "Masquer" : "Publier")
+              )
+            )
+          ),
+          createElement(
+            "div",
+            { className: styles.competition__stats_section },
+            createElement(
+              "button",
+              {
+                onClick: handleLoadStats,
+                className: `${styles.modal__button} ${styles["modal__button--secondary"]}`,
+                disabled: loadingStats,
+              },
+              loadingStats ? "Chargement..." : (showStats ? "Masquer les statistiques" : "Afficher les statistiques")
+            ),
+            showStats && stats && createElement(
+              "div",
+              { className: styles.competition__stats_content },
+              createElement(
+                "div",
+                { className: styles.competition__stats_summary },
+                createElement(
+                  "h3",
+                  { className: styles.competition__stats_title },
+                  "Résumé"
+                ),
+                createElement(
+                  "div",
+                  { className: styles.competition__stats_item },
+                  createElement("strong", null, "Total de poissons pêchés : "),
+                  stats.totalCatches || 0
+                )
+              ),
+              stats.speciesStats && stats.speciesStats.length > 0 && createElement(
+                "div",
+                { className: styles.competition__stats_species },
+                createElement(
+                  "h3",
+                  { className: styles.competition__stats_title },
+                  "Répartition par espèce"
+                ),
+                createElement(
+                  "table",
+                  { className: styles.competition__stats_table },
+                  createElement(
+                    "thead",
+                    null,
+                    createElement(
+                      "tr",
+                      null,
+                      createElement("th", null, "Espèce"),
+                      createElement("th", null, "Nombre")
+                    )
+                  ),
+                  createElement(
+                    "tbody",
+                    null,
+                    stats.speciesStats.map((species) =>
+                      createElement(
+                        "tr",
+                        { key: species.id },
+                        createElement("td", null, species.name),
+                        createElement("td", null, species.count)
+                      )
+                    )
+                  )
+                )
+              ),
+              stats.biggestBySpecies && stats.biggestBySpecies.length > 0 && createElement(
+                "div",
+                { className: styles.competition__stats_biggest },
+                createElement(
+                  "h3",
+                  { className: styles.competition__stats_title },
+                  "Plus grand poisson par espèce"
+                ),
+                createElement(
+                  "div",
+                  { className: styles.competition__biggest_list },
+                  stats.biggestBySpecies.map((biggest) =>
+                    createElement(
+                      "div",
+                      { key: biggest.id, className: styles.competition__biggest_item },
+                      createElement(
+                        "div",
+                        { className: styles.competition__biggest_header },
+                        createElement("strong", null, biggest.species.name),
+                        createElement("span", { className: styles.competition__biggest_size }, `${biggest.size} cm`)
+                      ),
+                      createElement(
+                        "div",
+                        { className: styles.competition__biggest_details },
+                        createElement("div", null, `Équipe : ${biggest.team.name}${biggest.team.registrationNumber ? ` (N° ${biggest.team.registrationNumber})` : ""}`),
+                        biggest.caughtBy && createElement("div", null, `Pêché par : ${biggest.caughtBy.firstname} ${biggest.caughtBy.lastname}`),
+                        createElement("div", null, `Points : ${biggest.points} pts`),
+                        createElement("div", { className: styles.competition__biggest_date }, `Date : ${new Date(biggest.createdAt).toLocaleString("fr-FR")}`)
+                      )
+                    )
+                  )
+                )
+              ),
+              stats.top3BySpecies && Object.keys(stats.top3BySpecies).length > 0 && createElement(
+                "div",
+                { className: styles.competition__stats_top3 },
+                createElement(
+                  "h3",
+                  { className: styles.competition__stats_title },
+                  "Top 3 des plus grands poissons par espèce"
+                ),
+                Object.entries(stats.top3BySpecies).map(([speciesId, top3]) => {
+                  const speciesName = top3[0]?.species?.name || "Inconnu";
+                  return createElement(
+                    "div",
+                    { key: speciesId, className: styles.competition__top3_species },
+                    createElement(
+                      "h4",
+                      { className: styles.competition__top3_species_title },
+                      speciesName
+                    ),
+                    createElement(
+                      "table",
+                      { className: styles.competition__top3_table },
+                      createElement(
+                        "thead",
+                        null,
+                        createElement(
+                          "tr",
+                          null,
+                          createElement("th", null, "Rang"),
+                          createElement("th", null, "Taille (cm)"),
+                          createElement("th", null, "Points"),
+                          createElement("th", null, "Équipe"),
+                          createElement("th", null, "Pêché par"),
+                          createElement("th", null, "Date")
+                        )
+                      ),
+                      createElement(
+                        "tbody",
+                        null,
+                        top3.map((catchItem, index) =>
+                          createElement(
+                            "tr",
+                            { key: catchItem.id },
+                            createElement("td", null, `#${index + 1}`),
+                            createElement("td", null, catchItem.size),
+                            createElement("td", null, `${catchItem.points} pts`),
+                            createElement("td", null, `${catchItem.team.name}${catchItem.team.registrationNumber ? ` (N° ${catchItem.team.registrationNumber})` : ""}`),
+                            createElement("td", null, catchItem.caughtBy ? `${catchItem.caughtBy.firstname} ${catchItem.caughtBy.lastname}` : "-"),
+                            createElement("td", null, new Date(catchItem.createdAt).toLocaleDateString("fr-FR"))
+                          )
+                        )
+                      )
+                    )
+                  );
+                })
+              )
+            )
           )
         ),
         createElement(
@@ -641,6 +896,61 @@ export default function Dashboard() {
           createElement(
             "div",
             { className: styles.modal__buttons },
+            createElement(
+              Link,
+              {
+                href: `/competitions/${competition.id}`,
+                className: `${styles.modal__button} ${styles["modal__button--secondary"]}`,
+                style: { textDecoration: 'none', display: 'inline-block' }
+              },
+              "Voir la compétition"
+            ),
+            createElement(
+              "button",
+              {
+                onClick: async () => {
+                  try {
+                    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`${API_URL}/api/admin/competitions/${competition.id}/pdf`, {
+                      method: 'GET',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                      },
+                    });
+                    
+                    if (!response.ok) {
+                      const errorText = await response.text();
+                      let errorMessage = 'Erreur lors du téléchargement du PDF';
+                      try {
+                        const errorJson = JSON.parse(errorText);
+                        errorMessage = errorJson.message || errorJson.error || errorMessage;
+                      } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                      }
+                      throw new Error(errorMessage);
+                    }
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const filename = `classement_${competition.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    toast.success('PDF téléchargé avec succès !');
+                  } catch (error) {
+                    console.error('Erreur téléchargement PDF:', error);
+                    toast.error('Erreur lors du téléchargement du PDF: ' + (error.message || 'Erreur inconnue'));
+                  }
+                },
+                className: `${styles.modal__button} ${styles["modal__button--secondary"]}`,
+              },
+              "📄 Télécharger PDF"
+            ),
             createElement(
               "button",
               {
@@ -1100,10 +1410,9 @@ export default function Dashboard() {
     return <div>Loading...</div>;
   }
 
-  console.log("Users data:", users);
-
   return (
-    <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
+    <ProtectedRoute requiredRole="ROLE_ADMIN">
+      <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
       <div className={styles.dashboard__container}>
         <div className={styles.dashboard__header}>
           <div className={styles.dashboard__header_content}>
@@ -1307,6 +1616,7 @@ export default function Dashboard() {
         )}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }
 

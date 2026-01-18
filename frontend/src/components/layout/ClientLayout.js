@@ -1,10 +1,14 @@
 "use client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "react-hot-toast";
 
 const queryClient = new QueryClient();
 
 export default function ClientLayout({ children }) {
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <Toaster position="top-right" />
+    </QueryClientProvider>
   );
 }

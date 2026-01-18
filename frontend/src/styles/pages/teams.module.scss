@@ -326,6 +326,35 @@
     margin-bottom: 2rem;
   }
 
+  &__top5_section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 0.75rem;
+    border: 2px solid #3b82f6;
+  }
+
+  &__top5_title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  &__other_catches_section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e5e7eb;
+  }
+
+  &__other_catches_title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 1rem;
+  }
+
   &__section-title {
     font-size: 1.25rem;
     font-weight: 600;

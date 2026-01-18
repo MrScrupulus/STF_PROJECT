@@ -7,6 +7,20 @@ import styles from "../../styles/pages/competitions.module.scss";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
 import Link from "next/link";
 
+const getCompetitionStatus = (startDate, endDate) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (now < start) {
+    return { text: "À venir", className: styles.statusUpcoming };
+  } else if (now >= start && now <= end) {
+    return { text: "En cours", className: styles.statusOngoing };
+  } else {
+    return { text: "Terminée", className: styles.statusEnded };
+  }
+};
+
 export default function CompetitionsPage() {
   const { data: competitions, isLoading } = useQuery({
     queryKey: ["competitions"],
@@ -41,17 +55,30 @@ export default function CompetitionsPage() {
             className: styles.competition__card,
           },
           createElement(
-            Link,
+            "div",
             {
-              href: `/competitions/${competition.id}`,
-              className: styles.competition__link,
+              className: styles.competition__header,
             },
             createElement(
-              "h3",
+              Link,
               {
-                className: styles.competition__name,
+                href: `/competitions/${competition.id}`,
+                className: styles.competition__link,
               },
-              competition.name
+              createElement(
+                "h3",
+                {
+                  className: styles.competition__name,
+                },
+                competition.name
+              )
+            ),
+            competition.startDate && competition.endDate && createElement(
+              "span",
+              {
+                className: getCompetitionStatus(competition.startDate, competition.endDate).className,
+              },
+              getCompetitionStatus(competition.startDate, competition.endDate).text
             )
           ),
           createElement(

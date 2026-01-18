@@ -22,10 +22,16 @@ export default function CompetitionDetailPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const { data: competition, isLoading: competitionLoading } = useQuery({
+  const { data: competitionResponse, isLoading: competitionLoading } = useQuery({
     queryKey: ["competition", id],
     queryFn: () => competitionsService.getOne(id),
   });
+
+  // Le backend retourne maintenant { success: true, ...competition }
+  // Extraire les données de la compétition (gérer les deux formats possibles)
+  const competition = competitionResponse?.success !== undefined
+    ? (competitionResponse.success ? { ...competitionResponse, success: undefined } : null)
+    : competitionResponse;
 
   const { data: myTeamsData, isLoading: teamsLoading } = useQuery({
     queryKey: ["my-teams"],
@@ -89,6 +95,20 @@ export default function CompetitionDetailPage() {
       </div>
     );
 
+  const getCompetitionStatus = (startDate, endDate) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (now < start) {
+      return { text: "À venir", className: styles.statusUpcoming };
+    } else if (now >= start && now <= end) {
+      return { text: "En cours", className: styles.statusOngoing };
+    } else {
+      return { text: "Terminée", className: styles.statusEnded };
+    }
+  };
+
   const getStatusClass = (status) => {
     switch (status) {
       case "upcoming":
@@ -130,7 +150,14 @@ export default function CompetitionDetailPage() {
   return (
     <ProtectedRoute>
       <div className={classNames(layoutStyles.main, styles.competitions__container)}>
-        <h1 className={styles.competitions__title}>{competition.name}</h1>
+        <div className={styles.competitions__header}>
+          <h1 className={styles.competitions__title}>{competition.name}</h1>
+          {competition.startDate && competition.endDate && (
+            <span className={getCompetitionStatus(competition.startDate, competition.endDate).className}>
+              {getCompetitionStatus(competition.startDate, competition.endDate).text}
+            </span>
+          )}
+        </div>
 
         <div className={styles.competitions__card}>
           <div className={styles.competitions__date}>
@@ -294,47 +321,105 @@ export default function CompetitionDetailPage() {
 
         {competition.teams && competition.teams.length > 0 && (
           <div className={styles.competitions__teams_list}>
-            <h2>Équipes inscrites</h2>
-            <div className={styles.competitions__teams_grid}>
-              {(() => {
-                // Filtrer les équipes selon le rôle de l'utilisateur
-                let teamsToShow = competition.teams;
-                
-                if (!isAdmin && currentUser) {
-                  // Pour les utilisateurs non-admin, ne montrer que leur propre équipe
-                  const userTeamIds = (myTeamsData || [])
-                    .filter(team => team.competition && team.competition.id === parseInt(id))
-                    .map(team => team.id);
-                  
-                  teamsToShow = competition.teams.filter(team => 
-                    userTeamIds.includes(team.id)
-                  );
-                }
-                
-                // Trier par score décroissant pour les admins
-                if (isAdmin) {
-                  teamsToShow = [...teamsToShow].sort((a, b) => 
-                    (b.totalScore || 0) - (a.totalScore || 0)
-                  );
-                }
-                
-                return teamsToShow.map((team) => (
-                  <div key={team.id} className={styles.competitions__team_card}>
-                    <h3>{team.name}</h3>
-                    {team.registrationNumber && (
-                      <div className={styles.competitions__team_number}>
-                        N° {team.registrationNumber}
-                      </div>
-                    )}
-                    {/* Afficher le score seulement pour les admins ou pour l'équipe de l'utilisateur */}
-                    {(isAdmin || (currentUser && myTeamsData?.some(t => t.id === team.id))) && (
-                      <div className={styles.competitions__team_score}>
-                        Score: {team.totalScore || 0} points
-                      </div>
-                    )}
-                  </div>
-                ));
-              })()}
+            <h2>
+              {competition.isEnded && competition.isRankingPublic ? "Classement final" : isAdmin ? "Classement (visible uniquement par les administrateurs)" : "Votre équipe"}
+            </h2>
+            
+            {!competition.isRankingPublic && !isAdmin && (
+              <div className={styles.competitions__ranking_info}>
+                <p>
+                  🔒 Le classement complet n'est pas encore public.
+                  Vous pouvez actuellement voir uniquement votre équipe.
+                </p>
+              </div>
+            )}
+            
+            {competition.isEnded && competition.isRankingPublic && (
+              <div className={styles.competitions__ranking_info}>
+                <p>
+                  ✅ Compétition terminée - Classement final disponible
+                </p>
+              </div>
+            )}
+            
+            <div className={styles.competitions__teams_table_wrapper}>
+              <table className={styles.competitions__teams_table}>
+                <thead>
+                  <tr>
+                    {competition.isEnded && competition.isRankingPublic && <th className={styles.competitions__table_rank}>Rang</th>}
+                    <th className={styles.competitions__table_name}>Équipe</th>
+                    <th className={styles.competitions__table_number}>N°</th>
+                    <th className={styles.competitions__table_members}>Membres</th>
+                    <th className={styles.competitions__table_score}>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    // Les équipes sont déjà filtrées et triées par le backend
+                    let teamsToShow = competition.teams || [];
+                    
+                    // Trier par score décroissant (au cas où le backend ne l'aurait pas fait)
+                    teamsToShow = [...teamsToShow].sort((a, b) => 
+                      (b.totalScore || 0) - (a.totalScore || 0)
+                    );
+                    
+                    return teamsToShow.map((team, index) => {
+                      // Vérifier si cette équipe appartient à l'utilisateur connecté
+                      const isUserTeam = currentUser && team.members && team.members.some(member => member.id === currentUser.id);
+                      // Afficher le score si : classement public OU admin OU c'est l'équipe de l'utilisateur
+                      const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
+                      
+                      return (
+                        <tr 
+                          key={team.id} 
+                          className={styles.competitions__table_row}
+                          onClick={() => router.push(`/teams/${team.id}`)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {competition.isEnded && competition.isRankingPublic && (
+                            <td className={styles.competitions__table_rank}>
+                              <span className={styles.competitions__rank_badge}>
+                                #{index + 1}
+                              </span>
+                            </td>
+                          )}
+                          <td className={styles.competitions__table_name}>
+                            <strong>{team.name}</strong>
+                          </td>
+                          <td className={styles.competitions__table_number}>
+                            {team.registrationNumber || "-"}
+                          </td>
+                          <td className={styles.competitions__table_members}>
+                            {team.members && team.members.length > 0 ? (
+                              <div className={styles.competitions__members_list}>
+                                {team.members.map((member, idx) => (
+                                  <span key={member.id} className={styles.competitions__member_name}>
+                                    {member.firstname}
+                                    {idx < team.members.length - 1 && ", "}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          <td className={styles.competitions__table_score}>
+                            {showScore && team.totalScore !== null ? (
+                              <span className={styles.competitions__score_value}>
+                                {team.totalScore || 0} pts
+                              </span>
+                            ) : (
+                              <span className={styles.competitions__score_value} style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                {isUserTeam ? "Calcul en cours..." : "-"}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

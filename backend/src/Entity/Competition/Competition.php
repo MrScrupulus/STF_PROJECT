@@ -40,6 +40,9 @@ class Competition
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isRankingPublic = false;
+
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
@@ -165,6 +168,17 @@ class Competition
     public function setDescription(?string $description): self
     {
         $this->description = $description;
+        return $this;
+    }
+
+    public function getIsRankingPublic(): bool
+    {
+        return $this->isRankingPublic;
+    }
+
+    public function setIsRankingPublic(bool $isRankingPublic): self
+    {
+        $this->isRankingPublic = $isRankingPublic;
         return $this;
     }
 }

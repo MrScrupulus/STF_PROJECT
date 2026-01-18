@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: DejaVu Sans, sans-serif;
+            font-size: 10pt;
+            margin: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #1e40af;
+            font-size: 20pt;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2563eb;
+            font-size: 14pt;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 5px;
+        }
+        .info {
+            background-color: #f9fafb;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 9pt;
+        }
+        table thead {
+            background-color: #3b82f6;
+            color: white;
+        }
+        table th {
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        table tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        table tbody tr:hover {
+            background-color: #f3f4f6;
+        }
+        .rank {
+            font-weight: bold;
+            color: #1e40af;
+        }
+        .score {
+            font-weight: bold;
+            color: #059669;
+        }
+        .species-section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .species-title {
+            background-color: #eff6ff;
+            padding: 8px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ competition.name }}</h1>
+    
+    <div class="info">
+        <strong>Date de début:</strong> {{ competition.startDate|date('d/m/Y H:i') }}<br>
+        <strong>Date de fin:</strong> {{ competition.endDate|date('d/m/Y H:i') }}<br>
+        <strong>Statut:</strong> {% if competition.endDate < date() %}Terminée{% else %}En cours{% endif %}<br>
+        <strong>Total de poissons pêchés:</strong> {{ totalCatches }}
+    </div>
+
+    <h2>Classement des équipes</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Rang</th>
+                <th>Équipe</th>
+                <th>N°</th>
+                <th>Membres</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for team in teams %}
+            <tr>
+                <td class="rank">#{{ loop.index }}</td>
+                <td>{{ team.name }}</td>
+                <td>{{ team.registrationNumber ?? '-' }}</td>
+                <td>
+                    {% for member in team.members %}
+                        {{ member.firstname }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+                <td class="score">{{ team.totalScore ?? 0 }} pts</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Répartition par espèce</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Espèce</th>
+                <th>Nombre</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in speciesStatsList %}
+            <tr>
+                <td>{{ stat.name }}</td>
+                <td>{{ stat.count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Top 3 des plus grands poissons par espèce</h2>
+    {% for speciesId, top3 in top3BySpecies %}
+        {% if top3 is not empty %}
+        <div class="species-section">
+            <div class="species-title">{{ speciesStats[speciesId].name ?? 'Espèce inconnue' }}</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rang</th>
+                        <th>Taille (cm)</th>
+                        <th>Points</th>
+                        <th>Équipe</th>
+                        <th>Pêché par</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for catch in top3 %}
+                    <tr>
+                        <td>#{{ loop.index }}</td>
+                        <td>{{ catch.size }}</td>
+                        <td>{{ catch.points }} pts</td>
+                        <td>{{ catch.team }}{% if catch.registrationNumber %} (N° {{ catch.registrationNumber }}){% endif %}</td>
+                        <td>{{ catch.caughtBy }}</td>
+                        <td>{{ catch.createdAt }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    {% endfor %}
+</body>
+</html>

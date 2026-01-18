@@ -6,6 +6,7 @@ use App\Entity\Competition\Competition;
 use App\Entity\Competition\Team;
 use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\TeamRepository;
+use App\Repository\Competition\FishCatchRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
@@ -36,6 +37,7 @@ class CompetitionController extends AbstractController
                     'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
                     'description' => $competition->getDescription(),
                     'maxParticipants' => $competition->getMaxParticipants(),
+                    'isRankingPublic' => $competition->getIsRankingPublic(),
                 ];
             }, $competitions);
 
@@ -68,6 +70,7 @@ class CompetitionController extends AbstractController
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),
+                    'isRankingPublic' => $competition->getIsRankingPublic(),
                 ];
             }, $competitions);
 
@@ -121,10 +124,18 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
-    public function getCompetition(int $id, CompetitionRepository $repository): JsonResponse
+    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository): JsonResponse
     {
-        $competition = $repository->find($id);
-        
+        // Charger la compétition avec les équipes et leurs membres pour éviter les requêtes N+1
+        $competition = $repository->createQueryBuilder('c')
+            ->select('c', 't', 'm')
+            ->leftJoin('c.teams', 't')
+            ->leftJoin('t.members', 'm')
+            ->where('c.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->getOneOrNullResult();
+
         if (!$competition) {
             return $this->json([
                 'success' => false,
@@ -132,7 +143,42 @@ class CompetitionController extends AbstractController
             ], 404);
         }
         
+        $user = $this->getUser();
+        $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
+        $now = new \DateTime();
+        $isEnded = $competition->getEndDate() < $now;
+        
+        // Déterminer quelles équipes retourner selon les règles de sécurité
+        $teamsToReturn = [];
+
+        // La visibilité du classement dépend de isRankingPublic ET du statut de la compétition
+        // Si la compétition est terminée ET que le classement est public, tout le monde peut voir
+        // Sinon, seuls les admins peuvent voir le classement complet
+        $rankingVisible = ($isEnded && $competition->getIsRankingPublic()) || $isAdmin;
+        
+        if ($rankingVisible) {
+            // Classement visible : afficher toutes les équipes avec scores
+            $allTeams = $competition->getTeams()->toArray();
+            // Trier par score décroissant
+            usort($allTeams, function($a, $b) {
+                return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
+            });
+            $teamsToReturn = $allTeams;
+        } else {
+            // Classement non visible : utilisateur normal voit uniquement son équipe
+            if ($user) {
+                $userTeams = $teamRepository->findTeamsByMember($user);
+                foreach ($userTeams as $team) {
+                    if ($team->getCompetition() && $team->getCompetition()->getId() === $competition->getId()) {
+                        $teamsToReturn[] = $team;
+                        break; // Un utilisateur ne peut avoir qu'une équipe par compétition
+                    }
+                }
+            }
+        }
+        
         return $this->json([
+            'success' => true,
             'id' => $competition->getId(),
             'name' => $competition->getName(),
             'type' => $competition->getType(),
@@ -142,15 +188,98 @@ class CompetitionController extends AbstractController
             'teamSize' => $competition->getTeamSize(),
             'maxParticipants' => $competition->getMaxParticipants(),
             'hasNoLimit' => $competition->getHasNoLimit(),
-            'teams' => array_map(function ($team) {
+            'isEnded' => $isEnded,
+            'isRankingPublic' => $competition->getIsRankingPublic(),
+            'teams' => array_map(function ($team) use ($rankingVisible, $isAdmin, $user, $teamRepository) {
+                // Pour les utilisateurs normaux si le classement n'est pas public, ne pas retourner le score
+                $showScore = $rankingVisible || ($user && $team->getMembers()->contains($user));
+                
                 return [
                     'id' => $team->getId(),
                     'name' => $team->getName(),
-                    'totalScore' => $team->getTotalScore(),
+                    'totalScore' => $showScore ? $team->getTotalScore() : null,
                     'registrationNumber' => $team->getRegistrationNumber(),
+                    'members' => array_map(function ($member) {
+                        return [
+                            'id' => $member->getId(),
+                            'firstname' => $member->getFirstname(),
+                            'lastname' => $member->getLastname(),
+                        ];
+                    }, $team->getMembers()->toArray()),
                 ];
-            }, $competition->getTeams()->toArray()),
+            }, $teamsToReturn),
         ]);
+    }
+
+    #[Route('/competitions/{id}', name: 'app_competition_update', methods: ['PUT'])]
+    public function update(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $repository->find($id);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            if (isset($data['name'])) {
+                $competition->setName($data['name']);
+            }
+            if (isset($data['type'])) {
+                $competition->setType($data['type']);
+            }
+            if (isset($data['startDate'])) {
+                $competition->setStartDate(new \DateTime($data['startDate']));
+            }
+            if (isset($data['endDate'])) {
+                $competition->setEndDate(new \DateTime($data['endDate']));
+            }
+            if (isset($data['description'])) {
+                $competition->setDescription($data['description']);
+            }
+            if (isset($data['teamSize'])) {
+                $competition->setTeamSize((int) $data['teamSize']);
+            }
+            if (isset($data['hasNoLimit'])) {
+                $competition->setHasNoLimit($data['hasNoLimit']);
+            }
+            if (isset($data['maxParticipants']) && !($data['hasNoLimit'] ?? false)) {
+                $competition->setMaxParticipants((int) $data['maxParticipants']);
+            }
+            if (isset($data['isRankingPublic'])) {
+                $competition->setIsRankingPublic((bool) $data['isRankingPublic']);
+            }
+
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Compétition mise à jour avec succès',
+                'competition' => [
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                    'type' => $competition->getType(),
+                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
+                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'description' => $competition->getDescription(),
+                    'teamSize' => $competition->getTeamSize(),
+                    'hasNoLimit' => $competition->getHasNoLimit(),
+                    'maxParticipants' => $competition->getMaxParticipants(),
+                    'isRankingPublic' => $competition->getIsRankingPublic(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Une erreur est survenue lors de la mise à jour',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/admin/competitions/{id}', name: 'app_admin_competition_delete', methods: ['DELETE'])]
@@ -196,6 +325,7 @@ class CompetitionController extends AbstractController
             $competition->setDescription($data['description'] ?? null);
             $competition->setTeamSize((int) $data['teamSize']);
             $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
+            $competition->setIsRankingPublic($data['isRankingPublic'] ?? false);
 
             if (!$data['hasNoLimit'] && isset($data['maxParticipants'])) {
                 $competition->setMaxParticipants((int) $data['maxParticipants']);
@@ -216,6 +346,7 @@ class CompetitionController extends AbstractController
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),
                     'maxParticipants' => $competition->getMaxParticipants(),
+                    'isRankingPublic' => $competition->getIsRankingPublic(),
                 ]
             ], 201);
         } catch (\Exception $e) {
@@ -337,6 +468,140 @@ class CompetitionController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Erreur lors de l\'inscription à la compétition: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/admin/competitions/{id}/stats', name: 'app_admin_competition_stats', methods: ['GET'])]
+    public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $competitionRepo->find($id);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
+
+            // Récupérer toutes les prises validées de cette compétition
+            $catches = $catchRepo->createQueryBuilder('c')
+                ->join('c.team', 't')
+                ->join('c.species', 's')
+                ->leftJoin('c.caughtBy', 'u')
+                ->where('t.competition = :competitionId')
+                ->andWhere('c.isValidated = :validated')
+                ->setParameter('competitionId', $competition->getId())
+                ->setParameter('validated', true)
+                ->getQuery()
+                ->getResult();
+
+            // Statistiques par espèce
+            $speciesStats = [];
+            $totalCatches = count($catches);
+            $biggestBySpecies = [];
+            $top3BySpecies = []; // Nouveau : top 3 par espèce
+
+            foreach ($catches as $catch) {
+                $species = $catch->getSpecies();
+                $speciesId = $species->getId();
+                $speciesName = $species->getName();
+
+                // Compter par espèce
+                if (!isset($speciesStats[$speciesId])) {
+                    $speciesStats[$speciesId] = [
+                        'id' => $speciesId,
+                        'name' => $speciesName,
+                        'coefficient' => $species->getCoefficient(),
+                        'count' => 0,
+                    ];
+                }
+                $speciesStats[$speciesId]['count']++;
+
+                // Initialiser le tableau pour cette espèce si nécessaire
+                if (!isset($top3BySpecies[$speciesId])) {
+                    $top3BySpecies[$speciesId] = [];
+                }
+
+                // Ajouter cette prise au tableau de l'espèce
+                $top3BySpecies[$speciesId][] = [
+                    'id' => $catch->getId(),
+                    'size' => $catch->getSize(),
+                    'species' => [
+                        'id' => $speciesId,
+                        'name' => $speciesName,
+                    ],
+                    'team' => [
+                        'id' => $catch->getTeam()->getId(),
+                        'name' => $catch->getTeam()->getName(),
+                        'registrationNumber' => $catch->getTeam()->getRegistrationNumber(),
+                    ],
+                    'caughtBy' => $catch->getCaughtBy() ? [
+                        'id' => $catch->getCaughtBy()->getId(),
+                        'firstname' => $catch->getCaughtBy()->getFirstname(),
+                        'lastname' => $catch->getCaughtBy()->getLastname(),
+                    ] : null,
+                    'points' => $catch->calculatePoints(),
+                    'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                ];
+
+                // Trouver le plus grand poisson de chaque espèce (pour compatibilité)
+                if (!isset($biggestBySpecies[$speciesId]) || $catch->getSize() > $biggestBySpecies[$speciesId]['size']) {
+                    $biggestBySpecies[$speciesId] = [
+                        'id' => $catch->getId(),
+                        'size' => $catch->getSize(),
+                        'species' => [
+                            'id' => $speciesId,
+                            'name' => $speciesName,
+                        ],
+                        'team' => [
+                            'id' => $catch->getTeam()->getId(),
+                            'name' => $catch->getTeam()->getName(),
+                            'registrationNumber' => $catch->getTeam()->getRegistrationNumber(),
+                        ],
+                        'caughtBy' => $catch->getCaughtBy() ? [
+                            'id' => $catch->getCaughtBy()->getId(),
+                            'firstname' => $catch->getCaughtBy()->getFirstname(),
+                            'lastname' => $catch->getCaughtBy()->getLastname(),
+                        ] : null,
+                        'points' => $catch->calculatePoints(),
+                        'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    ];
+                }
+            }
+
+            // Trier et prendre le top 3 pour chaque espèce
+            $top3BySpeciesFormatted = [];
+            foreach ($top3BySpecies as $speciesId => $catchesForSpecies) {
+                // Trier par taille décroissante
+                usort($catchesForSpecies, function($a, $b) {
+                    return $b['size'] <=> $a['size'];
+                });
+                
+                // Prendre les 3 premiers
+                $top3BySpeciesFormatted[$speciesId] = array_slice($catchesForSpecies, 0, 3);
+            }
+
+            return $this->json([
+                'success' => true,
+                'competition' => [
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                ],
+                'stats' => [
+                    'totalCatches' => $totalCatches,
+                    'speciesStats' => array_values($speciesStats),
+                    'biggestBySpecies' => array_values($biggestBySpecies),
+                    'top3BySpecies' => $top3BySpeciesFormatted, // Nouveau : top 3 par espèce
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Une erreur est survenue lors de la récupération des statistiques',
+                'message' => $e->getMessage()
             ], 500);
         }
     }

@@ -1,12 +1,15 @@
 "use client";
-import { useState } from "react";
-import { competitionsService } from "../../../../services/competitions";
-import { useRouter } from "next/navigation";
-import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
-import styles from "../../../../styles/pages/dashboard/competition-create.module.scss";
+import { useState, useEffect } from "react";
+import { competitionsService } from "../../../../../services/competitions";
+import { useRouter, useParams } from "next/navigation";
+import ProtectedRoute from "../../../../../components/auth/ProtectedRoute";
+import styles from "../../../../../styles/pages/dashboard/competition-create.module.scss";
 
-export default function CreateCompetition() {
+export default function EditCompetition() {
   const router = useRouter();
+  const params = useParams();
+  const competitionId = params.id;
+  
   const [formData, setFormData] = useState({
     name: "",
     startDate: "",
@@ -16,10 +19,62 @@ export default function CreateCompetition() {
     maxParticipants: "",
     hasNoLimit: false,
     description: "",
-    isRankingPublic: false,
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  useEffect(() => {
+    const fetchCompetition = async () => {
+      try {
+        setIsLoadingData(true);
+        const competition = await competitionsService.getOne(competitionId);
+        
+        // Gérer le format de réponse (avec ou sans success)
+        const compData = competition.success !== undefined 
+          ? (competition.success ? competition : null)
+          : competition;
+        
+        if (!compData) {
+          setError("Compétition non trouvée");
+          return;
+        }
+
+        // Convertir les dates au format datetime-local
+        const formatDateForInput = (dateString) => {
+          if (!dateString) return "";
+          const date = new Date(dateString);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
+        setFormData({
+          name: compData.name || "",
+          startDate: formatDateForInput(compData.startDate),
+          endDate: formatDateForInput(compData.endDate),
+          teamSize: compData.teamSize?.toString() || "",
+          type: compData.type || "street",
+          maxParticipants: compData.maxParticipants?.toString() || "",
+          hasNoLimit: compData.hasNoLimit || false,
+          description: compData.description || "",
+          isRankingPublic: compData.isRankingPublic || false,
+        });
+      } catch (error) {
+        console.error("Error fetching competition:", error);
+        setError("Erreur lors du chargement de la compétition");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    if (competitionId) {
+      fetchCompetition();
+    }
+  }, [competitionId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,21 +82,36 @@ export default function CreateCompetition() {
     setError("");
 
     try {
-      console.log("Sending data:", formData);
-      await competitionsService.create(formData);
+      const dataToSend = {
+        ...formData,
+        teamSize: parseInt(formData.teamSize),
+        maxParticipants: formData.hasNoLimit ? null : parseInt(formData.maxParticipants),
+      };
+
+      await competitionsService.update(competitionId, dataToSend);
       router.push("/dashboard");
     } catch (error) {
-      setError(error.message || "Une erreur est survenue lors de la création");
+      setError(error.message || "Une erreur est survenue lors de la mise à jour");
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isLoadingData) {
+    return (
+      <ProtectedRoute requiredRole="ROLE_ADMIN">
+        <div className={styles["competition-create__container"]}>
+          <div>Chargement...</div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute requiredRole="ROLE_ADMIN">
       <div className={styles["competition-create__container"]}>
         <h1 className={styles["competition-create__title"]}>
-          Créer une compétition
+          Modifier la compétition
         </h1>
 
         {error && <div className={styles.error}>{error}</div>}
@@ -214,7 +284,7 @@ export default function CreateCompetition() {
               className={`${styles["competition-create__button"]} ${styles["competition-create__button--submit"]}`}
               disabled={isLoading}
             >
-              {isLoading ? "Création..." : "Créer la compétition"}
+              {isLoading ? "Mise à jour..." : "Enregistrer les modifications"}
             </button>
           </div>
         </form>
