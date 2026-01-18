@@ -106,4 +106,23 @@ export const teamService = {
       throw error;
     }
   },
+  getMyHistory: async () => {
+    try {
+      const response = await api.get("/api/teams/my-history");
+      return response;
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      throw error;
+    }
+  },
+  reactivate: async (teamId, memberIds = null) => {
+    try {
+      const data = memberIds ? { memberIds } : {};
+      const response = await api.post(`/api/teams/${teamId}/reactivate`, data);
+      return response;
+    } catch (error) {
+      console.error("Error reactivating team:", error);
+      throw error;
+    }
+  },
 };

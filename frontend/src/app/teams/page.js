@@ -35,6 +35,23 @@ export default function TeamsPage() {
     fetchTeams();
   }, []);
 
+  const handleReactivateTeam = async (teamId) => {
+    if (!confirm("Voulez-vous réactiver cette équipe ? Le score sera réinitialisé à zéro pour la nouvelle compétition.")) {
+      return;
+    }
+
+    try {
+      await teamService.reactivate(teamId);
+      toast.success("Équipe réactivée avec succès");
+      // Recharger les équipes
+      const response = await teamService.getMyTeams();
+      const teamsData = response?.teams || [];
+      setTeams(teamsData);
+    } catch (error) {
+      toast.error(error.message || "Erreur lors de la réactivation de l'équipe");
+    }
+  };
+
   const getInitials = (name) => {
     return name
       .split(" ")
@@ -92,9 +109,14 @@ export default function TeamsPage() {
               </button>
             </div>
           ) : (
-            <div className={styles.teams__grid}>
-              {teams.map((team) => (
-              <div key={team.id} className={styles.teams__card}>
+            <>
+              {/* Équipes actives */}
+              {teams.filter(t => t.isActive !== false).length > 0 && (
+                <div className={styles.teams__section}>
+                  <h2 className={styles.teams__section_title}>Équipes actives</h2>
+                  <div className={styles.teams__grid}>
+                    {teams.filter(t => t.isActive !== false).map((team) => (
+                      <div key={team.id} className={styles.teams__card}>
                 <div className={styles.teams__card_header}>
                   <h2 className={styles.teams__team_name}>{team.name}</h2>
                 </div>
@@ -160,10 +182,65 @@ export default function TeamsPage() {
                       Quitter l'équipe
                     </button>
                   </div>
+                  </div>
                 </div>
-              </div>
-              ))}
-            </div>
+                ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Équipes inactives */}
+              {teams.filter(t => t.isActive === false).length > 0 && (
+                <div className={styles.teams__section}>
+                  <h2 className={styles.teams__section_title}>Équipes dissoutes</h2>
+                  <div className={styles.teams__grid}>
+                    {teams.filter(t => t.isActive === false).map((team) => (
+                      <div key={team.id} className={`${styles.teams__card} ${styles["teams__card--inactive"]}`}>
+                        <div className={styles.teams__card_header}>
+                          <h2 className={styles.teams__team_name}>{team.name}</h2>
+                          <span className={styles.teams__inactive_badge}>Dissoute</span>
+                        </div>
+
+                        <div className={styles.teams__card_content}>
+                          <div className={styles.teams__members}>
+                            {team.members?.map((member) => (
+                              <div key={member.id} className={styles.teams__member}>
+                                <div className={styles.teams__member_avatar}>
+                                  {getInitials(
+                                    (member.firstname || member.firstName || "") + " " + (member.lastname || member.lastName || "")
+                                  )}
+                                </div>
+                                <span className={styles.teams__member_name}>
+                                  {member.firstname || member.firstName} {member.lastname || member.lastName}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className={styles.teams__stats}>
+                            <div className={styles.teams__stat}>
+                              <div className={styles.teams__stat_value}>
+                                {team.totalScore || 0}
+                              </div>
+                              <div className={styles.teams__stat_label}>Points (historique)</div>
+                            </div>
+                          </div>
+
+                          <div className={styles.teams__actions}>
+                            <button
+                              onClick={() => handleReactivateTeam(team.id)}
+                              className={`${styles.teams__action_btn} ${styles["teams__action_btn--reactivate"]}`}
+                            >
+                              Réactiver l'équipe
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </ProtectedRoute>

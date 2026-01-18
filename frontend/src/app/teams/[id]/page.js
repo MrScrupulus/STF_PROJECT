@@ -17,6 +17,9 @@ export default function TeamDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
 
   useEffect(() => {
     const fetchTeam = async () => {
@@ -160,6 +163,92 @@ export default function TeamDetailPage() {
               </div>
             ))}
           </div>
+          
+          {/* Formulaire d'invitation si l'équipe n'est pas complète */}
+          {(() => {
+            // Déterminer la taille maximale de l'équipe
+            // Si l'équipe est inscrite à une compétition, utiliser la taille requise par la compétition
+            // Sinon, permettre jusqu'à 2 membres minimum
+            const maxTeamSize = team.competition?.teamSize || 2;
+            return team.members && team.members.length < maxTeamSize;
+          })() && (
+            <div className={styles.teams__invite_section}>
+              {!showInviteForm ? (
+                <button
+                  onClick={() => setShowInviteForm(true)}
+                  className={styles.teams__invite_button}
+                >
+                  + Inviter un membre
+                </button>
+              ) : (
+                <div className={styles.teams__invite_form}>
+                  <h3 className={styles.teams__invite_title}>
+                    Inviter un membre
+                    {team.competition && (
+                      <span style={{ fontSize: '0.875rem', fontWeight: 'normal', color: '#6b7280', display: 'block', marginTop: '0.25rem' }}>
+                        ({team.members?.length || 0} / {team.competition.teamSize} membres)
+                      </span>
+                    )}
+                  </h3>
+                  <div className={styles.teams__invite_input_group}>
+                    <input
+                      type="email"
+                      placeholder="Email du membre à inviter"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className={styles.teams__invite_input}
+                      disabled={isInviting}
+                    />
+                    <div className={styles.teams__invite_actions}>
+                      <button
+                        onClick={async () => {
+                          if (!inviteEmail.trim()) {
+                            toast.error("Veuillez entrer un email");
+                            return;
+                          }
+                          
+                          setIsInviting(true);
+                          try {
+                            const response = await teamService.inviteMember(team.id, inviteEmail);
+                            if (response.success) {
+                              toast.success("Invitation envoyée avec succès !");
+                              setInviteEmail("");
+                              setShowInviteForm(false);
+                              // Recharger les données de l'équipe
+                              const updatedResponse = await teamService.getById(undefined, params.id);
+                              if (updatedResponse.success && updatedResponse.team) {
+                                setTeam(updatedResponse.team);
+                              }
+                            } else {
+                              toast.error(response.message || "Erreur lors de l'invitation");
+                            }
+                          } catch (error) {
+                            toast.error(error.message || "Erreur lors de l'invitation");
+                          } finally {
+                            setIsInviting(false);
+                          }
+                        }}
+                        className={styles.teams__invite_submit}
+                        disabled={isInviting}
+                      >
+                        {isInviting ? "Envoi..." : "Envoyer l'invitation"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowInviteForm(false);
+                          setInviteEmail("");
+                        }}
+                        className={styles.teams__invite_cancel}
+                        disabled={isInviting}
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className={styles.teams__catches_section}>

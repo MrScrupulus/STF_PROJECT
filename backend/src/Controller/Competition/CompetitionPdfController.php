@@ -5,6 +5,7 @@ namespace App\Controller\Competition;
 use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\TeamRepository;
 use App\Repository\Competition\FishCatchRepository;
+use App\Service\CompetitionSnapshotService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +24,8 @@ class CompetitionPdfController extends AbstractController
         int $id,
         CompetitionRepository $competitionRepo,
         TeamRepository $teamRepo,
-        FishCatchRepository $catchRepo
+        FishCatchRepository $catchRepo,
+        CompetitionSnapshotService $snapshotService
     ): Response {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -34,10 +36,49 @@ class CompetitionPdfController extends AbstractController
             }
 
         // Récupérer toutes les équipes triées par score
-        $teams = $competition->getTeams()->toArray();
-        usort($teams, function($a, $b) {
-            return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
-        });
+        // Pour les compétitions terminées, utiliser les snapshots (état figé)
+        $now = new \DateTime();
+        $isEnded = $competition->getEndDate() < $now;
+        
+        if ($isEnded) {
+            // Créer les snapshots s'ils n'existent pas encore
+            if (!$snapshotService->hasSnapshots($competition)) {
+                $snapshotService->createSnapshotsForCompetition($competition);
+            }
+            
+            // Utiliser les snapshots pour le classement
+            $snapshots = $snapshotService->getSnapshotsForCompetition($competition);
+            // Créer des objets anonymes pour compatibilité avec le template Twig
+            $teams = array_map(function($snapshot) {
+                $teamData = new \stdClass();
+                $teamData->id = $snapshot->getTeam()->getId();
+                $teamData->name = $snapshot->getTeamName();
+                $teamData->totalScore = $snapshot->getTotalScore();
+                $teamData->registrationNumber = $snapshot->getRegistrationNumber();
+                
+                // Convertir le tableau JSON en objets pour le template
+                $members = [];
+                foreach ($snapshot->getMembers() as $memberData) {
+                    $member = new \stdClass();
+                    $member->id = $memberData['id'];
+                    $member->firstname = $memberData['firstname'];
+                    $member->lastname = $memberData['lastname'];
+                    $members[] = $member;
+                }
+                $teamData->members = $members;
+                
+                return $teamData;
+            }, $snapshots);
+        } else {
+            // Pour les compétitions en cours, seulement les équipes actives
+            $teams = $competition->getTeams()->filter(function($team) {
+                return $team->getIsActive();
+            })->toArray();
+            
+            usort($teams, function($a, $b) {
+                return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
+            });
+        }
 
         // Récupérer toutes les prises validées
         $catches = $catchRepo->createQueryBuilder('c')

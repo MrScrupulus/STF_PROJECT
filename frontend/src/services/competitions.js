@@ -30,4 +30,5 @@ export const competitionsService = {
   end: (id) => api.put(ENDPOINTS.competitions.end(id), {}),
 
   getStats: (id) => api.get(`/api/admin/competitions/${id}/stats`),
+  getPublicStats: (id) => api.get(`/api/admin/competitions/${id}/stats`), // Même endpoint, permissions gérées côté backend
 };

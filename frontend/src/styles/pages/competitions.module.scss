@@ -333,6 +333,17 @@
     font-weight: 600;
   }
 
+  &__inactive_badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
   &__table_number {
     text-align: center;
     color: #6b7280;
@@ -464,6 +475,178 @@
 
   &__date {
     margin-bottom: 0.5rem;
+  }
+
+  &__stats_section {
+    margin-top: 3rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    h4 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  &__stats_summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  &__stat_card {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    border: 2px solid #3b82f6;
+  }
+
+  &__stat_label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__stat_value {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #2563eb;
+  }
+
+  &__species_section {
+    margin-top: 2rem;
+  }
+
+  &__species_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  &__species_card {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid #2563eb;
+    text-align: center;
+  }
+
+  &__species_name {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+  }
+
+  &__species_count {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  &__top3_section {
+    margin-top: 2rem;
+  }
+
+  &__top3_species {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border: 2px solid #e5e7eb;
+  }
+
+  &__top3_species_title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  &__top3_list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__top3_item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &__top3_rank {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #2563eb;
+    min-width: 3rem;
+    text-align: center;
+  }
+
+  &__top3_details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__top3_size {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  &__top3_team {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  &__top3_caught_by {
+    font-size: 0.875rem;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  &__loading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
   }
 }
 

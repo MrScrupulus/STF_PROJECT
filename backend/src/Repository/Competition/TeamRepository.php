@@ -24,7 +24,9 @@ class TeamRepository extends ServiceEntityRepository
             ->leftJoin('t.members', 'm')
             ->leftJoin('t.competition', 'comp')
             ->where('t.competition = :competitionId')
+            ->andWhere('t.isActive = :isActive')
             ->setParameter('competitionId', $competitionId)
+            ->setParameter('isActive', true)
             ->orderBy('t.registrationNumber', 'ASC')
             ->getQuery()
             ->getResult();
@@ -35,24 +37,30 @@ class TeamRepository extends ServiceEntityRepository
         $result = $this->createQueryBuilder('t')
             ->select('MAX(t.registrationNumber) as lastNumber')
             ->where('t.competition = :competition')
+            ->andWhere('t.isActive = :isActive')
             ->setParameter('competition', $competition)
+            ->setParameter('isActive', true)
             ->getQuery()
             ->getOneOrNullResult();
 
         return $result && isset($result['lastNumber']) ? (int) $result['lastNumber'] : null;
     }
 
-    public function findTeamsByMember(User $user): array
+    public function findTeamsByMember(User $user, bool $activeOnly = true): array
     {
         // Trouver les IDs des équipes où l'utilisateur est membre
-        $teamIds = $this->createQueryBuilder('t')
+        $qb = $this->createQueryBuilder('t')
             ->select('DISTINCT t.id')
             ->innerJoin('t.members', 'm')
             ->where('m = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getScalarResult();
+            ->setParameter('user', $user);
         
+        if ($activeOnly) {
+            $qb->andWhere('t.isActive = :isActive')
+               ->setParameter('isActive', true);
+        }
+        
+        $teamIds = $qb->getQuery()->getScalarResult();
         $teamIds = array_column($teamIds, 'id');
         
         if (empty($teamIds)) {
@@ -66,6 +74,8 @@ class TeamRepository extends ServiceEntityRepository
             ->leftJoin('t.competition', 'comp')
             ->where('t.id IN (:teamIds)')
             ->setParameter('teamIds', $teamIds)
+            ->orderBy('t.isActive', 'DESC') // Actives en premier
+            ->addOrderBy('t.id', 'DESC')
             ->getQuery()
             ->getResult();
     }
@@ -74,6 +84,8 @@ class TeamRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('t')
             ->where('t.competition IS NULL')
+            ->andWhere('t.isActive = :isActive')
+            ->setParameter('isActive', true)
             ->getQuery()
             ->getResult();
     }
@@ -83,6 +95,8 @@ class TeamRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('t')
             ->select('t', 'm')
             ->leftJoin('t.members', 'm')
+            ->where('t.isActive = :isActive')
+            ->setParameter('isActive', true)
             ->orderBy('t.id', 'DESC')
             ->getQuery()
             ->getResult();
@@ -95,8 +109,18 @@ class TeamRepository extends ServiceEntityRepository
             ->leftJoin('t.members', 'm')
             ->leftJoin('t.catches', 'c')
             ->leftJoin('c.species', 's')
+            ->where('t.isActive = :isActive')
+            ->setParameter('isActive', true)
             ->orderBy('t.id', 'DESC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Récupère toutes les équipes d'un utilisateur (actives et inactives) pour l'historique
+     */
+    public function findUserHistory(User $user): array
+    {
+        return $this->findTeamsByMember($user, false);
     }
 }

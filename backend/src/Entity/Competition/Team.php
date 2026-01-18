@@ -48,12 +48,17 @@ class Team
     #[Groups(['team:read'])]
     private ?int $registrationNumber = null;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    #[Groups(['team:read'])]
+    private bool $isActive = true;
+
     public function __construct()
     {
         $this->members = new ArrayCollection();
         $this->catches = new ArrayCollection();
         $this->totalScore = 0;
         $this->hasBonus = false;
+        $this->isActive = true;
     }
 
     public function getId(): ?int
@@ -228,6 +233,17 @@ class Team
     public function setRegistrationNumber(?int $number): self
     {
         $this->registrationNumber = $number;
+        return $this;
+    }
+
+    public function getIsActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function setIsActive(bool $isActive): self
+    {
+        $this->isActive = $isActive;
         return $this;
     }
 }

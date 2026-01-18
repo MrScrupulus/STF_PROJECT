@@ -12,6 +12,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use App\Service\EmailService;
+use App\Service\CompetitionSnapshotService;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
@@ -124,7 +126,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
-    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository): JsonResponse
+    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, CompetitionSnapshotService $snapshotService): JsonResponse
     {
         // Charger la compétition avec les équipes et leurs membres pour éviter les requêtes N+1
         $competition = $repository->createQueryBuilder('c')
@@ -150,6 +152,7 @@ class CompetitionController extends AbstractController
         
         // Déterminer quelles équipes retourner selon les règles de sécurité
         $teamsToReturn = [];
+        $useSnapshots = false;
 
         // La visibilité du classement dépend de isRankingPublic ET du statut de la compétition
         // Si la compétition est terminée ET que le classement est public, tout le monde peut voir
@@ -157,13 +160,43 @@ class CompetitionController extends AbstractController
         $rankingVisible = ($isEnded && $competition->getIsRankingPublic()) || $isAdmin;
         
         if ($rankingVisible) {
-            // Classement visible : afficher toutes les équipes avec scores
-            $allTeams = $competition->getTeams()->toArray();
-            // Trier par score décroissant
-            usort($allTeams, function($a, $b) {
-                return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
-            });
-            $teamsToReturn = $allTeams;
+            // Pour les compétitions terminées, utiliser les snapshots (état figé)
+            if ($isEnded) {
+                // Créer les snapshots s'ils n'existent pas encore
+                if (!$snapshotService->hasSnapshots($competition)) {
+                    $snapshotService->createSnapshotsForCompetition($competition);
+                } else {
+                    // Vérifier si les snapshots existants ont des membres vides
+                    // Si oui, recréer les snapshots pour récupérer les membres depuis les prises
+                    $snapshots = $snapshotService->getSnapshotsForCompetition($competition);
+                    $needsRecreation = false;
+                    foreach ($snapshots as $snapshot) {
+                        if (empty($snapshot->getMembers())) {
+                            $needsRecreation = true;
+                            break;
+                        }
+                    }
+                    if ($needsRecreation) {
+                        $snapshotService->createSnapshotsForCompetition($competition, true);
+                    }
+                }
+                
+                // Utiliser les snapshots pour le classement
+                $snapshots = $snapshotService->getSnapshotsForCompetition($competition);
+                $useSnapshots = true;
+                $teamsToReturn = $snapshots;
+            } else {
+                // Pour les compétitions en cours, utiliser les équipes actuelles (actives seulement)
+                $allTeams = $competition->getTeams()->filter(function($team) {
+                    return $team->getIsActive();
+                })->toArray();
+                
+                // Trier par score décroissant
+                usort($allTeams, function($a, $b) {
+                    return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
+                });
+                $teamsToReturn = $allTeams;
+            }
         } else {
             // Classement non visible : utilisateur normal voit uniquement son équipe
             if ($user) {
@@ -190,29 +223,42 @@ class CompetitionController extends AbstractController
             'hasNoLimit' => $competition->getHasNoLimit(),
             'isEnded' => $isEnded,
             'isRankingPublic' => $competition->getIsRankingPublic(),
-            'teams' => array_map(function ($team) use ($rankingVisible, $isAdmin, $user, $teamRepository) {
+            'teams' => array_map(function ($teamOrSnapshot) use ($rankingVisible, $isAdmin, $user, $teamRepository, $useSnapshots) {
                 // Pour les utilisateurs normaux si le classement n'est pas public, ne pas retourner le score
-                $showScore = $rankingVisible || ($user && $team->getMembers()->contains($user));
-                
-                return [
-                    'id' => $team->getId(),
-                    'name' => $team->getName(),
-                    'totalScore' => $showScore ? $team->getTotalScore() : null,
-                    'registrationNumber' => $team->getRegistrationNumber(),
-                    'members' => array_map(function ($member) {
-                        return [
-                            'id' => $member->getId(),
-                            'firstname' => $member->getFirstname(),
-                            'lastname' => $member->getLastname(),
-                        ];
-                    }, $team->getMembers()->toArray()),
-                ];
+                if ($useSnapshots) {
+                    // Utiliser les données du snapshot (état figé)
+                    $showScore = $rankingVisible;
+                    return [
+                        'id' => $teamOrSnapshot->getTeam()->getId(),
+                        'name' => $teamOrSnapshot->getTeamName(),
+                        'totalScore' => $showScore ? $teamOrSnapshot->getTotalScore() : null,
+                        'registrationNumber' => $teamOrSnapshot->getRegistrationNumber(),
+                        'members' => $teamOrSnapshot->getMembers(), // Déjà au format JSON
+                    ];
+                } else {
+                    // Utiliser les données de l'équipe actuelle
+                    $showScore = $rankingVisible || ($user && $teamOrSnapshot->getMembers()->contains($user));
+                    return [
+                        'id' => $teamOrSnapshot->getId(),
+                        'name' => $teamOrSnapshot->getName(),
+                        'totalScore' => $showScore ? $teamOrSnapshot->getTotalScore() : null,
+                        'registrationNumber' => $teamOrSnapshot->getRegistrationNumber(),
+                        'isActive' => $teamOrSnapshot->getIsActive(),
+                        'members' => array_map(function ($member) {
+                            return [
+                                'id' => $member->getId(),
+                                'firstname' => $member->getFirstname(),
+                                'lastname' => $member->getLastname(),
+                            ];
+                        }, $teamOrSnapshot->getMembers()->toArray()),
+                    ];
+                }
             }, $teamsToReturn),
         ]);
     }
 
     #[Route('/competitions/{id}', name: 'app_competition_update', methods: ['PUT'])]
-    public function update(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    public function update(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager, CompetitionSnapshotService $snapshotService): JsonResponse
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -253,6 +299,13 @@ class CompetitionController extends AbstractController
             }
             if (isset($data['isRankingPublic'])) {
                 $competition->setIsRankingPublic((bool) $data['isRankingPublic']);
+                
+                // Si on publie le classement d'une compétition terminée, créer les snapshots
+                $now = new \DateTime();
+                $isEnded = $competition->getEndDate() < $now;
+                if ($data['isRankingPublic'] && $isEnded) {
+                    $snapshotService->createSnapshotsForCompetition($competition);
+                }
             }
 
             $entityManager->flush();
@@ -363,7 +416,8 @@ class CompetitionController extends AbstractController
         Request $request,
         CompetitionRepository $competitionRepo,
         TeamRepository $teamRepo,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        EmailService $emailService
     ): JsonResponse {
         try {
             $user = $this->getUser();
@@ -388,6 +442,22 @@ class CompetitionController extends AbstractController
                     'success' => false,
                     'message' => 'Compétition non trouvée'
                 ], 404);
+            }
+
+            // Vérifier que la compétition n'est pas terminée
+            $now = new \DateTime();
+            if ($competition->getEndDate() < $now) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Impossible de s\'inscrire à une compétition terminée'
+                ], 400);
+            }
+
+            // Vérifier que la compétition a commencé ou est à venir
+            if ($competition->getStartDate() > $now) {
+                // Compétition à venir - OK
+            } else {
+                // Compétition en cours - OK
             }
 
             $team = $teamRepo->find($data['teamId']);
@@ -455,6 +525,14 @@ class CompetitionController extends AbstractController
 
             $em->flush();
 
+            // Envoyer les emails de confirmation à tous les membres de l'équipe
+            try {
+                $emailService->sendCompetitionRegistrationEmail($team, $competition);
+            } catch (\Exception $e) {
+                // Log l'erreur mais ne pas faire échouer l'inscription
+                error_log('Erreur lors de l\'envoi des emails d\'inscription à la compétition: ' . $e->getMessage());
+            }
+
             return $this->json([
                 'success' => true,
                 'message' => 'Équipe inscrite à la compétition avec succès',
@@ -476,14 +554,23 @@ class CompetitionController extends AbstractController
     public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $competitionRepo->find($id);
             if (!$competition) {
                 return $this->json([
                     'success' => false,
                     'message' => 'Compétition non trouvée'
                 ], 404);
+            }
+
+            // Vérifier les permissions : admin OU classement public
+            $isAdmin = $this->isGranted('ROLE_ADMIN');
+            $isRankingPublic = $competition->getIsRankingPublic();
+            
+            if (!$isAdmin && !$isRankingPublic) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Les statistiques ne sont pas encore disponibles'
+                ], 403);
             }
 
             // Récupérer toutes les prises validées de cette compétition
@@ -501,8 +588,7 @@ class CompetitionController extends AbstractController
             // Statistiques par espèce
             $speciesStats = [];
             $totalCatches = count($catches);
-            $biggestBySpecies = [];
-            $top3BySpecies = []; // Nouveau : top 3 par espèce
+            $top3BySpecies = [];
 
             foreach ($catches as $catch) {
                 $species = $catch->getSpecies();
@@ -546,30 +632,6 @@ class CompetitionController extends AbstractController
                     'points' => $catch->calculatePoints(),
                     'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
                 ];
-
-                // Trouver le plus grand poisson de chaque espèce (pour compatibilité)
-                if (!isset($biggestBySpecies[$speciesId]) || $catch->getSize() > $biggestBySpecies[$speciesId]['size']) {
-                    $biggestBySpecies[$speciesId] = [
-                        'id' => $catch->getId(),
-                        'size' => $catch->getSize(),
-                        'species' => [
-                            'id' => $speciesId,
-                            'name' => $speciesName,
-                        ],
-                        'team' => [
-                            'id' => $catch->getTeam()->getId(),
-                            'name' => $catch->getTeam()->getName(),
-                            'registrationNumber' => $catch->getTeam()->getRegistrationNumber(),
-                        ],
-                        'caughtBy' => $catch->getCaughtBy() ? [
-                            'id' => $catch->getCaughtBy()->getId(),
-                            'firstname' => $catch->getCaughtBy()->getFirstname(),
-                            'lastname' => $catch->getCaughtBy()->getLastname(),
-                        ] : null,
-                        'points' => $catch->calculatePoints(),
-                        'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
-                    ];
-                }
             }
 
             // Trier et prendre le top 3 pour chaque espèce
@@ -593,8 +655,7 @@ class CompetitionController extends AbstractController
                 'stats' => [
                     'totalCatches' => $totalCatches,
                     'speciesStats' => array_values($speciesStats),
-                    'biggestBySpecies' => array_values($biggestBySpecies),
-                    'top3BySpecies' => $top3BySpeciesFormatted, // Nouveau : top 3 par espèce
+                    'top3BySpecies' => $top3BySpeciesFormatted,
                 ]
             ]);
         } catch (\Exception $e) {

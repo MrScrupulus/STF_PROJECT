@@ -91,3 +91,62 @@
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+.reactivateSection {
+  @apply mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg;
+
+  h2 {
+    @apply text-xl font-semibold mb-2 text-blue-900;
+  }
+
+  .reactivateDescription {
+    @apply text-sm text-gray-700 mb-4;
+  }
+
+  .inactiveTeamsList {
+    @apply space-y-4 mb-6;
+  }
+
+  .inactiveTeamCard {
+    @apply p-4 bg-white border border-gray-300 rounded-lg;
+    @apply flex justify-between items-center gap-4;
+    @apply hover:shadow-md transition-shadow;
+  }
+
+  .inactiveTeamInfo {
+    @apply flex-1;
+
+    h3 {
+      @apply font-semibold text-gray-900 mb-1;
+    }
+
+    .inactiveTeamMembers {
+      @apply text-sm text-gray-600 mb-1;
+    }
+
+    .inactiveTeamScore {
+      @apply text-sm text-gray-500;
+    }
+  }
+
+  .reactivateButton {
+    @apply px-4 py-2 bg-green-500 text-white rounded-md;
+    @apply hover:bg-green-600 transition-colors;
+    @apply disabled:bg-gray-300 disabled:cursor-not-allowed;
+    @apply font-medium;
+  }
+
+  .divider {
+    @apply relative my-6;
+    @apply text-center;
+
+    &::before {
+      content: '';
+      @apply absolute top-1/2 left-0 right-0 h-px bg-gray-300;
+    }
+
+    span {
+      @apply relative bg-blue-50 px-4 text-gray-500 font-medium;
+    }
+  }
+}

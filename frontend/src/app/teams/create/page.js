@@ -19,6 +19,7 @@ export default function CreateTeam() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [hasExistingTeam, setHasExistingTeam] = useState(false);
   const [existingTeam, setExistingTeam] = useState(null);
+  const [inactiveTeams, setInactiveTeams] = useState([]);
   const [checkingTeam, setCheckingTeam] = useState(true);
 
   useEffect(() => {
@@ -26,10 +27,17 @@ export default function CreateTeam() {
       try {
         const response = await teamService.getMyTeams();
         const teams = response?.teams || [];
-        if (teams.length > 0) {
+        const activeTeams = teams.filter(t => t.isActive !== false);
+        if (activeTeams.length > 0) {
           setHasExistingTeam(true);
-          setExistingTeam(teams[0]);
+          setExistingTeam(activeTeams[0]);
         }
+        
+        // Récupérer aussi les équipes inactives
+        const historyResponse = await teamService.getMyHistory();
+        const allTeams = historyResponse?.teams || [];
+        const inactive = allTeams.filter(t => t.isActive === false);
+        setInactiveTeams(inactive);
       } catch (error) {
         console.error("Error checking existing team:", error);
       } finally {
@@ -39,6 +47,29 @@ export default function CreateTeam() {
 
     checkExistingTeam();
   }, []);
+
+  const handleReactivate = async (teamId) => {
+    if (!confirm("Voulez-vous réactiver cette équipe ? Le score sera réinitialisé à zéro pour la nouvelle compétition.")) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await teamService.reactivate(teamId);
+      setSuccess("Équipe réactivée avec succès ! Redirection...");
+      setIsRedirecting(true);
+      setTimeout(() => {
+        router.push("/teams");
+      }, 2000);
+    } catch (error) {
+      setError(error.message || "Erreur lors de la réactivation de l'équipe");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -123,6 +154,43 @@ export default function CreateTeam() {
           </div>
         )}
 
+        {/* Proposer de réactiver une équipe inactive */}
+        {inactiveTeams.length > 0 && (
+          <div className={styles.reactivateSection}>
+            <h2>Ou réactiver une équipe existante</h2>
+            <p className={styles.reactivateDescription}>
+              Vous avez {inactiveTeams.length} équipe{inactiveTeams.length > 1 ? 's' : ''} dissoute{inactiveTeams.length > 1 ? 's' : ''}. 
+              Vous pouvez la réactiver pour éviter de créer une nouvelle équipe.
+            </p>
+            <div className={styles.inactiveTeamsList}>
+              {inactiveTeams.map((team) => (
+                <div key={team.id} className={styles.inactiveTeamCard}>
+                  <div className={styles.inactiveTeamInfo}>
+                    <h3>{team.name}</h3>
+                    <p className={styles.inactiveTeamMembers}>
+                      Membres : {team.members?.map(m => m.firstname).join(', ') || 'Aucun'}
+                    </p>
+                    <p className={styles.inactiveTeamScore}>
+                      Score historique : {team.totalScore || 0} pts
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleReactivate(team.id)}
+                    className={styles.reactivateButton}
+                    disabled={isLoading || isRedirecting}
+                  >
+                    Réactiver cette équipe
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className={styles.divider}>
+              <span>OU</span>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGroup}>
             <label htmlFor="name">Nom de l'équipe</label>
@@ -140,7 +208,7 @@ export default function CreateTeam() {
 
           <div className={styles.formGroup}>
             <label htmlFor="participant2Email">
-              Email du second participant
+              Email du second participant <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>(optionnel)</span>
             </label>
             <input
               type="email"
@@ -149,8 +217,8 @@ export default function CreateTeam() {
               onChange={(e) =>
                 setFormData({ ...formData, participant2Email: e.target.value })
               }
-              required
               disabled={isLoading || isRedirecting}
+              placeholder="Vous pourrez inviter un membre plus tard"
             />
           </div>
 

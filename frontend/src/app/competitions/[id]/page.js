@@ -21,6 +21,8 @@ export default function CompetitionDetailPage() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const { data: competitionResponse, isLoading: competitionLoading } = useQuery({
     queryKey: ["competition", id],
@@ -57,6 +59,41 @@ export default function CompetitionDetailPage() {
     };
     fetchUser();
   }, []);
+
+  // Charger les statistiques si le classement est public
+  useEffect(() => {
+    // Vérifier que la compétition est chargée
+    if (!competition) {
+      return;
+    }
+
+    // Ne charger que si le classement est public ou si l'utilisateur est admin
+    if (!competition.isRankingPublic && !isAdmin) {
+      return;
+    }
+
+    // Ne pas recharger si les stats sont déjà chargées ou en cours de chargement
+    if (stats || loadingStats) {
+      return;
+    }
+
+    const loadStats = async () => {
+      setLoadingStats(true);
+      try {
+        const response = await competitionsService.getPublicStats(id);
+        if (response.success && response.stats) {
+          setStats(response.stats);
+        }
+      } catch (error) {
+        console.error("Error loading stats:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [competition?.isRankingPublic, isAdmin, id]);
 
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }) =>
@@ -421,6 +458,84 @@ export default function CompetitionDetailPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Statistiques de la compétition */}
+        {competition.isRankingPublic && stats && (
+          <div className={styles.competitions__stats_section}>
+            <h2>Statistiques de la compétition</h2>
+            
+            {loadingStats ? (
+              <div className={styles.competitions__loading}>Chargement des statistiques...</div>
+            ) : (
+              <>
+                {/* Résumé */}
+                <div className={styles.competitions__stats_summary}>
+                  <div className={styles.competitions__stat_card}>
+                    <div className={styles.competitions__stat_label}>Total de poissons pêchés</div>
+                    <div className={styles.competitions__stat_value}>{stats.totalCatches || 0}</div>
+                  </div>
+                </div>
+
+                {/* Répartition par espèce */}
+                {stats.speciesStats && stats.speciesStats.length > 0 && (
+                  <div className={styles.competitions__species_section}>
+                    <h3>Répartition par espèce</h3>
+                    <div className={styles.competitions__species_grid}>
+                      {stats.speciesStats.map((species) => (
+                        <div key={species.id} className={styles.competitions__species_card}>
+                          <div className={styles.competitions__species_name}>{species.name}</div>
+                          <div className={styles.competitions__species_count}>
+                            {species.count} prise{species.count > 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top 3 par espèce */}
+                {stats.top3BySpecies && Object.keys(stats.top3BySpecies).length > 0 && (
+                  <div className={styles.competitions__top3_section}>
+                    <h3>Top 3 des plus grands poissons par espèce</h3>
+                    {Object.entries(stats.top3BySpecies).map(([speciesId, top3]) => {
+                      const speciesInfo = stats.speciesStats?.find(s => s.id === parseInt(speciesId));
+                      if (!speciesInfo || top3.length === 0) return null;
+                      
+                      return (
+                        <div key={speciesId} className={styles.competitions__top3_species}>
+                          <h4 className={styles.competitions__top3_species_title}>
+                            {speciesInfo.name}
+                          </h4>
+                          <div className={styles.competitions__top3_list}>
+                            {top3.map((catchItem, index) => (
+                              <div key={catchItem.id} className={styles.competitions__top3_item}>
+                                <div className={styles.competitions__top3_rank}>#{index + 1}</div>
+                                <div className={styles.competitions__top3_details}>
+                                  <div className={styles.competitions__top3_size}>
+                                    {catchItem.size} cm - {catchItem.points} pts
+                                  </div>
+                                  <div className={styles.competitions__top3_team}>
+                                    {catchItem.team.name}
+                                    {catchItem.team.registrationNumber && ` (N° ${catchItem.team.registrationNumber})`}
+                                  </div>
+                                  {catchItem.caughtBy && (
+                                    <div className={styles.competitions__top3_caught_by}>
+                                      Pêché par : {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

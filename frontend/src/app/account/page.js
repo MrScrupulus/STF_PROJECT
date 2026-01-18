@@ -77,12 +77,20 @@ export default function AccountPage() {
                 {user.subscriber_number || "Non renseigné"}
               </p>
             </div>
-            <button
-              onClick={() => router.push("/account/edit")}
-              className={styles.account__edit_button}
-            >
-              Modifier mon profil
-            </button>
+            <div className={styles.account__actions}>
+              <button
+                onClick={() => router.push("/account/edit")}
+                className={styles.account__edit_button}
+              >
+                Modifier mon profil
+              </button>
+              <button
+                onClick={() => router.push("/account/history")}
+                className={styles.account__history_button}
+              >
+                Voir mon historique
+              </button>
+            </div>
           </div>
           <div className={styles.account__danger_zone}>
             <h2>Zone dangereuse</h2>
