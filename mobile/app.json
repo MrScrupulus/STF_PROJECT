@@ -10,7 +10,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.stf.mobile"
+      "bundleIdentifier": "com.stf.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée."
+      }
     },
     "android": {
       "package": "com.stf.mobile",

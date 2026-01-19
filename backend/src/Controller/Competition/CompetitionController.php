@@ -160,10 +160,10 @@ class CompetitionController extends AbstractController
         $teamsToReturn = [];
         $useSnapshots = false;
 
-        // La visibilité du classement dépend de isRankingPublic ET du statut de la compétition
-        // Si la compétition est terminée ET que le classement est public, tout le monde peut voir
+        // La visibilité du classement dépend de isRankingPublic
+        // Si l'admin publie le classement (isRankingPublic = true), tout le monde peut voir, même si la compétition n'est pas terminée
         // Sinon, seuls les admins peuvent voir le classement complet
-        $rankingVisible = ($isEnded && $competition->getIsRankingPublic()) || $isAdmin;
+        $rankingVisible = $competition->getIsRankingPublic() || $isAdmin;
         
         if ($rankingVisible) {
             // Pour les compétitions terminées, utiliser les snapshots (état figé)

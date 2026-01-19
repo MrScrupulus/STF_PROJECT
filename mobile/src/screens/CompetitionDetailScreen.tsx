@@ -61,7 +61,10 @@ export default function CompetitionDetailScreen({ route }: any) {
 
   useEffect(() => {
     if (!competition) return;
-    if (!competition.isRankingPublic && !isAdmin) return;
+    // Le classement est visible si : classement public OU admin
+    // (Si l'admin publie le classement, il est visible même si la compétition n'est pas terminée)
+    const rankingVisible = competition.isRankingPublic || isAdmin;
+    if (!rankingVisible) return;
     if (stats || loadingStats) return;
 
     const loadStats = async () => {
@@ -79,7 +82,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     };
 
     loadStats();
-  }, [competition?.isRankingPublic, isAdmin, id]);
+  }, [competition?.isRankingPublic, competition?.endDate, isAdmin, id]);
 
 
   const registerMutation = useMutation({
@@ -361,6 +364,8 @@ export default function CompetitionDetailScreen({ route }: any) {
             <Text style={styles.sectionTitle}>
               {isEnded && competition.isRankingPublic
                 ? 'Classement final'
+                : competition.isRankingPublic
+                ? 'Classement'
                 : isAdmin
                 ? 'Classement (admin)'
                 : 'Votre équipe'}
@@ -369,7 +374,7 @@ export default function CompetitionDetailScreen({ route }: any) {
             {!competition.isRankingPublic && !isAdmin && (
               <View style={styles.rankingInfo}>
                 <Text style={styles.rankingInfoText}>
-                  🔒 Le classement complet n'est pas encore public
+                  🔒 Le classement n'a pas encore été publié par l'administrateur
                 </Text>
               </View>
             )}
@@ -378,6 +383,7 @@ export default function CompetitionDetailScreen({ route }: any) {
               const isUserTeam = currentUser && team.members?.some(
                 (member: any) => member.id === currentUser.id
               );
+              // Le score est visible si : classement public OU admin OU équipe de l'utilisateur
               const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
 
               return (

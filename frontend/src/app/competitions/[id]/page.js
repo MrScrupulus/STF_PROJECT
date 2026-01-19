@@ -419,13 +419,19 @@ export default function CompetitionDetailPage() {
         {competition.teams && competition.teams.length > 0 && (
           <div className={styles.competitions__teams_list}>
             <h2>
-              {competition.isEnded && competition.isRankingPublic ? "Classement final" : isAdmin ? "Classement (visible uniquement par les administrateurs)" : "Votre équipe"}
+              {competition.isEnded && competition.isRankingPublic 
+                ? "Classement final" 
+                : competition.isRankingPublic
+                ? "Classement"
+                : isAdmin 
+                ? "Classement (visible uniquement par les administrateurs)" 
+                : "Votre équipe"}
             </h2>
             
             {!competition.isRankingPublic && !isAdmin && (
               <div className={styles.competitions__ranking_info}>
                 <p>
-                  🔒 Le classement complet n'est pas encore public.
+                  🔒 Le classement n'a pas encore été publié par l'administrateur.
                   Vous pouvez actuellement voir uniquement votre équipe.
                 </p>
               </div>
@@ -439,11 +445,19 @@ export default function CompetitionDetailPage() {
               </div>
             )}
             
+            {!competition.isEnded && competition.isRankingPublic && (
+              <div className={styles.competitions__ranking_info}>
+                <p>
+                  📊 Classement publié par l'administrateur
+                </p>
+              </div>
+            )}
+            
             <div className={styles.competitions__teams_table_wrapper}>
               <table className={styles.competitions__teams_table}>
                 <thead>
                   <tr>
-                    {competition.isEnded && competition.isRankingPublic && <th className={styles.competitions__table_rank}>Rang</th>}
+                    {competition.isRankingPublic && <th className={styles.competitions__table_rank}>Rang</th>}
                     <th className={styles.competitions__table_name}>Équipe</th>
                     <th className={styles.competitions__table_number}>N°</th>
                     <th className={styles.competitions__table_members}>Membres</th>
@@ -473,7 +487,7 @@ export default function CompetitionDetailPage() {
                           onClick={() => router.push(`/teams/${team.id}`)}
                           style={{ cursor: 'pointer' }}
                         >
-                          {competition.isEnded && competition.isRankingPublic && (
+                          {competition.isRankingPublic && (
                             <td className={styles.competitions__table_rank}>
                               <span className={styles.competitions__rank_badge}>
                                 #{index + 1}

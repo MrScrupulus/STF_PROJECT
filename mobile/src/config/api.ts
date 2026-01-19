@@ -3,8 +3,17 @@
 // Pour Android: utiliser 10.0.2.2 pour accéder à localhost de l'émulateur
 // Pour iOS: utiliser localhost ou l'IP de votre machine
 // Pour production: utiliser l'URL de votre serveur
+//
+// Pour tester depuis un autre réseau, définir EXPO_PUBLIC_API_URL dans .env.local
+// Exemple: EXPO_PUBLIC_API_URL=http://votre-ip-publique:8001
+// Ou utiliser un tunnel: EXPO_PUBLIC_API_URL=https://votre-tunnel.ngrok.io
 
 const getApiBaseUrl = () => {
+  // Priorité 1: Variable d'environnement (pour tester depuis un autre réseau)
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
   if (__DEV__) {
     // En développement
     // Android émulateur: 10.0.2.2

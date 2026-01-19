@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -154,13 +155,54 @@ export default function AddCatchScreen({ navigation, route }: any) {
       setIsGettingLocation(true);
       setLocationError(null);
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Demander la permission
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
+
       if (status !== 'granted') {
+        setIsGettingLocation(false);
         setLocationError('Permission de localisation refusée');
-        Alert.alert(
-          'Permission requise',
-          'Nous avons besoin de votre position GPS pour valider que la prise est effectuée dans la zone autorisée.'
-        );
+        
+        // Vérifier si la permission a été refusée définitivement
+        if (canAskAgain === false) {
+          // Permission refusée définitivement, proposer d'ouvrir les paramètres
+          Alert.alert(
+            'Permission de localisation requise',
+            'La permission de localisation a été refusée. Veuillez l\'activer dans les paramètres de votre téléphone pour pouvoir ajouter des prises.',
+            [
+              {
+                text: 'Annuler',
+                style: 'cancel',
+              },
+              {
+                text: 'Ouvrir les paramètres',
+                onPress: () => {
+                  if (Platform.OS === 'ios') {
+                    Linking.openURL('app-settings:');
+                  } else {
+                    Linking.openSettings();
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          // Permission peut encore être demandée
+          Alert.alert(
+            'Permission requise',
+            'Nous avons besoin de votre position GPS pour valider que la prise est effectuée dans la zone autorisée. Veuillez autoriser l\'accès à votre localisation.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Réessayer après un court délai
+                  setTimeout(() => {
+                    getCurrentLocation();
+                  }, 500);
+                },
+              },
+            ]
+          );
+        }
         return;
       }
 
