@@ -38,7 +38,7 @@
       [
         "expo-location",
         {
-          "locationPermission": "L'application a besoin d'accéder à votre localisation pour enregistrer où vous avez pêché."
+          "locationPermission": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée."
         }
       ],
       "expo-router",

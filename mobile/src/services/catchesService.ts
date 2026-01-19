@@ -28,6 +28,8 @@ export interface CreateCatchData {
   photoUrl?: string;
   comment?: string;
   caughtById?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export const catchesService = {

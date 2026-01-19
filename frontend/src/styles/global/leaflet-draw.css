@@ -1,0 +1,41 @@
+/* Styles globaux pour Leaflet Draw */
+.leaflet-draw-toolbar {
+  margin-top: 10px;
+}
+
+.leaflet-draw-toolbar a {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #333;
+  font-size: 18px;
+  line-height: 30px;
+  text-align: center;
+  text-decoration: none;
+  width: 30px;
+  height: 30px;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.leaflet-draw-toolbar a:hover {
+  background-color: #f4f4f4;
+}
+
+.leaflet-draw-actions {
+  margin-top: 10px;
+}
+
+.leaflet-draw-actions a {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #333;
+  padding: 5px 10px;
+  text-decoration: none;
+  margin-right: 5px;
+}
+
+.leaflet-draw-actions a:hover {
+  background-color: #f4f4f4;
+}

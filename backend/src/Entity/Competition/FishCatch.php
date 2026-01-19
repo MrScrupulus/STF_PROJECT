@@ -56,6 +56,20 @@ class FishCatch
     #[Groups(['catch:read'])]
     private ?User $caughtBy = null;
 
+    /**
+     * Latitude de la position GPS où la prise a été effectuée
+     */
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 8, nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?string $latitude = null;
+
+    /**
+     * Longitude de la position GPS où la prise a été effectuée
+     */
+    #[ORM\Column(type: 'decimal', precision: 11, scale: 8, nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?string $longitude = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -167,6 +181,28 @@ class FishCatch
     public function setRejectionReason(?string $rejectionReason): self
     {
         $this->rejectionReason = $rejectionReason;
+        return $this;
+    }
+
+    public function getLatitude(): ?string
+    {
+        return $this->latitude;
+    }
+
+    public function setLatitude(?string $latitude): self
+    {
+        $this->latitude = $latitude;
+        return $this;
+    }
+
+    public function getLongitude(): ?string
+    {
+        return $this->longitude;
+    }
+
+    public function setLongitude(?string $longitude): self
+    {
+        $this->longitude = $longitude;
         return $this;
     }
 }

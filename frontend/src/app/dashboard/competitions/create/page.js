@@ -4,6 +4,7 @@ import { competitionsService } from "../../../../services/competitions";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
 import ScheduledPausesForm from "../../../../components/admin/ScheduledPausesForm";
+import PerimeterManager from "../../../../components/admin/PerimeterManager";
 import styles from "../../../../styles/pages/dashboard/competition-create.module.scss";
 
 export default function CreateCompetition() {
@@ -210,6 +211,14 @@ export default function CreateCompetition() {
             pauses={scheduledPauses}
             onChange={setScheduledPauses}
           />
+
+          {/* Note: Les périmètres seront gérés après la création de la compétition */}
+          <div className={styles["competition-create__info"]}>
+            <p>
+              💡 <strong>Note :</strong> Les périmètres de pêche pourront être définis après la
+              création de la compétition depuis la page de modification.
+            </p>
+          </div>
 
           <div className={styles["competition-create__actions"]}>
             <button

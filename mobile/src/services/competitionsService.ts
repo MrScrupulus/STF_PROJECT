@@ -8,6 +8,12 @@ export interface ScheduledPause {
   reason?: string;
 }
 
+export interface Perimeter {
+  id: number;
+  name?: string;
+  coordinates: number[][]; // [[lat, lng], [lat, lng], ...]
+}
+
 export interface Competition {
   id: number;
   name: string;
@@ -15,6 +21,7 @@ export interface Competition {
   endDate: string;
   teams?: Team[];
   scheduledPauses?: ScheduledPause[];
+  perimeters?: Perimeter[];
   isRankingPublic?: boolean;
   isPaused?: boolean;
   description?: string;

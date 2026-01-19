@@ -49,9 +49,13 @@ class Competition
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
+    #[ORM\OneToMany(mappedBy: 'competition', targetEntity: CompetitionPerimeter::class, cascade: ['persist', 'remove'])]
+    private Collection $perimeters;
+
     public function __construct()
     {
         $this->teams = new ArrayCollection();
+        $this->perimeters = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -193,6 +197,33 @@ class Competition
     public function setIsPaused(bool $isPaused): self
     {
         $this->isPaused = $isPaused;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CompetitionPerimeter>
+     */
+    public function getPerimeters(): Collection
+    {
+        return $this->perimeters;
+    }
+
+    public function addPerimeter(CompetitionPerimeter $perimeter): static
+    {
+        if (!$this->perimeters->contains($perimeter)) {
+            $this->perimeters->add($perimeter);
+            $perimeter->setCompetition($this);
+        }
+        return $this;
+    }
+
+    public function removePerimeter(CompetitionPerimeter $perimeter): static
+    {
+        if ($this->perimeters->removeElement($perimeter)) {
+            if ($perimeter->getCompetition() === $this) {
+                $perimeter->setCompetition(null);
+            }
+        }
         return $this;
     }
 }

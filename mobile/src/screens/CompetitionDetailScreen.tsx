@@ -17,6 +17,7 @@ import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
 import { formatDateTimeLocal } from '../utils/dateUtils';
 import Header from '../components/Header';
+import PerimeterMapView from '../components/PerimeterMapView';
 
 export default function CompetitionDetailScreen({ route }: any) {
   const navigation = useNavigation();
@@ -34,8 +35,8 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryFn: () => competitionsService.getOne(id),
   });
 
-  const competition = competitionResponse?.success !== undefined
-    ? (competitionResponse.success ? { ...competitionResponse, success: undefined } : null)
+  const competition = (competitionResponse as any)?.success !== undefined
+    ? ((competitionResponse as any).success ? { ...(competitionResponse as any), success: undefined } : null)
     : competitionResponse;
 
   const { data: myTeamsData } = useQuery({
@@ -190,6 +191,13 @@ export default function CompetitionDetailScreen({ route }: any) {
             </View>
           )}
         </View>
+
+        {/* Affichage des périmètres */}
+        {competition.perimeters && competition.perimeters.length > 0 && (
+          <View style={styles.perimeterSection}>
+            <PerimeterMapView perimeters={competition.perimeters} height={250} />
+          </View>
+        )}
 
         {/* Actions admin */}
         {isAdmin && (
@@ -376,7 +384,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 <TouchableOpacity
                   key={team.id}
                   style={styles.teamRow}
-                  onPress={() => navigation.navigate('TeamDetail' as never, { id: team.id } as never)}
+                  onPress={() => (navigation as any).navigate('TeamDetail', { id: team.id })}
                 >
                   {isEnded && competition.isRankingPublic && (
                     <Text style={styles.teamRank}>#{index + 1}</Text>
@@ -861,5 +869,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
+  },
+  perimeterSection: {
+    marginBottom: 24,
   },
 });

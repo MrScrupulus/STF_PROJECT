@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catchesService, CreateCatchData } from '../services/catchesService';
 import { speciesService } from '../services/speciesService';
@@ -32,6 +33,9 @@ export default function AddCatchScreen({ navigation, route }: any) {
   const [selectedMember, setSelectedMember] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   // Charger l'utilisateur connecté
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
     enabled: true, // S'assurer que la requête est activée
   });
 
-  // Trouver l'équipe inscrite à une compétition en cours
+  // Trouver l'équipe inscrite à une compétition en cours et charger les détails complets
   useEffect(() => {
     if (teamsData?.teams && competitions) {
       const registeredTeam = teamsData.teams.find(
@@ -97,7 +101,14 @@ export default function AddCatchScreen({ navigation, route }: any) {
           (c: any) => c.id === registeredTeam.competition?.id
         );
         if (competition) {
-          setSelectedCompetition(competition);
+          // Charger les détails complets de la compétition pour avoir les périmètres
+          competitionsService.getOne(competition.id).then((fullCompetition: any) => {
+            setSelectedCompetition(fullCompetition);
+          }).catch(() => {
+            // En cas d'erreur, utiliser la compétition de base
+            setSelectedCompetition(competition);
+          });
+          
           // Sélectionner automatiquement le membre connecté par défaut
           if (currentUser && registeredTeam.members) {
             const defaultMember = registeredTeam.members.find(
@@ -112,20 +123,67 @@ export default function AddCatchScreen({ navigation, route }: any) {
     }
   }, [teamsData, competitions, currentUser]);
 
-  // Demander les permissions pour la caméra
+  // Demander les permissions pour la caméra et la localisation
   useEffect(() => {
     (async () => {
       if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
+        // Permission caméra
+        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+        if (cameraStatus.status !== 'granted') {
           Alert.alert(
             'Permission requise',
             'Nous avons besoin de la permission pour utiliser la caméra.'
           );
         }
+
+        // Permission localisation
+        const locationStatus = await Location.requestForegroundPermissionsAsync();
+        if (locationStatus.status !== 'granted') {
+          Alert.alert(
+            'Permission de localisation requise',
+            'Nous avons besoin de votre position GPS pour valider que la prise est effectuée dans la zone autorisée de la compétition.'
+          );
+        }
       }
     })();
   }, []);
+
+  // Capturer la position GPS
+  const getCurrentLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      setLocationError(null);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Permission de localisation refusée');
+        Alert.alert(
+          'Permission requise',
+          'Nous avons besoin de votre position GPS pour valider que la prise est effectuée dans la zone autorisée.'
+        );
+        return;
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      setLocation({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+      setLocationError(null);
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération de la position:', error);
+      setLocationError('Impossible de récupérer votre position');
+      Alert.alert(
+        'Erreur de localisation',
+        'Impossible de récupérer votre position GPS. Veuillez réessayer.'
+      );
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
 
   // Mutation pour créer une prise
   const createCatchMutation = useMutation({
@@ -148,9 +206,12 @@ export default function AddCatchScreen({ navigation, route }: any) {
     },
   });
 
-  // Prendre une photo
+  // Prendre une photo et capturer la position GPS
   const takePhoto = async () => {
     try {
+      // Capturer la position GPS avant de prendre la photo
+      await getCurrentLocation();
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -208,12 +269,39 @@ export default function AddCatchScreen({ navigation, route }: any) {
       return;
     }
 
+    // Vérifier si la compétition a des périmètres définis
+    // Si oui, la position GPS est obligatoire
+    const hasPerimeters = selectedCompetition.perimeters && selectedCompetition.perimeters.length > 0;
+    
+    if (hasPerimeters && !location) {
+      Alert.alert(
+        'Position GPS requise',
+        'Cette compétition nécessite une position GPS pour valider que la prise est effectuée dans la zone autorisée. Veuillez capturer votre position.',
+        [
+          {
+            text: 'Annuler',
+            style: 'cancel',
+          },
+          {
+            text: 'Capturer la position',
+            onPress: async () => {
+              await getCurrentLocation();
+              // Après avoir capturé la position, on pourra réessayer
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     const catchData: CreateCatchData = {
       speciesId: selectedSpecies,
       size: parseFloat(size),
       photoUrl: photo,
       comment: comment || undefined,
       caughtById: selectedMember || undefined,
+      latitude: location?.latitude,
+      longitude: location?.longitude,
     };
 
     createCatchMutation.mutate(catchData);
@@ -333,6 +421,63 @@ export default function AddCatchScreen({ navigation, route }: any) {
           <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
             <Text style={styles.photoButtonText}>📷 Prendre une photo</Text>
           </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Position GPS */}
+      <View style={styles.section}>
+        <Text style={styles.label}>
+          Position GPS
+          {selectedCompetition.perimeters && selectedCompetition.perimeters.length > 0 && (
+            <Text style={styles.required}> *</Text>
+          )}
+        </Text>
+        {location ? (
+          <View style={styles.locationContainer}>
+            <Text style={styles.locationText}>
+              📍 Latitude: {location.latitude.toFixed(6)}
+            </Text>
+            <Text style={styles.locationText}>
+              📍 Longitude: {location.longitude.toFixed(6)}
+            </Text>
+            <TouchableOpacity
+              style={styles.updateLocationButton}
+              onPress={getCurrentLocation}
+              disabled={isGettingLocation}
+            >
+              {isGettingLocation ? (
+                <ActivityIndicator color="#007AFF" />
+              ) : (
+                <Text style={styles.updateLocationButtonText}>
+                  🔄 Mettre à jour la position
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View>
+            {locationError && (
+              <Text style={styles.errorText}>{locationError}</Text>
+            )}
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={getCurrentLocation}
+              disabled={isGettingLocation}
+            >
+              {isGettingLocation ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.locationButtonText}>
+                  📍 Capturer la position GPS
+                </Text>
+              )}
+            </TouchableOpacity>
+            {selectedCompetition.perimeters && selectedCompetition.perimeters.length > 0 && (
+              <Text style={styles.locationHint}>
+                ⚠️ La position GPS est requise pour cette compétition afin de valider que la prise est effectuée dans la zone autorisée.
+              </Text>
+            )}
+          </View>
         )}
       </View>
 
@@ -512,5 +657,50 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 8,
+  },
+  required: {
+    color: '#ff3b30',
+  },
+  locationContainer: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 4,
+  },
+  locationButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  locationButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  updateLocationButton: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  updateLocationButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  locationHint: {
+    fontSize: 12,
+    color: '#ff9500',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

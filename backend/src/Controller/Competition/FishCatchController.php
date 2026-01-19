@@ -6,6 +6,7 @@ use App\Entity\Competition\FishCatch;
 use App\Repository\Competition\FishCatchRepository;
 use App\Repository\Security\UserRepository;
 use App\Service\NotificationService;
+use App\Service\GeolocationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -44,7 +45,8 @@ class FishCatchController extends AbstractController
         \App\Repository\Species\SpeciesRepository $speciesRepository,
         \App\Repository\Competition\CompetitionRepository $competitionRepository,
         UserRepository $userRepository,
-        NotificationService $notificationService
+        NotificationService $notificationService,
+        GeolocationService $geolocationService
     ): JsonResponse {
         try {
             $user = $this->getUser();
@@ -120,12 +122,26 @@ class FishCatchController extends AbstractController
                 ], 404);
             }
 
+            // Valider la position GPS si fournie
+            $latitude = isset($data['latitude']) ? (float) $data['latitude'] : null;
+            $longitude = isset($data['longitude']) ? (float) $data['longitude'] : null;
+            
+            $locationError = $geolocationService->validateLocation($latitude, $longitude, $competitionId);
+            if ($locationError !== null) {
+                return $this->json([
+                    'success' => false,
+                    'message' => $locationError
+                ], 400);
+            }
+
             $catch = new FishCatch();
             $catch->setTeam($team);
             $catch->setSpecies($species);
             $catch->setSize((float) $data['size']);
             $catch->setPhotoUrl($data['photoUrl'] ?? null);
             $catch->setComment($data['comment'] ?? null);
+            $catch->setLatitude($latitude !== null ? (string) $latitude : null);
+            $catch->setLongitude($longitude !== null ? (string) $longitude : null);
             // Les prises ne sont plus validées automatiquement, elles doivent être validées par un admin
             $catch->setIsValidated(false);
             

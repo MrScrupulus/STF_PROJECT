@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { competitionsService } from "../../../../../services/competitions";
 import { useRouter, useParams } from "next/navigation";
 import ProtectedRoute from "../../../../../components/auth/ProtectedRoute";
+import PerimeterManager from "../../../../../components/admin/PerimeterManager";
 import styles from "../../../../../styles/pages/dashboard/competition-create.module.scss";
 
 export default function EditCompetition() {
@@ -288,6 +289,9 @@ export default function EditCompetition() {
             </button>
           </div>
         </form>
+
+        {/* Gestion des périmètres */}
+        <PerimeterManager competitionId={parseInt(competitionId)} isEditMode={true} />
       </div>
     </ProtectedRoute>
   );

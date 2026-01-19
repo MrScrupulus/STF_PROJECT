@@ -17,6 +17,7 @@ use App\Service\CompetitionSnapshotService;
 use App\Service\NotificationService;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Entity\Competition\ScheduledPause;
+use App\Repository\Competition\CompetitionPerimeterRepository;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
@@ -131,7 +132,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
-    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository): JsonResponse
+    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository, CompetitionPerimeterRepository $perimeterRepository): JsonResponse
     {
         // Charger la compétition avec les équipes et leurs membres pour éviter les requêtes N+1
         $competition = $repository->createQueryBuilder('c')
@@ -232,6 +233,16 @@ class CompetitionController extends AbstractController
                 'reason' => $pause->getReason(),
             ];
         }, $scheduledPauses);
+
+        // Récupérer les périmètres (visibles pour tous)
+        $perimeters = $perimeterRepository->findActiveByCompetition($competition->getId());
+        $perimetersData = array_map(function ($perimeter) {
+            return [
+                'id' => $perimeter->getId(),
+                'name' => $perimeter->getName(),
+                'coordinates' => $perimeter->getCoordinates(),
+            ];
+        }, $perimeters);
         
         return $this->json([
             'success' => true,
@@ -248,6 +259,7 @@ class CompetitionController extends AbstractController
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
             'scheduledPauses' => $scheduledPausesData,
+            'perimeters' => $perimetersData,
             'teams' => array_map(function ($teamOrSnapshot) use ($rankingVisible, $isAdmin, $user, $teamRepository, $useSnapshots) {
                 // Pour les utilisateurs normaux si le classement n'est pas public, ne pas retourner le score
                 if ($useSnapshots) {
