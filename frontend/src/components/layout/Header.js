@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authService } from "../../services/authService";
+import NotificationBell from "../notifications/NotificationBell";
 import styles from "../../styles/components/layout/Header.module.scss";
 import floatingStyles from "../../styles/components/FloatingMenu.module.scss";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -140,6 +141,11 @@ export function Header() {
 
     return (
       <>
+        {user && (
+          <div style={{ marginRight: "0.5rem" }}>
+            <NotificationBell />
+          </div>
+        )}
         <button
           className={`${floatingStyles.Header__float_button} ${
             isMenuOpen ? floatingStyles.is_open : ""
@@ -273,7 +279,10 @@ export function Header() {
           )}
         </div>
         <nav role="navigation" aria-label="Navigation principale">
-          {renderMenu()}
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            {user && <NotificationBell />}
+            {renderMenu()}
+          </div>
         </nav>
       </div>
     </header>

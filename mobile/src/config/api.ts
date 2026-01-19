@@ -49,6 +49,14 @@ export const API_ENDPOINTS = {
     start: (id: number) => `/api/competitions/${id}/start`,
     end: (id: number) => `/api/competitions/${id}/end`,
     stats: (id: number) => `/api/admin/competitions/${id}/stats`,
+    registerTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/register`,
+  },
+  notifications: {
+    list: '/api/notifications',
+    unread: '/api/notifications/unread',
+    count: '/api/notifications/count',
+    markRead: (id: number) => `/api/notifications/${id}/read`,
+    markAllRead: '/api/notifications/read-all',
   },
 };
 

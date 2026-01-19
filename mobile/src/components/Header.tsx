@@ -48,6 +48,7 @@ export default function Header({ title, showBack = true, showMenu = true }: Head
     { name: 'AddCatch', label: 'Ajouter une Prise', icon: '➕' },
     { name: 'Species', label: 'Espèces', icon: '🐟' },
     { name: 'History', label: 'Historique', icon: '📜' },
+    { name: 'Notifications', label: 'Notifications', icon: '🔔' },
     { name: 'Profile', label: 'Profil', icon: '👤' },
     ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: '⚙️' }] : []),
   ];

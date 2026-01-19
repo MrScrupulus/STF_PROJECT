@@ -16,6 +16,7 @@ use App\DTO\Competition\CreateTeamRequest;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use App\Service\EmailService;
+use App\Service\NotificationService;
 
 #[Route('/api/teams', name: 'team_')]
 class TeamController extends AbstractController
@@ -24,7 +25,8 @@ class TeamController extends AbstractController
         private LoggerInterface $logger,
         private EntityManagerInterface $entityManager,
         private SerializerInterface $serializer,
-        private EmailService $emailService
+        private EmailService $emailService,
+        private NotificationService $notificationService
     ) {}
 
     private function isTeamMember(Team $team): bool
@@ -493,6 +495,19 @@ class TeamController extends AbstractController
                 $this->emailService->sendTeamInvitationEmail($team, $invitedUser);
             } catch (\Exception $e) {
                 $this->logger->error('Erreur lors de l\'envoi de l\'email d\'invitation', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            // Créer une notification
+            try {
+                $this->notificationService->notifyTeamInvitation(
+                    $invitedUser,
+                    $team->getName(),
+                    $team->getId()
+                );
+            } catch (\Exception $e) {
+                $this->logger->error('Erreur lors de la création de la notification d\'invitation', [
                     'error' => $e->getMessage()
                 ]);
             }

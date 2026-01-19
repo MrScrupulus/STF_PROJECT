@@ -7,6 +7,7 @@ import { competitionsService } from "../../../services/competitions";
 import { teamService } from "../../../services/teamService";
 import { authService } from "../../../services/authService";
 import { adminService } from "../../../services/adminService";
+import ScheduledPausesManager from "../../../components/admin/ScheduledPausesManager";
 import styles from "../../../styles/pages/competitions.module.scss";
 import { toast } from "react-hot-toast";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
@@ -285,6 +286,11 @@ export default function CompetitionDetailPage() {
                 : "⏸️ Mettre en pause"}
             </button>
           </div>
+        )}
+
+        {/* Gestion des pauses programmées (admin uniquement) */}
+        {isAdmin && competition && (
+          <ScheduledPausesManager competitionId={competition.id} />
         )}
 
         {!showRegisterForm ? (

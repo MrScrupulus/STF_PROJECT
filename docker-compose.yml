@@ -41,6 +41,34 @@ services:
     networks:
       - stf_network
 
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stf_scheduler
+    restart: unless-stopped
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/var/cache
+      - /var/www/html/var/log
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+      - DATABASE_URL=mysql://MrScrupulus:!Pl@yT0W!n@database:3306/stf_db?serverVersion=mariadb-10.11.0
+      - APP_SECRET=${APP_SECRET:-stf_dev_secret_key_2025}
+    command: >
+      sh -c "
+        echo 'Scheduler démarré. Exécution toutes les minutes...' &&
+        while true; do
+          php bin/console app:process-scheduled-pauses || true
+          sleep 60
+        done
+      "
+    depends_on:
+      - database
+      - backend
+    networks:
+      - stf_network
+
   frontend:
     build:
       context: ./frontend

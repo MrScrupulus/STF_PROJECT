@@ -14,6 +14,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use App\Service\EmailService;
 use App\Service\CompetitionSnapshotService;
+use App\Service\NotificationService;
+use App\Repository\Competition\ScheduledPauseRepository;
+use App\Entity\Competition\ScheduledPause;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
@@ -128,7 +131,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
-    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, CompetitionSnapshotService $snapshotService): JsonResponse
+    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository): JsonResponse
     {
         // Charger la compétition avec les équipes et leurs membres pour éviter les requêtes N+1
         $competition = $repository->createQueryBuilder('c')
@@ -212,6 +215,24 @@ class CompetitionController extends AbstractController
             }
         }
         
+        // Récupérer les pauses programmées (visibles pour tous)
+        $scheduledPauses = $scheduledPauseRepository->findActiveByCompetition($competition->getId());
+        $scheduledPausesData = array_map(function ($pause) {
+            // Convertir les dates UTC en Europe/Paris pour l'affichage
+            $timezone = new \DateTimeZone('Europe/Paris');
+            $startDate = clone $pause->getStartDate();
+            $startDate->setTimezone($timezone);
+            $endDate = clone $pause->getEndDate();
+            $endDate->setTimezone($timezone);
+            
+            return [
+                'id' => $pause->getId(),
+                'startDate' => $startDate->format('Y-m-d H:i:s'),
+                'endDate' => $endDate->format('Y-m-d H:i:s'),
+                'reason' => $pause->getReason(),
+            ];
+        }, $scheduledPauses);
+        
         return $this->json([
             'success' => true,
             'id' => $competition->getId(),
@@ -226,6 +247,7 @@ class CompetitionController extends AbstractController
             'isEnded' => $isEnded,
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
+            'scheduledPauses' => $scheduledPausesData,
             'teams' => array_map(function ($teamOrSnapshot) use ($rankingVisible, $isAdmin, $user, $teamRepository, $useSnapshots) {
                 // Pour les utilisateurs normaux si le classement n'est pas public, ne pas retourner le score
                 if ($useSnapshots) {
@@ -394,6 +416,42 @@ class CompetitionController extends AbstractController
             $entityManager->persist($competition);
             $entityManager->flush();
 
+            // Créer les pauses programmées si elles sont fournies
+            if (isset($data['scheduledPauses']) && is_array($data['scheduledPauses'])) {
+                foreach ($data['scheduledPauses'] as $pauseData) {
+                    if (!isset($pauseData['startDate']) || !isset($pauseData['endDate'])) {
+                        continue; // Ignorer les pauses incomplètes
+                    }
+
+                    try {
+                        $startDate = new \DateTime($pauseData['startDate']);
+                        $endDate = new \DateTime($pauseData['endDate']);
+
+                        // Vérifier que la pause est dans les dates de la compétition
+                        if ($startDate < $competition->getStartDate() || $endDate > $competition->getEndDate()) {
+                            continue; // Ignorer les pauses hors des dates de compétition
+                        }
+
+                        if ($endDate <= $startDate) {
+                            continue; // Ignorer les pauses invalides
+                        }
+
+                        $pause = new ScheduledPause();
+                        $pause->setCompetition($competition);
+                        $pause->setStartDate($startDate);
+                        $pause->setEndDate($endDate);
+                        $pause->setReason($pauseData['reason'] ?? null);
+                        $pause->setIsActive(true);
+
+                        $entityManager->persist($pause);
+                    } catch (\Exception $e) {
+                        // Log l'erreur mais continue la création de la compétition
+                        error_log('Erreur lors de la création d\'une pause programmée: ' . $e->getMessage());
+                    }
+                }
+                $entityManager->flush();
+            }
+
             return $this->json([
                 'message' => 'Compétition créée avec succès',
                 'competition' => [
@@ -424,7 +482,8 @@ class CompetitionController extends AbstractController
         CompetitionRepository $competitionRepo,
         TeamRepository $teamRepo,
         EntityManagerInterface $em,
-        EmailService $emailService
+        EmailService $emailService,
+        NotificationService $notificationService
     ): JsonResponse {
         try {
             $user = $this->getUser();
@@ -538,6 +597,19 @@ class CompetitionController extends AbstractController
             } catch (\Exception $e) {
                 // Log l'erreur mais ne pas faire échouer l'inscription
                 error_log('Erreur lors de l\'envoi des emails d\'inscription à la compétition: ' . $e->getMessage());
+            }
+
+            // Créer des notifications pour tous les membres de l'équipe
+            foreach ($team->getMembers() as $member) {
+                try {
+                    $notificationService->notifyCompetitionRegistration(
+                        $member,
+                        $competition->getName(),
+                        $competition->getId()
+                    );
+                } catch (\Exception $e) {
+                    error_log('Erreur lors de la création de la notification d\'inscription: ' . $e->getMessage());
+                }
             }
 
             return $this->json([
@@ -678,7 +750,7 @@ class CompetitionController extends AbstractController
      * Met en pause ou reprend une compétition
      */
     #[Route('/admin/competitions/{id}/pause', name: 'app_admin_competition_pause', methods: ['POST'])]
-    public function togglePause(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    public function togglePause(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager, NotificationService $notificationService): JsonResponse
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -696,6 +768,29 @@ class CompetitionController extends AbstractController
 
             $competition->setIsPaused($isPaused);
             $entityManager->flush();
+
+            // Notifier tous les membres des équipes inscrites
+            foreach ($competition->getTeams() as $team) {
+                foreach ($team->getMembers() as $member) {
+                    try {
+                        if ($isPaused) {
+                            $notificationService->notifyCompetitionPaused(
+                                $member,
+                                $competition->getName(),
+                                $competition->getId()
+                            );
+                        } else {
+                            $notificationService->notifyCompetitionResumed(
+                                $member,
+                                $competition->getName(),
+                                $competition->getId()
+                            );
+                        }
+                    } catch (\Exception $e) {
+                        error_log('Erreur lors de la création de la notification de pause: ' . $e->getMessage());
+                    }
+                }
+            }
 
             return $this->json([
                 'success' => true,

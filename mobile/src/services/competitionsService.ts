@@ -1,12 +1,23 @@
 import apiClient from './api';
 import { API_ENDPOINTS } from '../config/api';
 
+export interface ScheduledPause {
+  id: number;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
 export interface Competition {
   id: number;
   name: string;
   startDate: string;
   endDate: string;
   teams?: Team[];
+  scheduledPauses?: ScheduledPause[];
+  isRankingPublic?: boolean;
+  isPaused?: boolean;
+  description?: string;
 }
 
 export interface Team {

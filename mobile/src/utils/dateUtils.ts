@@ -109,3 +109,65 @@ export function isDateBetween(
     return false;
   }
 }
+
+/**
+ * Formate une date qui est déjà en Europe/Paris (sans conversion UTC)
+ * Utilisé pour les pauses programmées qui sont déjà converties par le backend
+ */
+export function formatDateTimeLocal(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'Date inconnue';
+  }
+
+  try {
+    // Le backend envoie les dates déjà en Europe/Paris au format 'Y-m-d H:i:s'
+    // On ne doit pas ajouter "Z" car cela indiquerait UTC et ajouterait une heure supplémentaire
+    const dateStr = dateString.replace(' ', 'T');
+    const date = new Date(dateStr);
+    // Afficher directement sans conversion timezone car c'est déjà en heure locale
+    return date.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    console.error('Erreur lors du formatage de la date:', error);
+    return 'Date invalide';
+  }
+}
+
+/**
+ * Formate une date relative (il y a X minutes/heures/jours)
+ */
+export function formatRelativeTime(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'Date inconnue';
+  }
+
+  try {
+    const date = new Date(dateString + 'Z');
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) {
+      return "À l'instant";
+    } else if (diffMinutes < 60) {
+      return `Il y a ${diffMinutes} min`;
+    } else if (diffHours < 24) {
+      return `Il y a ${diffHours}h`;
+    } else if (diffDays < 7) {
+      return `Il y a ${diffDays}j`;
+    } else {
+      return formatDateTime(dateString);
+    }
+  } catch (error) {
+    console.error('Erreur lors du formatage de la date relative:', error);
+    return formatDateTime(dateString);
+  }
+}

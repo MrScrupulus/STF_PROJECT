@@ -5,6 +5,7 @@ namespace App\Controller\Competition;
 use App\Entity\Competition\FishCatch;
 use App\Repository\Competition\FishCatchRepository;
 use App\Repository\Security\UserRepository;
+use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,7 +43,8 @@ class FishCatchController extends AbstractController
         \App\Repository\Competition\TeamRepository $teamRepository,
         \App\Repository\Species\SpeciesRepository $speciesRepository,
         \App\Repository\Competition\CompetitionRepository $competitionRepository,
-        UserRepository $userRepository
+        UserRepository $userRepository,
+        NotificationService $notificationService
     ): JsonResponse {
         try {
             $user = $this->getUser();
@@ -150,6 +152,22 @@ class FishCatchController extends AbstractController
             // Recalculer le score de l'équipe
             $team->updateTotalScore();
             $em->flush();
+
+            // Notifier tous les admins qu'une nouvelle prise est en attente de validation
+            try {
+                $caughtBy = $catch->getCaughtBy();
+                $caughtByName = $caughtBy ? ($caughtBy->getFirstname() . ' ' . $caughtBy->getLastname()) : 'Inconnu';
+                $notificationService->notifyAdminsPendingCatch(
+                    $catch->getId(),
+                    $team->getName(),
+                    $species->getName(),
+                    $catch->getSize(),
+                    $caughtByName
+                );
+            } catch (\Exception $e) {
+                // Log l'erreur mais ne pas faire échouer la création de la prise
+                error_log('Erreur lors de la création de la notification pour les admins: ' . $e->getMessage());
+            }
 
             return $this->json([
                 'success' => true,

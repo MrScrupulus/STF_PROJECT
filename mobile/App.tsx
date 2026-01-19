@@ -21,6 +21,7 @@ import SpeciesScreen from './src/screens/SpeciesScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import AdminCatchValidationScreen from './src/screens/AdminCatchValidationScreen';
 import AdminAddCatchScreen from './src/screens/AdminAddCatchScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
@@ -68,6 +69,7 @@ function AppNavigator() {
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
             <Stack.Screen name="AdminCatchValidation" component={AdminCatchValidationScreen} />
             <Stack.Screen name="AdminAddCatch" component={AdminAddCatchScreen} />
+            <Stack.Screen name="Notifications" component={NotificationsScreen} />
           </>
         )}
       </Stack.Navigator>

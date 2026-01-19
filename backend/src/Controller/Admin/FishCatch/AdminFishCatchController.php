@@ -5,6 +5,7 @@ namespace App\Controller\Admin\FishCatch;
 use App\Entity\Competition\FishCatch;
 use App\Repository\Competition\FishCatchRepository;
 use App\Service\EmailService;
+use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,7 +17,8 @@ class AdminFishCatchController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private EmailService $emailService
+        private EmailService $emailService,
+        private NotificationService $notificationService
     ) {
     }
 
@@ -118,6 +120,18 @@ class AdminFishCatchController extends AbstractController
                     // Log l'erreur mais ne pas faire échouer la validation
                     error_log('Erreur lors de l\'envoi de l\'email de validation: ' . $e->getMessage());
                 }
+
+                // Créer une notification
+                try {
+                    $this->notificationService->notifyCatchValidated(
+                        $catch->getCaughtBy(),
+                        $catch->getId(),
+                        $catch->getSpecies()->getName(),
+                        $catch->getSize()
+                    );
+                } catch (\Exception $e) {
+                    error_log('Erreur lors de la création de la notification: ' . $e->getMessage());
+                }
             }
 
             return $this->json([
@@ -178,6 +192,19 @@ class AdminFishCatchController extends AbstractController
                 } catch (\Exception $e) {
                     // Log l'erreur mais ne pas faire échouer le rejet
                     error_log('Erreur lors de l\'envoi de l\'email de rejet: ' . $e->getMessage());
+                }
+
+                // Créer une notification
+                try {
+                    $this->notificationService->notifyCatchRejected(
+                        $catch->getCaughtBy(),
+                        $catch->getId(),
+                        $catch->getSpecies()->getName(),
+                        $catch->getSize(),
+                        $rejectionReason
+                    );
+                } catch (\Exception $e) {
+                    error_log('Erreur lors de la création de la notification: ' . $e->getMessage());
                 }
             }
 

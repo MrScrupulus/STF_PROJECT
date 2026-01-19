@@ -15,6 +15,7 @@ import { competitionsService } from '../services/competitionsService';
 import { teamService } from '../services/teamService';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
+import { formatDateTimeLocal } from '../utils/dateUtils';
 import Header from '../components/Header';
 
 export default function CompetitionDetailScreen({ route }: any) {
@@ -78,6 +79,7 @@ export default function CompetitionDetailScreen({ route }: any) {
 
     loadStats();
   }, [competition?.isRankingPublic, isAdmin, id]);
+
 
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }: { teamId: number; competitionId: number }) =>
@@ -208,6 +210,37 @@ export default function CompetitionDetailScreen({ route }: any) {
                   : '⏸️ Mettre en pause'}
               </Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Pauses programmées */}
+        {(competition as any).scheduledPauses && (competition as any).scheduledPauses.length > 0 && (
+          <View style={styles.scheduledPausesSection}>
+            <Text style={styles.sectionTitle}>⏰ Pauses programmées</Text>
+            {(competition as any).scheduledPauses.map((pause: any) => {
+              const now = new Date();
+              const startDate = new Date(pause.startDate.replace(' ', 'T'));
+              const endDate = new Date(pause.endDate.replace(' ', 'T'));
+              const isActive = now >= startDate && now <= endDate;
+
+              return (
+                <View key={pause.id} style={styles.pauseCard}>
+                  <View style={styles.pauseHeader}>
+                    <Text style={styles.pauseDates}>
+                      {formatDateTimeLocal(pause.startDate)} - {formatDateTimeLocal(pause.endDate)}
+                    </Text>
+                    {isActive && (
+                      <View style={styles.activeBadge}>
+                        <Text style={styles.activeBadgeText}>En cours</Text>
+                      </View>
+                    )}
+                  </View>
+                  {pause.reason && (
+                    <Text style={styles.pauseReason}>{pause.reason}</Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -788,5 +821,45 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  scheduledPausesSection: {
+    marginBottom: 24,
+  },
+  pauseCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9500',
+  },
+  pauseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  pauseDates: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  activeBadge: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  activeBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pauseReason: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
 });

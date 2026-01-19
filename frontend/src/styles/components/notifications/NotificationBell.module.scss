@@ -1,0 +1,218 @@
+.notification_bell {
+  position: relative;
+  margin-left: 1rem;
+
+  &__button {
+    position: relative;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: transform 0.2s;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  &__icon {
+    display: block;
+  }
+
+  &__badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 50%;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transform: translate(25%, -25%);
+  }
+
+  &__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: 400px;
+    max-width: 90vw;
+    max-height: 600px;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    @media (max-width: 600px) {
+      width: calc(100vw - 2rem);
+      right: -1rem;
+    }
+  }
+
+  &__header {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f9fafb;
+
+    h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+  }
+
+  &__mark_all {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+
+    &:hover:not(:disabled) {
+      background-color: #eff6ff;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &__list {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  &__loading,
+  &__empty {
+    padding: 2rem;
+    text-align: center;
+    color: #6b7280;
+  }
+
+  &__item {
+    display: flex;
+    align-items: flex-start;
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+
+    &:hover {
+      background-color: #f9fafb;
+    }
+
+    &_unread {
+      background-color: #eff6ff;
+      font-weight: 500;
+    }
+  }
+
+  &__item_icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__message {
+    margin: 0 0 0.25rem 0;
+    color: #1f2937;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  &__time {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  &__dot {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #3b82f6;
+    border-radius: 50%;
+  }
+
+  // Styles par type de notification
+  &__item {
+    &.notification__validated {
+      border-left: 4px solid #10b981;
+    }
+
+    &.notification__rejected {
+      border-left: 4px solid #ef4444;
+    }
+
+    &.notification__pending {
+      border-left: 4px solid #f59e0b;
+    }
+
+    &.notification__invitation {
+      border-left: 4px solid #3b82f6;
+    }
+
+    &.notification__registered {
+      border-left: 4px solid #8b5cf6;
+    }
+
+    &.notification__started {
+      border-left: 4px solid #f59e0b;
+    }
+
+    &.notification__ended {
+      border-left: 4px solid #6366f1;
+    }
+
+    &.notification__paused {
+      border-left: 4px solid #ff9500;
+    }
+
+    &.notification__resumed {
+      border-left: 4px solid #34c759;
+    }
+  }
+}

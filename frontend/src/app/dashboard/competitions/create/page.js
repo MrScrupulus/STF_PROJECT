@@ -3,6 +3,7 @@ import { useState } from "react";
 import { competitionsService } from "../../../../services/competitions";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
+import ScheduledPausesForm from "../../../../components/admin/ScheduledPausesForm";
 import styles from "../../../../styles/pages/dashboard/competition-create.module.scss";
 
 export default function CreateCompetition() {
@@ -20,6 +21,7 @@ export default function CreateCompetition() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [scheduledPauses, setScheduledPauses] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +30,11 @@ export default function CreateCompetition() {
 
     try {
       console.log("Sending data:", formData);
-      await competitionsService.create(formData);
+      const competitionData = {
+        ...formData,
+        scheduledPauses: scheduledPauses.length > 0 ? scheduledPauses : undefined,
+      };
+      await competitionsService.create(competitionData);
       router.push("/dashboard");
     } catch (error) {
       setError(error.message || "Une erreur est survenue lors de la création");
@@ -199,6 +205,11 @@ export default function CreateCompetition() {
               Sinon, seul l'administrateur pourra voir le classement complet.
             </p>
           </div>
+
+          <ScheduledPausesForm
+            pauses={scheduledPauses}
+            onChange={setScheduledPauses}
+          />
 
           <div className={styles["competition-create__actions"]}>
             <button
