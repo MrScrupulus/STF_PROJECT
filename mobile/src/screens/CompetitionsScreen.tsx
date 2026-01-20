@@ -53,13 +53,14 @@ export default function CompetitionsScreen() {
 
   const renderCompetition = ({ item }: { item: Competition }) => {
     const status = getCompetitionStatus(item.startDate, item.endDate);
+    const isEnded = status.text === 'Terminée';
     const handlePress = () => {
       (navigation as any).navigate('CompetitionDetail', { id: item.id });
     };
     
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, isEnded && styles.cardEnded]}
         onPress={handlePress}
         activeOpacity={0.7}
       >
@@ -131,6 +132,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  cardEnded: {
+    opacity: 0.7,
   },
   cardHeader: {
     flexDirection: 'row',

@@ -11,12 +11,15 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { authService, RegisterData } from '../services/authService';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
     password: '',
@@ -27,6 +30,28 @@ export default function RegisterScreen() {
     country: '',
     subscriber_number: '',
   });
+
+  const handleDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (date) {
+      setSelectedDate(date);
+      // Formater la date au format YYYY-MM-DD pour l'API
+      const formattedDate = date.toISOString().split('T')[0];
+      setFormData({ ...formData, birthDate: formattedDate });
+    }
+  };
+
+  const formatDateForDisplay = (date: Date | null): string => {
+    if (!date) return '';
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
 
   const handleRegister = async () => {
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
@@ -129,12 +154,36 @@ export default function RegisterScreen() {
             maxLength={10}
           />
 
-          <TextInput
+          <TouchableOpacity
             style={styles.input}
-            placeholder="Date de naissance (YYYY-MM-DD) (optionnel)"
-            value={formData.birthDate}
-            onChangeText={(text) => setFormData({ ...formData, birthDate: text })}
-          />
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={[styles.dateText, !selectedDate && styles.datePlaceholder]}>
+              {selectedDate ? formatDateForDisplay(selectedDate) : 'Date de naissance (optionnel)'}
+            </Text>
+          </TouchableOpacity>
+          
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate || new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+              locale="fr-FR"
+            />
+          )}
+          
+          {Platform.OS === 'ios' && showDatePicker && (
+            <View style={styles.iosDatePickerActions}>
+              <TouchableOpacity
+                style={styles.iosDatePickerButton}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.iosDatePickerButtonText}>Valider</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <TextInput
             style={styles.input}
@@ -233,5 +282,30 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#007AFF',
     fontSize: 16,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  datePlaceholder: {
+    color: '#999',
+  },
+  iosDatePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  iosDatePickerButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  iosDatePickerButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
