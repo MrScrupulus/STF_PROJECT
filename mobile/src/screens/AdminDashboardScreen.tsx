@@ -168,6 +168,12 @@ export default function AdminDashboardScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.navigationButton, styles.adminButton]}
+              onPress={() => (navigation as any).navigate('CreateCompetition')}
+            >
+              <Text style={styles.navigationButtonText}>➕ Créer une compétition</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.navigationButton, styles.adminButton]}
               onPress={() => (navigation as any).navigate('AdminAddCatch')}
             >
               <Text style={styles.navigationButtonText}>➕ Ajouter une prise (Admin)</Text>

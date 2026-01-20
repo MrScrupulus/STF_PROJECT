@@ -27,6 +27,7 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import InvitationsScreen from './src/screens/InvitationsScreen';
 import EditTeamScreen from './src/screens/EditTeamScreen';
+import CreateCompetitionScreen from './src/screens/CreateCompetitionScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
@@ -80,6 +81,7 @@ function AppNavigator() {
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
             <Stack.Screen name="Invitations" component={InvitationsScreen} />
             <Stack.Screen name="EditTeam" component={EditTeamScreen} />
+            <Stack.Screen name="CreateCompetition" component={CreateCompetitionScreen} />
           </>
         )}
       </Stack.Navigator>

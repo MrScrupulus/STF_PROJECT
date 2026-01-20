@@ -97,4 +97,9 @@ export const adminService = {
     const response = await apiClient.put(`/api/competitions/${competitionId}`, data);
     return response.data;
   },
+
+  createCompetition: async (data: any): Promise<any> => {
+    const response = await apiClient.post('/api/admin/competitions', data);
+    return response.data;
+  },
 };
