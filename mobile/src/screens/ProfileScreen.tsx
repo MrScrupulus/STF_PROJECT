@@ -128,6 +128,12 @@ export default function ProfileScreen() {
           >
             <Text style={styles.actionButtonText}>Voir mon historique</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Invitations' as never)}
+          >
+            <Text style={styles.actionButtonText}>Mes invitations</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.dangerZone}>

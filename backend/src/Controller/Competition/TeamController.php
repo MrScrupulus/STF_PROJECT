@@ -336,12 +336,22 @@ class TeamController extends AbstractController
             // Création de l'équipe
             $team = new Team();
             $team->setName($data['name']);
+            $team->setIsActive(true); // S'assurer que l'équipe est active
             $team->addMember($user);
 
-            // Ajouter le second participant s'il est fourni
+            // Persister l'équipe d'abord pour qu'elle ait un ID
+            $this->entityManager->persist($team);
+            $this->entityManager->flush();
+
+            $invitation = null; // Variable pour stocker l'invitation si créée
+
+            // Créer une invitation pour le second participant s'il est fourni
             if (isset($data['participant2Email']) && !empty($data['participant2Email'])) {
                 $participant2 = $userRepository->findOneByEmail($data['participant2Email']);
                 if (!$participant2) {
+                    // Supprimer l'équipe créée si l'utilisateur n'existe pas
+                    $this->entityManager->remove($team);
+                    $this->entityManager->flush();
                     return $this->json([
                         'success' => false,
                         'message' => 'Aucun utilisateur trouvé avec cet email'
@@ -351,6 +361,9 @@ class TeamController extends AbstractController
                 // Vérifier si le second participant a déjà une équipe active
                 $existingTeam2 = $this->entityManager->getRepository(Team::class)->findTeamsByMember($participant2, true);
                 if (count($existingTeam2) > 0) {
+                    // Supprimer l'équipe créée si le participant a déjà une équipe
+                    $this->entityManager->remove($team);
+                    $this->entityManager->flush();
                     return $this->json([
                         'success' => false,
                         'message' => 'Le second participant est déjà membre d\'une équipe active'
@@ -358,21 +371,61 @@ class TeamController extends AbstractController
                 }
 
                 if ($participant2 === $user) {
+                    // Supprimer l'équipe créée si l'utilisateur essaie de s'ajouter lui-même
+                    $this->entityManager->remove($team);
+                    $this->entityManager->flush();
                     return $this->json([
                         'success' => false,
                         'message' => 'Vous ne pouvez pas vous ajouter vous-même comme second participant'
                     ], 400);
                 }
 
-                $team->addMember($participant2);
+                // Vérifier qu'il n'y a pas déjà une invitation en attente pour cet utilisateur
+                // On vérifie toutes les invitations en attente de cet utilisateur
+                $invitationRepo = $this->entityManager->getRepository(TeamInvitation::class);
+                $existingInvitation = $invitationRepo->findInvitation($team, $participant2);
+                if ($existingInvitation) {
+                    // Supprimer l'équipe créée si une invitation existe déjà
+                    $this->entityManager->remove($team);
+                    $this->entityManager->flush();
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Une invitation est déjà en attente pour cet utilisateur'
+                    ], 400);
+                }
+
+                // Créer une invitation au lieu d'ajouter directement le membre
+                $invitation = new TeamInvitation();
+                $invitation->setTeam($team);
+                $invitation->setInvitedUser($participant2);
+                $invitation->setInvitedBy($user);
+                $invitation->setStatus('pending');
+                $this->entityManager->persist($invitation);
+                $this->entityManager->flush();
             }
 
-            $this->entityManager->persist($team);
-            $this->entityManager->flush();
-
-            // Envoyer les emails de confirmation à tous les membres
+            // Envoyer les emails de confirmation et d'invitation
             try {
+                // Email de création pour le créateur
                 $this->emailService->sendTeamCreationEmail($team);
+                
+                // Email d'invitation pour le participant2 si une invitation a été créée
+                if (isset($data['participant2Email']) && !empty($data['participant2Email']) && isset($invitation)) {
+                    $this->emailService->sendTeamInvitationEmail($team, $invitation->getInvitedUser());
+                    
+                    // Créer une notification pour l'invité
+                    try {
+                        $this->notificationService->notifyTeamInvitation(
+                            $invitation->getInvitedUser(),
+                            $team->getName(),
+                            $team->getId()
+                        );
+                    } catch (\Exception $e) {
+                        $this->logger->error('Erreur lors de la création de la notification d\'invitation', [
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
             } catch (\Exception $e) {
                 // Log l'erreur mais ne pas faire échouer la création de l'équipe
                 $this->logger->error('Erreur lors de l\'envoi des emails de création d\'équipe', [

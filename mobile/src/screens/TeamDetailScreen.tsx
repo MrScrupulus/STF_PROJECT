@@ -36,10 +36,18 @@ export default function TeamDetailScreen({ route }: any) {
     queryFn: () => teamService.getOne(id),
   });
 
+  // Récupérer les invitations en attente pour cette équipe
+  const { data: invitationsData } = useQuery({
+    queryKey: ['team-invitations', id],
+    queryFn: () => teamService.getTeamInvitations(id),
+    enabled: !!teamData?.team,
+  });
+
   const inviteMutation = useMutation({
     mutationFn: (email: string) => teamService.inviteMember(id, email),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['team-invitations', id] });
       Alert.alert('Succès', 'Invitation envoyée avec succès !');
       setInviteEmail('');
       setShowInviteForm(false);
@@ -341,6 +349,28 @@ export default function TeamDetailScreen({ route }: any) {
                   </View>
                 </View>
               )}
+            </View>
+          )}
+
+          {/* Invitations en attente */}
+          {invitationsData?.invitations && invitationsData.invitations.length > 0 && (
+            <View style={styles.pendingInvitationsSection}>
+              <Text style={styles.sectionTitle}>Invitations en attente</Text>
+              {invitationsData.invitations.map((invitation: any) => (
+                <View key={invitation.id} style={styles.pendingInvitationCard}>
+                  <View style={styles.pendingInvitationInfo}>
+                    <Text style={styles.pendingInvitationName}>
+                      {invitation.invitedUser.firstname} {invitation.invitedUser.lastname}
+                    </Text>
+                    <Text style={styles.pendingInvitationEmail}>
+                      {invitation.invitedUser.email}
+                    </Text>
+                    <Text style={styles.pendingInvitationDate}>
+                      Invité le {formatDateTime(invitation.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
             </View>
           )}
 
@@ -1107,5 +1137,36 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  pendingInvitationsSection: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  pendingInvitationCard: {
+    backgroundColor: '#fff3cd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#ffc107',
+  },
+  pendingInvitationInfo: {
+    flex: 1,
+  },
+  pendingInvitationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 4,
+  },
+  pendingInvitationEmail: {
+    fontSize: 14,
+    color: '#856404',
+    marginBottom: 4,
+  },
+  pendingInvitationDate: {
+    fontSize: 12,
+    color: '#856404',
+    opacity: 0.7,
   },
 });

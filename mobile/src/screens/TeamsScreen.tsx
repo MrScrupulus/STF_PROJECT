@@ -88,7 +88,7 @@ export default function TeamsScreen() {
     >
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.name}</Text>
-        {!item.competition && (
+        {item.isActive === false && (
           <View style={styles.inactiveBadge}>
             <Text style={styles.inactiveText}>Inactive</Text>
           </View>
@@ -109,7 +109,7 @@ export default function TeamsScreen() {
         <Text style={styles.cardScore}>Score: {item.totalScore} pts</Text>
       )}
 
-      {!item.competition && (
+      {item.isActive === false && (
         <TouchableOpacity
           style={styles.reactivateButton}
           onPress={() => handleReactivate(item.id)}
