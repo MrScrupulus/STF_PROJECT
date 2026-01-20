@@ -281,7 +281,32 @@ export default function TeamDetailScreen({ route }: any) {
 
         {/* Membres */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Membres de l'équipe</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Membres de l'équipe</Text>
+            {(() => {
+              // Vérifier si l'équipe est dans une compétition active
+              const isInActiveCompetition = team.competition && team.competition.endDate && (() => {
+                const now = new Date();
+                const competitionEndDate = new Date(team.competition.endDate);
+                return competitionEndDate >= now;
+              })();
+              
+              if (!isInActiveCompetition) {
+                return (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => {
+                      // @ts-ignore - navigation.navigate exists but TypeScript doesn't recognize it
+                      navigation.navigate('EditTeam', { id: team.id });
+                    }}
+                  >
+                    <Text style={styles.editButtonText}>Modifier</Text>
+                  </TouchableOpacity>
+                );
+              }
+              return null;
+            })()}
+          </View>
           {team.members?.map((member: any) => (
             <View key={member.id} style={styles.memberCard}>
               <View style={styles.memberAvatar}>
@@ -733,8 +758,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 12,
     color: '#333',
+    flex: 1,
   },
   memberCard: {
     flexDirection: 'row',
@@ -1168,5 +1193,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#856404',
     opacity: 0.7,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  editButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

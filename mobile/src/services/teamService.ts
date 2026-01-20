@@ -16,6 +16,8 @@ export interface Team {
     id: number;
     name: string;
     teamSize?: number;
+    startDate?: string;
+    endDate?: string;
   };
   totalScore?: number;
   bonus?: number;
@@ -85,6 +87,11 @@ export const teamService = {
 
   getTeamInvitations: async (teamId: number): Promise<any> => {
     const response = await apiClient.get(API_ENDPOINTS.teams.invitations.team(teamId));
+    return response.data;
+  },
+
+  update: async (teamId: number, data: { name?: string; memberIds?: number[] }): Promise<any> => {
+    const response = await apiClient.put(API_ENDPOINTS.teams.detail(teamId), data);
     return response.data;
   },
 };

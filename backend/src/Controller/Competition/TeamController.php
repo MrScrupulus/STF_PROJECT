@@ -736,20 +736,107 @@ class TeamController extends AbstractController
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
-    public function update(Team $team, Request $request): JsonResponse
+    public function update(Team $team, Request $request, UserRepository $userRepository): JsonResponse
     {
-        if (!$this->isTeamMember($team)) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Vous devez être membre de l\'équipe pour la modifier'
-            ], 403);
-        }
-
         try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            if (!$this->isTeamMember($team)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous devez être membre de l\'équipe pour la modifier'
+                ], 403);
+            }
+
+            // Vérifier que l'équipe n'est pas inscrite dans une compétition active
+            if ($team->getCompetition()) {
+                $now = new \DateTime();
+                $competitionEndDate = $team->getCompetition()->getEndDate();
+                if ($competitionEndDate && $competitionEndDate >= $now) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Impossible de modifier une équipe inscrite dans une compétition active'
+                    ], 400);
+                }
+            }
+
             $data = json_decode($request->getContent(), true);
 
-            if (isset($data['name'])) {
-                $team->setName($data['name']);
+            // Modifier le nom si fourni
+            if (isset($data['name']) && !empty($data['name'])) {
+                $team->setName(trim($data['name']));
+            }
+
+            // Modifier les membres si fourni
+            if (isset($data['memberIds']) && is_array($data['memberIds'])) {
+                // Vérifier que l'utilisateur actuel est dans la liste
+                if (!in_array($user->getId(), $data['memberIds'])) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Vous devez rester membre de l\'équipe'
+                    ], 400);
+                }
+
+                // Vérifier que tous les membres existent
+                $newMembers = [];
+                foreach ($data['memberIds'] as $memberId) {
+                    $member = $userRepository->find($memberId);
+                    if (!$member) {
+                        return $this->json([
+                            'success' => false,
+                            'message' => "Membre avec l'ID {$memberId} non trouvé"
+                        ], 404);
+                    }
+
+                    // Vérifier que le membre n'est pas déjà dans une autre équipe active
+                    if ($member->getId() !== $user->getId()) {
+                        $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($member, true);
+                        foreach ($existingTeam as $existing) {
+                            if ($existing->getId() !== $team->getId()) {
+                                return $this->json([
+                                    'success' => false,
+                                    'message' => "L'utilisateur {$member->getEmail()} est déjà membre d'une autre équipe active"
+                                ], 400);
+                            }
+                        }
+                    }
+
+                    $newMembers[] = $member;
+                }
+
+                // Déterminer la taille maximale de l'équipe
+                $maxTeamSize = 2; // Par défaut
+                if ($team->getCompetition()) {
+                    $maxTeamSize = $team->getCompetition()->getTeamSize();
+                }
+
+                // Vérifier qu'il n'y a pas plus de membres que la taille maximale
+                if (count($newMembers) > $maxTeamSize) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => "Une équipe ne peut pas avoir plus de {$maxTeamSize} membre(s)"
+                    ], 400);
+                }
+
+                // Vérifier qu'il y a au moins un membre
+                if (count($newMembers) < 1) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Une équipe doit avoir au moins un membre'
+                    ], 400);
+                }
+
+                // Remplacer les membres
+                $team->getMembers()->clear();
+                foreach ($newMembers as $member) {
+                    $team->addMember($member);
+                }
             }
 
             $this->entityManager->flush();
@@ -761,6 +848,7 @@ class TeamController extends AbstractController
                 'totalScore' => $team->getTotalScore(),
                 'hasBonus' => $team->getHasBonus(),
                 'registrationNumber' => $team->getRegistrationNumber(),
+                'isActive' => $team->getIsActive(),
                 'members' => array_map(function ($member) {
                     return [
                         'id' => $member->getId(),
@@ -769,13 +857,22 @@ class TeamController extends AbstractController
                         'email' => $member->getEmail(),
                     ];
                 }, $team->getMembers()->toArray()),
+                'competition' => $team->getCompetition() ? [
+                    'id' => $team->getCompetition()->getId(),
+                    'name' => $team->getCompetition()->getName(),
+                ] : null,
             ];
 
             return $this->json([
                 'success' => true,
+                'message' => 'Équipe modifiée avec succès',
                 'team' => $teamData
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la modification de l\'équipe', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
                 'message' => 'Erreur lors de la modification de l\'équipe: ' . $e->getMessage()
