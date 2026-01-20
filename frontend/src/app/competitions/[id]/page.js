@@ -194,6 +194,10 @@ export default function CompetitionDetailPage() {
   // Filtrer les équipes sans compétition, inscrites à cette compétition spécifique,
   // ou inscrites à une compétition terminée (pour permettre la réinscription)
   const now = new Date();
+  
+  // Vérifier si la compétition est terminée
+  const isCompetitionEnded = competition?.isEnded || (competition?.endDate && new Date(competition.endDate) < now);
+  
   const myTeams = allMyTeams.filter(team => {
     if (!team.competition) {
       // Équipe sans compétition - disponible
@@ -302,8 +306,8 @@ export default function CompetitionDetailPage() {
           </div>
         )}
 
-        {/* Gestion des pauses programmées (admin uniquement) */}
-        {isAdmin && competition && (
+        {/* Gestion des pauses programmées (admin uniquement) - masqué si compétition terminée */}
+        {isAdmin && competition && !isCompetitionEnded && (
           <ScheduledPausesManager competitionId={competition.id} />
         )}
 
@@ -340,15 +344,18 @@ export default function CompetitionDetailPage() {
                 )}
               </>
             ) : (
-              <div className={styles.competitions__no_teams}>
-                <p>Vous n'avez pas d'équipe disponible pour cette compétition.</p>
-                <button
-                  onClick={() => router.push("/teams/create")}
-                  className={styles.competitions__create_team_btn}
-                >
-                  Créer une équipe
-                </button>
-              </div>
+              // Masquer le message "pas d'équipe" si la compétition est terminée
+              !isCompetitionEnded && (
+                <div className={styles.competitions__no_teams}>
+                  <p>Vous n'avez pas d'équipe disponible pour cette compétition.</p>
+                  <button
+                    onClick={() => router.push("/teams/create")}
+                    className={styles.competitions__create_team_btn}
+                  >
+                    Créer une équipe
+                  </button>
+                </div>
+              )
             )}
           </div>
         ) : (
@@ -413,19 +420,22 @@ export default function CompetitionDetailPage() {
                 </div>
               </form>
             ) : (
-              <div className={styles.competitions__no_teams}>
-                <p>
-                  Vous n'avez pas d'équipe disponible pour cette compétition.
-                  <br />
-                  Créez une équipe pour pouvoir vous inscrire.
-                </p>
-                <button
-                  onClick={() => router.push("/teams/create")}
-                  className={styles.competitions__create_team_btn}
-                >
-                  Créer une équipe
-                </button>
-              </div>
+              // Masquer le message "pas d'équipe" si la compétition est terminée
+              !isCompetitionEnded && (
+                <div className={styles.competitions__no_teams}>
+                  <p>
+                    Vous n'avez pas d'équipe disponible pour cette compétition.
+                    <br />
+                    Créez une équipe pour pouvoir vous inscrire.
+                  </p>
+                  <button
+                    onClick={() => router.push("/teams/create")}
+                    className={styles.competitions__create_team_btn}
+                  >
+                    Créer une équipe
+                  </button>
+                </div>
+              )
             )}
           </div>
         )}

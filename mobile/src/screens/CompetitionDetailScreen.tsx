@@ -152,8 +152,25 @@ export default function CompetitionDetailScreen({ route }: any) {
     team.competition?.id === competition.id
   );
   const hasAvailableTeams = availableTeams.length > 0;
-  const isEnded = new Date(competition.endDate) < new Date();
+  const isEnded = (competition as any).isEnded || new Date(competition.endDate) < new Date();
   const canRegister = !isEnded && !isAlreadyRegistered && hasAvailableTeams;
+  
+  // Fonction pour déterminer le statut de la compétition
+  const getCompetitionStatus = () => {
+    const now = new Date();
+    const start = new Date(competition.startDate);
+    const end = new Date(competition.endDate);
+    
+    if (now < start) {
+      return { text: 'À venir', style: styles.statusUpcoming };
+    } else if (now >= start && now <= end) {
+      return { text: 'En cours', style: styles.statusOngoing };
+    } else {
+      return { text: 'Terminée', style: styles.statusEnded };
+    }
+  };
+  
+  const status = getCompetitionStatus();
 
   const handleRegister = () => {
     if (!selectedTeamId) {
@@ -173,10 +190,15 @@ export default function CompetitionDetailScreen({ route }: any) {
       <Header title={competition.name} showBack={true} showMenu={true} />
       <ScrollView style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.date}>
-          Du {new Date(competition.startDate).toLocaleDateString('fr-FR')} au{' '}
-          {new Date(competition.endDate).toLocaleDateString('fr-FR')}
-        </Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.date}>
+              Du {new Date(competition.startDate).toLocaleDateString('fr-FR')} au{' '}
+              {new Date(competition.endDate).toLocaleDateString('fr-FR')}
+            </Text>
+            <View style={[styles.statusBadge, status.style]}>
+              <Text style={styles.statusBadgeText}>{status.text}</Text>
+            </View>
+          </View>
 
         {competition.description && (
           <Text style={styles.description}>{competition.description}</Text>
@@ -204,7 +226,7 @@ export default function CompetitionDetailScreen({ route }: any) {
         )}
 
         {/* Actions admin */}
-        {isAdmin && (
+        {isAdmin && !isEnded && (
           <View style={styles.adminActions}>
             <TouchableOpacity
               style={[
@@ -225,8 +247,8 @@ export default function CompetitionDetailScreen({ route }: any) {
           </View>
         )}
 
-        {/* Pauses programmées */}
-        {(competition as any).scheduledPauses && (competition as any).scheduledPauses.length > 0 && (
+        {/* Pauses programmées - masqué si compétition terminée */}
+        {!isEnded && (competition as any).scheduledPauses && (competition as any).scheduledPauses.length > 0 && (
           <View style={styles.scheduledPausesSection}>
             <Text style={styles.sectionTitle}>⏰ Pauses programmées</Text>
             {(competition as any).scheduledPauses.map((pause: any) => {
@@ -274,7 +296,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                   Inscrire mon équipe
                 </Text>
               </TouchableOpacity>
-            ) : !hasAvailableTeams ? (
+            ) : !hasAvailableTeams && !isEnded ? (
               <View style={styles.noTeams}>
                 <Text style={styles.noTeamsText}>
                   Vous n'avez pas d'équipe disponible
@@ -341,7 +363,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                   </TouchableOpacity>
                 </View>
               </>
-            ) : (
+            ) : !isEnded ? (
               <View style={styles.noTeams}>
                 <Text style={styles.noTeamsText}>
                   Vous n'avez pas d'équipe disponible
@@ -355,7 +377,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                   </Text>
                 </TouchableOpacity>
               </View>
-            )}
+            ) : null}
           </View>
         )}
 
@@ -500,10 +522,36 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#333',
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   date: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 16,
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  statusUpcoming: {
+    backgroundColor: '#60a5fa',
+  },
+  statusOngoing: {
+    backgroundColor: '#34d399',
+  },
+  statusEnded: {
+    backgroundColor: '#f87171',
   },
   description: {
     fontSize: 14,

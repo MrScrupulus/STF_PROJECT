@@ -8,6 +8,7 @@ import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import Link from "next/link";
 import { speciesService } from "../../services/speciesService";
 import styles from "../../styles/pages/dashboard.module.scss";
+import modalStyles from "../../styles/components/ui/modal.module.scss";
 import { authService } from "../../services/authService";
 import { createElement } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -365,32 +366,32 @@ export default function Dashboard() {
     return createElement(
       "div",
       {
-        className: styles.modal__overlay,
+        className: modalStyles.modal__overlay,
         onClick: (e) => {
           if (e.target === e.currentTarget) onCancel();
         },
       },
       createElement(
         "div",
-        { className: styles.modal__content },
+        { className: modalStyles.modal__content },
         createElement(
           "div",
-          { className: styles.modal__header },
+          { className: modalStyles.modal__header },
           createElement("h2", null, "Confirmation")
         ),
         createElement(
           "div",
-          { className: styles.modal__body },
+          { className: modalStyles.modal__body },
           createElement("p", null, message)
         ),
         createElement(
           "div",
-          { className: styles.modal__actions },
+          { className: modalStyles.modal__actions },
           createElement(
             "button",
             {
               onClick: onConfirm,
-              className: `${styles.modal__button} ${styles["modal__button--confirm"]}`,
+              className: `${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`,
             },
             "Confirmer"
           ),
@@ -398,7 +399,7 @@ export default function Dashboard() {
             "button",
             {
               onClick: onCancel,
-              className: `${styles.modal__button} ${styles["modal__button--cancel"]}`,
+              className: `${modalStyles.modal__button} ${modalStyles["modal__button--cancel"]}`,
             },
             "Annuler"
           )
@@ -466,23 +467,23 @@ export default function Dashboard() {
 
     return createElement(
       "div",
-      { className: styles.modal__overlay },
+      { className: modalStyles.modal__overlay },
       createElement(
         "div",
-        { className: styles.modal__content },
+        { className: modalStyles.modal__content },
         createElement(
           "div",
-          { className: styles.modal__header },
+          { className: modalStyles.modal__header },
           createElement("h2", null, "Détails de l'utilisateur"),
           createElement(
             "button",
-            { onClick: onClose, className: styles.modal__close },
+            { onClick: onClose, className: modalStyles.modal__close },
             "×"
           )
         ),
         createElement(
           "div",
-          { className: styles.modal__body },
+          { className: modalStyles.modal__body },
           createElement(
             "div",
             { className: styles.user__details },
@@ -506,19 +507,19 @@ export default function Dashboard() {
         ),
         createElement(
           "div",
-          { className: styles.modal__actions },
+          { className: modalStyles.modal__actions },
           createElement(RoleSwitch, {
             isAdmin: isAdminLocal,
             onToggle: handleRoleToggle,
           }),
           createElement(
             "div",
-            { className: styles.modal__buttons },
+            { className: modalStyles.modal__buttons },
             createElement(
               "button",
               {
                 onClick: () => onUpdate(user),
-                className: `${styles.modal__button} ${styles["modal__button--primary"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--primary"]}`,
               },
               "Modifier"
             ),
@@ -526,7 +527,7 @@ export default function Dashboard() {
               "button",
               {
                 onClick: handleDelete,
-                className: `${styles.modal__button} ${styles["modal__button--danger"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--danger"]}`,
               },
               "Supprimer"
             )
@@ -678,23 +679,23 @@ export default function Dashboard() {
 
     return createElement(
       "div",
-      { className: styles.modal__overlay },
+      { className: modalStyles.modal__overlay },
       createElement(
         "div",
-        { className: styles.modal__content },
+        { className: modalStyles.modal__content },
         createElement(
           "div",
-          { className: styles.modal__header },
+          { className: modalStyles.modal__header },
           createElement("h2", null, "Détails de la compétition"),
           createElement(
             "button",
-            { onClick: onClose, className: styles.modal__close },
+            { onClick: onClose, className: modalStyles.modal__close },
             "×"
           )
         ),
         createElement(
           "div",
-          { className: styles.modal__body },
+          { className: modalStyles.modal__body },
           competitionFields.map((field) =>
             createElement(
               "div",
@@ -762,7 +763,7 @@ export default function Dashboard() {
               "button",
               {
                 onClick: handleLoadStats,
-                className: `${styles.modal__button} ${styles["modal__button--secondary"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--secondary"]}`,
                 disabled: loadingStats,
               },
               loadingStats ? "Chargement..." : (showStats ? "Masquer les statistiques" : "Afficher les statistiques")
@@ -901,15 +902,15 @@ export default function Dashboard() {
         ),
         createElement(
           "div",
-          { className: styles.modal__actions },
+          { className: modalStyles.modal__actions },
           createElement(
             "div",
-            { className: styles.modal__buttons },
+            { className: modalStyles.modal__buttons },
             createElement(
               Link,
               {
                 href: `/competitions/${competition.id}`,
-                className: `${styles.modal__button} ${styles["modal__button--secondary"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--secondary"]}`,
                 style: { textDecoration: 'none', display: 'inline-block' }
               },
               "Voir la compétition"
@@ -956,7 +957,7 @@ export default function Dashboard() {
                     toast.error('Erreur lors du téléchargement du PDF: ' + (error.message || 'Erreur inconnue'));
                   }
                 },
-                className: `${styles.modal__button} ${styles["modal__button--secondary"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--secondary"]}`,
               },
               "📄 Télécharger PDF"
             ),
@@ -965,7 +966,7 @@ export default function Dashboard() {
               {
                 onClick: () =>
                   router.push(`/dashboard/competitions/${competition.id}/edit`),
-                className: `${styles.modal__button} ${styles["modal__button--primary"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--primary"]}`,
               },
               "Modifier"
             ),
@@ -973,7 +974,7 @@ export default function Dashboard() {
               "button",
               {
                 onClick: handleDelete,
-                className: `${styles.modal__button} ${styles["modal__button--danger"]}`,
+                className: `${modalStyles.modal__button} ${modalStyles["modal__button--danger"]}`,
               },
               "Supprimer"
             )
@@ -1025,17 +1026,17 @@ export default function Dashboard() {
 
     return createElement(
       "div",
-      { className: styles.modal__overlay },
+      { className: modalStyles.modal__overlay },
       createElement(
         "div",
-        { className: styles.modal__content },
+        { className: modalStyles.modal__content },
         createElement(
           "div",
           { className: styles.species_modal__header },
           createElement("h2", null, "Détails de l'espèce"),
           createElement(
             "button",
-            { onClick: onClose, className: styles.modal__close },
+            { onClick: onClose, className: modalStyles.modal__close },
             "×"
           )
         ),
@@ -1110,7 +1111,7 @@ export default function Dashboard() {
               "button",
               {
                 onClick: handleSave,
-                className: `${styles.species_modal__button} ${styles["modal__button--primary"]}`,
+                className: `${styles.species_modal__button} ${modalStyles["modal__button--primary"]}`,
               },
               isCreating ? "Créer" : "Enregistrer"
             )
@@ -1162,23 +1163,23 @@ export default function Dashboard() {
 
     return createElement(
       "div",
-      { className: styles.modal__overlay },
+      { className: modalStyles.modal__overlay },
       createElement(
         "div",
-        { className: styles.modal__content },
+        { className: modalStyles.modal__content },
         createElement(
           "div",
-          { className: styles.modal__header },
+          { className: modalStyles.modal__header },
           createElement("h2", null, "Détails de l'équipe"),
           createElement(
             "button",
-            { onClick: onClose, className: styles.modal__close },
+            { onClick: onClose, className: modalStyles.modal__close },
             "×"
           )
         ),
         createElement(
           "div",
-          { className: styles.modal__body },
+          { className: modalStyles.modal__body },
           createElement(
             "div",
             { className: styles.user__details },
@@ -1220,12 +1221,12 @@ export default function Dashboard() {
         ),
         createElement(
           "div",
-          { className: styles.modal__actions },
+          { className: modalStyles.modal__actions },
           createElement(
             "button",
             {
               onClick: handleSave,
-              className: `${styles.modal__button} ${styles["modal__button--primary"]}`,
+              className: `${modalStyles.modal__button} ${modalStyles["modal__button--primary"]}`,
             },
             isCreating ? "Créer" : "Enregistrer"
           )
@@ -1697,28 +1698,28 @@ export default function Dashboard() {
         )}
 
         {showRoleModal && userToModify && (
-          <div className={styles.modal__overlay}>
-            <div className={styles.modal__content}>
-              <h3 className={styles.modal__title}>
+          <div className={modalStyles.modal__overlay}>
+            <div className={modalStyles.modal__content}>
+              <h3 className={modalStyles.modal__title}>
                 Modifier le rôle de {userToModify.firstname}{" "}
                 {userToModify.lastname}
               </h3>
-              <p className={styles.modal__text}>
+              <p className={modalStyles.modal__text}>
                 Êtes-vous sûr de vouloir{" "}
                 {userToModify.roles?.includes("ROLE_ADMIN")
                   ? "retirer"
                   : "ajouter"}{" "}
                 les droits administrateur ?
               </p>
-              <div className={styles.modal__actions}>
+              <div className={modalStyles.modal__actions}>
                 <button
-                  className={`${styles.modal__button} ${styles["modal__button--confirm"]}`}
+                  className={`${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`}
                   onClick={confirmRoleChange}
                 >
                   Confirmer
                 </button>
                 <button
-                  className={`${styles.modal__button} ${styles["modal__button--cancel"]}`}
+                  className={`${modalStyles.modal__button} ${modalStyles["modal__button--cancel"]}`}
                   onClick={() => setShowRoleModal(false)}
                 >
                   Annuler
@@ -1730,15 +1731,15 @@ export default function Dashboard() {
 
         {/* Modal de rejet de prise */}
         {showCatchModal && selectedCatch && (
-          <div className={styles.modal__overlay}>
-            <div className={styles.modal__content}>
-              <h3 className={styles.modal__title}>Rejeter la prise</h3>
-              <p className={styles.modal__text}>
+          <div className={modalStyles.modal__overlay}>
+            <div className={modalStyles.modal__content}>
+              <h3 className={modalStyles.modal__title}>Rejeter la prise</h3>
+              <p className={modalStyles.modal__text}>
                 <strong>{selectedCatch.species.name}</strong> de {selectedCatch.size} cm
                 <br />
                 Équipe: {selectedCatch.team.name}
               </p>
-              <div className={styles.modal__form_group}>
+              <div className={modalStyles.modal__form_group}>
                 <label htmlFor="rejectionReason">
                   Motif du rejet <span style={{ color: "#dc2626" }}>*</span>
                 </label>
@@ -1748,13 +1749,13 @@ export default function Dashboard() {
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Expliquez pourquoi cette prise est rejetée..."
                   rows={4}
-                  className={styles.modal__textarea}
+                  className={modalStyles.modal__textarea}
                   required
                 />
               </div>
-              <div className={styles.modal__actions}>
+              <div className={modalStyles.modal__actions}>
                 <button
-                  className={`${styles.modal__button} ${styles["modal__button--confirm"]}`}
+                  className={`${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`}
                   onClick={async () => {
                     if (!rejectionReason.trim()) {
                       toast.error("Veuillez indiquer un motif de rejet");
@@ -1779,7 +1780,7 @@ export default function Dashboard() {
                   {isProcessing ? "Traitement..." : "Rejeter"}
                 </button>
                 <button
-                  className={`${styles.modal__button} ${styles["modal__button--cancel"]}`}
+                  className={`${modalStyles.modal__button} ${modalStyles["modal__button--cancel"]}`}
                   onClick={() => {
                     setShowCatchModal(false);
                     setSelectedCatch(null);
