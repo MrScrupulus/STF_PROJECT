@@ -191,10 +191,22 @@ export default function CompetitionDetailPage() {
   };
 
   const allMyTeams = myTeamsData || [];
-  // Filtrer les équipes sans compétition OU inscrites à cette compétition spécifique
-  const myTeams = allMyTeams.filter(team => 
-    !team.competition || (team.competition && team.competition.id === parseInt(id))
-  );
+  // Filtrer les équipes sans compétition, inscrites à cette compétition spécifique,
+  // ou inscrites à une compétition terminée (pour permettre la réinscription)
+  const now = new Date();
+  const myTeams = allMyTeams.filter(team => {
+    if (!team.competition) {
+      // Équipe sans compétition - disponible
+      return true;
+    }
+    if (team.competition.id === parseInt(id)) {
+      // Équipe déjà inscrite à cette compétition - disponible pour affichage
+      return true;
+    }
+    // Équipe inscrite à une autre compétition - disponible seulement si la compétition est terminée
+    const competitionEndDate = new Date(team.competition.endDate);
+    return competitionEndDate < now;
+  });
   const hasAvailableTeams = myTeams.length > 0;
   const hasSingleTeam = myTeams.length === 1;
   const singleTeam = hasSingleTeam ? myTeams[0] : null;

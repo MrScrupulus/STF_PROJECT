@@ -56,17 +56,24 @@ export default function TeamDetailPage() {
     };
   }, [selectedImage]);
 
-  // Trier les prises par points décroissants
-  const sortedCatches = team?.catches
-    ? [...team.catches].sort((a, b) => b.points - a.points)
+  // Séparer les prises rejetées des autres
+  const rejectedCatches = team?.catches
+    ? team.catches.filter(catchItem => catchItem.rejectionReason)
+    : [];
+  
+  // Filtrer les prises non rejetées et les trier par points décroissants
+  const validCatches = team?.catches
+    ? team.catches
+        .filter(catchItem => !catchItem.rejectionReason)
+        .sort((a, b) => b.points - a.points)
     : [];
 
   // Calculer le top 5 des prises (celles qui comptent pour le score)
-  const top5Catches = sortedCatches.slice(0, 5);
+  const top5Catches = validCatches.slice(0, 5);
   const baseScore = top5Catches.reduce((sum, catchItem) => sum + catchItem.points, 0);
   
   // Séparer les top 5 des autres prises
-  const otherCatches = sortedCatches.slice(5);
+  const otherCatches = validCatches.slice(5);
 
   if (isLoading) {
     return (
@@ -473,6 +480,104 @@ export default function TeamDetailPage() {
                         ) : (
                           <div className={styles.teams__catch_status_validated}>
                             ✅ Validée
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Prises refusées */}
+              {rejectedCatches.length > 0 && (
+                <div className={styles.teams__rejected_catches_section}>
+                  <h3 className={styles.teams__rejected_catches_title}>
+                    ❌ Prises refusées ({rejectedCatches.length})
+                  </h3>
+                  <div className={styles.teams__catches_grid}>
+                    {rejectedCatches.map((catchItem) => (
+                      <div
+                        key={catchItem.id}
+                        className={`${styles.teams__catch_card} ${styles["teams__catch_card--rejected"]}`}
+                      >
+                        <div className={styles.teams__catch_header}>
+                          <h3 className={styles.teams__catch_species}>
+                            {catchItem.species.name}
+                          </h3>
+                          <div className={styles.teams__catch_points}>
+                            {catchItem.points} pts
+                          </div>
+                        </div>
+
+                        <div className={styles.teams__catch_details}>
+                          <div className={styles.teams__catch_detail_row}>
+                            <span className={styles.teams__catch_label}>Taille :</span>
+                            <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
+                              {catchItem.size} cm
+                            </span>
+                          </div>
+                          <div className={styles.teams__catch_detail_row}>
+                            <span className={styles.teams__catch_label}>
+                              Coefficient :
+                            </span>
+                            <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
+                              {catchItem.species.coefficient}
+                            </span>
+                          </div>
+                          {catchItem.caughtBy && (
+                            <div className={styles.teams__catch_detail_row}>
+                              <span className={styles.teams__catch_label}>
+                                Pêché par :
+                              </span>
+                              <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
+                                {catchItem.caughtBy.firstname}{" "}
+                                {catchItem.caughtBy.lastname}
+                              </span>
+                            </div>
+                          )}
+                          {catchItem.comment && (
+                            <div className={styles.teams__catch_comment}>
+                              <span className={styles.teams__catch_label}>
+                                Commentaire :
+                              </span>
+                              <p>{catchItem.comment}</p>
+                            </div>
+                          )}
+                          {catchItem.createdAt && (
+                            <div className={styles.teams__catch_detail_row}>
+                              <span className={styles.teams__catch_label}>
+                                Date :
+                              </span>
+                              <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
+                                {new Date(catchItem.createdAt).toLocaleString("fr-FR")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {catchItem.photoUrl && (
+                          <div 
+                            className={styles.teams__catch_photo}
+                            onClick={() => setSelectedImage(catchItem.photoUrl)}
+                          >
+                            <img
+                              src={catchItem.photoUrl}
+                              alt={`${catchItem.species.name} de ${catchItem.size}cm`}
+                              className={styles.teams__catch_image}
+                              style={{
+                                width: '150px',
+                                height: '150px',
+                                objectFit: 'cover',
+                                display: 'block'
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {catchItem.rejectionReason && (
+                          <div className={styles.teams__catch_status_rejected}>
+                            <strong>Motif de rejet :</strong>
+                            <p>{catchItem.rejectionReason}</p>
                           </div>
                         )}
                       </div>

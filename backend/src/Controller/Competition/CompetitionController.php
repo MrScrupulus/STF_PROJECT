@@ -522,8 +522,10 @@ class CompetitionController extends AbstractController
                 ], 404);
             }
 
-            // Vérifier que la compétition n'est pas terminée
+            // Définir la date actuelle une seule fois
             $now = new \DateTime();
+            
+            // Vérifier que la compétition n'est pas terminée
             if ($competition->getEndDate() < $now) {
                 return $this->json([
                     'success' => false,
@@ -554,17 +556,24 @@ class CompetitionController extends AbstractController
                 ], 403);
             }
 
-            // Vérifier que l'équipe n'est pas déjà inscrite à une compétition EN COURS
-            // Si l'équipe est inscrite à une compétition terminée, on peut la désinscrire et s'inscrire à la nouvelle
+            // Vérifier que l'équipe n'est pas déjà inscrite à une compétition EN COURS ou À VENIR
+            // Si l'équipe est inscrite à une compétition terminée, on peut s'inscrire à la nouvelle
+            // IMPORTANT: On ne désinscrit PAS de l'ancienne compétition pour préserver l'historique
+            // Les snapshots et les prises restent liés à l'équipe et à l'ancienne compétition
             if ($team->getCompetition()) {
-                $now = new \DateTime();
                 $oldCompetition = $team->getCompetition();
                 
                 // Si la compétition précédente est terminée, on peut s'inscrire à la nouvelle
                 if ($oldCompetition->getEndDate() < $now) {
-                    // Désinscrire de l'ancienne compétition
-                    $team->setCompetition(null);
-                    $team->setRegistrationNumber(null);
+                    // Permettre l'inscription à la nouvelle compétition
+                    // Note: Avec la structure ManyToOne actuelle, on change la compétition "active" de l'équipe
+                    // L'historique est préservé via:
+                    // 1. Les snapshots (CompetitionTeamSnapshot) créés à la fin de l'ancienne compétition
+                    // 2. Les prises (FishCatch) qui restent liées à l'équipe (même si team.competition change)
+                    // 3. Les prises peuvent être filtrées par date de création pour retrouver celles de l'ancienne compétition
+                    // 
+                    // Pour l'instant, on change la compétition active, mais l'historique reste accessible
+                    // via les snapshots et les prises filtrées par date
                 } else {
                     // La compétition précédente est encore en cours ou à venir
                     return $this->json([
@@ -665,11 +674,12 @@ class CompetitionController extends AbstractController
             }
 
             // Récupérer toutes les prises validées de cette compétition
+            // Utiliser la relation directe avec competition pour préserver l'historique
             $catches = $catchRepo->createQueryBuilder('c')
                 ->join('c.team', 't')
                 ->join('c.species', 's')
                 ->leftJoin('c.caughtBy', 'u')
-                ->where('t.competition = :competitionId')
+                ->where('c.competition = :competitionId')
                 ->andWhere('c.isValidated = :validated')
                 ->setParameter('competitionId', $competition->getId())
                 ->setParameter('validated', true)

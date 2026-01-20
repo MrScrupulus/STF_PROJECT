@@ -22,6 +22,15 @@ class FishCatch
     #[ORM\JoinColumn(nullable: false)]
     private ?Team $team = null;
 
+    /**
+     * Relation directe avec la compétition pour préserver l'historique
+     * même si l'équipe change de compétition
+     */
+    #[ORM\ManyToOne(targetEntity: Competition::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?Competition $competition = null;
+
     #[ORM\ManyToOne(targetEntity: Species::class)]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['catch:read'])]
@@ -203,6 +212,17 @@ class FishCatch
     public function setLongitude(?string $longitude): self
     {
         $this->longitude = $longitude;
+        return $this;
+    }
+
+    public function getCompetition(): ?Competition
+    {
+        return $this->competition;
+    }
+
+    public function setCompetition(?Competition $competition): self
+    {
+        $this->competition = $competition;
         return $this;
     }
 }

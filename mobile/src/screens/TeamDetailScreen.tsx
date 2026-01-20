@@ -66,11 +66,20 @@ export default function TeamDetailScreen({ route }: any) {
     );
   }
 
-  const sortedCatches = team.catches
-    ? [...team.catches].sort((a: any, b: any) => b.points - a.points)
+  // Séparer les prises rejetées des autres
+  const rejectedCatches = team.catches
+    ? team.catches.filter((catchItem: any) => catchItem.rejectionReason)
     : [];
-  const top5Catches = sortedCatches.slice(0, 5);
-  const otherCatches = sortedCatches.slice(5);
+  
+  // Filtrer les prises non rejetées et les trier par points décroissants
+  const validCatches = team.catches
+    ? team.catches
+        .filter((catchItem: any) => !catchItem.rejectionReason)
+        .sort((a: any, b: any) => b.points - a.points)
+    : [];
+  
+  const top5Catches = validCatches.slice(0, 5);
+  const otherCatches = validCatches.slice(5);
   const baseScore = top5Catches.reduce((sum: number, catchItem: any) => sum + catchItem.points, 0);
 
   const maxTeamSize = team.competition?.teamSize || 2;
@@ -234,6 +243,23 @@ export default function TeamDetailScreen({ route }: any) {
                   ))}
                 </View>
               )}
+
+              {/* Prises refusées */}
+              {rejectedCatches.length > 0 && (
+                <View style={styles.rejectedCatchesSection}>
+                  <Text style={styles.rejectedCatchesTitle}>
+                    ❌ Prises refusées ({rejectedCatches.length})
+                  </Text>
+                  {rejectedCatches.map((catchItem: any) => (
+                    <CatchCard
+                      key={catchItem.id}
+                      catchItem={catchItem}
+                      isRejected={true}
+                      onImagePress={(uri: string) => setSelectedImage(uri)}
+                    />
+                  ))}
+                </View>
+              )}
             </>
           )}
         </View>
@@ -267,9 +293,9 @@ export default function TeamDetailScreen({ route }: any) {
   );
 }
 
-function CatchCard({ catchItem, index, isTop5, onImagePress }: any) {
+function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress }: any) {
   return (
-    <View style={[styles.catchCard, isTop5 && styles.catchCardTop5]}>
+    <View style={styles.catchCard}>
       {isTop5 && (
         <View style={styles.top5Badge}>
           <Text style={styles.top5BadgeText}>Top {index + 1}</Text>
@@ -325,9 +351,8 @@ function CatchCard({ catchItem, index, isTop5, onImagePress }: any) {
       )}
       {catchItem.rejectionReason ? (
         <View style={styles.catchStatusRejected}>
-          <Text style={styles.catchStatusText}>
-            ❌ Rejetée: {catchItem.rejectionReason}
-          </Text>
+          <Text style={styles.catchStatusRejectedTitle}>❌ Motif de rejet :</Text>
+          <Text style={styles.catchStatusRejectedText}>{catchItem.rejectionReason}</Text>
         </View>
       ) : !catchItem.isValidated ? (
         <View style={styles.catchStatusPending}>
@@ -515,31 +540,39 @@ const styles = StyleSheet.create({
   },
   top5Section: {
     marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#10b981',
   },
   top5Title: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 12,
-    color: '#333',
+    color: '#047857',
+    textAlign: 'center',
   },
   otherCatchesSection: {
     marginTop: 24,
+    padding: 16,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
   },
   otherCatchesTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
+    color: '#1e40af',
+    textAlign: 'center',
   },
   catchCard: {
     backgroundColor: '#fff',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
-  },
-  catchCardTop5: {
-    borderWidth: 2,
-    borderColor: '#007AFF',
   },
   top5Badge: {
     backgroundColor: '#007AFF',
@@ -622,9 +655,35 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginTop: 8,
   },
+  catchStatusRejectedTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#721c24',
+    marginBottom: 4,
+  },
+  catchStatusRejectedText: {
+    fontSize: 14,
+    color: '#721c24',
+  },
   catchStatusText: {
     fontSize: 14,
     color: '#333',
+  },
+  rejectedCatchesSection: {
+    marginTop: 24,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#dc3545',
+  },
+  rejectedCatchesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#991b1b',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyCatches: {
     padding: 24,

@@ -1,33 +1,8 @@
 @use "../abstracts/variables" as *;
 
 .dashboard {
-  // Variables pour le thème clair
-  --status-upcoming-bg: #60a5fa;
-  --status-upcoming-text: #1e3a8a;
-  --status-ongoing-bg: #34d399;
-  --status-ongoing-text: #064e3b;
-  --status-ended-bg: #f87171;
-  --status-ended-text: #7f1d1d;
-
-  --role-user-bg: #dc2626;
-  --role-user-text: #991b1b;
-  --role-admin-bg: #059669;
-  --role-admin-text: #065f46;
-
-  // Quand le thème sombre est actif
-  &[data-theme="dark"] {
-    --status-upcoming-bg: #1d4ed8;
-    --status-upcoming-text: #93c5fd;
-    --status-ongoing-bg: #059669;
-    --status-ongoing-text: #6ee7b7;
-    --status-ended-bg: #dc2626;
-    --status-ended-text: #fca5a5;
-
-    --role-user-bg: #b91c1c;
-    --role-user-text: #fca5a5;
-    --role-admin-bg: #047857;
-    --role-admin-text: #6ee7b7;
-  }
+  // Les variables CSS sont définies globalement dans theme.scss
+  // Utilisation des variables globales pour éviter les duplications
 
   &__container {
     width: 100%;
@@ -483,6 +458,46 @@
     }
   }
 
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #111827;
+  }
+
+  &__text {
+    margin-bottom: 1rem;
+    color: #374151;
+  }
+
+  &__form_group {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #374151;
+    }
+  }
+
+  &__textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+  }
+
   &__actions {
     display: flex;
     justify-content: space-between;
@@ -503,12 +518,18 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    border: none;
 
-    &:not(&--danger) {
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &:not(&--danger):not(&--confirm):not(&--cancel):not(&--primary) {
       background-color: #2563eb;
       color: white;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #1d4ed8;
       }
     }
@@ -517,7 +538,7 @@
       background-color: #dc2626;
       color: white;
 
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #b91c1c;
       }
     }
@@ -525,7 +546,7 @@
     &--primary {
       background-color: #2563eb;
       color: white;
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #1d4ed8;
       }
     }
@@ -533,16 +554,16 @@
     &--confirm {
       background-color: #16a34a !important;
       color: white;
-      &:hover {
+      &:hover:not(:disabled) {
         background-color: #15803d !important;
       }
     }
 
     &--cancel {
-      background-color: #dc2626 !important;
-      color: white;
-      &:hover {
-        background-color: #b91c1c !important;
+      background-color: #f3f4f6;
+      color: #374151;
+      &:hover:not(:disabled) {
+        background-color: #e5e7eb;
       }
     }
   }
@@ -716,13 +737,13 @@
   text-align: center;
 
   &--admin {
-    background-color: #059669;
-    color: white;
+    background-color: var(--role-admin-bg);
+    color: var(--role-admin-text);
   }
 
   &--user {
-    background-color: #dc2626;
-    color: white;
+    background-color: var(--role-user-bg);
+    color: var(--role-user-text);
   }
 }
 
@@ -1366,106 +1387,3 @@
   }
 }
 
-.modal {
-  &__overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  &__content {
-    background-color: white;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    max-width: 900px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-
-  &__title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: #111827;
-  }
-
-  &__text {
-    margin-bottom: 1rem;
-    color: #374151;
-  }
-
-  &__form_group {
-    margin-bottom: 1rem;
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #374151;
-    }
-  }
-
-  &__textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-family: inherit;
-    resize: vertical;
-    min-height: 100px;
-
-    &:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-  }
-
-  &__actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-  }
-
-  &__button {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    &--confirm {
-      background-color: #dc2626;
-      color: white;
-
-      &:hover:not(:disabled) {
-        background-color: #b91c1c;
-      }
-    }
-
-    &--cancel {
-      background-color: #f3f4f6;
-      color: #374151;
-
-      &:hover:not(:disabled) {
-        background-color: #e5e7eb;
-      }
-    }
-  }
-}

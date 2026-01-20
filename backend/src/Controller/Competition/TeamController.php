@@ -116,7 +116,7 @@ class TeamController extends AbstractController
                 ->join('c.team', 't')
                 ->leftJoin('c.species', 's')
                 ->leftJoin('c.caughtBy', 'u')
-                ->leftJoin('t.competition', 'comp');
+                ->leftJoin('c.competition', 'comp'); // Utiliser la relation directe avec competition
             
             // Construire la condition : caughtBy = user OU team IN (teams de l'utilisateur)
             $conditions = ['c.caughtBy = :user'];
@@ -187,11 +187,11 @@ class TeamController extends AbstractController
                         'name' => $catch->getTeam()->getName(),
                         'isActive' => $catch->getTeam()->getIsActive(),
                     ],
-                    'competition' => $catch->getTeam()->getCompetition() ? [
-                        'id' => $catch->getTeam()->getCompetition()->getId(),
-                        'name' => $catch->getTeam()->getCompetition()->getName(),
-                        'startDate' => $catch->getTeam()->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
-                        'endDate' => $catch->getTeam()->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                    'competition' => $catch->getCompetition() ? [
+                        'id' => $catch->getCompetition()->getId(),
+                        'name' => $catch->getCompetition()->getName(),
+                        'startDate' => $catch->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
+                        'endDate' => $catch->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
                     ] : null,
                 ];
             }, $allCatches);

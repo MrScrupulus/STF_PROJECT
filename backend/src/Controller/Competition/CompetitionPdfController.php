@@ -81,11 +81,12 @@ class CompetitionPdfController extends AbstractController
         }
 
         // Récupérer toutes les prises validées
+        // Utiliser la relation directe avec competition pour préserver l'historique
         $catches = $catchRepo->createQueryBuilder('c')
             ->join('c.team', 't')
             ->join('c.species', 's')
             ->leftJoin('c.caughtBy', 'u')
-            ->where('t.competition = :competitionId')
+            ->where('c.competition = :competitionId')
             ->andWhere('c.isValidated = :validated')
             ->setParameter('competitionId', $competition->getId())
             ->setParameter('validated', true)

@@ -38,6 +38,7 @@ class AdminFishCatchController extends AbstractController
                 ->leftJoin('c.caughtBy', 'u')
                 ->leftJoin('t.competition', 'comp')
                 ->where('c.isValidated = :validated')
+                ->andWhere('c.rejectionReason IS NULL')
                 ->setParameter('validated', false)
                 ->orderBy('c.createdAt', 'DESC')
                 ->getQuery()
@@ -159,13 +160,6 @@ class AdminFishCatchController extends AbstractController
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-            if ($catch->isValidated()) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Cette prise est déjà validée et ne peut pas être rejetée'
-                ], 400);
-            }
-
             $data = json_decode($request->getContent(), true);
             $rejectionReason = $data['reason'] ?? null;
 
@@ -176,19 +170,44 @@ class AdminFishCatchController extends AbstractController
                 ], 400);
             }
 
+            // Mémoriser les informations nécessaires avant le clear()
+            $wasValidated = $catch->isValidated();
+            $teamId = $catch->getTeam()->getId();
+            $catchId = $catch->getId();
+            $caughtBy = $catch->getCaughtBy();
+            $caughtById = $caughtBy ? $caughtBy->getId() : null;
+            $speciesName = $catch->getSpecies()->getName();
+            $catchSize = $catch->getSize();
+
+            // Marquer la prise comme rejetée
             $catch->setIsValidated(false);
             $catch->setRejectionReason($rejectionReason);
-
-            // Recalculer le score de l'équipe (la prise rejetée ne compte plus)
-            $team = $catch->getTeam();
-            $team->updateTotalScore();
             
+            // Sauvegarder la prise rejetée
             $em->flush();
+            
+            // Nettoyer le cache Doctrine pour forcer le rechargement des données
+            $em->clear();
+            
+            // Recharger l'équipe depuis la base de données pour avoir les données à jour
+            $team = $em->getRepository(\App\Entity\Competition\Team::class)->find($teamId);
+            
+            if ($team) {
+                // Recalculer le score de l'équipe (la prise rejetée ne compte plus)
+                // Important : recalculer même si la prise n'était pas validée, au cas où
+                // le score aurait été calculé incorrectement
+                $team->updateTotalScore();
+                $em->flush();
+            }
 
             // Envoyer un email de notification au pêcheur
-            if ($catch->getCaughtBy()) {
+            if ($caughtById) {
                 try {
-                    $this->emailService->sendCatchValidationEmail($catch, false, $rejectionReason);
+                    // Recharger la prise et l'utilisateur pour l'email
+                    $catchForEmail = $em->getRepository(\App\Entity\Competition\FishCatch::class)->find($catchId);
+                    if ($catchForEmail) {
+                        $this->emailService->sendCatchValidationEmail($catchForEmail, false, $rejectionReason);
+                    }
                 } catch (\Exception $e) {
                     // Log l'erreur mais ne pas faire échouer le rejet
                     error_log('Erreur lors de l\'envoi de l\'email de rejet: ' . $e->getMessage());
@@ -196,13 +215,16 @@ class AdminFishCatchController extends AbstractController
 
                 // Créer une notification
                 try {
-                    $this->notificationService->notifyCatchRejected(
-                        $catch->getCaughtBy(),
-                        $catch->getId(),
-                        $catch->getSpecies()->getName(),
-                        $catch->getSize(),
-                        $rejectionReason
-                    );
+                    $user = $em->getRepository(\App\Entity\Security\User::class)->find($caughtById);
+                    if ($user) {
+                        $this->notificationService->notifyCatchRejected(
+                            $user,
+                            $catchId,
+                            $speciesName,
+                            $catchSize,
+                            $rejectionReason
+                        );
+                    }
                 } catch (\Exception $e) {
                     error_log('Erreur lors de la création de la notification: ' . $e->getMessage());
                 }
@@ -289,6 +311,7 @@ class AdminFishCatchController extends AbstractController
             // Créer la prise
             $catch = new \App\Entity\Competition\FishCatch();
             $catch->setTeam($team);
+            $catch->setCompetition($competition); // Associer directement la compétition pour préserver l'historique
             $catch->setSpecies($species);
             $catch->setSize((float) $data['size']);
             $catch->setPhotoUrl($data['photoUrl'] ?? null);

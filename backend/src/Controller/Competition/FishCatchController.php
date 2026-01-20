@@ -20,9 +20,10 @@ class FishCatchController extends AbstractController
     public function list(int $competitionId, FishCatchRepository $repository): JsonResponse
     {
         // Récupérer les prises pour cette compétition
+        // Utiliser la relation directe avec competition pour préserver l'historique
         $catches = $repository->createQueryBuilder('c')
             ->join('c.team', 't')
-            ->where('t.competition = :competitionId')
+            ->where('c.competition = :competitionId')
             ->setParameter('competitionId', $competitionId)
             ->getQuery()
             ->getResult();
@@ -134,8 +135,18 @@ class FishCatchController extends AbstractController
                 ], 400);
             }
 
+            // Récupérer la compétition pour l'associer directement à la prise
+            $competition = $competitionRepository->find($competitionId);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
+
             $catch = new FishCatch();
             $catch->setTeam($team);
+            $catch->setCompetition($competition); // Associer directement la compétition pour préserver l'historique
             $catch->setSpecies($species);
             $catch->setSize((float) $data['size']);
             $catch->setPhotoUrl($data['photoUrl'] ?? null);
