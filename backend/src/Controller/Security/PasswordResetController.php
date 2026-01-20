@@ -23,7 +23,9 @@ class PasswordResetController extends AbstractController
     public function __construct(
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly EmailService $emailService,
-        private readonly PasswordResetTokenRepository $resetTokenRepository
+        private readonly PasswordResetTokenRepository $resetTokenRepository,
+        private readonly SerializerInterface $serializer,
+        private readonly EntityManagerInterface $entityManager
     ) {}
 
     #[Route('/request', name: 'request_password_reset', methods: ['POST'])]
@@ -64,10 +66,18 @@ class PasswordResetController extends AbstractController
 
     #[Route('/reset', name: 'reset_password', methods: ['POST'])]
     public function resetPassword(
-        string $token,
-        Request $request,
-        UserPasswordHasherInterface $passwordHasher
+        Request $request
     ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+        
+        if (!isset($data['token']) || !isset($data['password'])) {
+            return $this->json(
+                ['message' => 'Token et mot de passe requis'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
+        $token = $data['token'];
         $resetToken = $this->resetTokenRepository->findOneBy(['token' => $token]);
 
         if (!$resetToken || $resetToken->isExpired()) {
@@ -78,23 +88,15 @@ class PasswordResetController extends AbstractController
         }
 
         $user = $resetToken->getUser();
-
-        /** @var ResetPasswordRequest $resetRequest */
-        $resetRequest = $this->serializer->deserialize(
-            $request->getContent(),
-            ResetPasswordRequest::class,
-            'json'
-        );
-
-        $newPassword = $resetRequest->getPassword();
+        $newPassword = $data['password'];
 
         // Hasher et mettre à jour le mot de passe
-        $hashedPassword = $passwordHasher->hashPassword($user, $newPassword);
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $newPassword);
         $user->setPassword($hashedPassword);
 
         // Supprimer le token utilisé
-        $entityManager->remove($resetToken);
-        $entityManager->flush();
+        $this->entityManager->remove($resetToken);
+        $this->entityManager->flush();
 
         return $this->json(['message' => 'Mot de passe réinitialisé avec succès']);
     }

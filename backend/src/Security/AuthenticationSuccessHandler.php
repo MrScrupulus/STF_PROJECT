@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Http\Authentication\AuthenticationSuccessHandlerInterface;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 use App\Entity\Security\User;
+use Doctrine\ORM\EntityManagerInterface;
 
 class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterface
 {
@@ -19,7 +20,8 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
         private JWTTokenManagerInterface $jwtManager,
         private LoggerInterface $logger,
         private RefreshTokenGeneratorInterface $refreshTokenGenerator,
-        private RefreshTokenManagerInterface $refreshTokenManager
+        private RefreshTokenManagerInterface $refreshTokenManager,
+        private EntityManagerInterface $entityManager
     ) {}
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token): JWTAuthenticationSuccessResponse
@@ -27,10 +29,18 @@ class AuthenticationSuccessHandler implements AuthenticationSuccessHandlerInterf
         /** @var User $user */
         $user = $token->getUser();
 
+        // Recharger l'utilisateur depuis la base de données pour avoir les données à jour
+        // (au cas où is_verified a été modifié directement en base)
+        try {
+            $this->entityManager->refresh($user);
+        } catch (\Exception $e) {
+            // Si l'utilisateur n'est pas géré par Doctrine, continuer avec l'utilisateur tel quel
+        }
+
         // Vérifier si l'email est vérifié
         if (!$user->isVerified()) {
             throw new CustomUserMessageAuthenticationException(
-                'Veuillez vérifier votre email avant de vous connecter.'
+                'Votre compte n\'est pas encore activé. Veuillez vérifier votre adresse email en cliquant sur le lien reçu lors de votre inscription. Si vous n\'avez pas reçu l\'email, vérifiez votre dossier spam ou contactez le support.'
             );
         }
 

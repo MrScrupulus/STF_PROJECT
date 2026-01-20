@@ -144,12 +144,19 @@ export const api = {
       const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(responseData.message || `Error ${response.status}`);
+        // Créer une erreur avec les informations du backend
+        const backendError = new Error(responseData.message || responseData.error || `Error ${response.status}`);
+        backendError.response = {
+          status: response.status,
+          data: responseData
+        };
+        throw backendError;
       }
 
       return responseData;
     } catch (error) {
       console.error("API error:", error);
+      // Si l'erreur n'a pas déjà de réponse, la propager telle quelle
       throw error;
     }
   },

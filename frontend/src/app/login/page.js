@@ -28,11 +28,23 @@ export default function Login() {
       const response = await authService.login(formData);
       router.push("/dashboard");
     } catch (error) {
-      if (error.message === "Invalid credentials") {
-        setError("Adresse email ou mot de passe incorrect");
-      } else {
-        setError("Une erreur est survenue lors de la connexion");
+      let errorMessage = "Une erreur est survenue lors de la connexion";
+      
+      // Extraire le message d'erreur du backend
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        // Gérer les messages d'erreur standards
+        if (error.message === "Invalid credentials" || error.message.includes("401")) {
+          errorMessage = "Adresse email ou mot de passe incorrect";
+        } else {
+          errorMessage = error.message;
+        }
       }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

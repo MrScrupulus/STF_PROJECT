@@ -20,6 +20,9 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [formData, setFormData] = useState<RegisterData>({
     email: '',
     password: '',
@@ -53,9 +56,41 @@ export default function RegisterScreen() {
     });
   };
 
+  // Vérifier les exigences du mot de passe
+  const getPasswordRequirements = () => {
+    const requirements = [];
+    if (formData.password.length >= 8) {
+      requirements.push('✓ Au moins 8 caractères');
+    } else {
+      requirements.push('✗ Au moins 8 caractères');
+    }
+    if (/[A-Za-z]/.test(formData.password)) {
+      requirements.push('✓ Au moins une lettre');
+    } else {
+      requirements.push('✗ Au moins une lettre');
+    }
+    if (/\d/.test(formData.password)) {
+      requirements.push('✓ Au moins un chiffre');
+    } else {
+      requirements.push('✗ Au moins un chiffre');
+    }
+    if (/[@$!%*#?&]/.test(formData.password)) {
+      requirements.push('✓ Au moins un caractère spécial (@$!%*#?&)');
+    } else {
+      requirements.push('✗ Au moins un caractère spécial (@$!%*#?&)');
+    }
+    return requirements;
+  };
+
   const handleRegister = async () => {
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    // Vérifier que les mots de passe correspondent
+    if (formData.password !== confirmPassword) {
+      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
       return;
     }
 
@@ -136,14 +171,64 @@ export default function RegisterScreen() {
             autoComplete="email"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Mot de passe *"
-            value={formData.password}
-            onChangeText={(text) => setFormData({ ...formData, password: text })}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Mot de passe *"
+              value={formData.password}
+              onChangeText={(text) => setFormData({ ...formData, password: text })}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={styles.eyeIconText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {formData.password.length > 0 && (
+            <View style={styles.passwordRequirements}>
+              <Text style={styles.passwordRequirementsTitle}>Exigences du mot de passe :</Text>
+              {getPasswordRequirements().map((req, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.passwordRequirement,
+                    req.startsWith('✓') ? styles.passwordRequirementValid : styles.passwordRequirementInvalid
+                  ]}
+                >
+                  {req}
+                </Text>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Confirmer le mot de passe *"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              <Text style={styles.eyeIconText}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {confirmPassword.length > 0 && formData.password !== confirmPassword && (
+            <Text style={styles.passwordMismatch}>Les mots de passe ne correspondent pas</Text>
+          )}
+          
+          {confirmPassword.length > 0 && formData.password === confirmPassword && formData.password.length > 0 && (
+            <Text style={styles.passwordMatch}>✓ Les mots de passe correspondent</Text>
+          )}
 
           <TextInput
             style={styles.input}
@@ -307,5 +392,64 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+  },
+  eyeIcon: {
+    padding: 16,
+    paddingLeft: 8,
+  },
+  eyeIconText: {
+    fontSize: 20,
+  },
+  passwordRequirements: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  passwordRequirementsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  passwordRequirement: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  passwordRequirementValid: {
+    color: '#34C759',
+  },
+  passwordRequirementInvalid: {
+    color: '#999',
+  },
+  passwordMismatch: {
+    color: '#FF3B30',
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 16,
+    paddingLeft: 4,
+  },
+  passwordMatch: {
+    color: '#34C759',
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 16,
+    paddingLeft: 4,
   },
 });

@@ -200,11 +200,15 @@ final class AuthController extends AbstractController
             ], Response::HTTP_UNAUTHORIZED);
         }
 
+        // Recharger l'utilisateur depuis la base de données pour avoir les données à jour
+        // (au cas où is_verified a été modifié directement en base)
+        $this->entityManager->refresh($user);
+
         // Vérifier que l'email est vérifié
         if (!$user->isVerified()) {
             return $this->json([
                 'success' => false,
-                'message' => 'Votre email n\'a pas été vérifié. Veuillez vérifier votre boîte mail et cliquer sur le lien de vérification.',
+                'message' => 'Votre compte n\'est pas encore activé. Veuillez vérifier votre adresse email en cliquant sur le lien reçu lors de votre inscription. Si vous n\'avez pas reçu l\'email, vérifiez votre dossier spam ou contactez le support.',
                 'requiresVerification' => true
             ], Response::HTTP_FORBIDDEN);
         }

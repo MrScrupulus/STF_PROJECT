@@ -33,6 +33,14 @@ export const authService = {
     } catch (error) {
       console.error("❌ Erreur connexion:", error);
       console.groupEnd();
+      
+      // Préserver les informations d'erreur du backend pour un meilleur affichage
+      if (error.response) {
+        // Erreur avec réponse HTTP
+        const backendError = new Error(error.response.data?.message || error.message || "Erreur de connexion");
+        backendError.response = error.response;
+        throw backendError;
+      }
       throw error;
     }
   },

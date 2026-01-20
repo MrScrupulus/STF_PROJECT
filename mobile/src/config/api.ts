@@ -36,6 +36,8 @@ export const API_ENDPOINTS = {
     verifyEmail: (token: string) => `/api/auth/verify-email/${token}`,
     me: '/api/auth/me',
     refresh: '/api/auth/refresh',
+    forgotPassword: '/password-reset/request',
+    resetPassword: '/password-reset/reset',
   },
   species: {
     list: '/api/species',
