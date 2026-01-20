@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .competition-create {
   &__container {
     max-width: 800px;
@@ -28,7 +30,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
 
-    @media (max-width: 768px) {
+    @include mobile-and-tablet {
       grid-template-columns: 1fr;
     }
   }

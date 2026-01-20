@@ -1,5 +1,7 @@
 // Breakpoints
 $breakpoint-mobile: 600px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1024px;
 
 // Font sizes
 $font-size-xs: 0.75rem; // 12px
@@ -22,8 +24,26 @@ $spacing-xl: 2rem; // 32px
   }
 }
 
+@mixin tablet {
+  @media (min-width: #{$breakpoint-mobile + 1px}) and (max-width: #{$breakpoint-tablet}) {
+    @content;
+  }
+}
+
+@mixin mobile-and-tablet {
+  @media (max-width: #{$breakpoint-tablet}) {
+    @content;
+  }
+}
+
 @mixin desktop {
   @media (min-width: #{$breakpoint-mobile + 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop-large {
+  @media (min-width: #{$breakpoint-desktop}) {
     @content;
   }
 }

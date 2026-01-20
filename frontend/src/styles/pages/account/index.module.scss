@@ -62,7 +62,7 @@
       background-color: #2563eb !important;
     }
 
-    @media (min-width: 600px) {
+    @include desktop {
       &:hover {
         background-color: #2563eb;
       }
@@ -83,7 +83,7 @@
       background-color: #047857 !important;
     }
 
-    @media (min-width: 600px) {
+    @include desktop {
       &:hover {
         background-color: #047857;
       }
@@ -117,7 +117,7 @@
     display: grid;
     gap: 1.5rem;
     
-    @media (min-width: 640px) {
+    @include desktop {
       grid-template-columns: repeat(2, 1fr);
     }
   }

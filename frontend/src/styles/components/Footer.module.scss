@@ -1,3 +1,5 @@
+@use "../abstracts/variables" as *;
+
 .footer {
   background-color: #1a1a1a;
   color: #ffffff;
@@ -20,7 +22,7 @@
   &__section {
     &:first-child {
       grid-column: span 2;
-      @media (max-width: 768px) {
+      @include mobile-and-tablet {
         grid-column: span 1;
       }
     }

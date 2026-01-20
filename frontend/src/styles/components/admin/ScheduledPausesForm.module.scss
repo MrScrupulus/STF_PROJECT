@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .scheduled_pauses_form {
   margin-top: 1.5rem;
   padding: 1.5rem;
@@ -90,7 +92,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 
-    @media (max-width: 768px) {
+    @include mobile-and-tablet {
       grid-template-columns: 1fr;
     }
   }

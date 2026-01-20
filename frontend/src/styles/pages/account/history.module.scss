@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .history {
   &__container {
     width: 100%;
@@ -467,7 +469,7 @@
 }
 
 // Responsive
-@media (max-width: 768px) {
+@include mobile-and-tablet {
   .history {
     &__container {
       padding: 0 0.5rem;

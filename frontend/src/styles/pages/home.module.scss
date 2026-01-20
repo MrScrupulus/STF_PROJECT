@@ -58,7 +58,7 @@
     gap: 1.5rem;
     margin-top: $spacing-base;
 
-    @media (max-width: 600px) {
+    @include mobile {
       flex-direction: column;
       padding-right: 0;
     }
@@ -106,7 +106,7 @@
     gap: 2rem;
     width: 100%;
 
-    @media (max-width: 768px) {
+    @include mobile-and-tablet {
       grid-template-columns: 1fr;
     }
   }
@@ -182,7 +182,7 @@
       height: 450px;
     }
 
-    @media (max-width: 768px) {
+    @include mobile-and-tablet {
       iframe {
         height: 300px;
       }

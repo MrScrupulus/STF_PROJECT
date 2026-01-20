@@ -289,7 +289,7 @@
       background-color: $color-gray-100;
     }
 
-    @media (max-width: 640px) {
+    @include mobile {
       &:hover {
         background-color: $color-gray-50;
       }

@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .scheduled_pauses_manager {
   margin-top: 2rem;
   padding: 1.5rem;
@@ -63,7 +65,7 @@
     align-items: flex-start;
     gap: 1rem;
 
-    @media (max-width: 768px) {
+    @include mobile-and-tablet {
       flex-direction: column;
     }
   }
@@ -107,7 +109,7 @@
     display: flex;
     gap: 0.5rem;
 
-    @media (max-width: 768px) {
+    @include mobile-and-tablet {
       width: 100%;
       justify-content: flex-end;
     }

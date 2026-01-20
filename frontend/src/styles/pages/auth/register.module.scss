@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .passwordError {
   @apply text-sm text-red-600 mt-1 mb-2;
   animation: fadeIn 0.3s ease-in;
@@ -53,7 +55,7 @@
     display: grid;
     gap: 1.5rem;
     
-    @media (min-width: 640px) {
+    @include desktop {
       grid-template-columns: repeat(2, 1fr);
     }
   }
@@ -66,7 +68,7 @@
     }
 
     &--full {
-      @media (min-width: 640px) {
+      @include desktop {
         grid-column: span 2;
       }
     }

@@ -7,7 +7,7 @@
     font-weight: 500;
     color: #ffffff;
 
-    @media (max-width: 600px) {
+    @include mobile {
       font-size: 0.875rem; // Réduction de la taille pour mobile
       line-height: 1.2; // Réduire l'espacement vertical
     }
@@ -20,7 +20,7 @@
 
     // Ajuster l'espacement pour le groupe mot de passe en mobile
     &--password {
-      @media (max-width: 600px) {
+      @include mobile {
         margin-bottom: 1rem; // Réduire l'espace après le champ
       }
     }
@@ -35,7 +35,7 @@
     color: #ffffff;
     transition: border-color 0.2s;
 
-    @media (max-width: 600px) {
+    @include mobile {
       padding: 0.625rem; // Réduire légèrement le padding en mobile
     }
 

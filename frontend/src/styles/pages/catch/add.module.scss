@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .catch_add__container {
   max-width: 800px;
   margin: 0 auto;
@@ -209,7 +211,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@include mobile-and-tablet {
   .catch_add__container {
     padding: 1rem;
   }

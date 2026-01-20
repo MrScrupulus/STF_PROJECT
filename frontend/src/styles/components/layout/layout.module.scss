@@ -1,3 +1,5 @@
+@use "../../abstracts/variables" as *;
+
 .mainLayout {
   @apply min-h-screen;
   background-color: #f3f4f6;
@@ -11,24 +13,24 @@
 .main {
   padding-top: 200px;
 
-  @media (min-width: 768px) {
+  @include desktop {
     padding-top: 250px;
   }
 
   &.form_page {
-    @media (min-width: 768px) {
+    @include desktop {
       padding-top: 100px;
     }
   }
 
   &.team_page {
-    @media (min-width: 768px) {
+    @include desktop {
       padding-top: 150px;
     }
   }
 
   &.dashboard_page {
-    @media (min-width: 768px) {
+    @include desktop {
       padding-top: 120px;
     }
   }
@@ -36,7 +38,7 @@
   &.account_page {
     padding-top: 150px;
 
-    @media (min-width: 768px) {
+    @include desktop {
       padding-top: 150px;
     }
   }
@@ -44,7 +46,7 @@
   &.teams_page {
     padding-top: 150px;
 
-    @media (min-width: 768px) {
+    @include desktop {
       padding-top: 150px;
     }
   }
@@ -52,7 +54,7 @@
   &.teams_create_page {
     padding-top: 150px;
 
-    @media (min-width: 768px) {
+    @include desktop {
       padding-top: 150px;
     }
   }
