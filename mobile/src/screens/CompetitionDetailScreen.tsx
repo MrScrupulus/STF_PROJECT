@@ -15,6 +15,7 @@ import { competitionsService } from '../services/competitionsService';
 import { teamService } from '../services/teamService';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
+import { speciesService } from '../services/speciesService';
 import { formatDateTimeLocal } from '../utils/dateUtils';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
@@ -24,16 +25,18 @@ export default function CompetitionDetailScreen({ route }: any) {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { id } = route.params;
+  const competitionId = typeof id === 'string' ? parseInt(id, 10) : id;
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [activeTab, setActiveTab] = useState<'info' | 'species'>('info');
 
   const { data: competitionResponse, isLoading } = useQuery({
-    queryKey: ['competition', id],
-    queryFn: () => competitionsService.getOne(id),
+    queryKey: ['competition', competitionId],
+    queryFn: () => competitionsService.getOne(competitionId),
   });
 
   const competition = (competitionResponse as any)?.success !== undefined
@@ -44,6 +47,12 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryKey: ['my-teams'],
     queryFn: () => teamService.getMyTeams(),
   });
+
+  // Utiliser les espèces de la compétition si disponibles
+  const speciesData = competition?.species && competition.species.length > 0
+    ? competition.species
+    : null;
+  const loadingSpecies = false; // Les espèces sont déjà dans les données de la compétition
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -71,7 +80,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     const loadStats = async () => {
       setLoadingStats(true);
       try {
-        const response = await competitionsService.getPublicStats(id);
+        const response = await competitionsService.getPublicStats(competitionId);
         if (response.success && response.stats) {
           setStats(response.stats);
         }
@@ -83,14 +92,14 @@ export default function CompetitionDetailScreen({ route }: any) {
     };
 
     loadStats();
-  }, [competition?.isRankingPublic, competition?.endDate, isAdmin, id]);
+  }, [competition?.isRankingPublic, competition?.endDate, isAdmin, competitionId]);
 
 
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }: { teamId: number; competitionId: number }) =>
       teamService.registerToCompetition(teamId, competitionId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competition', id] });
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       Alert.alert('Succès', 'Équipe inscrite avec succès !');
       setShowRegisterForm(false);
@@ -103,14 +112,35 @@ export default function CompetitionDetailScreen({ route }: any) {
 
   // Mutation pour mettre en pause/reprendre
   const pauseMutation = useMutation({
-    mutationFn: (isPaused: boolean) => adminService.togglePause(id, isPaused),
+    mutationFn: (isPaused: boolean) => adminService.togglePause(competitionId, isPaused),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competition', id] });
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       const comp = competition as any;
       Alert.alert('Succès', comp?.isPaused ? 'Compétition reprise' : 'Compétition mise en pause');
     },
     onError: (error: any) => {
       Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la modification');
+    },
+  });
+
+  // Mutation pour publier/masquer le classement
+  const rankingMutation = useMutation({
+    mutationFn: (isPublic: boolean) => adminService.updateCompetition(competitionId, {
+      ...competition,
+      isRankingPublic: isPublic,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      const comp = competition as any;
+      Alert.alert(
+        'Succès',
+        comp?.isRankingPublic
+          ? 'Le classement est maintenant public et visible par tous'
+          : 'Le classement est maintenant privé et visible uniquement par les administrateurs'
+      );
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la publication du classement');
     },
   });
 
@@ -147,12 +177,26 @@ export default function CompetitionDetailScreen({ route }: any) {
   }
 
   const myTeams = myTeamsData?.teams || [];
-  const availableTeams = myTeams.filter((team: any) => !team.competition);
-  const isAlreadyRegistered = myTeams.some((team: any) => 
-    team.competition?.id === competition.id
-  );
+  const now = new Date();
+  
+  // Filtrer les équipes disponibles (sans compétition ou avec compétition terminée)
+  const availableTeams = myTeams.filter((team: any) => {
+    if (!team.competition) return true;
+    // Considérer l'équipe comme disponible si sa compétition est terminée
+    const teamCompetitionEndDate = new Date(team.competition.endDate);
+    return teamCompetitionEndDate < now;
+  });
+  
+  // Vérifier si déjà inscrit à cette compétition spécifique (et que la compétition est active)
+  const isAlreadyRegistered = myTeams.some((team: any) => {
+    if (!team.competition || team.competition.id !== competition.id) return false;
+    // Vérifier que la compétition de l'équipe est encore active
+    const teamCompetitionEndDate = new Date(team.competition.endDate);
+    return teamCompetitionEndDate >= now;
+  });
+  
   const hasAvailableTeams = availableTeams.length > 0;
-  const isEnded = (competition as any).isEnded || new Date(competition.endDate) < new Date();
+  const isEnded = (competition as any).isEnded || new Date(competition.endDate) < now;
   const canRegister = !isEnded && !isAlreadyRegistered && hasAvailableTeams;
   
   // Fonction pour déterminer le statut de la compétition
@@ -177,7 +221,7 @@ export default function CompetitionDetailScreen({ route }: any) {
       Alert.alert('Erreur', 'Veuillez sélectionner une équipe');
       return;
     }
-    registerMutation.mutate({ teamId: selectedTeamId, competitionId: id });
+    registerMutation.mutate({ teamId: selectedTeamId, competitionId: competitionId });
   };
 
   const teamsToShow = competition.teams || [];
@@ -204,7 +248,64 @@ export default function CompetitionDetailScreen({ route }: any) {
           <Text style={styles.description}>{competition.description}</Text>
         )}
 
-        <View style={styles.infoSection}>
+        {/* Onglets */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'info' && styles.tabActive]}
+            onPress={() => setActiveTab('info')}
+          >
+            <Text style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}>
+              Informations
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'species' && styles.tabActive]}
+            onPress={() => setActiveTab('species')}
+          >
+            <Text style={[styles.tabText, activeTab === 'species' && styles.tabTextActive]}>
+              Espèces
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Contenu selon l'onglet actif */}
+        {activeTab === 'species' ? (
+          <View style={styles.speciesTabContent}>
+            {loadingSpecies ? (
+              <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 32 }} />
+            ) : speciesData && speciesData.length > 0 ? (
+              <>
+                <Text style={styles.sectionTitle}>Espèces disponibles</Text>
+                {speciesData.map((compSpecies: any) => (
+                  <View key={compSpecies.id} style={styles.speciesCard}>
+                    <View style={styles.speciesHeader}>
+                      <Text style={styles.speciesCardName}>{compSpecies.name}</Text>
+                      {compSpecies.isBonusEnabled && (
+                        <View style={styles.bonusBadge}>
+                          <Text style={styles.bonusText}>Bonus</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.speciesInfo}>
+                      <Text style={styles.speciesCoefficient}>
+                        Coefficient: {compSpecies.coefficient}
+                      </Text>
+                      {compSpecies.basePoints !== undefined && compSpecies.basePoints !== null && (
+                        <Text style={styles.speciesBasePoints}>
+                          Points bonus: {compSpecies.basePoints}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </>
+            ) : (
+              <Text style={styles.emptyText}>Aucune espèce configurée pour cette compétition</Text>
+            )}
+          </View>
+        ) : (
+          <View>
+            <View style={styles.infoSection}>
           <Text style={styles.infoText}>
             Taille d'équipe: {(competition as any).teamSize} membre(s)
           </Text>
@@ -226,22 +327,56 @@ export default function CompetitionDetailScreen({ route }: any) {
         )}
 
         {/* Actions admin */}
-        {isAdmin && !isEnded && (
+        {isAdmin && (
           <View style={styles.adminActions}>
+            {!isEnded && (
+              <TouchableOpacity
+                style={[
+                  styles.adminButton,
+                  (competition as any).isPaused ? styles.resumeButton : styles.pauseButton,
+                ]}
+                onPress={handleTogglePause}
+                disabled={pauseMutation.isPending}
+              >
+                <Text style={styles.adminButtonText}>
+                  {pauseMutation.isPending
+                    ? '...'
+                    : (competition as any).isPaused
+                    ? '▶️ Reprendre la compétition'
+                    : '⏸️ Mettre en pause'}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[
                 styles.adminButton,
-                (competition as any).isPaused ? styles.resumeButton : styles.pauseButton,
+                (competition as any).isRankingPublic ? styles.rankingPublicButton : styles.rankingPrivateButton,
               ]}
-              onPress={handleTogglePause}
-              disabled={pauseMutation.isPending}
+              onPress={() => {
+                const comp = competition as any;
+                const newValue = !comp?.isRankingPublic;
+                Alert.alert(
+                  newValue ? 'Publier le classement' : 'Masquer le classement',
+                  newValue
+                    ? 'Le classement sera visible par tous les utilisateurs. Continuer ?'
+                    : 'Le classement sera visible uniquement par les administrateurs. Continuer ?',
+                  [
+                    { text: 'Annuler', style: 'cancel' },
+                    {
+                      text: newValue ? 'Publier' : 'Masquer',
+                      onPress: () => rankingMutation.mutate(newValue),
+                    },
+                  ]
+                );
+              }}
+              disabled={rankingMutation.isPending}
             >
               <Text style={styles.adminButtonText}>
-                {pauseMutation.isPending
+                {rankingMutation.isPending
                   ? '...'
-                  : (competition as any).isPaused
-                  ? '▶️ Reprendre la compétition'
-                  : '⏸️ Mettre en pause'}
+                  : (competition as any).isRankingPublic
+                  ? '🔒 Masquer le classement'
+                  : '✅ Publier le classement'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -435,6 +570,8 @@ export default function CompetitionDetailScreen({ route }: any) {
                 </TouchableOpacity>
               );
             })}
+          </View>
+        )}
           </View>
         )}
 
@@ -872,6 +1009,12 @@ const styles = StyleSheet.create({
   resumeButton: {
     backgroundColor: '#34C759',
   },
+  rankingPublicButton: {
+    backgroundColor: '#34C759',
+  },
+  rankingPrivateButton: {
+    backgroundColor: '#8E8E93',
+  },
   adminButtonText: {
     color: '#fff',
     fontSize: 16,
@@ -919,5 +1062,82 @@ const styles = StyleSheet.create({
   },
   perimeterSection: {
     marginBottom: 24,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginTop: 16,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  speciesTabContent: {
+    marginTop: 16,
+  },
+  speciesCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  speciesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  speciesCardName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  bonusBadge: {
+    backgroundColor: '#ff9500',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  bonusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  speciesInfo: {
+    marginTop: 8,
+  },
+  speciesCoefficient: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  speciesBasePoints: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 32,
   },
 });

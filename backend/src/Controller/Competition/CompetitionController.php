@@ -18,6 +18,9 @@ use App\Service\NotificationService;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Entity\Competition\ScheduledPause;
 use App\Repository\Competition\CompetitionPerimeterRepository;
+use App\Repository\Species\SpeciesRepository;
+use App\Entity\Competition\CompetitionSpecies;
+use App\Repository\Competition\CompetitionSpeciesRepository;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
@@ -60,13 +63,26 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions', name: 'competition_list', methods: ['GET'])]
-    public function list(CompetitionRepository $repository): JsonResponse
+    public function list(CompetitionRepository $repository, TeamRepository $teamRepository): JsonResponse
     {
         try {
+            $user = $this->getUser();
             $competitions = $repository->findAll();
 
+            // Récupérer les équipes de l'utilisateur pour déterminer s'il est inscrit
+            $userTeamIds = [];
+            if ($user) {
+                $userTeams = $teamRepository->findTeamsByMember($user);
+                foreach ($userTeams as $team) {
+                    if ($team->getCompetition()) {
+                        $userTeamIds[] = $team->getCompetition()->getId();
+                    }
+                }
+            }
+
             // Transformer les données comme dans la route admin
-            $data = array_map(function ($competition) {
+            $data = array_map(function ($competition) use ($userTeamIds) {
+                $isRegistered = in_array($competition->getId(), $userTeamIds);
                 return [
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
@@ -78,6 +94,7 @@ class CompetitionController extends AbstractController
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
+                    'isRegistered' => $isRegistered,
                 ];
             }, $competitions);
 
@@ -197,9 +214,11 @@ class CompetitionController extends AbstractController
                     return $team->getIsActive();
                 })->toArray();
                 
-                // Trier par score décroissant
-                usort($allTeams, function($a, $b) {
-                    return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
+                // Trier par score décroissant en utilisant le score filtré par compétition
+                usort($allTeams, function($a, $b) use ($competition) {
+                    $scoreA = $a->getScoreForCompetition($competition);
+                    $scoreB = $b->getScoreForCompetition($competition);
+                    return $scoreB - $scoreA;
                 });
                 $teamsToReturn = $allTeams;
             }
@@ -243,6 +262,19 @@ class CompetitionController extends AbstractController
                 'coordinates' => $perimeter->getCoordinates(),
             ];
         }, $perimeters);
+
+        // Récupérer les espèces de la compétition
+        $competitionSpecies = $competition->getCompetitionSpecies();
+        $speciesData = array_map(function ($compSpecies) {
+            $species = $compSpecies->getSpecies();
+            return [
+                'id' => $species->getId(),
+                'name' => $species->getName(),
+                'coefficient' => $compSpecies->getCoefficient(),
+                'isBonusEnabled' => $compSpecies->isBonusEnabled(),
+                'basePoints' => $compSpecies->getBasePoints(),
+            ];
+        }, $competitionSpecies->toArray());
         
         return $this->json([
             'success' => true,
@@ -258,9 +290,11 @@ class CompetitionController extends AbstractController
             'isEnded' => $isEnded,
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
+            'isBonusEnabled' => $competition->getIsBonusEnabled(),
             'scheduledPauses' => $scheduledPausesData,
             'perimeters' => $perimetersData,
-            'teams' => array_map(function ($teamOrSnapshot) use ($rankingVisible, $isAdmin, $user, $teamRepository, $useSnapshots) {
+            'species' => $speciesData,
+            'teams' => array_map(function ($teamOrSnapshot) use ($rankingVisible, $isAdmin, $user, $teamRepository, $useSnapshots, $competition) {
                 // Pour les utilisateurs normaux si le classement n'est pas public, ne pas retourner le score
                 if ($useSnapshots) {
                     // Utiliser les données du snapshot (état figé)
@@ -275,10 +309,12 @@ class CompetitionController extends AbstractController
                 } else {
                     // Utiliser les données de l'équipe actuelle
                     $showScore = $rankingVisible || ($user && $teamOrSnapshot->getMembers()->contains($user));
+                    // Utiliser le score filtré par compétition pour éviter d'inclure les prises d'autres compétitions
+                    $teamScore = $showScore ? $teamOrSnapshot->getScoreForCompetition($competition) : null;
                     return [
                         'id' => $teamOrSnapshot->getId(),
                         'name' => $teamOrSnapshot->getName(),
-                        'totalScore' => $showScore ? $teamOrSnapshot->getTotalScore() : null,
+                        'totalScore' => $teamScore,
                         'registrationNumber' => $teamOrSnapshot->getRegistrationNumber(),
                         'isActive' => $teamOrSnapshot->getIsActive(),
                         'members' => array_map(function ($member) {
@@ -420,6 +456,7 @@ class CompetitionController extends AbstractController
             $competition->setTeamSize((int) $data['teamSize']);
             $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
             $competition->setIsRankingPublic($data['isRankingPublic'] ?? false);
+            $competition->setIsBonusEnabled($data['isBonusEnabled'] ?? false);
 
             if (!$data['hasNoLimit'] && isset($data['maxParticipants'])) {
                 $competition->setMaxParticipants((int) $data['maxParticipants']);
@@ -427,6 +464,40 @@ class CompetitionController extends AbstractController
 
             $entityManager->persist($competition);
             $entityManager->flush();
+
+            // Créer les espèces associées à la compétition si elles sont fournies
+            if (isset($data['species']) && is_array($data['species'])) {
+                $speciesRepository = $entityManager->getRepository(\App\Entity\Species\Species::class);
+                foreach ($data['species'] as $speciesData) {
+                    if (!isset($speciesData['speciesId']) || !isset($speciesData['coefficient'])) {
+                        continue; // Ignorer les espèces incomplètes
+                    }
+
+                    try {
+                        $species = $speciesRepository->find($speciesData['speciesId']);
+                        if (!$species) {
+                            continue; // Ignorer si l'espèce n'existe pas
+                        }
+
+                        $competitionSpecies = new CompetitionSpecies();
+                        $competitionSpecies->setCompetition($competition);
+                        $competitionSpecies->setSpecies($species);
+                        $competitionSpecies->setCoefficient((float) $speciesData['coefficient']);
+                        // basePoints seulement si le bonus est activé pour la compétition
+                        if ($competition->getIsBonusEnabled() && isset($speciesData['basePoints'])) {
+                            $competitionSpecies->setBasePoints((int) $speciesData['basePoints']);
+                        } else {
+                            $competitionSpecies->setBasePoints(null);
+                        }
+
+                        $entityManager->persist($competitionSpecies);
+                    } catch (\Exception $e) {
+                        // Log l'erreur mais continue la création
+                        error_log('Erreur lors de la création d\'une espèce de compétition: ' . $e->getMessage());
+                    }
+                }
+                $entityManager->flush();
+            }
 
             // Créer les pauses programmées si elles sont fournies
             if (isset($data['scheduledPauses']) && is_array($data['scheduledPauses'])) {
@@ -651,10 +722,18 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/admin/competitions/{id}/stats', name: 'app_admin_competition_stats', methods: ['GET'])]
-    public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo): JsonResponse
+    public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
     {
         try {
-            $competition = $competitionRepo->find($id);
+            // Charger la compétition avec ses CompetitionSpecies
+            $competition = $competitionRepo->createQueryBuilder('c')
+                ->leftJoin('c.competitionSpecies', 'cs')
+                ->addSelect('cs')
+                ->where('c.id = :id')
+                ->setParameter('id', $id)
+                ->getQuery()
+                ->getOneOrNullResult();
+            
             if (!$competition) {
                 return $this->json([
                     'success' => false,
@@ -673,13 +752,21 @@ class CompetitionController extends AbstractController
                 ], 403);
             }
 
+            // Créer un mapping des espèces vers leurs coefficients de compétition
+            $competitionSpeciesMap = [];
+            foreach ($competition->getCompetitionSpecies() as $compSpecies) {
+                $competitionSpeciesMap[$compSpecies->getSpecies()->getId()] = $compSpecies;
+            }
+
             // Récupérer toutes les prises validées de cette compétition
             // Utiliser la relation directe avec competition pour préserver l'historique
+            // IMPORTANT: Filtrer strictement par competition ID pour éviter d'afficher des prises d'autres compétitions
             $catches = $catchRepo->createQueryBuilder('c')
                 ->join('c.team', 't')
                 ->join('c.species', 's')
                 ->leftJoin('c.caughtBy', 'u')
                 ->where('c.competition = :competitionId')
+                ->andWhere('c.competition IS NOT NULL') // S'assurer que la compétition n'est pas null
                 ->andWhere('c.isValidated = :validated')
                 ->setParameter('competitionId', $competition->getId())
                 ->setParameter('validated', true)
@@ -696,12 +783,18 @@ class CompetitionController extends AbstractController
                 $speciesId = $species->getId();
                 $speciesName = $species->getName();
 
+                // Récupérer le coefficient de la compétition si disponible, sinon utiliser celui de l'espèce
+                $coefficient = $species->getCoefficient();
+                if (isset($competitionSpeciesMap[$speciesId])) {
+                    $coefficient = $competitionSpeciesMap[$speciesId]->getCoefficient();
+                }
+
                 // Compter par espèce
                 if (!isset($speciesStats[$speciesId])) {
                     $speciesStats[$speciesId] = [
                         'id' => $speciesId,
                         'name' => $speciesName,
-                        'coefficient' => $species->getCoefficient(),
+                        'coefficient' => $coefficient,
                         'count' => 0,
                     ];
                 }
@@ -712,6 +805,8 @@ class CompetitionController extends AbstractController
                     $top3BySpecies[$speciesId] = [];
                 }
 
+                // Utiliser le coefficient déjà calculé ci-dessus
+
                 // Ajouter cette prise au tableau de l'espèce
                 $top3BySpecies[$speciesId][] = [
                     'id' => $catch->getId(),
@@ -719,6 +814,7 @@ class CompetitionController extends AbstractController
                     'species' => [
                         'id' => $speciesId,
                         'name' => $speciesName,
+                        'coefficient' => $coefficient,
                     ],
                     'team' => [
                         'id' => $catch->getTeam()->getId(),

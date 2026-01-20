@@ -92,4 +92,9 @@ export const adminService = {
     });
     return response.data;
   },
+
+  updateCompetition: async (competitionId: number, data: any): Promise<any> => {
+    const response = await apiClient.put(`/api/competitions/${competitionId}`, data);
+    return response.data;
+  },
 };

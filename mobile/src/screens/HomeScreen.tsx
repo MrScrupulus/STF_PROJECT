@@ -69,19 +69,9 @@ export default function HomeScreen() {
           style={styles.card}
           onPress={() => navigation.navigate('Teams' as never)}
         >
-          <Text style={styles.cardTitle}>Mes Équipes</Text>
+          <Text style={styles.cardTitle}>Mon Équipe</Text>
           <Text style={styles.cardDescription}>
-            Voir et gérer vos équipes
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('Species' as never)}
-        >
-          <Text style={styles.cardTitle}>Espèces</Text>
-          <Text style={styles.cardDescription}>
-            Voir toutes les espèces disponibles
+            Voir et gérer votre équipe
           </Text>
         </TouchableOpacity>
 

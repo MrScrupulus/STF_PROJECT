@@ -90,8 +90,34 @@ class FishCatch
             return 0;
         }
 
+        // Utiliser le coefficient de CompetitionSpecies si la prise est associée à une compétition
+        // Sinon, utiliser le coefficient par défaut de Species
+        $coefficient = $this->species->getCoefficient();
+        
+        if ($this->competition) {
+            // Chercher le CompetitionSpecies correspondant à cette espèce dans cette compétition
+            // La collection peut ne pas être chargée (lazy loading)
+            try {
+                $competitionSpeciesCollection = $this->competition->getCompetitionSpecies();
+                
+                // Si la collection est chargée et non vide, chercher dedans
+                if ($competitionSpeciesCollection && $competitionSpeciesCollection->count() > 0) {
+                    foreach ($competitionSpeciesCollection as $competitionSpecies) {
+                        if ($competitionSpecies->getSpecies() && 
+                            $competitionSpecies->getSpecies()->getId() === $this->species->getId()) {
+                            $coefficient = $competitionSpecies->getCoefficient();
+                            break;
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                // Si la collection n'est pas chargée (lazy loading exception), utiliser le coefficient par défaut
+                // Cela peut arriver si la compétition n'a pas été chargée avec ses espèces
+            }
+        }
+
         // Score de base = coefficient × longueur
-        return (int) ($this->size * $this->species->getCoefficient());
+        return (int) ($this->size * $coefficient);
     }
 
     // Getters et Setters...

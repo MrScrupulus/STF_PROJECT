@@ -7,6 +7,7 @@ import { competitionsService } from "../../../services/competitions";
 import { teamService } from "../../../services/teamService";
 import { authService } from "../../../services/authService";
 import { adminService } from "../../../services/adminService";
+import { speciesService } from "../../../services/speciesService";
 import ScheduledPausesManager from "../../../components/admin/ScheduledPausesManager";
 import SpeciesPieChart from "../../../components/competition/SpeciesPieChart";
 import CatchesMap from "../../../components/competition/CatchesMap";
@@ -18,7 +19,7 @@ import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 
 export default function CompetitionDetailPage() {
   const params = useParams();
-  const id = params.id;
+  const id = parseInt(params.id, 10);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState(null);
@@ -27,6 +28,7 @@ export default function CompetitionDetailPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [activeTab, setActiveTab] = useState('info');
 
   const { data: competitionResponse, isLoading: competitionLoading } = useQuery({
     queryKey: ["competition", id],
@@ -47,6 +49,12 @@ export default function CompetitionDetailPage() {
     },
     // Charger les équipes dès que la page est chargée pour vérifier la disponibilité
   });
+
+  // Utiliser les espèces de la compétition si disponibles, sinon toutes les espèces
+  const speciesData = competition?.species && competition.species.length > 0
+    ? competition.species
+    : null;
+  const loadingSpecies = false; // Les espèces sont déjà dans les données de la compétition
 
   // Charger l'utilisateur connecté pour vérifier son rôle
   useEffect(() => {
@@ -262,27 +270,87 @@ export default function CompetitionDetailPage() {
               {competition.description}
             </div>
           )}
-          <div className={styles.competitions__info}>
-            <div>
-              <strong>Taille d'équipe: </strong>
-              {competition.teamSize} membre(s)
-            </div>
-            <div>
-              <strong>Nombre d'équipes inscrites: </strong>
-              {competition.teams?.length || 0}
-              {competition.maxParticipants && !competition.hasNoLimit && (
-                <span>
-                  {" "}
-                  / {Math.floor(competition.maxParticipants / competition.teamSize)} max
-                </span>
+
+          {/* Onglets */}
+          <div className={styles.competitions__tabs}>
+            <button
+              className={`${styles.competitions__tab} ${
+                activeTab === 'info' ? styles.competitions__tab_active : ''
+              }`}
+              onClick={() => setActiveTab('info')}
+            >
+              Informations
+            </button>
+            <button
+              className={`${styles.competitions__tab} ${
+                activeTab === 'species' ? styles.competitions__tab_active : ''
+              }`}
+              onClick={() => setActiveTab('species')}
+            >
+              Espèces
+            </button>
+          </div>
+
+          {/* Contenu selon l'onglet actif */}
+          {activeTab === 'species' ? (
+            <div className={styles.competitions__species_tab}>
+              {loadingSpecies ? (
+                <div className={styles.competitions__loading}>Chargement des espèces...</div>
+              ) : speciesData && speciesData.length > 0 ? (
+                <>
+                  <h2 className={styles.competitions__section_title}>Espèces disponibles</h2>
+                  <div className={styles.competitions__species_list}>
+                    {speciesData.map((compSpecies) => (
+                      <div key={compSpecies.id} className={styles.competitions__species_card}>
+                        <div className={styles.competitions__species_header}>
+                          <h3 className={styles.competitions__species_name}>{compSpecies.name}</h3>
+                          {compSpecies.isBonusEnabled && (
+                            <span className={styles.competitions__species_bonus_badge}>Bonus</span>
+                          )}
+                        </div>
+                        <div className={styles.competitions__species_info}>
+                          <div className={styles.competitions__species_coefficient}>
+                            Coefficient: {compSpecies.coefficient}
+                          </div>
+                          {compSpecies.basePoints !== undefined && compSpecies.basePoints !== null && (
+                            <div className={styles.competitions__species_base_points}>
+                              Points bonus: {compSpecies.basePoints}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className={styles.competitions__empty}>Aucune espèce configurée pour cette compétition</div>
               )}
             </div>
-            {competition.isPaused && (
-              <div className={styles.competitions__paused_badge}>
-                ⏸️ Compétition en pause
+          ) : (
+            <>
+              <div className={styles.competitions__info}>
+                <div>
+                  <strong>Taille d'équipe: </strong>
+                  {competition.teamSize} membre(s)
+                </div>
+                <div>
+                  <strong>Nombre d'équipes inscrites: </strong>
+                  {competition.teams?.length || 0}
+                  {competition.maxParticipants && !competition.hasNoLimit && (
+                    <span>
+                      {" "}
+                      / {Math.floor(competition.maxParticipants / competition.teamSize)} max
+                    </span>
+                  )}
+                </div>
+                {competition.isPaused && (
+                  <div className={styles.competitions__paused_badge}>
+                    ⏸️ Compétition en pause
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Actions admin */}

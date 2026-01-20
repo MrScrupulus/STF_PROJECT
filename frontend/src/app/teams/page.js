@@ -60,7 +60,19 @@ export default function TeamsPage() {
       .toUpperCase();
   };
 
-  const handleLeaveTeam = async (teamId) => {
+  const handleLeaveTeam = async (teamId, team) => {
+    // Vérifier si l'équipe est inscrite dans une compétition active
+    if (team?.competition) {
+      const now = new Date();
+      const competitionEndDate = new Date(team.competition.endDate);
+      const isCompetitionActive = competitionEndDate >= now;
+      
+      if (isCompetitionActive) {
+        toast.error("Vous ne pouvez pas quitter une équipe inscrite dans une compétition en cours. Attendez la fin de la compétition.");
+        return;
+      }
+    }
+
     if (!confirm("Êtes-vous sûr de vouloir quitter cette équipe ?")) {
       return;
     }
@@ -175,12 +187,23 @@ export default function TeamsPage() {
                         Voir la compétition
                       </Link>
                     )}
-                    <button
-                      onClick={() => handleLeaveTeam(team.id)}
-                      className={`${styles.teams__action_btn} ${styles["teams__action_btn--leave"]}`}
-                    >
-                      Quitter l'équipe
-                    </button>
+                    {(() => {
+                      const now = new Date();
+                      const competitionEndDate = team.competition ? new Date(team.competition.endDate) : null;
+                      const isCompetitionActive = competitionEndDate && competitionEndDate >= now;
+                      const canLeave = !isCompetitionActive;
+                      
+                      return (
+                        <button
+                          onClick={() => handleLeaveTeam(team.id, team)}
+                          disabled={!canLeave}
+                          className={`${styles.teams__action_btn} ${styles["teams__action_btn--leave"]} ${!canLeave ? styles["teams__action_btn--disabled"] : ""}`}
+                          title={!canLeave ? "Impossible de quitter une équipe inscrite dans une compétition en cours" : ""}
+                        >
+                          {canLeave ? "Quitter l'équipe" : "Impossible (compétition en cours)"}
+                        </button>
+                      );
+                    })()}
                   </div>
                   </div>
                 </div>

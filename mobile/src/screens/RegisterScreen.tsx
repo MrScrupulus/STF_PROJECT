@@ -29,7 +29,7 @@ export default function RegisterScreen() {
   });
 
   const handleRegister = async () => {
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName || !formData.phoneNumber || !formData.birthDate) {
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -48,7 +48,28 @@ export default function RegisterScreen() {
         ]
       );
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Erreur lors de l\'inscription');
+      let errorMessage = 'Erreur lors de l\'inscription';
+      
+      if (error.response) {
+        // Erreur HTTP (404, 400, 500, etc.)
+        if (error.response.status === 404) {
+          errorMessage = 'Le serveur n\'a pas été trouvé. Vérifiez votre connexion et que le serveur est démarré.';
+        } else if (error.response.status === 400) {
+          errorMessage = error.response.data?.message || 'Données invalides. Vérifiez tous les champs.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+        } else {
+          errorMessage = error.response.data?.message || `Erreur ${error.response.status}`;
+        }
+      } else if (error.request) {
+        // Pas de réponse du serveur
+        errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion internet et que le serveur est démarré.';
+      } else if (error.message) {
+        // Erreur de validation côté client
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Erreur d\'inscription', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -101,7 +122,7 @@ export default function RegisterScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Téléphone (10 chiffres) *"
+            placeholder="Téléphone (10 chiffres) (optionnel)"
             value={formData.phoneNumber}
             onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
             keyboardType="phone-pad"
@@ -110,7 +131,7 @@ export default function RegisterScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Date de naissance (YYYY-MM-DD) *"
+            placeholder="Date de naissance (YYYY-MM-DD) (optionnel)"
             value={formData.birthDate}
             onChangeText={(text) => setFormData({ ...formData, birthDate: text })}
           />

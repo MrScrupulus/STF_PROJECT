@@ -41,35 +41,90 @@ export default function CompetitionsScreen() {
     const end = new Date(endDate);
 
     if (now < start) {
-      return { text: 'À venir', style: styles.statusUpcoming };
+      return { text: 'À venir', style: styles.statusUpcoming, sortOrder: 2 };
     } else if (now >= start && now <= end) {
-      return { text: 'En cours', style: styles.statusOngoing };
+      return { text: 'En cours', style: styles.statusOngoing, sortOrder: 1 };
     } else {
-      return { text: 'Terminée', style: styles.statusEnded };
+      return { text: 'Terminée', style: styles.statusEnded, sortOrder: 3 };
+    }
+  };
+
+  const formatCompetitionDate = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Vérifier si les dates sont le même jour
+    const isSameDay = 
+      start.getFullYear() === end.getFullYear() &&
+      start.getMonth() === end.getMonth() &&
+      start.getDate() === end.getDate();
+    
+    if (isSameDay) {
+      // Même jour : afficher date + heures début et fin
+      const dateStr = start.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      const startTime = start.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      const endTime = end.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      return `${dateStr} de ${startTime} à ${endTime}`;
+    } else {
+      // Jours différents : afficher les deux dates complètes
+      const startStr = start.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      const endStr = end.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      return `${startStr} - ${endStr}`;
     }
   };
 
   const renderCompetition = ({ item }: { item: Competition }) => {
     const status = getCompetitionStatus(item.startDate, item.endDate);
+    const handlePress = () => {
+      (navigation as any).navigate('CompetitionDetail', { id: item.id });
+    };
     
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => (navigation as any).navigate('CompetitionDetail', { id: item.id })}
+        onPress={handlePress}
+        activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{item.name}</Text>
-          <View style={[styles.statusBadge, status.style]}>
-            <Text style={styles.statusBadgeText}>{status.text}</Text>
+          <View style={styles.badgesContainer}>
+            <View style={[styles.statusBadge, status.style]}>
+              <Text style={styles.statusBadgeText}>{status.text}</Text>
+            </View>
+            {item.isRegistered && (
+              <View style={styles.registeredBadge}>
+                <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
+              </View>
+            )}
           </View>
         </View>
         <Text style={styles.cardDate}>
-          {new Date(item.startDate).toLocaleDateString('fr-FR')} -{' '}
-          {new Date(item.endDate).toLocaleDateString('fr-FR')}
+          {formatCompetitionDate(item.startDate, item.endDate)}
         </Text>
         {item.teams && item.teams.length > 0 && (
           <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>
         )}
+        <View style={styles.moreInfoContainer}>
+          <Text style={styles.moreInfoText}>+ d'infos</Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -79,7 +134,11 @@ export default function CompetitionsScreen() {
       <Header title="Compétitions" showBack={true} showMenu={true} />
       <View style={styles.container}>
         <FlatList
-          data={data || []}
+          data={[...(data || [])].sort((a, b) => {
+            const statusA = getCompetitionStatus(a.startDate, a.endDate);
+            const statusB = getCompetitionStatus(b.startDate, b.endDate);
+            return statusA.sortOrder - statusB.sortOrder;
+          })}
           renderItem={renderCompetition}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
@@ -119,6 +178,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  badgesContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -145,6 +210,17 @@ const styles = StyleSheet.create({
   statusEnded: {
     backgroundColor: '#f87171',
   },
+  registeredBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#dbeafe',
+  },
+  registeredBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#1e40af',
+  },
   cardDate: {
     fontSize: 14,
     color: '#666',
@@ -153,6 +229,17 @@ const styles = StyleSheet.create({
   cardTeams: {
     fontSize: 12,
     color: '#999',
+    marginBottom: 8,
+  },
+  moreInfoContainer: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  moreInfoText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   center: {
     flex: 1,

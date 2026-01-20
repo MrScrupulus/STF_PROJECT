@@ -9,6 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -60,10 +61,14 @@ export default function Header({ title, showBack = true, showMenu = true }: Head
     }
   };
 
+  const queryClient = useQueryClient();
+
   const handleLogout = async () => {
     setMenuVisible(false);
     try {
       await authService.logout();
+      // Invalider tous les caches React Query pour éviter d'afficher les données de l'ancien utilisateur
+      queryClient.clear();
       // Mettre à jour l'état d'authentification pour que App.tsx change le stack
       setIsAuthenticated(false);
     } catch (error) {

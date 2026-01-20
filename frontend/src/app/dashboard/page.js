@@ -644,6 +644,9 @@ export default function Dashboard() {
       }
     };
 
+    // Récupérer les espèces de la compétition
+    const competitionSpecies = competition.species || [];
+
     const competitionFields = [
       { label: "Titre", value: competition.name },
       {
@@ -711,6 +714,60 @@ export default function Dashboard() {
                   className: `${styles.user__value} ${field.className || ""}`,
                 },
                 field.value || "Non renseigné"
+              )
+            )
+          ),
+          competitionSpecies.length > 0 && createElement(
+            "div",
+            { className: styles.user__field },
+            createElement(
+              "span",
+              { className: styles.user__label },
+              "Espèces configurées"
+            ),
+            createElement(
+              "div",
+              { style: { marginTop: "8px" } },
+              competitionSpecies.map((compSpecies) =>
+                createElement(
+                  "div",
+                  {
+                    key: compSpecies.id,
+                    style: {
+                      padding: "8px",
+                      marginBottom: "8px",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "4px",
+                      border: "1px solid #e5e7eb",
+                    },
+                  },
+                  createElement(
+                    "div",
+                    { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" } },
+                    createElement("strong", null, compSpecies.name),
+                    compSpecies.isBonusEnabled && createElement(
+                      "span",
+                      {
+                        style: {
+                          backgroundColor: "#10b981",
+                          color: "#fff",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                        },
+                      },
+                      "Bonus"
+                    )
+                  ),
+                  createElement(
+                    "div",
+                    { style: { fontSize: "14px", color: "#666" } },
+                    `Coefficient: ${compSpecies.coefficient}`,
+                    compSpecies.basePoints !== null && compSpecies.basePoints !== undefined &&
+                      createElement("span", { style: { marginLeft: "12px" } }, `| Points bonus: ${compSpecies.basePoints}`)
+                  )
+                )
               )
             )
           ),

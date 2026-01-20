@@ -80,12 +80,12 @@ export default function AddCatchScreen({ navigation, route }: any) {
     },
   });
 
-  // Charger les espèces
-  const { data: species, isLoading: loadingSpecies } = useQuery({
-    queryKey: ['species'],
-    queryFn: () => speciesService.getAll(),
-    enabled: true, // S'assurer que la requête est activée
-  });
+  // Utiliser les espèces de la compétition si disponibles
+  // Les espèces peuvent être dans competition.species (depuis getOne) ou dans selectedCompetition.species
+  const species = selectedCompetition?.species && Array.isArray(selectedCompetition.species) && selectedCompetition.species.length > 0
+    ? selectedCompetition.species
+    : [];
+  const loadingSpecies = false; // Les espèces sont déjà dans les données de la compétition
 
   // Trouver l'équipe inscrite à une compétition en cours et charger les détails complets
   useEffect(() => {
@@ -102,10 +102,21 @@ export default function AddCatchScreen({ navigation, route }: any) {
           (c: any) => c.id === registeredTeam.competition?.id
         );
         if (competition) {
-          // Charger les détails complets de la compétition pour avoir les périmètres
+          // Charger les détails complets de la compétition pour avoir les périmètres et les espèces
           competitionsService.getOne(competition.id).then((fullCompetition: any) => {
-            setSelectedCompetition(fullCompetition);
-          }).catch(() => {
+            // S'assurer que fullCompetition a la structure attendue
+            if (fullCompetition && fullCompetition.success !== false) {
+              // Si la réponse contient success: true, extraire les données
+              const competitionData = fullCompetition.success === true 
+                ? { ...fullCompetition, success: undefined } 
+                : fullCompetition;
+              setSelectedCompetition(competitionData);
+            } else {
+              // En cas d'erreur, utiliser la compétition de base
+              setSelectedCompetition(competition);
+            }
+          }).catch((error) => {
+            console.error('Erreur lors du chargement des détails de la compétition:', error);
             // En cas d'erreur, utiliser la compétition de base
             setSelectedCompetition(competition);
           });
@@ -241,10 +252,38 @@ export default function AddCatchScreen({ navigation, route }: any) {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert(
-        'Erreur',
-        error.response?.data?.message || 'Erreur lors de l\'enregistrement de la prise'
-      );
+      console.error('Erreur lors de la création de la prise:', error);
+      console.error('Détails complets de l\'erreur:', {
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        stack: error.stack,
+      });
+      
+      let errorMessage = 'Erreur lors de l\'enregistrement de la prise.';
+      
+      if (error.response) {
+        // Erreur HTTP avec réponse
+        if (error.response.data) {
+          if (typeof error.response.data === 'string') {
+            errorMessage = error.response.data;
+          } else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.response.data.error) {
+            errorMessage = error.response.data.error;
+          }
+        }
+        
+        // Ajouter le code d'erreur si disponible
+        if (error.response.status) {
+          errorMessage += ` (Code: ${error.response.status})`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Erreur', errorMessage);
     },
   });
 
@@ -336,11 +375,18 @@ export default function AddCatchScreen({ navigation, route }: any) {
       return;
     }
 
+    // Vérifier que l'espèce sélectionnée existe dans les espèces de la compétition
+    const selectedSpeciesObj = species.find((spec: any) => spec.id === selectedSpecies);
+    if (!selectedSpeciesObj) {
+      Alert.alert('Erreur', 'L\'espèce sélectionnée n\'est pas valide pour cette compétition');
+      return;
+    }
+
     const catchData: CreateCatchData = {
       speciesId: selectedSpecies,
       size: parseFloat(size),
       photoUrl: photo,
-      comment: comment || undefined,
+      comment: comment && comment.trim() ? comment.trim() : undefined,
       caughtById: selectedMember || undefined,
       latitude: location?.latitude,
       longitude: location?.longitude,
@@ -349,7 +395,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
     createCatchMutation.mutate(catchData);
   };
 
-  if (loadingTeams || loadingCompetitions || loadingSpecies) {
+  if (loadingTeams || loadingCompetitions) {
     return (
       <>
         <Header title="Ajouter une prise" showBack={true} showMenu={true} />
@@ -385,27 +431,33 @@ export default function AddCatchScreen({ navigation, route }: any) {
       {/* Sélection de l'espèce */}
       <View style={styles.section}>
         <Text style={styles.label}>Espèce *</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {(Array.isArray(species) ? species : []).map((spec: any) => (
-            <TouchableOpacity
-              key={spec.id}
-              style={[
-                styles.speciesButton,
-                selectedSpecies === spec.id && styles.speciesButtonSelected,
-              ]}
-              onPress={() => setSelectedSpecies(spec.id)}
-            >
-              <Text
+        {species && species.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {(Array.isArray(species) ? species : []).map((spec: any) => (
+              <TouchableOpacity
+                key={spec.id}
                 style={[
-                  styles.speciesButtonText,
-                  selectedSpecies === spec.id && styles.speciesButtonTextSelected,
+                  styles.speciesButton,
+                  selectedSpecies === spec.id && styles.speciesButtonSelected,
                 ]}
+                onPress={() => setSelectedSpecies(spec.id)}
               >
-                {spec.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text
+                  style={[
+                    styles.speciesButtonText,
+                    selectedSpecies === spec.id && styles.speciesButtonTextSelected,
+                  ]}
+                >
+                  {spec.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.errorText}>
+            Aucune espèce configurée pour cette compétition
+          </Text>
+        )}
       </View>
 
       {/* Taille */}

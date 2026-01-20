@@ -44,8 +44,19 @@ export const catchesService = {
   },
 
   create: async (competitionId: number, data: CreateCatchData): Promise<FishCatch> => {
-    const response = await apiClient.post(`/api/competitions/${competitionId}/catches`, data);
-    return response.data.catch || response.data;
+    try {
+      const response = await apiClient.post(`/api/competitions/${competitionId}/catches`, data);
+      return response.data.catch || response.data;
+    } catch (error: any) {
+      console.error('Erreur dans catchesService.create:', error);
+      // Propager l'erreur avec plus de détails
+      if (error.response?.data) {
+        const errorWithData = new Error(error.response.data.message || 'Erreur lors de la création de la prise');
+        (errorWithData as any).response = error.response;
+        throw errorWithData;
+      }
+      throw error;
+    }
   },
 
   update: async (id: number, data: Partial<FishCatch>): Promise<FishCatch> => {

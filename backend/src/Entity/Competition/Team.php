@@ -112,12 +112,72 @@ class Team
 
     public function updateTotalScore(): void
     {
+        // Calculer le score pour la compétition actuelle de l'équipe
+        if ($this->competition) {
+            $this->updateTotalScoreForCompetition($this->competition);
+        } else {
+            // Si l'équipe n'a pas de compétition, calculer avec toutes les prises
+            $this->updateTotalScoreWithCatches($this->catches->toArray());
+        }
+    }
+
+    /**
+     * Calcule le score de l'équipe pour une compétition spécifique
+     */
+    public function getScoreForCompetition(?Competition $competition): int
+    {
+        if (!$competition) {
+            return $this->totalScore ?? 0;
+        }
+
+        // Filtrer les prises par compétition
+        $competitionCatches = [];
+        foreach ($this->catches as $catch) {
+            if ($catch->getCompetition() && $catch->getCompetition()->getId() === $competition->getId()) {
+                $competitionCatches[] = $catch;
+            }
+        }
+
+        return $this->calculateScoreFromCatches($competitionCatches);
+    }
+
+    /**
+     * Met à jour le score total pour une compétition spécifique
+     */
+    private function updateTotalScoreForCompetition(Competition $competition): void
+    {
+        // Filtrer les prises par compétition
+        $competitionCatches = [];
+        foreach ($this->catches as $catch) {
+            if ($catch->getCompetition() && $catch->getCompetition()->getId() === $competition->getId()) {
+                $competitionCatches[] = $catch;
+            }
+        }
+
+        $score = $this->calculateScoreFromCatches($competitionCatches);
+        $this->totalScore = $score;
+    }
+
+    /**
+     * Met à jour le score total avec une liste de prises donnée
+     */
+    private function updateTotalScoreWithCatches(array $catches): void
+    {
+        $score = $this->calculateScoreFromCatches($catches);
+        $this->totalScore = $score;
+    }
+
+    /**
+     * Calcule le score à partir d'une liste de prises
+     */
+    private function calculateScoreFromCatches(array $catches): int
+    {
         // Récupérer toutes les prises validées
         $validatedCatches = [];
         $uniqueSpecies = [];
         $hasGobi = false;
 
-        foreach ($this->catches as $catch) {
+        foreach ($catches as $catch) {
             if ($catch->isValidated()) {
                 $validatedCatches[] = $catch;
                 
@@ -133,9 +193,8 @@ class Team
 
         // Si aucune prise validée, score = 0
         if (empty($validatedCatches)) {
-            $this->totalScore = 0;
             $this->hasBonus = false;
-            return;
+            return 0;
         }
 
         // Calculer le score de chaque prise
@@ -180,8 +239,8 @@ class Team
         }
 
         // Score total = score de base + bonus
-        $this->totalScore = $baseScore + $bonus;
         $this->hasBonus = ($bonus > 0);
+        return $baseScore + $bonus;
     }
 
     public function getHasBonus(): ?bool

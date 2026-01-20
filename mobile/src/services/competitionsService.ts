@@ -25,6 +25,7 @@ export interface Competition {
   isRankingPublic?: boolean;
   isPaused?: boolean;
   description?: string;
+  isRegistered?: boolean;
 }
 
 export interface Team {

@@ -234,6 +234,24 @@
     &--leave {
       background-color: #dc2626;
       color: white;
+
+      &:hover:not(:disabled) {
+        background-color: #b91c1c;
+      }
+
+      &:disabled {
+        background-color: #9ca3af;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+    }
+
+    &--disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.6;
+      background-color: #dc2626;
+      color: white;
       border: none;
 
       &:hover {

@@ -10,12 +10,13 @@ import {
   Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { data: userResponse, isLoading } = useQuery({
@@ -30,6 +31,8 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     await authService.logout();
+    // Invalider tous les caches React Query pour éviter d'afficher les données de l'ancien utilisateur
+    queryClient.clear();
     // @ts-ignore - navigation.replace exists but TypeScript doesn't recognize it
     navigation.replace('Login' as never);
   };

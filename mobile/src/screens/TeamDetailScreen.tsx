@@ -42,6 +42,57 @@ export default function TeamDetailScreen({ route }: any) {
     },
   });
 
+  const leaveTeamMutation = useMutation({
+    mutationFn: () => teamService.leaveTeam(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team', id] });
+      Alert.alert('Succès', 'Vous avez quitté l\'équipe avec succès', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la sortie de l\'équipe');
+    },
+  });
+
+  const handleLeaveTeam = () => {
+    // Vérifier si l'équipe est inscrite dans une compétition active
+    if (team && team.competition && (team.competition as any).endDate) {
+      const now = new Date();
+      const competitionEndDate = new Date((team.competition as any).endDate);
+      const isCompetitionActive = competitionEndDate >= now;
+      
+      if (isCompetitionActive) {
+        Alert.alert(
+          'Action impossible',
+          'Vous ne pouvez pas quitter une équipe inscrite dans une compétition en cours. Attendez la fin de la compétition.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    
+    Alert.alert(
+      'Quitter l\'équipe',
+      'Êtes-vous sûr de vouloir quitter cette équipe ? Cette action est irréversible.',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Quitter',
+          style: 'destructive',
+          onPress: () => leaveTeamMutation.mutate(),
+        },
+      ]
+    );
+  };
+
   const team = teamData?.team;
 
   if (isLoading) {
@@ -67,12 +118,12 @@ export default function TeamDetailScreen({ route }: any) {
   }
 
   // Séparer les prises rejetées des autres
-  const rejectedCatches = team.catches
+  const rejectedCatches = team?.catches
     ? team.catches.filter((catchItem: any) => catchItem.rejectionReason)
     : [];
   
   // Filtrer les prises non rejetées et les trier par points décroissants
-  const validCatches = team.catches
+  const validCatches = team?.catches
     ? team.catches
         .filter((catchItem: any) => !catchItem.rejectionReason)
         .sort((a: any, b: any) => b.points - a.points)
@@ -104,7 +155,7 @@ export default function TeamDetailScreen({ route }: any) {
         )}
 
         {/* Résumé des scores */}
-        {team.catches && team.catches.length > 0 && (
+        {team?.catches && team.catches.length > 0 && (
           <View style={styles.scoreSummary}>
             <View style={styles.scoreCard}>
               <Text style={styles.scoreLabel}>Score Total</Text>
@@ -198,6 +249,40 @@ export default function TeamDetailScreen({ route }: any) {
               )}
             </View>
           )}
+
+          {/* Bouton quitter l'équipe */}
+          {(() => {
+            // Vérifier si l'équipe est inscrite dans une compétition active
+            const canLeave = !team || !team.competition || !(team.competition as any).endDate || (() => {
+              const now = new Date();
+              const competitionEndDate = new Date((team.competition as any).endDate);
+              return competitionEndDate < now;
+            })();
+            
+            return (
+              <View style={styles.leaveTeamSection}>
+                <TouchableOpacity
+                  style={[
+                    styles.leaveTeamButton,
+                    !canLeave && styles.leaveTeamButtonDisabled
+                  ]}
+                  onPress={handleLeaveTeam}
+                  disabled={leaveTeamMutation.isPending || !canLeave}
+                >
+                  {leaveTeamMutation.isPending ? (
+                    <ActivityIndicator color="#ff3b30" />
+                  ) : (
+                    <Text style={[
+                      styles.leaveTeamButtonText,
+                      !canLeave && styles.leaveTeamButtonTextDisabled
+                    ]}>
+                      {canLeave ? 'Quitter l\'équipe' : 'Impossible de quitter (compétition en cours)'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            );
+          })()}
         </View>
 
         {/* Prises */}
@@ -537,6 +622,32 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 14,
     fontWeight: '600',
+  },
+  leaveTeamSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e5e5',
+  },
+  leaveTeamButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ff3b30',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  leaveTeamButtonText: {
+    color: '#ff3b30',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  leaveTeamButtonDisabled: {
+    opacity: 0.5,
+    borderColor: '#ccc',
+  },
+  leaveTeamButtonTextDisabled: {
+    color: '#999',
   },
   top5Section: {
     marginBottom: 24,

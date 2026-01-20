@@ -46,16 +46,23 @@ class Competition
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isPaused = false;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isBonusEnabled = false;
+
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: CompetitionPerimeter::class, cascade: ['persist', 'remove'])]
     private Collection $perimeters;
 
+    #[ORM\OneToMany(mappedBy: 'competition', targetEntity: CompetitionSpecies::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $competitionSpecies;
+
     public function __construct()
     {
         $this->teams = new ArrayCollection();
         $this->perimeters = new ArrayCollection();
+        $this->competitionSpecies = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -200,6 +207,17 @@ class Competition
         return $this;
     }
 
+    public function getIsBonusEnabled(): bool
+    {
+        return $this->isBonusEnabled;
+    }
+
+    public function setIsBonusEnabled(bool $isBonusEnabled): self
+    {
+        $this->isBonusEnabled = $isBonusEnabled;
+        return $this;
+    }
+
     /**
      * @return Collection<int, CompetitionPerimeter>
      */
@@ -222,6 +240,33 @@ class Competition
         if ($this->perimeters->removeElement($perimeter)) {
             if ($perimeter->getCompetition() === $this) {
                 $perimeter->setCompetition(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CompetitionSpecies>
+     */
+    public function getCompetitionSpecies(): Collection
+    {
+        return $this->competitionSpecies;
+    }
+
+    public function addCompetitionSpecies(CompetitionSpecies $competitionSpecies): static
+    {
+        if (!$this->competitionSpecies->contains($competitionSpecies)) {
+            $this->competitionSpecies->add($competitionSpecies);
+            $competitionSpecies->setCompetition($this);
+        }
+        return $this;
+    }
+
+    public function removeCompetitionSpecies(CompetitionSpecies $competitionSpecies): static
+    {
+        if ($this->competitionSpecies->removeElement($competitionSpecies)) {
+            if ($competitionSpecies->getCompetition() === $this) {
+                $competitionSpecies->setCompetition(null);
             }
         }
         return $this;

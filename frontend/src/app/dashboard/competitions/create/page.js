@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { competitionsService } from "../../../../services/competitions";
+import { speciesService } from "../../../../services/speciesService";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
 import ScheduledPausesForm from "../../../../components/admin/ScheduledPausesForm";
@@ -19,10 +20,81 @@ export default function CreateCompetition() {
     hasNoLimit: false,
     description: "",
     isRankingPublic: false,
+    isBonusEnabled: false,
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [scheduledPauses, setScheduledPauses] = useState([]);
+  const [availableSpecies, setAvailableSpecies] = useState([]);
+  const [competitionSpecies, setCompetitionSpecies] = useState([]);
+  const [loadingSpecies, setLoadingSpecies] = useState(false);
+
+  useEffect(() => {
+    const fetchSpecies = async () => {
+      setLoadingSpecies(true);
+      try {
+        const response = await speciesService.getAll();
+        setAvailableSpecies(response || []);
+      } catch (error) {
+        console.error("Error fetching species:", error);
+        setError("Erreur lors du chargement des espèces");
+      } finally {
+        setLoadingSpecies(false);
+      }
+    };
+    fetchSpecies();
+  }, []);
+
+  const handleAddSpecies = () => {
+    if (availableSpecies.length === 0) return;
+    const firstSpecies = availableSpecies[0];
+    setCompetitionSpecies([
+      ...competitionSpecies,
+      {
+        speciesId: firstSpecies.id,
+        coefficient: firstSpecies.coefficient || 1.0,
+        basePoints: formData.isBonusEnabled ? (firstSpecies.basePoints || 50) : null,
+      },
+    ]);
+  };
+
+  const handleRemoveSpecies = (index) => {
+    setCompetitionSpecies(competitionSpecies.filter((_, i) => i !== index));
+  };
+
+  const handleSpeciesChange = (index, field, value) => {
+    const updated = [...competitionSpecies];
+    updated[index] = { ...updated[index], [field]: value };
+    // Si le bonus est activé globalement et qu'on change une espèce, mettre à jour basePoints si nécessaire
+    if (field === 'speciesId' && formData.isBonusEnabled && !updated[index].basePoints) {
+      const species = availableSpecies.find((s) => s.id === value);
+      updated[index].basePoints = species?.basePoints || 50;
+    }
+    setCompetitionSpecies(updated);
+  };
+
+  // Fonction pour normaliser les nombres (accepter "," et ".")
+  const normalizeNumber = (value) => {
+    if (typeof value === 'string') {
+      return value.replace(',', '.');
+    }
+    return value;
+  };
+
+  // Fonction pour parser les nombres avec virgule ou point (décimales autorisées)
+  const parseNumber = (value) => {
+    if (!value || value === '') return null;
+    const normalized = normalizeNumber(String(value));
+    // Permettre les nombres décimaux (ex: 1.5, 0.5, etc.)
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? null : parsed;
+  };
+
+  // Fonction pour formater l'affichage des nombres (garder les décimales si présentes)
+  const formatNumber = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    return String(value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +106,7 @@ export default function CreateCompetition() {
       const competitionData = {
         ...formData,
         scheduledPauses: scheduledPauses.length > 0 ? scheduledPauses : undefined,
+        species: competitionSpecies.length > 0 ? competitionSpecies : undefined,
       };
       await competitionsService.create(competitionData);
       router.push("/dashboard");
@@ -205,6 +278,172 @@ export default function CreateCompetition() {
               Si coché, le classement sera visible par tous les utilisateurs une fois la compétition terminée.
               Sinon, seul l'administrateur pourra voir le classement complet.
             </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
+                checked={formData.isBonusEnabled}
+                onChange={(e) => {
+                  const isEnabled = e.target.checked;
+                  setFormData({ ...formData, isBonusEnabled: isEnabled });
+                  // Si on active le bonus, ajouter basePoints aux espèces existantes
+                  if (isEnabled) {
+                    setCompetitionSpecies(competitionSpecies.map(cs => ({
+                      ...cs,
+                      basePoints: cs.basePoints || 50
+                    })));
+                  } else {
+                    // Si on désactive, retirer basePoints
+                    setCompetitionSpecies(competitionSpecies.map(cs => ({
+                      ...cs,
+                      basePoints: null
+                    })));
+                  }
+                }}
+                id="isBonusEnabled"
+              />
+              <label
+                htmlFor="isBonusEnabled"
+                className={styles["competition-create__label"]}
+              >
+                Activer la règle du bonus (points supplémentaires selon le nombre d'espèces différentes)
+              </label>
+            </div>
+            <p className={styles["competition-create__help_text"]}>
+              Si activé, les équipes gagneront des points bonus selon le nombre d'espèces différentes pêchées.
+              Vous pourrez définir les points bonus pour chaque espèce ci-dessous.
+            </p>
+          </div>
+
+          {/* Gestion des espèces */}
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__species_header"]}>
+              <label className={styles["competition-create__label"]}>
+                Espèces de la compétition
+              </label>
+              <button
+                type="button"
+                onClick={handleAddSpecies}
+                className={styles["competition-create__add_species_btn"]}
+                disabled={loadingSpecies || availableSpecies.length === 0}
+              >
+                + Ajouter une espèce
+              </button>
+            </div>
+            <p className={styles["competition-create__help_text"]}>
+              Définissez les espèces disponibles pour cette compétition avec leurs coefficients.
+              {formData.isBonusEnabled && " Vous pouvez également définir les points bonus pour chaque espèce si le bonus est activé."}
+            </p>
+
+            {competitionSpecies.length > 0 && (
+              <div className={styles["competition-create__species_list"]}>
+                {competitionSpecies.map((compSpecies, index) => {
+                  const species = availableSpecies.find((s) => s.id === compSpecies.speciesId);
+                  return (
+                    <div key={index} className={styles["competition-create__species_item"]}>
+                      <div className={styles["competition-create__species_select"]}>
+                        <label>Espèce</label>
+                        <select
+                          value={compSpecies.speciesId}
+                          onChange={(e) =>
+                            handleSpeciesChange(index, "speciesId", parseInt(e.target.value))
+                          }
+                          className={styles["competition-create__input"]}
+                        >
+                          {availableSpecies.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className={styles["competition-create__species_coefficient"]}>
+                        <label>Coefficient</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.1"
+                          value={typeof compSpecies.coefficient === 'string' 
+                            ? compSpecies.coefficient 
+                            : formatNumber(compSpecies.coefficient)}
+                          onChange={(e) => {
+                            const inputValue = e.target.value;
+                            // Permettre la saisie de nombres décimaux (ex: "1.5", "0.5", "1.", etc.)
+                            // Accepter les formats: nombre, nombre., nombre, nombre, nombre.nombre
+                            const normalized = normalizeNumber(inputValue);
+                            
+                            // Pattern pour accepter: nombre entier, nombre décimal, ou nombre en cours de saisie (ex: "1.")
+                            const decimalPattern = /^-?\d*\.?\d*$/;
+                            
+                            if (inputValue === '' || inputValue === '.' || inputValue === ',') {
+                              // Permettre la saisie de "." ou "," seul
+                              handleSpeciesChange(index, "coefficient", inputValue);
+                            } else if (decimalPattern.test(normalized)) {
+                              // Si c'est un format valide, garder la valeur telle quelle pendant la saisie
+                              // Cela permet de taper "1." puis "5" pour faire "1.5"
+                              handleSpeciesChange(index, "coefficient", inputValue);
+                            }
+                            // Sinon, ignorer la saisie (caractère invalide)
+                          }}
+                          onBlur={(e) => {
+                            const value = parseNumber(e.target.value);
+                            if (value === null || value < 0 || isNaN(value)) {
+                              handleSpeciesChange(index, "coefficient", 1.0);
+                            } else {
+                              // S'assurer que la valeur finale est bien un nombre
+                              handleSpeciesChange(index, "coefficient", value);
+                            }
+                          }}
+                          className={styles["competition-create__input"]}
+                          required
+                          placeholder="1.0"
+                        />
+                      </div>
+
+                      {formData.isBonusEnabled && (
+                        <div className={styles["competition-create__species_base_points"]}>
+                          <label>Points bonus</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            min="0"
+                            value={compSpecies.basePoints ?? ""}
+                            onChange={(e) => {
+                              const value = parseNumber(e.target.value);
+                              handleSpeciesChange(
+                                index,
+                                "basePoints",
+                                value !== null ? Math.floor(value) : null
+                              );
+                            }}
+                            onBlur={(e) => {
+                              const value = parseNumber(e.target.value);
+                              if (value === null || value < 0) {
+                                handleSpeciesChange(index, "basePoints", 50);
+                              }
+                            }}
+                            className={styles["competition-create__input"]}
+                            placeholder="50"
+                          />
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSpecies(index)}
+                        className={styles["competition-create__remove_species_btn"]}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <ScheduledPausesForm

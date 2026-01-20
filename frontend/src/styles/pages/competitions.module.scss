@@ -30,6 +30,16 @@
   font-weight: 500;
 }
 
+.statusRegistered {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  background-color: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
 .competitions {
   &__container {
     width: 100%;
@@ -731,4 +741,100 @@
   text-align: center;
   color: #dc2626;
   padding: 2rem;
+}
+
+.competitions {
+  &__tabs {
+    display: flex;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  &__tab {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      color: #007AFF;
+    }
+
+    &_active {
+      color: #007AFF;
+      font-weight: 600;
+      border-bottom-color: #007AFF;
+    }
+  }
+
+  &__species_tab {
+    margin-top: 1rem;
+  }
+
+  &__species_list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  &__species_card {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  &__species_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  &__species_name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+  }
+
+  &__species_bonus_badge {
+    background-color: #ff9500;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  &__species_info {
+    margin-top: 0.5rem;
+  }
+
+  &__species_coefficient {
+    font-size: 0.875rem;
+    color: #007AFF;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  &__species_base_points {
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  &__empty {
+    text-align: center;
+    color: #999;
+    padding: 2rem;
+    font-size: 1rem;
+  }
 }

@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\Competition\CompetitionRepository;
+use App\Repository\Competition\CompetitionSpeciesRepository;
 use App\DTO\Competition\CreateTeamRequest;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -541,13 +542,33 @@ class TeamController extends AbstractController
     }
 
     #[Route('/{id}', name: 'competition_team_show', methods: ['GET'])]
-    public function show(Team $team): JsonResponse
+    public function show(Team $team, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
     {
-        // Calculer le bonus de l'équipe
+        // Filtrer les prises par compétition si l'équipe a une compétition
+        $competitionCatches = [];
+        if ($team->getCompetition()) {
+            foreach ($team->getCatches() as $catch) {
+                if ($catch->getCompetition() && $catch->getCompetition()->getId() === $team->getCompetition()->getId()) {
+                    $competitionCatches[] = $catch;
+                }
+            }
+        } else {
+            $competitionCatches = $team->getCatches()->toArray();
+        }
+
+        // Créer un mapping des espèces vers leurs coefficients de compétition si l'équipe a une compétition
+        $competitionSpeciesMap = [];
+        if ($team->getCompetition()) {
+            foreach ($team->getCompetition()->getCompetitionSpecies() as $compSpecies) {
+                $competitionSpeciesMap[$compSpecies->getSpecies()->getId()] = $compSpecies;
+            }
+        }
+
+        // Calculer le bonus de l'équipe avec les prises filtrées
         $validatedCatches = [];
         $uniqueSpecies = [];
         $hasGobi = false;
-        foreach ($team->getCatches() as $catch) {
+        foreach ($competitionCatches as $catch) {
             if ($catch->isValidated()) {
                 $validatedCatches[] = $catch;
                 $speciesId = $catch->getSpecies()->getId();
@@ -574,6 +595,11 @@ class TeamController extends AbstractController
                 }
             }
         }
+
+        // Utiliser le score filtré par compétition
+        $teamScore = $team->getCompetition() 
+            ? $team->getScoreForCompetition($team->getCompetition())
+            : $team->getTotalScore();
         
         // Transformer manuellement les données pour éviter les références circulaires
         return $this->json([
@@ -581,7 +607,7 @@ class TeamController extends AbstractController
             'team' => [
                 'id' => $team->getId(),
                 'name' => $team->getName(),
-                'totalScore' => $team->getTotalScore(),
+                'totalScore' => $teamScore,
                 'hasBonus' => $team->getHasBonus(),
                 'bonus' => $bonus,
                 'registrationNumber' => $team->getRegistrationNumber(),
@@ -600,13 +626,20 @@ class TeamController extends AbstractController
                     'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
                     'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
                 ] : null,
-                'catches' => array_map(function ($catch) {
+                'catches' => array_map(function ($catch) use ($competitionSpeciesMap) {
+                    // Récupérer le coefficient de la compétition si disponible, sinon utiliser celui de l'espèce
+                    $speciesId = $catch->getSpecies()->getId();
+                    $coefficient = $catch->getSpecies()->getCoefficient();
+                    if (isset($competitionSpeciesMap[$speciesId])) {
+                        $coefficient = $competitionSpeciesMap[$speciesId]->getCoefficient();
+                    }
+
                     return [
                         'id' => $catch->getId(),
                         'species' => [
-                            'id' => $catch->getSpecies()->getId(),
+                            'id' => $speciesId,
                             'name' => $catch->getSpecies()->getName(),
-                            'coefficient' => $catch->getSpecies()->getCoefficient(),
+                            'coefficient' => $coefficient,
                         ],
                         'size' => $catch->getSize(),
                         'points' => $catch->calculatePoints(),
@@ -620,8 +653,12 @@ class TeamController extends AbstractController
                             'firstname' => $catch->getCaughtBy()->getFirstname(),
                             'lastname' => $catch->getCaughtBy()->getLastname(),
                         ] : null,
+                        'competition' => $catch->getCompetition() ? [
+                            'id' => $catch->getCompetition()->getId(),
+                            'name' => $catch->getCompetition()->getName(),
+                        ] : null,
                     ];
-                }, $team->getCatches()->toArray()),
+                }, $competitionCatches),
             ]
         ]);
     }

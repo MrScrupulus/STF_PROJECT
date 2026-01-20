@@ -13,11 +13,11 @@ const getCompetitionStatus = (startDate, endDate) => {
   const end = new Date(endDate);
 
   if (now < start) {
-    return { text: "À venir", className: styles.statusUpcoming };
+    return { text: "À venir", className: styles.statusUpcoming, sortOrder: 2 };
   } else if (now >= start && now <= end) {
-    return { text: "En cours", className: styles.statusOngoing };
+    return { text: "En cours", className: styles.statusOngoing, sortOrder: 1 };
   } else {
-    return { text: "Terminée", className: styles.statusEnded };
+    return { text: "Terminée", className: styles.statusEnded, sortOrder: 3 };
   }
 };
 
@@ -29,6 +29,13 @@ export default function CompetitionsPage() {
 
   if (isLoading)
     return createElement("div", { className: `${layoutStyles.main} ${styles.loading}` }, "Chargement...");
+
+  // Trier les compétitions : En cours, À venir, Terminé
+  const sortedCompetitions = [...(competitions || [])].sort((a, b) => {
+    const statusA = getCompetitionStatus(a.startDate, a.endDate);
+    const statusB = getCompetitionStatus(b.startDate, b.endDate);
+    return statusA.sortOrder - statusB.sortOrder;
+  });
 
   return createElement(
     "div",
@@ -47,7 +54,7 @@ export default function CompetitionsPage() {
       {
         className: styles.competitions__list,
       },
-      (competitions || []).map((competition) =>
+      sortedCompetitions.map((competition) =>
         createElement(
           "div",
           {
@@ -73,12 +80,25 @@ export default function CompetitionsPage() {
                 competition.name
               )
             ),
-            competition.startDate && competition.endDate && createElement(
-              "span",
+            createElement(
+              "div",
               {
-                className: getCompetitionStatus(competition.startDate, competition.endDate).className,
+                style: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" },
               },
-              getCompetitionStatus(competition.startDate, competition.endDate).text
+              competition.startDate && competition.endDate && createElement(
+                "span",
+                {
+                  className: getCompetitionStatus(competition.startDate, competition.endDate).className,
+                },
+                getCompetitionStatus(competition.startDate, competition.endDate).text
+              ),
+              competition.isRegistered && createElement(
+                "span",
+                {
+                  className: styles.statusRegistered,
+                },
+                "✓ Vous êtes inscrit"
+              )
             )
           ),
           createElement(
