@@ -66,4 +66,25 @@ export const teamService = {
     });
     return response.data;
   },
+
+  // Invitations
+  getMyInvitations: async (): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.teams.invitations.my);
+    return response.data;
+  },
+
+  acceptInvitation: async (invitationId: number): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.invitations.accept(invitationId));
+    return response.data;
+  },
+
+  rejectInvitation: async (invitationId: number): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.invitations.reject(invitationId));
+    return response.data;
+  },
+
+  getTeamInvitations: async (teamId: number): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.teams.invitations.team(teamId));
+    return response.data;
+  },
 };

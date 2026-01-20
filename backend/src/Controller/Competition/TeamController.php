@@ -3,7 +3,9 @@
 namespace App\Controller\Competition;
 
 use App\Entity\Competition\Team;
+use App\Entity\Competition\TeamInvitation;
 use App\Repository\Competition\TeamRepository;
+use App\Repository\Competition\TeamInvitationRepository;
 use App\Repository\Competition\FishCatchRepository;
 use App\Repository\Security\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -487,8 +489,24 @@ class TeamController extends AbstractController
                 ], 400);
             }
 
-            // Ajouter le membre à l'équipe
-            $team->addMember($invitedUser);
+            // Vérifier qu'il n'y a pas déjà une invitation en attente
+            $invitationRepo = $this->entityManager->getRepository(TeamInvitation::class);
+            $existingInvitation = $invitationRepo->findInvitation($team, $invitedUser);
+            if ($existingInvitation) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Une invitation est déjà en attente pour cet utilisateur'
+                ], 400);
+            }
+
+            // Créer une invitation au lieu d'ajouter directement le membre
+            $invitation = new TeamInvitation();
+            $invitation->setTeam($team);
+            $invitation->setInvitedUser($invitedUser);
+            $invitation->setInvitedBy($user);
+            $invitation->setStatus('pending');
+            
+            $this->entityManager->persist($invitation);
             $this->entityManager->flush();
 
             // Envoyer un email d'invitation
@@ -515,18 +533,19 @@ class TeamController extends AbstractController
 
             return $this->json([
                 'success' => true,
-                'message' => 'Membre invité avec succès',
-                'team' => [
-                    'id' => $team->getId(),
-                    'name' => $team->getName(),
-                    'members' => array_map(function ($member) {
-                        return [
-                            'id' => $member->getId(),
-                            'firstname' => $member->getFirstname(),
-                            'lastname' => $member->getLastname(),
-                            'email' => $member->getEmail(),
-                        ];
-                    }, $team->getMembers()->toArray()),
+                'message' => 'Invitation envoyée avec succès',
+                'invitation' => [
+                    'id' => $invitation->getId(),
+                    'team' => [
+                        'id' => $team->getId(),
+                        'name' => $team->getName(),
+                    ],
+                    'invitedUser' => [
+                        'id' => $invitedUser->getId(),
+                        'email' => $invitedUser->getEmail(),
+                    ],
+                    'status' => $invitation->getStatus(),
+                    'createdAt' => $invitation->getCreatedAt()->format('Y-m-d H:i:s'),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -927,6 +946,258 @@ class TeamController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Erreur lors de la réactivation de l\'équipe: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/invitations/my', name: 'my_invitations', methods: ['GET'])]
+    public function getMyInvitations(TeamInvitationRepository $invitationRepo): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            $invitations = $invitationRepo->findPendingInvitationsForUser($user);
+
+            $invitationsData = array_map(function ($invitation) {
+                return [
+                    'id' => $invitation->getId(),
+                    'team' => [
+                        'id' => $invitation->getTeam()->getId(),
+                        'name' => $invitation->getTeam()->getName(),
+                    ],
+                    'invitedBy' => [
+                        'id' => $invitation->getInvitedBy()->getId(),
+                        'firstname' => $invitation->getInvitedBy()->getFirstname(),
+                        'lastname' => $invitation->getInvitedBy()->getLastname(),
+                        'email' => $invitation->getInvitedBy()->getEmail(),
+                    ],
+                    'status' => $invitation->getStatus(),
+                    'createdAt' => $invitation->getCreatedAt()->format('Y-m-d H:i:s'),
+                ];
+            }, $invitations);
+
+            return $this->json([
+                'success' => true,
+                'invitations' => $invitationsData
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des invitations', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des invitations: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/invitations/{id}/accept', name: 'accept_invitation', methods: ['POST'])]
+    public function acceptInvitation(int $id, TeamInvitationRepository $invitationRepo): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            $invitation = $invitationRepo->find($id);
+            if (!$invitation) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Invitation non trouvée'
+                ], 404);
+            }
+
+            // Vérifier que l'invitation est pour l'utilisateur connecté
+            if ($invitation->getInvitedUser()->getId() !== $user->getId()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas autorisé à accepter cette invitation'
+                ], 403);
+            }
+
+            // Vérifier que l'invitation est en attente
+            if (!$invitation->isPending()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette invitation a déjà été traitée'
+                ], 400);
+            }
+
+            $team = $invitation->getTeam();
+
+            // Vérifier que l'équipe n'est pas complète
+            $maxTeamSize = 2;
+            if ($team->getCompetition()) {
+                $maxTeamSize = $team->getCompetition()->getTeamSize();
+            }
+            
+            if ($team->getMembers()->count() >= $maxTeamSize) {
+                return $this->json([
+                    'success' => false,
+                    'message' => "L'équipe est déjà complète ({$maxTeamSize} membre(s) maximum)"
+                ], 400);
+            }
+
+            // Vérifier que l'utilisateur n'est pas déjà dans une équipe active
+            $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($user, true);
+            if (count($existingTeam) > 0) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous êtes déjà membre d\'une équipe active'
+                ], 400);
+            }
+
+            // Ajouter le membre à l'équipe
+            $team->addMember($user);
+            
+            // Marquer l'invitation comme acceptée
+            $invitation->setStatus('accepted');
+            $invitation->setRespondedAt(new \DateTime());
+            
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Invitation acceptée avec succès',
+                'team' => [
+                    'id' => $team->getId(),
+                    'name' => $team->getName(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de l\'acceptation de l\'invitation', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'acceptation de l\'invitation: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/invitations/{id}/reject', name: 'reject_invitation', methods: ['POST'])]
+    public function rejectInvitation(int $id, TeamInvitationRepository $invitationRepo): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            $invitation = $invitationRepo->find($id);
+            if (!$invitation) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Invitation non trouvée'
+                ], 404);
+            }
+
+            // Vérifier que l'invitation est pour l'utilisateur connecté
+            if ($invitation->getInvitedUser()->getId() !== $user->getId()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas autorisé à rejeter cette invitation'
+                ], 403);
+            }
+
+            // Vérifier que l'invitation est en attente
+            if (!$invitation->isPending()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette invitation a déjà été traitée'
+                ], 400);
+            }
+
+            // Marquer l'invitation comme rejetée
+            $invitation->setStatus('rejected');
+            $invitation->setRespondedAt(new \DateTime());
+            
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Invitation rejetée'
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors du rejet de l\'invitation', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du rejet de l\'invitation: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/{id}/invitations', name: 'team_invitations', methods: ['GET'])]
+    public function getTeamInvitations(Team $team, TeamInvitationRepository $invitationRepo): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            // Vérifier que l'utilisateur est membre de l'équipe
+            if (!$team->getMembers()->contains($user)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous devez être membre de l\'équipe pour voir les invitations'
+                ], 403);
+            }
+
+            $invitations = $invitationRepo->findPendingInvitationsForTeam($team);
+
+            $invitationsData = array_map(function ($invitation) {
+                return [
+                    'id' => $invitation->getId(),
+                    'invitedUser' => [
+                        'id' => $invitation->getInvitedUser()->getId(),
+                        'firstname' => $invitation->getInvitedUser()->getFirstname(),
+                        'lastname' => $invitation->getInvitedUser()->getLastname(),
+                        'email' => $invitation->getInvitedUser()->getEmail(),
+                    ],
+                    'invitedBy' => [
+                        'id' => $invitation->getInvitedBy()->getId(),
+                        'firstname' => $invitation->getInvitedBy()->getFirstname(),
+                        'lastname' => $invitation->getInvitedBy()->getLastname(),
+                    ],
+                    'status' => $invitation->getStatus(),
+                    'createdAt' => $invitation->getCreatedAt()->format('Y-m-d H:i:s'),
+                ];
+            }, $invitations);
+
+            return $this->json([
+                'success' => true,
+                'invitations' => $invitationsData
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des invitations de l\'équipe', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des invitations: ' . $e->getMessage()
             ], 500);
         }
     }

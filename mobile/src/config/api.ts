@@ -55,6 +55,13 @@ export const API_ENDPOINTS = {
     detail: (id: number) => `/api/teams/${id}`,
     myTeams: '/api/teams/my-teams',
     myHistory: '/api/teams/my-history',
+    invite: (id: number) => `/api/teams/${id}/invite`,
+    invitations: {
+      my: '/api/teams/invitations/my',
+      accept: (id: number) => `/api/teams/invitations/${id}/accept`,
+      reject: (id: number) => `/api/teams/invitations/${id}/reject`,
+      team: (teamId: number) => `/api/teams/${teamId}/invitations`,
+    },
   },
   competitions: {
     list: '/api/competitions',

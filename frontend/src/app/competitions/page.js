@@ -118,12 +118,14 @@ export default function CompetitionsPage() {
           {
             className: styles.competitions__list,
           },
-      sortedCompetitions.map((competition) =>
-        createElement(
+      sortedCompetitions.map((competition) => {
+        const competitionStatus = getCompetitionStatus(competition.startDate, competition.endDate);
+        const isEnded = competitionStatus.text === "Terminée";
+        return createElement(
           "div",
           {
             key: competition.id,
-            className: styles.competition__card,
+            className: `${styles.competition__card} ${isEnded ? styles.competition__card_ended : ""}`,
           },
           createElement(
             "div",
@@ -212,8 +214,8 @@ export default function CompetitionsPage() {
             },
             `Taille d'équipe: ${competition.teamSize} membre(s)`
           )
-        )
-      )
+        );
+      })
     )
   );
 }

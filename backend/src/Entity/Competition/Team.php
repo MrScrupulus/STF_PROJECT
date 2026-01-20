@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Security\User;
 use Symfony\Component\Serializer\Annotation\Groups;
+use App\Entity\Competition\TeamInvitation;
 
 #[ORM\Entity(repositoryClass: TeamRepository::class)]
 #[ORM\Table(name: 'teams')]
@@ -52,10 +53,14 @@ class Team
     #[Groups(['team:read'])]
     private bool $isActive = true;
 
+    #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamInvitation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $invitations;
+
     public function __construct()
     {
         $this->members = new ArrayCollection();
         $this->catches = new ArrayCollection();
+        $this->invitations = new ArrayCollection();
         $this->totalScore = 0;
         $this->hasBonus = false;
         $this->isActive = true;
@@ -303,6 +308,33 @@ class Team
     public function setIsActive(bool $isActive): self
     {
         $this->isActive = $isActive;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, TeamInvitation>
+     */
+    public function getInvitations(): Collection
+    {
+        return $this->invitations;
+    }
+
+    public function addInvitation(TeamInvitation $invitation): static
+    {
+        if (!$this->invitations->contains($invitation)) {
+            $this->invitations->add($invitation);
+            $invitation->setTeam($this);
+        }
+        return $this;
+    }
+
+    public function removeInvitation(TeamInvitation $invitation): static
+    {
+        if ($this->invitations->removeElement($invitation)) {
+            if ($invitation->getTeam() === $this) {
+                $invitation->setTeam(null);
+            }
+        }
         return $this;
     }
 }

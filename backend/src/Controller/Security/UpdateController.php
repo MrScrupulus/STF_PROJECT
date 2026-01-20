@@ -15,7 +15,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 use Psr\Log\LoggerInterface;
 
-#[Route('/auth')]
+#[Route('/api/auth')]
 class UpdateController extends AbstractController
 {
     public function __construct(
