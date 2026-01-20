@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -13,8 +14,16 @@ import { competitionsService, Competition } from '../services/competitionsServic
 import { formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
 
+const FILTERS = {
+  ALL: 'all',
+  ONGOING: 'ongoing',
+  UPCOMING: 'upcoming',
+  ENDED: 'ended',
+};
+
 export default function CompetitionsScreen() {
   const navigation = useNavigation();
+  const [activeFilter, setActiveFilter] = useState(FILTERS.ALL);
   const { data, isLoading, error } = useQuery({
     queryKey: ['competitions'],
     queryFn: () => competitionsService.getAll(),
@@ -49,6 +58,16 @@ export default function CompetitionsScreen() {
       return { text: 'Terminée', style: styles.statusEnded, sortOrder: 3 };
     }
   };
+
+  // Filtrer les compétitions selon le filtre actif
+  const filteredData = (data || []).filter((competition) => {
+    if (activeFilter === FILTERS.ALL) return true;
+    const status = getCompetitionStatus(competition.startDate, competition.endDate);
+    if (activeFilter === FILTERS.ONGOING) return status.text === 'En cours';
+    if (activeFilter === FILTERS.UPCOMING) return status.text === 'À venir';
+    if (activeFilter === FILTERS.ENDED) return status.text === 'Terminée';
+    return true;
+  });
 
 
   const renderCompetition = ({ item }: { item: Competition }) => {
@@ -94,8 +113,84 @@ export default function CompetitionsScreen() {
     <>
       <Header title="Compétitions" showBack={true} showMenu={true} />
       <View style={styles.container}>
+        <View style={styles.filtersWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filtersContainer}
+            contentContainerStyle={styles.filtersContent}
+          >
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === FILTERS.ALL && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter(FILTERS.ALL)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                activeFilter === FILTERS.ALL && styles.filterButtonTextActive,
+              ]}
+            >
+              Toutes
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === FILTERS.ONGOING && styles.filterButtonActive,
+              activeFilter === FILTERS.ONGOING && styles.filterButtonOngoing,
+            ]}
+            onPress={() => setActiveFilter(FILTERS.ONGOING)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                activeFilter === FILTERS.ONGOING && styles.filterButtonTextActive,
+              ]}
+            >
+              En cours
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === FILTERS.UPCOMING && styles.filterButtonActive,
+              activeFilter === FILTERS.UPCOMING && styles.filterButtonUpcoming,
+            ]}
+            onPress={() => setActiveFilter(FILTERS.UPCOMING)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                activeFilter === FILTERS.UPCOMING && styles.filterButtonTextActive,
+              ]}
+            >
+              À venir
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === FILTERS.ENDED && styles.filterButtonActive,
+              activeFilter === FILTERS.ENDED && styles.filterButtonEnded,
+            ]}
+            onPress={() => setActiveFilter(FILTERS.ENDED)}
+          >
+            <Text
+              style={[
+                styles.filterButtonText,
+                activeFilter === FILTERS.ENDED && styles.filterButtonTextActive,
+              ]}
+            >
+              Terminées
+            </Text>
+          </TouchableOpacity>
+          </ScrollView>
+        </View>
         <FlatList
-          data={[...(data || [])].sort((a, b) => {
+          data={[...filteredData].sort((a, b) => {
             const statusA = getCompetitionStatus(a.startDate, a.endDate);
             const statusB = getCompetitionStatus(b.startDate, b.endDate);
             return statusA.sortOrder - statusB.sortOrder;
@@ -105,7 +200,15 @@ export default function CompetitionsScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyText}>Aucune compétition</Text>
+              <Text style={styles.emptyText}>
+                {activeFilter === FILTERS.ALL
+                  ? 'Aucune compétition'
+                  : activeFilter === FILTERS.ONGOING
+                  ? 'Aucune compétition en cours'
+                  : activeFilter === FILTERS.UPCOMING
+                  ? 'Aucune compétition à venir'
+                  : 'Aucune compétition terminée'}
+              </Text>
             </View>
           }
         />
@@ -118,6 +221,63 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  filtersWrapper: {
+    flexShrink: 0,
+    flexGrow: 0,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  filtersContainer: {
+    flexShrink: 0,
+    flexGrow: 0,
+  },
+  filtersContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    alignItems: 'flex-start',
+    alignContent: 'flex-start',
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+    minWidth: 'auto',
+    width: 'auto',
+    flexShrink: 0,
+    flexGrow: 0,
+  },
+  filterButtonActive: {
+    borderWidth: 1,
+    backgroundColor: '#6b7280',
+    borderColor: '#6b7280',
+  },
+  filterButtonOngoing: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  filterButtonUpcoming: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  filterButtonEnded: {
+    backgroundColor: '#ef4444',
+    borderColor: '#ef4444',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  filterButtonTextActive: {
+    color: '#fff',
+    fontWeight: '600',
   },
   list: {
     padding: 16,

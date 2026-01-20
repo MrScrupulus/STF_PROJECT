@@ -52,7 +52,111 @@
     font-size: 1.5rem;
     font-weight: bold;
     text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  &__filters {
+    display: flex;
+    gap: 0.75rem;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    align-content: flex-start;
+    flex-shrink: 0;
+    flex-grow: 0;
+    height: fit-content;
+    min-height: fit-content;
+    max-height: fit-content;
+
+    @include mobile {
+      gap: 0.5rem;
+    }
+  }
+
+  &__filter_btn {
+    padding: 0.625rem 1.25rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #6b7280;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    flex-grow: 0;
+    width: fit-content;
+    min-width: fit-content;
+    max-width: fit-content;
+
+    &:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    &_active {
+      color: white;
+      font-weight: 600;
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+
+    &_active:not(&_ongoing):not(&_upcoming):not(&_ended) {
+      border-color: #6b7280;
+      background-color: #6b7280;
+
+      &:hover {
+        border-color: #4b5563;
+        background-color: #4b5563;
+      }
+    }
+
+    &_ongoing {
+      border-color: #10b981;
+      background-color: #10b981;
+
+      &:hover {
+        border-color: #059669;
+        background-color: #059669;
+      }
+    }
+
+    &_upcoming {
+      border-color: #3b82f6;
+      background-color: #3b82f6;
+
+      &:hover {
+        border-color: #2563eb;
+        background-color: #2563eb;
+      }
+    }
+
+    &_ended {
+      border-color: #ef4444;
+      background-color: #ef4444;
+
+      &:hover {
+        border-color: #dc2626;
+        background-color: #dc2626;
+      }
+    }
+
+    @include mobile {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6b7280;
+    font-size: 1.125rem;
   }
 
   &__list {

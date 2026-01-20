@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement } from "react";
+import { createElement, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { competitionsService } from "../../services/competitions";
 import styles from "../../styles/pages/competitions.module.scss";
@@ -21,7 +21,15 @@ const getCompetitionStatus = (startDate, endDate) => {
   }
 };
 
+const FILTERS = {
+  ALL: "all",
+  ONGOING: "ongoing",
+  UPCOMING: "upcoming",
+  ENDED: "ended",
+};
+
 export default function CompetitionsPage() {
+  const [activeFilter, setActiveFilter] = useState(FILTERS.ALL);
   const { data: competitions, isLoading } = useQuery({
     queryKey: ["competitions"],
     queryFn: competitionsService.getAll,
@@ -30,8 +38,18 @@ export default function CompetitionsPage() {
   if (isLoading)
     return createElement("div", { className: `${layoutStyles.main} ${styles.loading}` }, "Chargement...");
 
+  // Filtrer les compétitions selon le filtre actif
+  const filteredCompetitions = (competitions || []).filter((competition) => {
+    if (activeFilter === FILTERS.ALL) return true;
+    const status = getCompetitionStatus(competition.startDate, competition.endDate);
+    if (activeFilter === FILTERS.ONGOING) return status.text === "En cours";
+    if (activeFilter === FILTERS.UPCOMING) return status.text === "À venir";
+    if (activeFilter === FILTERS.ENDED) return status.text === "Terminée";
+    return true;
+  });
+
   // Trier les compétitions : En cours, À venir, Terminé
-  const sortedCompetitions = [...(competitions || [])].sort((a, b) => {
+  const sortedCompetitions = [...filteredCompetitions].sort((a, b) => {
     const statusA = getCompetitionStatus(a.startDate, a.endDate);
     const statusB = getCompetitionStatus(b.startDate, b.endDate);
     return statusA.sortOrder - statusB.sortOrder;
@@ -52,8 +70,54 @@ export default function CompetitionsPage() {
     createElement(
       "div",
       {
-        className: styles.competitions__list,
+        className: styles.competitions__filters,
       },
+      createElement(
+        "button",
+        {
+          className: `${styles.competitions__filter_btn} ${activeFilter === FILTERS.ALL ? styles.competitions__filter_btn_active : ""}`,
+          onClick: () => setActiveFilter(FILTERS.ALL),
+        },
+        "Toutes"
+      ),
+      createElement(
+        "button",
+        {
+          className: `${styles.competitions__filter_btn} ${activeFilter === FILTERS.ONGOING ? `${styles.competitions__filter_btn_active} ${styles.competitions__filter_btn_ongoing}` : ""}`,
+          onClick: () => setActiveFilter(FILTERS.ONGOING),
+        },
+        "En cours"
+      ),
+      createElement(
+        "button",
+        {
+          className: `${styles.competitions__filter_btn} ${activeFilter === FILTERS.UPCOMING ? `${styles.competitions__filter_btn_active} ${styles.competitions__filter_btn_upcoming}` : ""}`,
+          onClick: () => setActiveFilter(FILTERS.UPCOMING),
+        },
+        "À venir"
+      ),
+      createElement(
+        "button",
+        {
+          className: `${styles.competitions__filter_btn} ${activeFilter === FILTERS.ENDED ? `${styles.competitions__filter_btn_active} ${styles.competitions__filter_btn_ended}` : ""}`,
+          onClick: () => setActiveFilter(FILTERS.ENDED),
+        },
+        "Terminées"
+      )
+    ),
+    sortedCompetitions.length === 0 && activeFilter !== FILTERS.ALL
+      ? createElement(
+          "div",
+          {
+            className: styles.competitions__empty,
+          },
+          `Aucune compétition ${activeFilter === FILTERS.ONGOING ? "en cours" : activeFilter === FILTERS.UPCOMING ? "à venir" : "terminée"}`
+        )
+      : createElement(
+          "div",
+          {
+            className: styles.competitions__list,
+          },
       sortedCompetitions.map((competition) =>
         createElement(
           "div",
