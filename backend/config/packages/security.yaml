@@ -22,11 +22,13 @@ security:
         failure_handler: lexik_jwt_authentication.handler.authentication_failure
         username_path: email
         password_path: password
+      user_checker: App\Security\UserChecker
     api:
       pattern: ^/api
       stateless: true
       provider: app_user_provider
       jwt: ~
+      user_checker: App\Security\UserChecker
     main:
       lazy: true
       provider: app_user_provider

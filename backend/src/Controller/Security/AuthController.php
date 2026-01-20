@@ -72,16 +72,12 @@ final class AuthController extends AbstractController
                 ], 400);
             }
 
-            // Validation des données requises
+            // Validation des données requises (seuls email, password, firstname, lastname sont obligatoires)
             $requiredFields = [
                 'email',
                 'password',
                 'firstname',
                 'lastname',
-                'phone_number',
-                'birthdate',
-                'country',
-                'subscriber_number'
             ];
 
             foreach ($requiredFields as $field) {
@@ -109,50 +105,18 @@ final class AuthController extends AbstractController
                 ], 400);
             }
 
-            // Validation du format de la date
-            $this->logger->info('Date reçue:', ['birthdate' => $data['birthdate'] ?? null]);
-            if (isset($data['birthdate']) && $data['birthdate']) {
+            // Validation du format de la date si fournie
+            $birthDate = null;
+            if (isset($data['birthdate']) && !empty($data['birthdate'])) {
                 try {
                     $birthDate = new \DateTime($data['birthdate']);
                     $this->logger->info('Date convertie:', ['date' => $birthDate->format('Y-m-d')]);
-                    $user = new User();
-                    $user->setEmail($data['email']);
-                    $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
-                    $user->setPassword($hashedPassword);
-                    $user->setFirstname($data['firstname']);
-                    $user->setLastname($data['lastname']);
-                    $user->setPhoneNumber($data['phone_number'] ?? null);
-                    $user->setCountry($data['country'] ?? null);
-                    $user->setBirthDate($birthDate);
-                    $user->setSubscriberNumber($data['subscriber_number']);
-                    $verificationToken = bin2hex(random_bytes(32));
-                    error_log("Longueur du token généré: " . strlen($verificationToken));
-                    error_log("Token généré lors de l'inscription: " . $verificationToken);
-                    $user->setVerificationToken($verificationToken);
-                    $user->setIsVerified(false);
-                    $user->setRoles(['ROLE_USER']);
-
-                    $this->entityManager->persist($user);
-                    $this->entityManager->flush();
-
-                    error_log("Envoi de l'email avec le token: " . $verificationToken);
-                    try {
-                        $this->emailService->sendVerificationEmail($user);
-                    } catch (\Exception $emailException) {
-                        error_log("ERREUR lors de l'envoi de l'email (non bloquant): " . $emailException->getMessage());
-                        // L'utilisateur est créé même si l'email échoue
-                    }
-
-                    return $this->json([
-                        'success' => true,
-                        'message' => 'Inscription réussie. Veuillez vérifier votre email.',
-                    ]);
                 } catch (\Exception $e) {
                     $this->logger->error('Erreur conversion date:', ['error' => $e->getMessage()]);
                     return $this->json([
                         'success' => false,
-                        'message' => 'Une erreur est survenue lors de la conversion de la date',
-                    ], 500);
+                        'message' => 'Format de date invalide. Utilisez le format YYYY-MM-DD',
+                    ], 400);
                 }
             }
 
@@ -170,10 +134,10 @@ final class AuthController extends AbstractController
             $user->setPassword($hashedPassword);
             $user->setFirstname($data['firstname']);
             $user->setLastname($data['lastname']);
-            $user->setPhoneNumber($data['phone_number'] ?? null);
-            $user->setCountry($data['country'] ?? null);
-            $user->setBirthDate(isset($data['birth_date']) ? new \DateTime($data['birth_date']) : null);
-            $user->setSubscriberNumber($data['subscriber_number']);
+            $user->setPhoneNumber(!empty($data['phone_number']) ? $data['phone_number'] : null);
+            $user->setCountry(!empty($data['country']) ? $data['country'] : null);
+            $user->setBirthDate($birthDate);
+            $user->setSubscriberNumber(!empty($data['subscriber_number']) ? $data['subscriber_number'] : null);
             $verificationToken = bin2hex(random_bytes(32));
             error_log("Longueur du token généré: " . strlen($verificationToken));
             error_log("Token généré lors de l'inscription: " . $verificationToken);
@@ -231,14 +195,25 @@ final class AuthController extends AbstractController
 
         if (!$user) {
             return $this->json([
-                'message' => 'Invalid credentials'
+                'success' => false,
+                'message' => 'Identifiants invalides'
             ], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Vérifier que l'email est vérifié
+        if (!$user->isVerified()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Votre email n\'a pas été vérifié. Veuillez vérifier votre boîte mail et cliquer sur le lien de vérification.',
+                'requiresVerification' => true
+            ], Response::HTTP_FORBIDDEN);
         }
 
         // Générer le token JWT
         $token = $this->jwtManager->create($user);
 
         return $this->json([
+            'success' => true,
             'token' => $token,
             'user' => $user->getUserIdentifier(),
             'roles' => $user->getRoles()

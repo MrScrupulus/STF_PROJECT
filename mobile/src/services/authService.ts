@@ -35,21 +35,34 @@ export const authService = {
       );
     }
 
-    if (!PHONE_REGEX.test(userData.phoneNumber)) {
-      throw new Error("Le numéro de téléphone doit contenir 10 chiffres");
+    // Validation du téléphone seulement s'il est fourni
+    if (userData.phoneNumber && userData.phoneNumber.trim() !== '') {
+      if (!PHONE_REGEX.test(userData.phoneNumber)) {
+        throw new Error("Le numéro de téléphone doit contenir 10 chiffres");
+      }
     }
 
-    // Formatage des données pour l'API
-    const formattedData = {
+    // Formatage des données pour l'API (ne pas envoyer les champs vides)
+    const formattedData: any = {
       email: userData.email,
       password: userData.password,
       firstname: userData.firstName,
       lastname: userData.lastName,
-      phone_number: userData.phoneNumber.replace(/\D/g, ''),
-      birthdate: userData.birthDate,
-      country: userData.country,
-      subscriber_number: userData.subscriber_number,
     };
+
+    // Ajouter les champs optionnels seulement s'ils sont remplis
+    if (userData.phoneNumber && userData.phoneNumber.trim() !== '') {
+      formattedData.phone_number = userData.phoneNumber.replace(/\D/g, '');
+    }
+    if (userData.birthDate && userData.birthDate.trim() !== '') {
+      formattedData.birthdate = userData.birthDate;
+    }
+    if (userData.country && userData.country.trim() !== '') {
+      formattedData.country = userData.country;
+    }
+    if (userData.subscriber_number && userData.subscriber_number.trim() !== '') {
+      formattedData.subscriber_number = userData.subscriber_number;
+    }
 
     const response = await apiClient.post(API_ENDPOINTS.auth.register, formattedData);
     return response.data;

@@ -234,9 +234,12 @@ export default function CompetitionDetailScreen({ route }: any) {
   }
 
   const myTeams = myTeamsData?.teams || [];
+  
+  // Date actuelle pour les comparaisons
   const now = new Date();
   
   // Filtrer les équipes disponibles (sans compétition ou avec compétition terminée)
+  
   const availableTeams = myTeams.filter((team: any) => {
     if (!team.competition) return true;
     // Considérer l'équipe comme disponible si sa compétition est terminée
@@ -245,11 +248,25 @@ export default function CompetitionDetailScreen({ route }: any) {
   });
   
   // Vérifier si déjà inscrit à cette compétition spécifique (et que la compétition est active)
+  // OU si l'utilisateur a une équipe inscrite à une autre compétition active
   const isAlreadyRegistered = myTeams.some((team: any) => {
-    if (!team.competition || team.competition.id !== competition.id) return false;
-    // Vérifier que la compétition de l'équipe est encore active
-    const teamCompetitionEndDate = new Date(team.competition.endDate);
-    return teamCompetitionEndDate >= now;
+    if (!team.competition) return false;
+    
+    // Si l'équipe est inscrite à cette compétition, vérifier qu'elle est active
+    if (team.competition.id === competition.id) {
+      const teamCompetitionEndDate = new Date(team.competition.endDate);
+      return teamCompetitionEndDate >= now; // En cours ou à venir
+    }
+    
+    // Si l'équipe est inscrite à une autre compétition, vérifier qu'elle est active
+    // Si oui, on ne peut pas s'inscrire à une nouvelle compétition
+    const otherCompetitionEndDate = new Date(team.competition.endDate);
+    if (otherCompetitionEndDate >= now) {
+      // L'équipe est inscrite à une compétition active (en cours ou à venir)
+      return true; // On considère qu'on est déjà inscrit (à une autre compétition active)
+    }
+    
+    return false;
   });
   
   const hasAvailableTeams = availableTeams.length > 0;
