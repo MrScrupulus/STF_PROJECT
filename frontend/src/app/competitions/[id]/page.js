@@ -223,6 +223,9 @@ export default function CompetitionDetailPage() {
   // Vérifier si la compétition est terminée
   const isCompetitionEnded = competition?.isEnded || (competition?.endDate && new Date(competition.endDate) < now);
   
+  // Vérifier si c'est une compétition individuelle (teamSize === 1)
+  const isIndividualCompetition = competition?.teamSize === 1;
+  
   const myTeams = allMyTeams.filter(team => {
     if (!team.competition) {
       // Équipe sans compétition - disponible
@@ -245,8 +248,34 @@ export default function CompetitionDetailPage() {
     team => team.competition && team.competition.id === parseInt(id)
   );
 
+  // Mutation pour créer une équipe individuelle
+  const createIndividualTeamMutation = useMutation({
+    mutationFn: () => {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const teamName = `${currentUser.firstname || ""} ${currentUser.lastname || ""}`.trim() || "Mon équipe";
+      return teamService.create({ name: teamName });
+    },
+    onSuccess: (response) => {
+      // Après création de l'équipe, inscrire directement à la compétition
+      if (response.team?.id) {
+        registerMutation.mutate({ teamId: response.team.id, competitionId: id });
+      } else {
+        toast.error("Erreur lors de la création de l'équipe");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Erreur lors de la création de l'équipe");
+    },
+  });
+
   // Si l'utilisateur n'a qu'une seule équipe, l'inscrire automatiquement au clic
   const handleRegisterClick = () => {
+    // Pour les compétitions individuelles, créer automatiquement une équipe si nécessaire
+    if (isIndividualCompetition && !hasAvailableTeams) {
+      createIndividualTeamMutation.mutate();
+      return;
+    }
+    
     if (hasSingleTeam) {
       // Inscrire directement l'unique équipe
       registerMutation.mutate({ teamId: singleTeam.id, competitionId: id });
@@ -420,7 +449,7 @@ export default function CompetitionDetailPage() {
                 {hasSingleTeam ? (
                   <div className={styles.competitions__single_team_info}>
                     <p>
-                      <strong>Votre équipe :</strong> {singleTeam.name}
+                      <strong>{isIndividualCompetition ? "Vous participez" : "Votre équipe"} :</strong> {singleTeam.name}
                     </p>
                     <button
                       onClick={handleRegisterClick}
@@ -429,29 +458,50 @@ export default function CompetitionDetailPage() {
                     >
                       {registerMutation.isPending
                         ? "Inscription en cours..."
-                        : "Inscrire mon équipe"}
+                        : isIndividualCompetition ? "S'inscrire" : "Inscrire mon équipe"}
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={handleRegisterClick}
                     className={styles.competitions__register_btn}
+                    disabled={registerMutation.isPending || createIndividualTeamMutation.isPending}
                   >
-                    Inscrire mon équipe
+                    {registerMutation.isPending || createIndividualTeamMutation.isPending
+                      ? "Inscription en cours..."
+                      : isIndividualCompetition ? "S'inscrire" : "Inscrire mon équipe"}
                   </button>
                 )}
               </>
             ) : (
               // Masquer le message "pas d'équipe" si la compétition est terminée
+              // Pour les compétitions individuelles, permettre l'inscription directe
               !isCompetitionEnded && (
                 <div className={styles.competitions__no_teams}>
-                  <p>Vous n'avez pas d'équipe disponible pour cette compétition.</p>
-                  <button
-                    onClick={() => router.push("/teams/create")}
-                    className={styles.competitions__create_team_btn}
-                  >
-                    Créer une équipe
-                  </button>
+                  {isIndividualCompetition ? (
+                    <>
+                      <p>Vous pouvez vous inscrire directement à cette compétition individuelle.</p>
+                      <button
+                        onClick={handleRegisterClick}
+                        disabled={createIndividualTeamMutation.isPending || registerMutation.isPending}
+                        className={styles.competitions__register_btn}
+                      >
+                        {createIndividualTeamMutation.isPending || registerMutation.isPending
+                          ? "Inscription en cours..."
+                          : "S'inscrire"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p>Vous n'avez pas d'équipe disponible pour cette compétition.</p>
+                      <button
+                        onClick={() => router.push("/teams/create")}
+                        className={styles.competitions__create_team_btn}
+                      >
+                        Créer une équipe
+                      </button>
+                    </>
+                  )}
                 </div>
               )
             )}
@@ -519,19 +569,39 @@ export default function CompetitionDetailPage() {
               </form>
             ) : (
               // Masquer le message "pas d'équipe" si la compétition est terminée
+              // Pour les compétitions individuelles, permettre l'inscription directe
               !isCompetitionEnded && (
                 <div className={styles.competitions__no_teams}>
-                  <p>
-                    Vous n'avez pas d'équipe disponible pour cette compétition.
-                    <br />
-                    Créez une équipe pour pouvoir vous inscrire.
-                  </p>
-                  <button
-                    onClick={() => router.push("/teams/create")}
-                    className={styles.competitions__create_team_btn}
-                  >
-                    Créer une équipe
-                  </button>
+                  {isIndividualCompetition ? (
+                    <>
+                      <p>
+                        Vous pouvez vous inscrire directement à cette compétition individuelle.
+                      </p>
+                      <button
+                        onClick={handleRegisterClick}
+                        disabled={createIndividualTeamMutation.isPending || registerMutation.isPending}
+                        className={styles.competitions__register_btn}
+                      >
+                        {createIndividualTeamMutation.isPending || registerMutation.isPending
+                          ? "Inscription en cours..."
+                          : "S'inscrire"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        Vous n'avez pas d'équipe disponible pour cette compétition.
+                        <br />
+                        Créez une équipe pour pouvoir vous inscrire.
+                      </p>
+                      <button
+                        onClick={() => router.push("/teams/create")}
+                        className={styles.competitions__create_team_btn}
+                      >
+                        Créer une équipe
+                      </button>
+                    </>
+                  )}
                 </div>
               )
             )}

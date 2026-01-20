@@ -181,6 +181,28 @@ export default function CompetitionDetailScreen({ route }: any) {
     },
   });
 
+  // Mutation pour créer une équipe individuelle
+  const createIndividualTeamMutation = useMutation({
+    mutationFn: async () => {
+      const currentUser = await authService.getCurrentUser();
+      const teamName = currentUser?.user?.firstname && currentUser?.user?.lastname
+        ? `${currentUser.user.firstname} ${currentUser.user.lastname}`.trim()
+        : 'Mon équipe';
+      return teamService.create({ name: teamName });
+    },
+    onSuccess: (response: any) => {
+      // Après création de l'équipe, inscrire directement à la compétition
+      if (response.team?.id) {
+        registerMutation.mutate({ teamId: response.team.id, competitionId: competitionId });
+      } else {
+        Alert.alert('Erreur', 'Erreur lors de la création de l\'équipe');
+      }
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || error.message || 'Erreur lors de la création de l\'équipe');
+    },
+  });
+
   // Mutation pour mettre en pause/reprendre
   const pauseMutation = useMutation({
     mutationFn: (isPaused: boolean) => adminService.togglePause(competitionId, isPaused),
@@ -285,7 +307,9 @@ export default function CompetitionDetailScreen({ route }: any) {
   
   const hasAvailableTeams = availableTeams.length > 0;
   const isEnded = (competition as any).isEnded || new Date(competition.endDate) < now;
-  const canRegister = !isEnded && !isAlreadyRegistered && hasAvailableTeams;
+  // Vérifier si c'est une compétition individuelle (teamSize === 1)
+  const isIndividualCompetition = (competition as any)?.teamSize === 1;
+  const canRegister = !isEnded && !isAlreadyRegistered && (hasAvailableTeams || isIndividualCompetition);
   
   // Fonction pour déterminer le statut de la compétition
   const getCompetitionStatus = () => {
@@ -310,6 +334,16 @@ export default function CompetitionDetailScreen({ route }: any) {
       return;
     }
     registerMutation.mutate({ teamId: selectedTeamId, competitionId: competitionId });
+  };
+
+  const handleRegisterClick = () => {
+    // Pour les compétitions individuelles, créer automatiquement une équipe si nécessaire
+    if (isIndividualCompetition && !hasAvailableTeams) {
+      createIndividualTeamMutation.mutate();
+      return;
+    }
+    // Sinon, afficher le formulaire de sélection
+    setShowRegisterForm(true);
   };
 
   const teamsToShow = competition.teams || [];
@@ -536,25 +570,49 @@ export default function CompetitionDetailScreen({ route }: any) {
             ) : canRegister ? (
               <TouchableOpacity
                 style={styles.registerButton}
-                onPress={() => setShowRegisterForm(true)}
+                onPress={handleRegisterClick}
+                disabled={createIndividualTeamMutation.isPending || registerMutation.isPending}
               >
                 <Text style={styles.registerButtonText}>
-                  Inscrire mon équipe
+                  {createIndividualTeamMutation.isPending || registerMutation.isPending
+                    ? 'Inscription...'
+                    : isIndividualCompetition ? "S'inscrire" : 'Inscrire mon équipe'}
                 </Text>
               </TouchableOpacity>
             ) : !hasAvailableTeams && !isEnded ? (
               <View style={styles.noTeams}>
-                <Text style={styles.noTeamsText}>
-                  Vous n'avez pas d'équipe disponible
-                </Text>
-                <TouchableOpacity
-                  style={styles.createTeamButton}
-                  onPress={() => navigation.navigate('CreateTeam' as never)}
-                >
-                  <Text style={styles.createTeamButtonText}>
-                    Créer une équipe
-                  </Text>
-                </TouchableOpacity>
+                {isIndividualCompetition ? (
+                  <>
+                    <Text style={styles.noTeamsText}>
+                      Vous pouvez vous inscrire directement à cette compétition individuelle.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.registerButton}
+                      onPress={handleRegisterClick}
+                      disabled={createIndividualTeamMutation.isPending || registerMutation.isPending}
+                    >
+                      <Text style={styles.registerButtonText}>
+                        {createIndividualTeamMutation.isPending || registerMutation.isPending
+                          ? 'Inscription...'
+                          : "S'inscrire"}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.noTeamsText}>
+                      Vous n'avez pas d'équipe disponible
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.createTeamButton}
+                      onPress={() => navigation.navigate('CreateTeam' as never)}
+                    >
+                      <Text style={styles.createTeamButtonText}>
+                        Créer une équipe
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             ) : isEnded ? (
               <Text style={styles.endedText}>
@@ -611,17 +669,38 @@ export default function CompetitionDetailScreen({ route }: any) {
               </>
             ) : !isEnded ? (
               <View style={styles.noTeams}>
-                <Text style={styles.noTeamsText}>
-                  Vous n'avez pas d'équipe disponible
-                </Text>
-                <TouchableOpacity
-                  style={styles.createTeamButton}
-                  onPress={() => navigation.navigate('CreateTeam' as never)}
-                >
-                  <Text style={styles.createTeamButtonText}>
-                    Créer une équipe
-                  </Text>
-                </TouchableOpacity>
+                {isIndividualCompetition ? (
+                  <>
+                    <Text style={styles.noTeamsText}>
+                      Vous pouvez vous inscrire directement à cette compétition individuelle.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.registerButton}
+                      onPress={handleRegisterClick}
+                      disabled={createIndividualTeamMutation.isPending || registerMutation.isPending}
+                    >
+                      <Text style={styles.registerButtonText}>
+                        {createIndividualTeamMutation.isPending || registerMutation.isPending
+                          ? 'Inscription...'
+                          : "S'inscrire"}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.noTeamsText}>
+                      Vous n'avez pas d'équipe disponible
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.createTeamButton}
+                      onPress={() => navigation.navigate('CreateTeam' as never)}
+                    >
+                      <Text style={styles.createTeamButtonText}>
+                        Créer une équipe
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             ) : null}
           </View>
