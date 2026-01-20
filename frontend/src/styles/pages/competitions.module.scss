@@ -539,6 +539,26 @@
   }
 
   &__species_section {
+    margin-bottom: 2rem;
+  }
+
+  &__chart_container {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    min-width: 300px;
+    min-height: 400px;
+    margin-top: 1rem;
+  }
+
+  &__map_section {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  &__species_section {
     margin-top: 2rem;
   }
 

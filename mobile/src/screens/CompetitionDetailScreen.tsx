@@ -18,6 +18,7 @@ import { adminService } from '../services/adminService';
 import { formatDateTimeLocal } from '../utils/dateUtils';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
+import SpeciesPieChart from '../components/competition/SpeciesPieChart';
 
 export default function CompetitionDetailScreen({ route }: any) {
   const navigation = useNavigation();
@@ -430,15 +431,7 @@ export default function CompetitionDetailScreen({ route }: any) {
 
                 {stats.speciesStats && stats.speciesStats.length > 0 && (
                   <View style={styles.speciesSection}>
-                    <Text style={styles.subsectionTitle}>Répartition par espèce</Text>
-                    {stats.speciesStats.map((species: any) => (
-                      <View key={species.id} style={styles.speciesItem}>
-                        <Text style={styles.speciesName}>{species.name}</Text>
-                        <Text style={styles.speciesCount}>
-                          {species.count} prise{species.count > 1 ? 's' : ''}
-                        </Text>
-                      </View>
-                    ))}
+                    <SpeciesPieChart speciesStats={stats.speciesStats} />
                   </View>
                 )}
 

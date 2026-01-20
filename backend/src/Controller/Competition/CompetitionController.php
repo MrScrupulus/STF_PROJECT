@@ -722,6 +722,8 @@ class CompetitionController extends AbstractController
                     ] : null,
                     'points' => $catch->calculatePoints(),
                     'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'latitude' => $catch->getLatitude(),
+                    'longitude' => $catch->getLongitude(),
                 ];
             }
 
@@ -737,6 +739,34 @@ class CompetitionController extends AbstractController
                 $top3BySpeciesFormatted[$speciesId] = array_slice($catchesForSpecies, 0, 3);
             }
 
+            // Préparer les données des prises avec coordonnées GPS pour la carte
+            $catchesForMap = [];
+            foreach ($catches as $catch) {
+                if ($catch->getLatitude() && $catch->getLongitude()) {
+                    $catchesForMap[] = [
+                        'id' => $catch->getId(),
+                        'size' => $catch->getSize(),
+                        'species' => [
+                            'id' => $catch->getSpecies()->getId(),
+                            'name' => $catch->getSpecies()->getName(),
+                        ],
+                        'team' => [
+                            'id' => $catch->getTeam()->getId(),
+                            'name' => $catch->getTeam()->getName(),
+                        ],
+                        'caughtBy' => $catch->getCaughtBy() ? [
+                            'id' => $catch->getCaughtBy()->getId(),
+                            'firstname' => $catch->getCaughtBy()->getFirstname(),
+                            'lastname' => $catch->getCaughtBy()->getLastname(),
+                        ] : null,
+                        'points' => $catch->calculatePoints(),
+                        'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                        'latitude' => $catch->getLatitude(),
+                        'longitude' => $catch->getLongitude(),
+                    ];
+                }
+            }
+
             return $this->json([
                 'success' => true,
                 'competition' => [
@@ -747,6 +777,7 @@ class CompetitionController extends AbstractController
                     'totalCatches' => $totalCatches,
                     'speciesStats' => array_values($speciesStats),
                     'top3BySpecies' => $top3BySpeciesFormatted,
+                    'catchesForMap' => $catchesForMap, // Ajouter les prises avec GPS pour la carte
                 ]
             ]);
         } catch (\Exception $e) {

@@ -8,6 +8,8 @@ import { teamService } from "../../../services/teamService";
 import { authService } from "../../../services/authService";
 import { adminService } from "../../../services/adminService";
 import ScheduledPausesManager from "../../../components/admin/ScheduledPausesManager";
+import SpeciesPieChart from "../../../components/competition/SpeciesPieChart";
+import CatchesMap from "../../../components/competition/CatchesMap";
 import styles from "../../../styles/pages/competitions.module.scss";
 import { toast } from "react-hot-toast";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
@@ -552,20 +554,22 @@ export default function CompetitionDetailPage() {
                   </div>
                 </div>
 
-                {/* Répartition par espèce */}
+                {/* Répartition par espèce avec graphique */}
                 {stats.speciesStats && stats.speciesStats.length > 0 && (
                   <div className={styles.competitions__species_section}>
-                    <h3>Répartition par espèce</h3>
-                    <div className={styles.competitions__species_grid}>
-                      {stats.speciesStats.map((species) => (
-                        <div key={species.id} className={styles.competitions__species_card}>
-                          <div className={styles.competitions__species_name}>{species.name}</div>
-                          <div className={styles.competitions__species_count}>
-                            {species.count} prise{species.count > 1 ? 's' : ''}
-                          </div>
-                        </div>
-                      ))}
+                    <div className={styles.competitions__chart_container}>
+                      <SpeciesPieChart speciesStats={stats.speciesStats} />
                     </div>
+                  </div>
+                )}
+
+                {/* Carte interactive des prises */}
+                {stats.catchesForMap && stats.catchesForMap.length > 0 && (
+                  <div className={styles.competitions__map_section}>
+                    <CatchesMap 
+                      catches={stats.catchesForMap} 
+                      perimeters={competition.perimeters || []}
+                    />
                   </div>
                 )}
 
