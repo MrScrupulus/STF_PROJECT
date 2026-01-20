@@ -10,6 +10,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
+import { formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
 
 export default function CompetitionsScreen() {
@@ -49,47 +50,6 @@ export default function CompetitionsScreen() {
     }
   };
 
-  const formatCompetitionDate = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    // Vérifier si les dates sont le même jour
-    const isSameDay = 
-      start.getFullYear() === end.getFullYear() &&
-      start.getMonth() === end.getMonth() &&
-      start.getDate() === end.getDate();
-    
-    if (isSameDay) {
-      // Même jour : afficher date + heures début et fin
-      const dateStr = start.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-      const startTime = start.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      const endTime = end.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      return `${dateStr} de ${startTime} à ${endTime}`;
-    } else {
-      // Jours différents : afficher les deux dates complètes
-      const startStr = start.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-      const endStr = end.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-      return `${startStr} - ${endStr}`;
-    }
-  };
 
   const renderCompetition = ({ item }: { item: Competition }) => {
     const status = getCompetitionStatus(item.startDate, item.endDate);
@@ -117,7 +77,7 @@ export default function CompetitionsScreen() {
           </View>
         </View>
         <Text style={styles.cardDate}>
-          {formatCompetitionDate(item.startDate, item.endDate)}
+          {formatCompetitionDateRange(item.startDate, item.endDate)}
         </Text>
         {item.teams && item.teams.length > 0 && (
           <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>

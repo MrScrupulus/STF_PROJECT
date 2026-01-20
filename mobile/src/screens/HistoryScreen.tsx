@@ -13,6 +13,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
+import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 
 export default function HistoryScreen() {
@@ -257,7 +258,7 @@ function CatchesTab({ catches, onImagePress }: any) {
             {catchItem.createdAt && (
               <Text style={styles.catchDetail}>
                 Date: <Text style={styles.catchValue}>
-                  {new Date(catchItem.createdAt).toLocaleString('fr-FR')}
+                  {formatDateTime(catchItem.createdAt)}
                 </Text>
               </Text>
             )}

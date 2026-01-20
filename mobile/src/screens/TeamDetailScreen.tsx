@@ -14,6 +14,9 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { teamService, Team } from '../services/teamService';
+import { adminService } from '../services/adminService';
+import { authService } from '../services/authService';
+import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 
 export default function TeamDetailScreen({ route }: any) {
@@ -23,6 +26,10 @@ export default function TeamDetailScreen({ route }: any) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedCatchForReject, setSelectedCatchForReject] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const { data: teamData, isLoading, error } = useQuery({
     queryKey: ['team', id],
@@ -58,6 +65,93 @@ export default function TeamDetailScreen({ route }: any) {
       Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la sortie de l\'équipe');
     },
   });
+
+  // Vérifier si l'utilisateur est admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const response = await authService.getCurrentUser();
+        const user = response.user || response;
+        setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
+      } catch (error) {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, []);
+
+  // Mutation pour valider une prise
+  const validateCatchMutation = useMutation({
+    mutationFn: (catchId: number) => adminService.validateCatch(catchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
+      Alert.alert('Succès', 'Prise validée avec succès !');
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la validation');
+    },
+  });
+
+  // Mutation pour rejeter une prise
+  const rejectCatchMutation = useMutation({
+    mutationFn: ({ catchId, reason }: { catchId: number; reason: string }) =>
+      adminService.rejectCatch(catchId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
+      Alert.alert('Succès', 'Prise rejetée avec succès !');
+      setShowRejectModal(false);
+      setSelectedCatchForReject(null);
+      setRejectionReason('');
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors du rejet');
+    },
+  });
+
+  const handleValidateCatch = (catchId: number) => {
+    Alert.alert(
+      'Valider la prise',
+      'Êtes-vous sûr de vouloir valider cette prise ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Valider',
+          onPress: () => validateCatchMutation.mutate(catchId),
+        },
+      ]
+    );
+  };
+
+  const handleRejectCatch = (catchItem: any) => {
+    setSelectedCatchForReject(catchItem);
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmReject = () => {
+    if (!rejectionReason.trim()) {
+      Alert.alert('Erreur', 'Veuillez indiquer un motif de rejet');
+      return;
+    }
+    if (selectedCatchForReject) {
+      Alert.alert(
+        'Rejeter la prise',
+        'Êtes-vous sûr de vouloir rejeter cette prise ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Rejeter',
+            style: 'destructive',
+            onPress: () => rejectCatchMutation.mutate({
+              catchId: selectedCatchForReject.id,
+              reason: rejectionReason.trim(),
+            }),
+          },
+        ]
+      );
+    }
+  };
 
   const handleLeaveTeam = () => {
     // Vérifier si l'équipe est inscrite dans une compétition active
@@ -308,6 +402,9 @@ export default function TeamDetailScreen({ route }: any) {
                       index={index}
                       isTop5={true}
                       onImagePress={(uri: string) => setSelectedImage(uri)}
+                      isAdmin={isAdmin}
+                      onValidate={handleValidateCatch}
+                      onReject={handleRejectCatch}
                     />
                   ))}
                 </View>
@@ -341,6 +438,9 @@ export default function TeamDetailScreen({ route }: any) {
                       catchItem={catchItem}
                       isRejected={true}
                       onImagePress={(uri: string) => setSelectedImage(uri)}
+                      isAdmin={isAdmin}
+                      onValidate={handleValidateCatch}
+                      onReject={handleRejectCatch}
                     />
                   ))}
                 </View>
@@ -373,12 +473,72 @@ export default function TeamDetailScreen({ route }: any) {
           )}
         </View>
       </Modal>
+
+      {/* Modal pour rejeter une prise */}
+      <Modal
+        visible={showRejectModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowRejectModal(false);
+          setSelectedCatchForReject(null);
+          setRejectionReason('');
+        }}
+      >
+        <View style={styles.rejectModalOverlay}>
+          <View style={styles.rejectModalContent}>
+            <Text style={styles.rejectModalTitle}>Rejeter la prise</Text>
+            {selectedCatchForReject && (
+              <View style={styles.rejectModalCatchInfo}>
+                <Text style={styles.rejectModalCatchText}>
+                  Espèce: {selectedCatchForReject.species?.name || 'N/A'}
+                </Text>
+                <Text style={styles.rejectModalCatchText}>
+                  Taille: {selectedCatchForReject.size} cm
+                </Text>
+              </View>
+            )}
+            <Text style={styles.rejectModalLabel}>Motif de rejet *</Text>
+            <TextInput
+              style={styles.rejectModalInput}
+              placeholder="Indiquez le motif de rejet..."
+              value={rejectionReason}
+              onChangeText={setRejectionReason}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            <View style={styles.rejectModalActions}>
+              <TouchableOpacity
+                style={[styles.rejectModalButton, styles.rejectModalCancelButton]}
+                onPress={() => {
+                  setShowRejectModal(false);
+                  setSelectedCatchForReject(null);
+                  setRejectionReason('');
+                }}
+                disabled={rejectCatchMutation.isPending}
+              >
+                <Text style={styles.rejectModalButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.rejectModalButton, styles.rejectModalConfirmButton]}
+                onPress={handleConfirmReject}
+                disabled={rejectCatchMutation.isPending || !rejectionReason.trim()}
+              >
+                <Text style={styles.rejectModalButtonText}>
+                  {rejectCatchMutation.isPending ? 'Traitement...' : 'Rejeter'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       </ScrollView>
     </>
   );
 }
 
-function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress }: any) {
+function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress, isAdmin, onValidate, onReject }: any) {
   return (
     <View style={styles.catchCard}>
       {isTop5 && (
@@ -417,7 +577,7 @@ function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress }: any) 
           <View style={styles.catchDetailRow}>
             <Text style={styles.catchLabel}>Date :</Text>
             <Text style={styles.catchValue}>
-              {new Date(catchItem.createdAt).toLocaleString('fr-FR')}
+              {formatDateTime(catchItem.createdAt)}
             </Text>
           </View>
         )}
@@ -442,6 +602,22 @@ function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress }: any) 
       ) : !catchItem.isValidated ? (
         <View style={styles.catchStatusPending}>
           <Text style={styles.catchStatusText}>⏳ En attente de validation</Text>
+          {isAdmin && (
+            <View style={styles.catchAdminActions}>
+              <TouchableOpacity
+                style={[styles.adminActionButton, styles.validateButton]}
+                onPress={() => onValidate(catchItem.id)}
+              >
+                <Text style={styles.adminActionButtonText}>✓ Valider</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.adminActionButton, styles.rejectButton]}
+                onPress={() => onReject(catchItem)}
+              >
+                <Text style={styles.adminActionButtonText}>✗ Rejeter</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : (
         <View style={styles.catchStatusValidated}>
@@ -840,5 +1016,96 @@ const styles = StyleSheet.create({
   imageModalImage: {
     width: '90%',
     height: '80%',
+  },
+  catchAdminActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  adminActionButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  validateButton: {
+    backgroundColor: '#34C759',
+  },
+  rejectButton: {
+    backgroundColor: '#FF3B30',
+  },
+  adminActionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  rejectModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  rejectModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+  },
+  rejectModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#333',
+  },
+  rejectModalCatchInfo: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  rejectModalCatchText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  rejectModalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  rejectModalInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 100,
+    marginBottom: 16,
+    textAlignVertical: 'top',
+  },
+  rejectModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rejectModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rejectModalCancelButton: {
+    backgroundColor: '#e5e5e5',
+  },
+  rejectModalConfirmButton: {
+    backgroundColor: '#FF3B30',
+  },
+  rejectModalButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });

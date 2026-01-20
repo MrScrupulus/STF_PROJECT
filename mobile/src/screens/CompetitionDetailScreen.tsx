@@ -10,13 +10,13 @@ import {
   TextInput,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { competitionsService } from '../services/competitionsService';
 import { teamService } from '../services/teamService';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
-import { formatDateTimeLocal } from '../utils/dateUtils';
+import { formatDateTimeLocal, formatCompetitionDate, formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
@@ -69,13 +69,14 @@ export default function CompetitionDetailScreen({ route }: any) {
     fetchUser();
   }, []);
 
+  // Charger les stats au montage et quand les dépendances changent
   useEffect(() => {
     if (!competition) return;
     // Le classement est visible si : classement public OU admin
     // (Si l'admin publie le classement, il est visible même si la compétition n'est pas terminée)
     const rankingVisible = competition.isRankingPublic || isAdmin;
     if (!rankingVisible) return;
-    if (stats || loadingStats) return;
+    if (loadingStats) return; // Éviter les appels multiples simultanés
 
     const loadStats = async () => {
       setLoadingStats(true);
@@ -86,6 +87,10 @@ export default function CompetitionDetailScreen({ route }: any) {
         }
       } catch (error) {
         console.error('Error loading stats:', error);
+        // Ne pas afficher d'erreur si c'est juste que les stats ne sont pas disponibles
+        if ((error as any)?.response?.status !== 403) {
+          // Seulement logger les autres erreurs
+        }
       } finally {
         setLoadingStats(false);
       }
@@ -93,6 +98,58 @@ export default function CompetitionDetailScreen({ route }: any) {
 
     loadStats();
   }, [competition?.isRankingPublic, competition?.endDate, isAdmin, competitionId]);
+
+  // Recharger les stats quand l'écran est focus (quand on revient dessus)
+  // Utiliser un ref pour éviter les appels multiples
+  const lastFocusTime = React.useRef<number>(0);
+  const isLoadingRef = React.useRef<boolean>(false);
+  
+  // Synchroniser le ref avec l'état
+  useEffect(() => {
+    isLoadingRef.current = loadingStats;
+  }, [loadingStats]);
+  
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!competition) return;
+      const rankingVisible = competition.isRankingPublic || isAdmin;
+      if (!rankingVisible) return;
+      if (isLoadingRef.current) return; // Éviter les appels multiples simultanés
+      
+      // Éviter les appels trop fréquents (minimum 2 secondes entre les appels)
+      const now = Date.now();
+      if (now - lastFocusTime.current < 2000) return;
+      lastFocusTime.current = now;
+
+      // Invalider les requêtes pour forcer le rafraîchissement
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      
+      // Recharger les stats seulement si on n'est pas déjà en train de charger
+      if (!isLoadingRef.current) {
+        isLoadingRef.current = true;
+        setLoadingStats(true);
+        
+        const loadStats = async () => {
+          try {
+            const response = await competitionsService.getPublicStats(competitionId);
+            if (response.success && response.stats) {
+              setStats(response.stats);
+            }
+          } catch (error: any) {
+            // Ne pas logger les erreurs 403 (stats non disponibles) car c'est normal
+            if (error?.response?.status !== 403 && error?.message !== 'Network Error') {
+              console.error('Error loading stats:', error);
+            }
+          } finally {
+            setLoadingStats(false);
+            isLoadingRef.current = false;
+          }
+        };
+
+        loadStats();
+      }
+    }, [competitionId, competition?.isRankingPublic, isAdmin, queryClient])
+  );
 
 
   const registerMutation = useMutation({
@@ -236,8 +293,7 @@ export default function CompetitionDetailScreen({ route }: any) {
         <View style={styles.content}>
           <View style={styles.headerRow}>
             <Text style={styles.date}>
-              Du {new Date(competition.startDate).toLocaleDateString('fr-FR')} au{' '}
-              {new Date(competition.endDate).toLocaleDateString('fr-FR')}
+              {formatCompetitionDateRange(competition.startDate, competition.endDate)}
             </Text>
             <View style={[styles.statusBadge, status.style]}>
               <Text style={styles.statusBadgeText}>{status.text}</Text>

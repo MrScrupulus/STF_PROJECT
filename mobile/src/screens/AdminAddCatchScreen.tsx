@@ -31,24 +31,35 @@ export default function AdminAddCatchScreen() {
   const [comment, setComment] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
 
-  // Charger les compétitions
+  // Charger les compétitions en cours uniquement
   const { data: competitions, isLoading: loadingCompetitions } = useQuery({
-    queryKey: ['admin-competitions'],
-    queryFn: () => adminService.getCompetitions(),
+    queryKey: ['admin-competitions-ongoing'],
+    queryFn: async () => {
+      const allCompetitions = await adminService.getCompetitions();
+      const now = new Date();
+      return allCompetitions.filter((comp: any) => {
+        const start = new Date(comp.startDate);
+        const end = new Date(comp.endDate);
+        return now >= start && now <= end;
+      });
+    },
   });
 
-  // Charger les équipes de la compétition sélectionnée
+  // Charger les détails de la compétition sélectionnée (avec équipes et espèces)
   const { data: competitionData, isLoading: loadingCompetition } = useQuery({
     queryKey: ['competition', selectedCompetition],
     queryFn: () => competitionsService.getOne(selectedCompetition!),
     enabled: !!selectedCompetition,
   });
 
-  // Charger les espèces
-  const { data: species, isLoading: loadingSpecies } = useQuery({
-    queryKey: ['species'],
-    queryFn: () => speciesService.getAll(),
-  });
+  // Utiliser les espèces de la compétition si disponibles
+  const competitionDataAny: any = competitionData;
+  const competition: any = competitionDataAny?.success !== undefined
+    ? (competitionDataAny.success ? { ...competitionDataAny, success: undefined } : null)
+    : competitionDataAny;
+  const species = competition?.species && Array.isArray(competition.species) && competition.species.length > 0
+    ? competition.species
+    : [];
 
   // Charger les détails de l'équipe sélectionnée
   const { data: teamData, isLoading: loadingTeam } = useQuery({
@@ -57,11 +68,25 @@ export default function AdminAddCatchScreen() {
     enabled: !!selectedTeam,
   });
 
+  // Demander les permissions pour la caméra
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+        if (cameraStatus.status !== 'granted') {
+          // Permission refusée, mais on peut quand même utiliser la galerie
+          console.log('Permission caméra refusée');
+        }
+      }
+    })();
+  }, []);
+
   // Réinitialiser les sélections quand la compétition change
   useEffect(() => {
     if (selectedCompetition) {
       setSelectedTeam(null);
       setSelectedMember(null);
+      setSelectedSpecies(null);
     }
   }, [selectedCompetition]);
 
@@ -71,6 +96,26 @@ export default function AdminAddCatchScreen() {
       setSelectedMember(null);
     }
   }, [selectedTeam]);
+
+  // Prendre une photo avec la caméra
+  const takePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setPhoto(base64Image);
+      }
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de prendre la photo');
+    }
+  };
 
   // Sélectionner une photo depuis la galerie
   const pickImage = async () => {
@@ -106,6 +151,11 @@ export default function AdminAddCatchScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
       queryClient.invalidateQueries({ queryKey: ['competition', selectedCompetition] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+      // Invalider toutes les requêtes liées aux compétitions pour forcer le rafraîchissement
+      queryClient.invalidateQueries({ queryKey: ['competition'] });
       Alert.alert('Succès', 'Prise créée et validée avec succès !', [
         {
           text: 'OK',
@@ -138,6 +188,16 @@ export default function AdminAddCatchScreen() {
       return;
     }
 
+    // Vérifier que l'espèce sélectionnée existe dans les espèces de la compétition
+    const selectedSpeciesObj = species.find((spec: any) => {
+      const specId = spec.id || spec.speciesId || spec.species?.id;
+      return specId === selectedSpecies;
+    });
+    if (!selectedSpeciesObj) {
+      Alert.alert('Erreur', 'L\'espèce sélectionnée n\'est pas valide pour cette compétition');
+      return;
+    }
+
     if (!size || parseFloat(size) <= 0) {
       Alert.alert('Erreur', 'Veuillez entrer une taille valide');
       return;
@@ -161,7 +221,7 @@ export default function AdminAddCatchScreen() {
     createCatchMutation.mutate(catchData);
   };
 
-  if (loadingCompetitions || loadingSpecies) {
+  if (loadingCompetitions) {
     return (
       <>
         <Header title="Ajouter une prise (Admin)" showBack={true} showMenu={true} />
@@ -172,7 +232,7 @@ export default function AdminAddCatchScreen() {
     );
   }
 
-  const teams = competitionData?.teams || [];
+  const teams = competition?.teams || [];
   const members = teamData?.team?.members || [];
 
   return (
@@ -290,30 +350,45 @@ export default function AdminAddCatchScreen() {
         )}
 
         {/* Sélection de l'espèce */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Espèce *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {(species || []).map((spec: any) => (
-              <TouchableOpacity
-                key={spec.id}
-                style={[
-                  styles.optionButton,
-                  selectedSpecies === spec.id && styles.optionButtonSelected,
-                ]}
-                onPress={() => setSelectedSpecies(spec.id)}
-              >
-                <Text
-                  style={[
-                    styles.optionButtonText,
-                    selectedSpecies === spec.id && styles.optionButtonTextSelected,
-                  ]}
-                >
-                  {spec.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {selectedCompetition && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Espèce *</Text>
+            {loadingCompetition ? (
+              <ActivityIndicator size="small" color="#007AFF" />
+            ) : species.length === 0 ? (
+              <Text style={styles.errorText}>
+                Aucune espèce configurée pour cette compétition
+              </Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {species.map((spec: any) => {
+                  // Gérer différentes structures : CompetitionSpecies ou Species direct
+                  const specId = spec.id || spec.speciesId || spec.species?.id;
+                  const specName = spec.name || spec.species?.name;
+                  return (
+                    <TouchableOpacity
+                      key={specId}
+                      style={[
+                        styles.optionButton,
+                        selectedSpecies === specId && styles.optionButtonSelected,
+                      ]}
+                      onPress={() => setSelectedSpecies(specId)}
+                    >
+                      <Text
+                        style={[
+                          styles.optionButtonText,
+                          selectedSpecies === specId && styles.optionButtonTextSelected,
+                        ]}
+                      >
+                        {specName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
         {/* Taille */}
         <View style={styles.section}>
@@ -344,13 +419,24 @@ export default function AdminAddCatchScreen() {
         {/* Photo */}
         <View style={styles.section}>
           <Text style={styles.label}>Photo *</Text>
-          <TouchableOpacity style={styles.photoButton} onPress={pickImage}>
-            <Text style={styles.photoButtonText}>
-              {photo ? '📷 Photo sélectionnée' : '📷 Sélectionner une photo'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.photoButtonsContainer}>
+            <TouchableOpacity style={[styles.photoButton, styles.photoButtonCamera]} onPress={takePhoto}>
+              <Text style={styles.photoButtonText}>📷 Prendre une photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.photoButton, styles.photoButtonGallery]} onPress={pickImage}>
+              <Text style={styles.photoButtonText}>🖼️ Importer depuis la galerie</Text>
+            </TouchableOpacity>
+          </View>
           {photo && (
-            <Image source={{ uri: photo }} style={styles.photoPreview} resizeMode="cover" />
+            <View style={styles.photoContainer}>
+              <Image source={{ uri: photo }} style={styles.photoPreview} resizeMode="cover" />
+              <TouchableOpacity
+                style={styles.removePhotoButton}
+                onPress={() => setPhoto(null)}
+              >
+                <Text style={styles.removePhotoButtonText}>✕ Supprimer la photo</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -428,22 +514,47 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
   },
+  photoButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
   photoButton: {
-    backgroundColor: '#007AFF',
+    flex: 1,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 12,
+  },
+  photoButtonCamera: {
+    backgroundColor: '#007AFF',
+  },
+  photoButtonGallery: {
+    backgroundColor: '#34C759',
   },
   photoButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
+  },
+  photoContainer: {
+    marginTop: 12,
   },
   photoPreview: {
     width: '100%',
     height: 200,
     borderRadius: 8,
+    marginBottom: 8,
+  },
+  removePhotoButton: {
+    backgroundColor: '#FF3B30',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  removePhotoButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: '#34C759',

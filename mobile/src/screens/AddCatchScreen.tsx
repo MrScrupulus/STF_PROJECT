@@ -244,6 +244,12 @@ export default function AddCatchScreen({ navigation, route }: any) {
       catchesService.create(selectedCompetition.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['catches'] });
+      queryClient.invalidateQueries({ queryKey: ['competition', selectedCompetition.id] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team'] });
+      // Invalider toutes les requêtes liées aux compétitions pour forcer le rafraîchissement
+      queryClient.invalidateQueries({ queryKey: ['competition'] });
       Alert.alert('Succès', 'Prise enregistrée avec succès !', [
         {
           text: 'OK',

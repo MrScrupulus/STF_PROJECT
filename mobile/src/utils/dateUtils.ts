@@ -171,3 +171,93 @@ export function formatRelativeTime(dateString: string | null | undefined): strin
     return formatDateTime(dateString);
   }
 }
+
+/**
+ * Formate une date de compétition (sans heure) en tenant compte du fuseau horaire
+ * Le backend envoie les dates en UTC, on les convertit en heure locale
+ */
+export function formatCompetitionDate(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'Date inconnue';
+  }
+
+  try {
+    const date = new Date(dateString + 'Z'); // Ajouter 'Z' pour indiquer UTC
+    return date.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Europe/Paris',
+    });
+  } catch (error) {
+    console.error('Erreur lors du formatage de la date:', error);
+    return 'Date invalide';
+  }
+}
+
+/**
+ * Formate une heure de compétition en tenant compte du fuseau horaire
+ * Le backend envoie les dates en UTC, on les convertit en heure locale
+ */
+export function formatCompetitionTime(dateString: string | null | undefined): string {
+  if (!dateString) {
+    return 'Heure inconnue';
+  }
+
+  try {
+    const date = new Date(dateString + 'Z'); // Ajouter 'Z' pour indiquer UTC
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Paris',
+    });
+  } catch (error) {
+    console.error('Erreur lors du formatage de l\'heure:', error);
+    return 'Heure invalide';
+  }
+}
+
+/**
+ * Formate les dates de début et fin d'une compétition
+ * Affiche de manière optimisée selon si c'est le même jour ou non
+ */
+export function formatCompetitionDateRange(startDate: string | null | undefined, endDate: string | null | undefined): string {
+  if (!startDate || !endDate) {
+    return 'Dates inconnues';
+  }
+
+  try {
+    const start = new Date(startDate + 'Z');
+    const end = new Date(endDate + 'Z');
+    
+    // Utiliser Intl.DateTimeFormat pour obtenir les dates en Europe/Paris
+    const formatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+    
+    const startFormatted = formatter.format(start);
+    const endFormatted = formatter.format(end);
+    
+    // Vérifier si les dates sont le même jour
+    const isSameDay = startFormatted === endFormatted;
+    
+    if (isSameDay) {
+      // Même jour : afficher date + heures début et fin
+      const dateStr = formatCompetitionDate(startDate);
+      const startTime = formatCompetitionTime(startDate);
+      const endTime = formatCompetitionTime(endDate);
+      return `${dateStr} de ${startTime} à ${endTime}`;
+    } else {
+      // Jours différents : afficher les deux dates complètes
+      const startStr = formatCompetitionDate(startDate);
+      const endStr = formatCompetitionDate(endDate);
+      return `${startStr} - ${endStr}`;
+    }
+  } catch (error) {
+    console.error('Erreur lors du formatage des dates:', error);
+    return 'Dates invalides';
+  }
+}

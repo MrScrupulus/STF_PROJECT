@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { catchesService } from '../services/catchesService';
+import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 
 export default function CatchesScreen() {
@@ -55,7 +56,7 @@ export default function CatchesScreen() {
         )}
         {item.createdAt && (
           <Text style={styles.cardInfo}>
-            Date: {new Date(item.createdAt).toLocaleString('fr-FR')}
+            Date: {formatDateTime(item.createdAt)}
           </Text>
         )}
         {item.comment && (
