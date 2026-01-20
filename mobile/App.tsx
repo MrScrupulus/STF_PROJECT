@@ -28,6 +28,8 @@ import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import InvitationsScreen from './src/screens/InvitationsScreen';
 import EditTeamScreen from './src/screens/EditTeamScreen';
 import CreateCompetitionScreen from './src/screens/CreateCompetitionScreen';
+import NotificationPreferencesScreen from './src/screens/NotificationPreferencesScreen';
+import NotificationInitializer from './src/components/NotificationInitializer';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 const Stack = createNativeStackNavigator();
@@ -50,6 +52,7 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
+      <NotificationInitializer />
       <StatusBar style="auto" />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
@@ -82,6 +85,7 @@ function AppNavigator() {
             <Stack.Screen name="Invitations" component={InvitationsScreen} />
             <Stack.Screen name="EditTeam" component={EditTeamScreen} />
             <Stack.Screen name="CreateCompetition" component={CreateCompetitionScreen} />
+            <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
           </>
         )}
       </Stack.Navigator>

@@ -79,5 +79,9 @@ export const API_ENDPOINTS = {
     markRead: (id: number) => `/api/notifications/${id}/read`,
     markAllRead: '/api/notifications/read-all',
   },
+  notificationPreferences: {
+    get: '/api/notification-preferences',
+    update: '/api/notification-preferences',
+  },
 };
 

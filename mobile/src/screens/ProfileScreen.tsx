@@ -134,6 +134,12 @@ export default function ProfileScreen() {
           >
             <Text style={styles.actionButtonText}>Mes invitations</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('NotificationPreferences' as never)}
+          >
+            <Text style={styles.actionButtonText}>🔔 Préférences notifications</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.dangerZone}>

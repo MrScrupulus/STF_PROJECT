@@ -19,11 +19,12 @@
     "android": {
       "package": "com.stf.mobile",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -51,8 +52,9 @@
     "scheme": "stf",
     "extra": {
       "eas": {
-        "projectId": "stf-mobile"
+        "projectId": "7773bd56-c404-4652-9f8e-4b15cff939fe"
       }
-    }
+    },
+    "owner": "mrscrupulus"
   }
 }

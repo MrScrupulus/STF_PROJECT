@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Notification;
 use App\Entity\Security\User;
+use App\Repository\NotificationPreferencesRepository;
 use App\Repository\Security\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -11,12 +12,14 @@ class NotificationService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly UserRepository $userRepository
+        private readonly UserRepository $userRepository,
+        private readonly NotificationPreferencesRepository $preferencesRepository,
+        private readonly ExpoPushNotificationService $expoPushService
     ) {
     }
 
     /**
-     * Crée une notification pour un utilisateur
+     * Crée une notification pour un utilisateur et envoie une push notification si activée
      */
     public function createNotification(
         User $user,
@@ -33,6 +36,17 @@ class NotificationService
 
         $this->entityManager->persist($notification);
         $this->entityManager->flush();
+
+        // Envoyer une push notification si les préférences l'autorisent
+        $preferences = $this->preferencesRepository->findOrCreateForUser($user);
+        if ($preferences->isNotificationEnabled($type) && $preferences->getExpoPushToken()) {
+            $this->expoPushService->sendPushNotification(
+                $preferences,
+                'STF Competition',
+                $message,
+                array_merge($data ?? [], ['type' => $type, 'notificationId' => $notification->getId()])
+            );
+        }
 
         return $notification;
     }
@@ -174,20 +188,25 @@ class NotificationService
     public function notifyAdminsPendingCatch(int $catchId, string $teamName, string $speciesName, float $size, string $caughtByName): void
     {
         $admins = $this->userRepository->findByRole('ROLE_ADMIN');
+        $adminPreferences = [];
         
         foreach ($admins as $admin) {
-            $this->createNotification(
-                $admin,
-                'catch_pending',
-                "Nouvelle prise en attente de validation : {$speciesName} ({$size} cm) par {$caughtByName} de l'équipe {$teamName}",
-                [
-                    'catchId' => $catchId,
-                    'teamName' => $teamName,
-                    'speciesName' => $speciesName,
-                    'size' => $size,
-                    'caughtByName' => $caughtByName,
-                ]
-            );
+            $preferences = $this->preferencesRepository->findOrCreateForUser($admin);
+            // Vérifier que l'admin a activé les notifications catch_pending
+            if ($preferences->isCatchPending()) {
+                $this->createNotification(
+                    $admin,
+                    'catch_pending',
+                    "Nouvelle prise en attente de validation : {$speciesName} ({$size} cm) par {$caughtByName} de l'équipe {$teamName}",
+                    [
+                        'catchId' => $catchId,
+                        'teamName' => $teamName,
+                        'speciesName' => $speciesName,
+                        'size' => $size,
+                        'caughtByName' => $caughtByName,
+                    ]
+                );
+            }
         }
     }
 }
