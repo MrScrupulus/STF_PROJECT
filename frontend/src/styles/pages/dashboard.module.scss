@@ -450,7 +450,7 @@
     border-radius: 0.5rem;
     padding: $spacing-base;
     width: 90%;
-    max-width: 500px;
+    max-width: 900px;
     max-height: 90vh;
     overflow-y: auto;
   }
@@ -912,8 +912,19 @@
 
   &__stats_summary,
   &__stats_species,
-  &__stats_biggest {
+  &__stats_biggest,
+  &__stats_map {
     margin-bottom: 2rem;
+  }
+
+  &__stats_map {
+    width: 100%;
+    min-height: 400px;
+    margin-top: 1.5rem;
+    
+    h3 {
+      margin-bottom: 1rem;
+    }
   }
 
   &__stats_title {
@@ -1373,7 +1384,7 @@
     background-color: white;
     border-radius: 0.5rem;
     padding: 1.5rem;
-    max-width: 500px;
+    max-width: 900px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;

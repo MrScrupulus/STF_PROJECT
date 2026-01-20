@@ -279,9 +279,9 @@ export function Header() {
           )}
         </div>
         <nav role="navigation" aria-label="Navigation principale">
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            {user && <NotificationBell />}
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "flex-end", width: "100%" }}>
             {renderMenu()}
+            {user && <NotificationBell />}
           </div>
         </nav>
       </div>

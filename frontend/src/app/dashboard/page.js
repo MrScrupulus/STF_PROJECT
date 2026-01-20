@@ -15,6 +15,9 @@ import { FaCheckCircle, FaTimesCircle, FaSearch } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import classNames from "classnames";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
+import SpeciesPieChart from "../../components/competition/SpeciesPieChart";
+import CatchesMap from "../../components/competition/CatchesMap";
+import { perimeterService } from "../../services/perimeterService";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -554,6 +557,7 @@ export default function Dashboard() {
     const [loadingStats, setLoadingStats] = useState(false);
     const [isRankingPublic, setIsRankingPublic] = useState(competition.isRankingPublic || false);
     const [updatingRanking, setUpdatingRanking] = useState(false);
+    const [perimeters, setPerimeters] = useState([]);
     const status = getCompetitionStatus(
       competition.startDate,
       competition.endDate
@@ -586,10 +590,18 @@ export default function Dashboard() {
       
       setLoadingStats(true);
       try {
-        const response = await competitionsService.getStats(competition.id);
-        if (response.success) {
-          setStats(response.stats);
+        const [statsResponse, perimetersResponse] = await Promise.all([
+          competitionsService.getStats(competition.id),
+          perimeterService.getAll(competition.id).catch(() => ({ success: true, perimeters: [] }))
+        ]);
+        
+        if (statsResponse.success) {
+          setStats(statsResponse.stats);
           setShowStats(true);
+        }
+        
+        if (perimetersResponse.success) {
+          setPerimeters(perimetersResponse.perimeters || []);
         }
       } catch (error) {
         console.error("Error loading stats:", error);
@@ -781,32 +793,20 @@ export default function Dashboard() {
                   { className: styles.competition__stats_title },
                   "Répartition par espèce"
                 ),
+                createElement(SpeciesPieChart, { speciesStats: stats.speciesStats })
+              ),
+              stats.catchesForMap && stats.catchesForMap.length > 0 && createElement(
+                "div",
+                { className: styles.competition__stats_map },
                 createElement(
-                  "table",
-                  { className: styles.competition__stats_table },
-                  createElement(
-                    "thead",
-                    null,
-                    createElement(
-                      "tr",
-                      null,
-                      createElement("th", null, "Espèce"),
-                      createElement("th", null, "Nombre")
-                    )
-                  ),
-                  createElement(
-                    "tbody",
-                    null,
-                    stats.speciesStats.map((species) =>
-                      createElement(
-                        "tr",
-                        { key: species.id },
-                        createElement("td", null, species.name),
-                        createElement("td", null, species.count)
-                      )
-                    )
-                  )
-                )
+                  "h3",
+                  { className: styles.competition__stats_title },
+                  "Localisation des prises"
+                ),
+                createElement(CatchesMap, { 
+                  catches: stats.catchesForMap,
+                  perimeters: perimeters
+                })
               ),
               stats.biggestBySpecies && stats.biggestBySpecies.length > 0 && createElement(
                 "div",
