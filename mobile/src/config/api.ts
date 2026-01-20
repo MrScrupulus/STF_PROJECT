@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
     refresh: '/api/auth/refresh',
     forgotPassword: '/password-reset/request',
     resetPassword: '/password-reset/reset',
+    updateProfile: '/api/auth/profile',
+    updatePassword: '/api/auth/password',
   },
   species: {
     list: '/api/species',
@@ -61,6 +63,7 @@ export const API_ENDPOINTS = {
     end: (id: number) => `/api/competitions/${id}/end`,
     stats: (id: number) => `/api/admin/competitions/${id}/stats`,
     registerTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/register`,
+    unregisterTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/unregister`,
   },
   notifications: {
     list: '/api/notifications',

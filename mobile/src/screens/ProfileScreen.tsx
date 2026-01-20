@@ -112,6 +112,18 @@ export default function ProfileScreen() {
         <View style={styles.actionsSection}>
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => navigation.navigate('EditProfile' as never)}
+          >
+            <Text style={styles.actionButtonText}>Modifier mon profil</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('ChangePassword' as never)}
+          >
+            <Text style={styles.actionButtonText}>Modifier le mot de passe</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => navigation.navigate('History' as never)}
           >
             <Text style={styles.actionButtonText}>Voir mon historique</Text>

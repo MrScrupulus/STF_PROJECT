@@ -721,6 +721,88 @@ class CompetitionController extends AbstractController
         }
     }
 
+    #[Route('/competitions/{id}/teams/unregister', name: 'unregister_team_from_competition', methods: ['POST'])]
+    public function unregisterTeamFromCompetition(
+        int $id,
+        CompetitionRepository $competitionRepo,
+        TeamRepository $teamRepo,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        try {
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non connecté'
+                ], 401);
+            }
+
+            $competition = $competitionRepo->find($id);
+            if (!$competition) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Compétition non trouvée'
+                ], 404);
+            }
+
+            $now = new \DateTime();
+            
+            // Vérifier que la compétition est à venir (pas encore commencée)
+            if ($competition->getStartDate() <= $now) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Impossible de quitter une compétition en cours ou terminée. Vous ne pouvez quitter que les compétitions à venir.'
+                ], 400);
+            }
+
+            // Trouver l'équipe de l'utilisateur inscrite à cette compétition
+            $userTeams = $teamRepo->findBy(['competition' => $competition]);
+            $userTeam = null;
+            
+            foreach ($userTeams as $team) {
+                if ($team->getMembers()->contains($user)) {
+                    $userTeam = $team;
+                    break;
+                }
+            }
+
+            if (!$userTeam) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous n\'êtes pas inscrit à cette compétition'
+                ], 404);
+            }
+
+            // Vérifier que l'utilisateur est membre de l'équipe
+            if (!$userTeam->getMembers()->contains($user)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Vous devez être membre de l\'équipe pour quitter la compétition'
+                ], 403);
+            }
+
+            // Retirer l'équipe de la compétition
+            $userTeam->setCompetition(null);
+            $userTeam->setRegistrationNumber(null);
+
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Vous avez quitté la compétition avec succès'
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la désinscription de la compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la désinscription: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     #[Route('/admin/competitions/{id}/stats', name: 'app_admin_competition_stats', methods: ['GET'])]
     public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
     {

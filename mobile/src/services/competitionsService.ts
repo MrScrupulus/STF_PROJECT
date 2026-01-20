@@ -73,5 +73,10 @@ export const competitionsService = {
     const response = await apiClient.get(`/api/admin/competitions/${id}/stats`);
     return response.data;
   },
+
+  unregisterFromCompetition: async (competitionId: number): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.competitions.unregisterTeam(competitionId));
+    return response.data;
+  },
 };
 

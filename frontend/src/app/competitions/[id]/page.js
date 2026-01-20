@@ -107,6 +107,19 @@ export default function CompetitionDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competition?.isRankingPublic, isAdmin, id]);
 
+  const unregisterMutation = useMutation({
+    mutationFn: () => competitionsService.unregisterFromCompetition(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["competition", id] });
+      queryClient.invalidateQueries({ queryKey: ["competitions"] });
+      queryClient.invalidateQueries({ queryKey: ["my-teams"] });
+      toast.success("Vous avez quitté la compétition avec succès");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || error.message || "Erreur lors de la désinscription");
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }) =>
       teamService.registerToCompetition(teamId, competitionId),
@@ -184,6 +197,10 @@ export default function CompetitionDetailPage() {
       return { text: "Terminée", className: styles.statusEnded };
     }
   };
+
+  const competitionStatus = competition?.startDate && competition?.endDate
+    ? getCompetitionStatus(competition.startDate, competition.endDate)
+    : null;
 
   const getStatusClass = (status) => {
     switch (status) {
@@ -384,6 +401,19 @@ export default function CompetitionDetailPage() {
             {isAlreadyRegistered ? (
               <div className={styles.competitions__already_registered}>
                 <p>✓ Vous êtes déjà inscrit à cette compétition avec votre équipe.</p>
+                {competitionStatus?.text === "À venir" && (
+                  <button
+                    onClick={() => {
+                      if (confirm("Êtes-vous sûr de vouloir quitter cette compétition ?")) {
+                        unregisterMutation.mutate();
+                      }
+                    }}
+                    disabled={unregisterMutation.isPending}
+                    className={styles.competitions__unregister_btn}
+                  >
+                    {unregisterMutation.isPending ? "Désinscription..." : "Quitter la compétition"}
+                  </button>
+                )}
               </div>
             ) : hasAvailableTeams ? (
               <>

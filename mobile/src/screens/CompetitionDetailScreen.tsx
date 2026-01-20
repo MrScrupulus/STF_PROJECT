@@ -152,6 +152,20 @@ export default function CompetitionDetailScreen({ route }: any) {
   );
 
 
+  const unregisterMutation = useMutation({
+    mutationFn: () => competitionsService.unregisterFromCompetition(competitionId),
+    onSuccess: () => {
+      Alert.alert('Succès', 'Vous avez quitté la compétition avec succès');
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de la désinscription';
+      Alert.alert('Erreur', errorMessage);
+    },
+  });
+
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }: { teamId: number; competitionId: number }) =>
       teamService.registerToCompetition(teamId, competitionId),
@@ -494,6 +508,30 @@ export default function CompetitionDetailScreen({ route }: any) {
                 <Text style={styles.alreadyRegisteredText}>
                   ✓ Vous êtes déjà inscrit à cette compétition
                 </Text>
+                {status.text === 'À venir' && (
+                  <TouchableOpacity
+                    style={[styles.unregisterButton, unregisterMutation.isPending && styles.unregisterButtonDisabled]}
+                    onPress={() => {
+                      Alert.alert(
+                        'Quitter la compétition',
+                        'Êtes-vous sûr de vouloir quitter cette compétition ?',
+                        [
+                          { text: 'Annuler', style: 'cancel' },
+                          {
+                            text: 'Quitter',
+                            style: 'destructive',
+                            onPress: () => unregisterMutation.mutate(),
+                          },
+                        ]
+                      );
+                    }}
+                    disabled={unregisterMutation.isPending}
+                  >
+                    <Text style={styles.unregisterButtonText}>
+                      {unregisterMutation.isPending ? 'Désinscription...' : 'Quitter la compétition'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : canRegister ? (
               <TouchableOpacity
@@ -792,6 +830,22 @@ const styles = StyleSheet.create({
   alreadyRegisteredText: {
     color: '#155724',
     fontSize: 14,
+    marginBottom: 12,
+  },
+  unregisterButton: {
+    backgroundColor: '#ef4444',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  unregisterButtonDisabled: {
+    opacity: 0.6,
+  },
+  unregisterButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   registerButton: {
     backgroundColor: '#007AFF',

@@ -206,6 +206,23 @@ export const authService = {
     }
   },
 
+  updatePassword: async (currentPassword, newPassword) => {
+    try {
+      console.group("🔐 Mise à jour du mot de passe");
+      const response = await api.put("/api/auth/password", {
+        currentPassword,
+        newPassword,
+      });
+      console.log("📥 Réponse serveur:", response);
+      console.groupEnd();
+      return response;
+    } catch (error) {
+      console.error("❌ Erreur mise à jour mot de passe:", error);
+      console.groupEnd();
+      throw error;
+    }
+  },
+
   deleteAccount: async () => {
     try {
       console.group("❌ Suppression du compte");

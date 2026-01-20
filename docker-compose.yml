@@ -81,6 +81,7 @@ services:
       - ./frontend:/app:delegated
       - /app/node_modules
       - /app/.next
+    command: sh -c "npm install && npm run dev"
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true

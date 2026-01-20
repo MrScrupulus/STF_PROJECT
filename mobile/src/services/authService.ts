@@ -144,5 +144,32 @@ export const authService = {
     });
     return response.data;
   },
+
+  async updateProfile(profileData: {
+    firstname?: string;
+    lastname?: string;
+    phone_number?: string | null;
+    birthdate?: string | null;
+    country?: string | null;
+    subscriber_number?: string | null;
+  }): Promise<any> {
+    const response = await apiClient.post(API_ENDPOINTS.auth.updateProfile, profileData);
+    return response.data;
+  },
+
+  async updatePassword(currentPassword: string, newPassword: string): Promise<any> {
+    // Validation côté client
+    if (!PASSWORD_REGEX.test(newPassword)) {
+      throw new Error(
+        "Le mot de passe doit contenir au moins 8 caractères, une lettre, un chiffre et un caractère spécial"
+      );
+    }
+
+    const response = await apiClient.put(API_ENDPOINTS.auth.updatePassword, {
+      currentPassword,
+      newPassword,
+    });
+    return response.data;
+  },
 };
 

@@ -34,8 +34,12 @@ const nextConfig = {
       ".css",
     ];
     
-    // Réduire la taille des stack traces en développement
+    // Configuration pour react-leaflet et recharts
     if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
       config.optimization = {
         ...config.optimization,
         minimize: false,

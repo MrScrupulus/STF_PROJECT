@@ -22,6 +22,13 @@ export default function EditAccountPage() {
   const [error, setError] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -62,6 +69,41 @@ export default function EditAccountPage() {
       }, 2000);
     } catch (error) {
       setError(error.message);
+    }
+  };
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setError("Le nouveau mot de passe doit être différent de l'ancien");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    setError("");
+    try {
+      await authService.updatePassword(passwordData.currentPassword, passwordData.newPassword);
+      setShowSuccessMessage(true);
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setShowPasswordSection(false);
+      setTimeout(() => {
+        router.push('/account');
+      }, 2000);
+    } catch (error) {
+      setError(error.response?.data?.message || error.message || "Erreur lors de la modification du mot de passe");
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -186,6 +228,85 @@ export default function EditAccountPage() {
             </button>
           </div>
         </form>
+
+        <div className={styles.edit__password_section}>
+          <h2 className={styles.edit__password_title}>Modifier le mot de passe</h2>
+          {!showPasswordSection ? (
+            <button
+              type="button"
+              onClick={() => setShowPasswordSection(true)}
+              className={styles.edit__password_toggle}
+            >
+              Modifier le mot de passe
+            </button>
+          ) : (
+            <form onSubmit={handlePasswordUpdate} className={styles.edit__password_form}>
+              <div className={styles.edit__group}>
+                <label className={styles.edit__label}>Mot de passe actuel *</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                  }
+                  className={styles.edit__input}
+                  required
+                />
+              </div>
+
+              <div className={styles.edit__group}>
+                <label className={styles.edit__label}>Nouveau mot de passe *</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, newPassword: e.target.value })
+                  }
+                  className={styles.edit__input}
+                  required
+                  minLength={8}
+                />
+                <small className={styles.edit__help}>
+                  Le mot de passe doit contenir au moins 8 caractères, une lettre, un chiffre et un caractère spécial
+                </small>
+              </div>
+
+              <div className={styles.edit__group}>
+                <label className={styles.edit__label}>Confirmer le nouveau mot de passe *</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                  }
+                  className={styles.edit__input}
+                  required
+                />
+              </div>
+
+              <div className={styles.edit__actions}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordSection(false);
+                    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+                    setError("");
+                  }}
+                  className={`${styles.edit__button} ${styles["edit__button--cancel"]}`}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className={`${styles.edit__button} ${styles["edit__button--submit"]}`}
+                  disabled={isUpdatingPassword}
+                >
+                  {isUpdatingPassword ? "Modification..." : "Modifier le mot de passe"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
 
         <Modal
           isOpen={showConfirmModal}
