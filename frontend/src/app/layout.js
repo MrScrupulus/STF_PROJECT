@@ -5,7 +5,6 @@ import "./globals.scss";
 import "../styles/theme.scss";
 import "../styles/components/layout/layout.module.scss";
 import "../styles/global/leaflet-draw.css";
-import styles from "../styles/components/layout/layout.module.scss";
 
 export const metadata = {
   metadataBase: new URL(

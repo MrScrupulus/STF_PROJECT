@@ -1,4 +1,4 @@
-@import '@/styles/abstracts/variables';
+@use "../../abstracts/variables" as *;
 
 .edit {
   &__container {
