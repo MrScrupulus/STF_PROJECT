@@ -37,6 +37,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<'updated' | 'in-zone' | 'out-of-zone' | null>(null);
 
   // Charger l'utilisateur connecté
   useEffect(() => {
@@ -135,6 +136,23 @@ export default function AddCatchScreen({ navigation, route }: any) {
     }
   }, [teamsData, competitions, currentUser]);
 
+  // Vérifier la zone quand la compétition ou la localisation change
+  useEffect(() => {
+    if (location && selectedCompetition) {
+      // Vérifier si la position est dans la zone autorisée
+      if (!selectedCompetition.perimeters || selectedCompetition.perimeters.length === 0) {
+        setLocationStatus('updated');
+      } else {
+        const isInZone = selectedCompetition.perimeters.some((perimeter: any) => {
+          return isPointInPolygon(location.latitude, location.longitude, perimeter.coordinates);
+        });
+        setLocationStatus(isInZone ? 'in-zone' : 'out-of-zone');
+      }
+    } else {
+      setLocationStatus(null);
+    }
+  }, [selectedCompetition, location]);
+
   // Demander les permissions pour la caméra et la localisation
   useEffect(() => {
     (async () => {
@@ -221,11 +239,15 @@ export default function AddCatchScreen({ navigation, route }: any) {
         accuracy: Location.Accuracy.Balanced,
       });
 
-      setLocation({
+      const newLocation = {
         latitude: currentLocation.coords.latitude,
         longitude: currentLocation.coords.longitude,
-      });
+      };
+      setLocation(newLocation);
       setLocationError(null);
+      
+      // Vérifier si la position est dans la zone autorisée
+      checkLocationInZone(newLocation);
     } catch (error: any) {
       console.error('Erreur lors de la récupération de la position:', error);
       setLocationError('Impossible de récupérer votre position');
@@ -236,6 +258,57 @@ export default function AddCatchScreen({ navigation, route }: any) {
     } finally {
       setIsGettingLocation(false);
     }
+  };
+
+  // Algorithme ray casting pour vérifier si un point est dans un polygone
+  const isPointInPolygon = (lat: number, lng: number, polygon: any[]): boolean => {
+    if (!polygon || polygon.length < 3) {
+      return false;
+    }
+
+    let inside = false;
+    let j = polygon.length - 1;
+
+    for (let i = 0; i < polygon.length; i++) {
+      const pointI = polygon[i];
+      const pointJ = polygon[j];
+
+      // Normaliser le format des coordonnées
+      const xi = Array.isArray(pointI) ? pointI[0] : pointI?.lat ?? pointI?.[0];
+      const yi = Array.isArray(pointI) ? pointI[1] : pointI?.lng ?? pointI?.[1];
+      const xj = Array.isArray(pointJ) ? pointJ[0] : pointJ?.lat ?? pointJ?.[0];
+      const yj = Array.isArray(pointJ) ? pointJ[1] : pointJ?.lng ?? pointJ?.[1];
+
+      if (xi === null || yi === null || xj === null || yj === null) {
+        j = i;
+        continue;
+      }
+
+      // Algorithme ray casting
+      if (((yi > lng) !== (yj > lng)) && (lat < ((xj - xi) * (lng - yi) / (yj - yi) + xi))) {
+        inside = !inside;
+      }
+
+      j = i;
+    }
+
+    return inside;
+  };
+
+  // Vérifier si la position est dans la zone autorisée
+  const checkLocationInZone = (loc: { latitude: number; longitude: number }) => {
+    if (!selectedCompetition || !selectedCompetition.perimeters || selectedCompetition.perimeters.length === 0) {
+      // Pas de périmètre défini, on accepte toutes les positions
+      setLocationStatus('updated');
+      return;
+    }
+
+    // Vérifier si le point est dans au moins un périmètre
+    const isInZone = selectedCompetition.perimeters.some((perimeter: any) => {
+      return isPointInPolygon(loc.latitude, loc.longitude, perimeter.coordinates);
+    });
+
+    setLocationStatus(isInZone ? 'in-zone' : 'out-of-zone');
   };
 
   // Mutation pour créer une prise
@@ -534,12 +607,28 @@ export default function AddCatchScreen({ navigation, route }: any) {
         </Text>
         {location ? (
           <View style={styles.locationContainer}>
-            <Text style={styles.locationText}>
-              📍 Latitude: {location.latitude.toFixed(6)}
-            </Text>
-            <Text style={styles.locationText}>
-              📍 Longitude: {location.longitude.toFixed(6)}
-            </Text>
+            {/* Message de statut de la géolocalisation */}
+            {locationStatus === 'updated' && (
+              <View style={styles.locationStatusContainer}>
+                <Text style={styles.locationStatusText}>
+                  ✓ Géolocalisation actualisée
+                </Text>
+              </View>
+            )}
+            {locationStatus === 'in-zone' && (
+              <View style={[styles.locationStatusContainer, styles.locationStatusInZone]}>
+                <Text style={styles.locationStatusTextInZone}>
+                  ✓ Vous êtes dans la zone autorisée
+                </Text>
+              </View>
+            )}
+            {locationStatus === 'out-of-zone' && (
+              <View style={[styles.locationStatusContainer, styles.locationStatusOutZone]}>
+                <Text style={styles.locationStatusTextOutZone}>
+                  ✗ Vous êtes en dehors de la zone autorisée
+                </Text>
+              </View>
+            )}
             <TouchableOpacity
               style={styles.updateLocationButton}
               onPress={getCurrentLocation}
@@ -772,6 +861,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 4,
+  },
+  locationStatusContainer: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: '#f3f4f6',
+  },
+  locationStatusInZone: {
+    backgroundColor: '#d1fae5',
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  locationStatusOutZone: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+  },
+  locationStatusText: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  locationStatusTextInZone: {
+    fontSize: 14,
+    color: '#065f46',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  locationStatusTextOutZone: {
+    fontSize: 14,
+    color: '#991b1b',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   locationButton: {
     backgroundColor: '#007AFF',

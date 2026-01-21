@@ -104,6 +104,9 @@ export default function NotificationsScreen() {
             {notifications.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Aucune notification</Text>
+                <Text style={styles.emptySubtext}>
+                  Vous serez notifié(e) des événements importants (invitations, validations, etc.).
+                </Text>
               </View>
             ) : (
               <View style={styles.notificationsList}>

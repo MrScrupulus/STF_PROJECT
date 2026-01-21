@@ -8,10 +8,10 @@ Améliorer l'expérience utilisateur, la clarté des messages, et la cohérence 
 ## 🎨 Messages d'Erreur et Feedback Utilisateur
 
 ### Messages d'erreur génériques
-- [ ] Remplacer tous les messages d'erreur techniques par des messages clairs et utiles
+- [x] Remplacer tous les messages d'erreur techniques par des messages clairs et utiles ✅ (2026-01-21)
 - [ ] Ajouter des suggestions d'actions pour résoudre les erreurs
-- [ ] Uniformiser le format des messages d'erreur (style, ton, longueur)
-- [ ] Vérifier que les messages d'erreur sont traduits en français (si applicable)
+- [x] Uniformiser le format des messages d'erreur (style, ton, longueur) ✅ (2026-01-21)
+- [x] Vérifier que les messages d'erreur sont traduits en français (si applicable) ✅ (2026-01-21)
 
 ### Messages de succès
 - [ ] Ajouter des messages de confirmation pour les actions importantes

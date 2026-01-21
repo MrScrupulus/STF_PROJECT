@@ -144,6 +144,9 @@ export default function InvitationsScreen() {
           {invitations.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>Aucune invitation en attente</Text>
+              <Text style={styles.emptySubtext}>
+                Créez une équipe ou attendez qu'un membre vous invite à rejoindre son équipe.
+              </Text>
             </View>
           ) : (
             invitations.map((invitation) => (
@@ -227,8 +230,17 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6b7280',
+    fontWeight: '600',
+    color: '#333',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 20,
   },
   invitationCard: {
     backgroundColor: '#fff',

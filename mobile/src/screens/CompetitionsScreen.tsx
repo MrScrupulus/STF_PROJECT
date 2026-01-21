@@ -209,6 +209,21 @@ export default function CompetitionsScreen() {
                   ? 'Aucune compétition à venir'
                   : 'Aucune compétition terminée'}
               </Text>
+              {activeFilter === FILTERS.ONGOING && (
+                <Text style={styles.emptySubtext}>
+                  Consultez les compétitions à venir pour vous inscrire.
+                </Text>
+              )}
+              {activeFilter === FILTERS.UPCOMING && (
+                <Text style={styles.emptySubtext}>
+                  De nouvelles compétitions seront bientôt disponibles.
+                </Text>
+              )}
+              {activeFilter === FILTERS.ENDED && (
+                <Text style={styles.emptySubtext}>
+                  Aucune compétition n'a encore été terminée.
+                </Text>
+              )}
             </View>
           }
         />
@@ -375,8 +390,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   emptyText: {
-    color: '#999',
     fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 20,
   },
 });
 

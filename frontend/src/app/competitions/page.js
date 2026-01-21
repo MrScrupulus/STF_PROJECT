@@ -111,7 +111,18 @@ export default function CompetitionsPage() {
           {
             className: styles.competitions__empty,
           },
-          `Aucune compétition ${activeFilter === FILTERS.ONGOING ? "en cours" : activeFilter === FILTERS.UPCOMING ? "à venir" : "terminée"}`
+          createElement("p", { className: styles.competitions__empty_title }, 
+            `Aucune compétition ${activeFilter === FILTERS.ONGOING ? "en cours" : activeFilter === FILTERS.UPCOMING ? "à venir" : "terminée"}`
+          ),
+          activeFilter === FILTERS.ONGOING && createElement("p", { className: styles.competitions__empty_subtext },
+            "Consultez les compétitions à venir pour vous inscrire."
+          ),
+          activeFilter === FILTERS.UPCOMING && createElement("p", { className: styles.competitions__empty_subtext },
+            "De nouvelles compétitions seront bientôt disponibles."
+          ),
+          activeFilter === FILTERS.ENDED && createElement("p", { className: styles.competitions__empty_subtext },
+            "Aucune compétition n'a encore été terminée."
+          )
         )
       : createElement(
           "div",

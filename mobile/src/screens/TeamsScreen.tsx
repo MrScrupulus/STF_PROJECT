@@ -133,6 +133,9 @@ export default function TeamsScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Text style={styles.emptyText}>Aucune équipe</Text>
+            <Text style={styles.emptySubtext}>
+              Créez votre première équipe pour participer aux compétitions.
+            </Text>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => navigation.navigate('CreateTeam' as never)}

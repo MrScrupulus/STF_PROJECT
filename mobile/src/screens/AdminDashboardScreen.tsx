@@ -110,6 +110,9 @@ export default function AdminDashboardScreen() {
             {pendingCount === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Aucune prise en attente</Text>
+                <Text style={styles.emptySubtext}>
+                  Toutes les prises ont été validées ou rejetées.
+                </Text>
               </View>
             ) : (
               <View style={styles.catchesList}>

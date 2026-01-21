@@ -962,8 +962,22 @@
 
   &__empty {
     text-align: center;
-    color: #999;
     padding: 2rem;
     font-size: 1rem;
+  }
+
+  &__empty_title {
+    color: #333;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__empty_subtext {
+    color: #666;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 400px;
+    margin: 0 auto;
   }
 }

@@ -447,6 +447,9 @@ export default function TeamDetailScreen({ route }: any) {
           {!team.catches || team.catches.length === 0 ? (
             <View style={styles.emptyCatches}>
               <Text style={styles.emptyText}>Aucune prise enregistrée</Text>
+              <Text style={styles.emptySubtext}>
+                Ajoutez votre première prise pour commencer à marquer des points !
+              </Text>
             </View>
           ) : (
             <>

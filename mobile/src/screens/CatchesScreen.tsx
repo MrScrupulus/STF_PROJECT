@@ -98,6 +98,9 @@ export default function CatchesScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyText}>Aucune prise enregistrée</Text>
+              <Text style={styles.emptySubtext}>
+                Ajoutez votre première prise pour commencer à marquer des points !
+              </Text>
             </View>
           }
         />
