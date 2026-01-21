@@ -53,7 +53,13 @@ export default function HistoryPage() {
       const nextPage = catchesPage + 1;
       const response = await teamService.getMyHistory(nextPage, 10);
       if (response.success) {
-        setAllCatches([...allCatches, ...(response.catches || [])]);
+        const newCatches = response.catches || [];
+        // Filtrer les doublons en vérifiant les IDs
+        setAllCatches((prev) => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const uniqueNewCatches = newCatches.filter(c => !existingIds.has(c.id));
+          return [...prev, ...uniqueNewCatches];
+        });
         setCatchesPage(response.catchesPagination?.page || nextPage);
         setCatchesPages(response.catchesPagination?.pages || catchesPages);
       }

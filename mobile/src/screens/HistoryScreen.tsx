@@ -50,8 +50,13 @@ export default function HistoryScreen() {
 
   useEffect(() => {
     if (moreCatchesData && catchesPage > 1) {
-      // Pages suivantes : ajouter aux prises existantes
-      setAllCatches(prev => [...prev, ...(moreCatchesData.catches || [])]);
+      // Pages suivantes : ajouter aux prises existantes en filtrant les doublons
+      const newCatches = moreCatchesData.catches || [];
+      setAllCatches(prev => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const uniqueNewCatches = newCatches.filter(c => !existingIds.has(c.id));
+        return [...prev, ...uniqueNewCatches];
+      });
       setCatchesPages(moreCatchesData.catchesPagination?.pages || catchesPages);
       setIsLoadingMore(false);
     }
