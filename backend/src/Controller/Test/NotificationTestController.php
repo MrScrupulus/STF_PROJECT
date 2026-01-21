@@ -87,9 +87,16 @@ class NotificationTestController extends AbstractController
                 'userId' => $targetUser->getId(),
             ]);
         } catch (\Exception $e) {
+            // On logue l'erreur pour le débogage, mais on ne renvoie pas le détail au client
+            // car ce contrôleur peut être utilisé en environnement réel par des admins
+            $this->container->get('logger')->error('Erreur lors de l\'envoi de la notification de test', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'envoi de la notification : ' . $e->getMessage(),
+                'message' => 'Erreur lors de l\'envoi de la notification de test. Veuillez réessayer plus tard.',
             ], 500);
         }
     }

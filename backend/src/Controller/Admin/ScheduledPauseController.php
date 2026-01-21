@@ -106,7 +106,7 @@ class ScheduledPauseController extends AbstractController
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Format de date invalide: ' . $e->getMessage()
+                'message' => 'Format de date invalide. Veuillez vérifier les dates saisies.'
             ], 400);
         }
 
@@ -177,7 +177,7 @@ class ScheduledPauseController extends AbstractController
             } catch (\Exception $e) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Format de date de début invalide: ' . $e->getMessage()
+                    'message' => 'Format de date de début invalide. Veuillez vérifier la date saisie.'
                 ], 400);
             }
         }
@@ -193,7 +193,7 @@ class ScheduledPauseController extends AbstractController
             } catch (\Exception $e) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Format de date de fin invalide: ' . $e->getMessage()
+                    'message' => 'Format de date de fin invalide. Veuillez vérifier la date saisie.'
                 ], 400);
             }
         }

@@ -185,15 +185,22 @@ class CompetitionPdfController extends AbstractController
                 ]
             );
         } catch (\Exception $e) {
-            // Log l'erreur pour le débogage
-            error_log('Erreur génération PDF: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
+            // Log l'erreur pour le débogage (utiliser le logger Symfony si disponible)
+            if ($this->container->has('logger')) {
+                $this->container->get('logger')->error('Erreur génération PDF de compétition', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+            } else {
+                error_log('Erreur génération PDF: ' . $e->getMessage());
+                error_log('Stack trace: ' . $e->getTraceAsString());
+            }
             
             return new Response(
                 json_encode([
                     'success' => false,
                     'error' => 'Erreur lors de la génération du PDF',
-                    'message' => $e->getMessage()
+                    'message' => 'Une erreur est survenue lors de la génération du PDF. Veuillez réessayer plus tard.'
                 ]),
                 Response::HTTP_INTERNAL_SERVER_ERROR,
                 ['Content-Type' => 'application/json']
