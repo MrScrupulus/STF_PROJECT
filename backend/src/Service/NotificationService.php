@@ -54,7 +54,7 @@ class NotificationService
     /**
      * Notifie qu'une prise a été validée
      */
-    public function notifyCatchValidated(User $user, int $catchId, string $speciesName, float $size): void
+    public function notifyCatchValidated(User $user, int $catchId, string $speciesName, float $size, int $teamId): void
     {
         $this->createNotification(
             $user,
@@ -62,6 +62,7 @@ class NotificationService
             "Votre prise de {$speciesName} ({$size} cm) a été validée !",
             [
                 'catchId' => $catchId,
+                'teamId' => $teamId,
                 'speciesName' => $speciesName,
                 'size' => $size,
             ]
@@ -71,7 +72,7 @@ class NotificationService
     /**
      * Notifie qu'une prise a été rejetée
      */
-    public function notifyCatchRejected(User $user, int $catchId, string $speciesName, float $size, string $reason): void
+    public function notifyCatchRejected(User $user, int $catchId, string $speciesName, float $size, string $reason, int $teamId): void
     {
         $this->createNotification(
             $user,
@@ -79,6 +80,7 @@ class NotificationService
             "Votre prise de {$speciesName} ({$size} cm) a été rejetée : {$reason}",
             [
                 'catchId' => $catchId,
+                'teamId' => $teamId,
                 'speciesName' => $speciesName,
                 'size' => $size,
                 'reason' => $reason,

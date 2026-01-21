@@ -2,9 +2,9 @@ import { api } from "./api";
 import { ENDPOINTS } from "./endpoints";
 
 export const competitionsService = {
-  getAll: async () => {
-    const response = await api.get("/api/competitions");
-    return response.competitions || [];
+  getAll: async (page = 1, limit = 10) => {
+    const response = await api.get(`/api/competitions?page=${page}&limit=${limit}`);
+    return response;
   },
 
   getOngoing: async () => {

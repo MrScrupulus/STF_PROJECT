@@ -11,14 +11,18 @@ import {
   FlatList,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 
 export default function HistoryScreen() {
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'catches'>('overview');
+  const route = useRoute();
+  const routeParams = route.params as { initialTab?: 'overview' | 'teams' | 'catches' } | undefined;
+  const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'catches'>(
+    routeParams?.initialTab || 'overview'
+  );
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const [catchesPage, setCatchesPage] = useState(1);

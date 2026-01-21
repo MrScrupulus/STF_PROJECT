@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useState } from "react";
+import { createElement, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { competitionsService } from "../../services/competitions";
 import styles from "../../styles/pages/competitions.module.scss";
@@ -30,16 +30,47 @@ const FILTERS = {
 
 export default function CompetitionsPage() {
   const [activeFilter, setActiveFilter] = useState(FILTERS.ALL);
-  const { data: competitions, isLoading } = useQuery({
-    queryKey: ["competitions"],
-    queryFn: competitionsService.getAll,
+  const [competitionsPage, setCompetitionsPage] = useState(1);
+  const [allCompetitions, setAllCompetitions] = useState([]);
+  const [competitionsPages, setCompetitionsPages] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const COMPETITIONS_LIMIT = 10;
+
+  const { data: competitionsData, isLoading } = useQuery({
+    queryKey: ["competitions", competitionsPage],
+    queryFn: () => competitionsService.getAll(competitionsPage, COMPETITIONS_LIMIT),
   });
 
-  if (isLoading)
+  // Mettre à jour les compétitions quand les données changent
+  useEffect(() => {
+    if (competitionsData) {
+      if (competitionsPage === 1) {
+        setAllCompetitions(competitionsData.competitions || []);
+      } else {
+        setAllCompetitions((prev) => {
+          const newCompetitions = (competitionsData.competitions || []).filter(
+            (newComp) => !prev.some((existingComp) => existingComp.id === newComp.id)
+          );
+          return [...prev, ...newCompetitions];
+        });
+      }
+      setCompetitionsPages(competitionsData.pagination?.pages || 1);
+      setIsLoadingMore(false);
+    }
+  }, [competitionsData, competitionsPage]);
+
+  const loadMoreCompetitions = () => {
+    if (competitionsPage < competitionsPages && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setCompetitionsPage((prev) => prev + 1);
+    }
+  };
+
+  if (isLoading && competitionsPage === 1)
     return createElement("div", { className: `${layoutStyles.main} ${styles.loading}` }, "Chargement...");
 
   // Filtrer les compétitions selon le filtre actif
-  const filteredCompetitions = (competitions || []).filter((competition) => {
+  const filteredCompetitions = (allCompetitions || []).filter((competition) => {
     if (activeFilter === FILTERS.ALL) return true;
     const status = getCompetitionStatus(competition.startDate, competition.endDate);
     if (activeFilter === FILTERS.ONGOING) return status.text === "En cours";
@@ -129,7 +160,8 @@ export default function CompetitionsPage() {
           {
             className: styles.competitions__list,
           },
-      sortedCompetitions.map((competition) => {
+      [
+        ...sortedCompetitions.map((competition) => {
         const competitionStatus = getCompetitionStatus(competition.startDate, competition.endDate);
         const isEnded = competitionStatus.text === "Terminée";
         return createElement(
@@ -226,7 +258,24 @@ export default function CompetitionsPage() {
             `Taille d'équipe: ${competition.teamSize} membre(s)`
           )
         );
-      })
+      }),
+      competitionsPage < competitionsPages && createElement(
+        "div",
+        {
+          key: "load-more",
+          className: styles.competitions__load_more,
+        },
+        createElement(
+          "button",
+          {
+            onClick: loadMoreCompetitions,
+            disabled: isLoadingMore,
+            className: styles.competitions__load_more_button,
+          },
+          isLoadingMore ? "Chargement..." : `Charger plus de compétitions (${allCompetitions.length}/${competitionsData?.pagination?.total || 0})`
+        )
+      )
+      ]
     )
   );
 }

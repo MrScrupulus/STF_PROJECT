@@ -45,6 +45,11 @@ export default function CreateCompetitionScreen() {
 
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  // États pour gérer séparément date et heure sur Android
+  const [showStartDateOnly, setShowStartDateOnly] = useState(false);
+  const [showStartTimeOnly, setShowStartTimeOnly] = useState(false);
+  const [showEndDateOnly, setShowEndDateOnly] = useState(false);
+  const [showEndTimeOnly, setShowEndTimeOnly] = useState(false);
   const [competitionSpecies, setCompetitionSpecies] = useState<CompetitionSpecies[]>([]);
   const [error, setError] = useState('');
   const [showSpeciesModal, setShowSpeciesModal] = useState(false);
@@ -116,30 +121,108 @@ export default function CreateCompetitionScreen() {
 
   const handleStartDateChange = (event: any, date?: Date) => {
     if (Platform.OS === 'android') {
-      setShowStartDatePicker(false);
-    }
-    if (date) {
-      setFormData({ ...formData, startDate: date });
-      // Si la date de fin est avant la date de début, mettre à jour
-      if (date > formData.endDate) {
-        const newEndDate = new Date(date);
-        newEndDate.setHours(date.getHours() + 1);
-        setFormData({ ...formData, startDate: date, endDate: newEndDate });
+      // Sur Android, on gère séparément date et heure
+      if (showStartDateOnly) {
+        setShowStartDateOnly(false);
+        if (!date || (event && event.type === 'dismissed')) {
+          return;
+        }
+        // Mettre à jour la date, garder l'heure actuelle
+        const newDate = new Date(date);
+        newDate.setHours(formData.startDate.getHours());
+        newDate.setMinutes(formData.startDate.getMinutes());
+        setFormData({ ...formData, startDate: newDate });
+        // Ouvrir le sélecteur d'heure
+        setShowStartTimeOnly(true);
+        return;
       }
+      if (showStartTimeOnly) {
+        setShowStartTimeOnly(false);
+        if (!date || (event && event.type === 'dismissed')) {
+          return;
+        }
+        // Mettre à jour l'heure, garder la date actuelle
+        const newDate = new Date(formData.startDate);
+        newDate.setHours(date.getHours());
+        newDate.setMinutes(date.getMinutes());
+        setFormData({ ...formData, startDate: newDate });
+        // Si la date de fin est avant la date de début, mettre à jour
+        if (newDate > formData.endDate) {
+          const newEndDate = new Date(newDate);
+          newEndDate.setHours(newDate.getHours() + 1);
+          setFormData({ ...formData, startDate: newDate, endDate: newEndDate });
+        }
+        return;
+      }
+      setShowStartDatePicker(false);
+      // Sur Android, si l'utilisateur annule, event peut être undefined, null, ou event.type === 'dismissed'
+      // Vérifier d'abord si date existe, puis vérifier event si nécessaire
+      if (!date) {
+        return;
+      }
+      // Si event existe et est de type 'dismissed', ne pas mettre à jour
+      if (event && event.type === 'dismissed') {
+        return;
+      }
+    }
+    // Vérifier que date existe avant de continuer
+    if (!date) {
+      return;
+    }
+    setFormData({ ...formData, startDate: date });
+    // Si la date de fin est avant la date de début, mettre à jour
+    if (date > formData.endDate) {
+      const newEndDate = new Date(date);
+      newEndDate.setHours(date.getHours() + 1);
+      setFormData({ ...formData, startDate: date, endDate: newEndDate });
     }
   };
 
   const handleEndDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'ios') {
-      if (date) {
-        setFormData({ ...formData, endDate: date });
+    if (Platform.OS === 'android') {
+      // Sur Android, on gère séparément date et heure
+      if (showEndDateOnly) {
+        setShowEndDateOnly(false);
+        if (!date || (event && event.type === 'dismissed')) {
+          return;
+        }
+        // Mettre à jour la date, garder l'heure actuelle
+        const newDate = new Date(date);
+        newDate.setHours(formData.endDate.getHours());
+        newDate.setMinutes(formData.endDate.getMinutes());
+        setFormData({ ...formData, endDate: newDate });
+        // Ouvrir le sélecteur d'heure
+        setShowEndTimeOnly(true);
+        return;
       }
-    } else {
+      if (showEndTimeOnly) {
+        setShowEndTimeOnly(false);
+        if (!date || (event && event.type === 'dismissed')) {
+          return;
+        }
+        // Mettre à jour l'heure, garder la date actuelle
+        const newDate = new Date(formData.endDate);
+        newDate.setHours(date.getHours());
+        newDate.setMinutes(date.getMinutes());
+        setFormData({ ...formData, endDate: newDate });
+        return;
+      }
       setShowEndDatePicker(false);
-      if (date) {
-        setFormData({ ...formData, endDate: date });
+      // Sur Android, si l'utilisateur annule, event peut être undefined, null, ou event.type === 'dismissed'
+      // Vérifier d'abord si date existe, puis vérifier event si nécessaire
+      if (!date) {
+        return;
+      }
+      // Si event existe et est de type 'dismissed', ne pas mettre à jour
+      if (event && event.type === 'dismissed') {
+        return;
       }
     }
+    // Vérifier que date existe avant de continuer
+    if (!date) {
+      return;
+    }
+    setFormData({ ...formData, endDate: date });
   };
 
   const formatDateTime = (date: Date): string => {
@@ -251,7 +334,15 @@ export default function CreateCompetitionScreen() {
             <Text style={styles.label}>Date de début *</Text>
             <TouchableOpacity
               style={styles.dateButton}
-              onPress={() => setShowStartDatePicker(true)}
+              onPress={() => {
+                if (Platform.OS === 'android') {
+                  // Sur Android, ouvrir d'abord le sélecteur de date
+                  setShowStartDateOnly(true);
+                } else {
+                  // Sur iOS, ouvrir le sélecteur datetime
+                  setShowStartDatePicker(true);
+                }
+              }}
             >
               <Text style={styles.dateText}>
                 {formData.startDate.toLocaleString('fr-FR', {
@@ -263,12 +354,33 @@ export default function CreateCompetitionScreen() {
                 })}
               </Text>
             </TouchableOpacity>
-            {showStartDatePicker && (
+            {/* Sur Android, utiliser deux sélecteurs séparés */}
+            {Platform.OS === 'android' && showStartDateOnly && (
+              <DateTimePicker
+                value={formData.startDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={handleStartDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+            {Platform.OS === 'android' && showStartTimeOnly && (
+              <DateTimePicker
+                value={formData.startDate}
+                mode="time"
+                is24Hour={true}
+                display="default"
+                onChange={handleStartDateChange}
+              />
+            )}
+            {/* Sur iOS, utiliser le sélecteur datetime */}
+            {Platform.OS === 'ios' && showStartDatePicker && (
               <DateTimePicker
                 value={formData.startDate}
                 mode="datetime"
                 is24Hour={true}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
                 onChange={handleStartDateChange}
                 minimumDate={new Date()}
               />
@@ -289,7 +401,15 @@ export default function CreateCompetitionScreen() {
             <Text style={styles.label}>Date de fin *</Text>
             <TouchableOpacity
               style={styles.dateButton}
-              onPress={() => setShowEndDatePicker(true)}
+              onPress={() => {
+                if (Platform.OS === 'android') {
+                  // Sur Android, ouvrir d'abord le sélecteur de date
+                  setShowEndDateOnly(true);
+                } else {
+                  // Sur iOS, ouvrir le sélecteur datetime
+                  setShowEndDatePicker(true);
+                }
+              }}
             >
               <Text style={styles.dateText}>
                 {formData.endDate.toLocaleString('fr-FR', {
@@ -301,12 +421,33 @@ export default function CreateCompetitionScreen() {
                 })}
               </Text>
             </TouchableOpacity>
-            {showEndDatePicker && (
+            {/* Sur Android, utiliser deux sélecteurs séparés */}
+            {Platform.OS === 'android' && showEndDateOnly && (
+              <DateTimePicker
+                value={formData.endDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={handleEndDateChange}
+                minimumDate={formData.startDate}
+              />
+            )}
+            {Platform.OS === 'android' && showEndTimeOnly && (
+              <DateTimePicker
+                value={formData.endDate}
+                mode="time"
+                is24Hour={true}
+                display="default"
+                onChange={handleEndDateChange}
+              />
+            )}
+            {/* Sur iOS, utiliser le sélecteur datetime */}
+            {Platform.OS === 'ios' && showEndDatePicker && (
               <DateTimePicker
                 value={formData.endDate}
                 mode="datetime"
                 is24Hour={true}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
                 onChange={handleEndDateChange}
                 minimumDate={formData.startDate}
               />
@@ -496,8 +637,9 @@ export default function CreateCompetitionScreen() {
                             handleSpeciesChange(index, 'coefficient', text);
                           }
                         }}
-                        onBlur={(e) => {
-                          const value = parseNumber(e.nativeEvent.text);
+                        onBlur={() => {
+                          const currentValue = String(compSpecies.coefficient);
+                          const value = parseNumber(currentValue);
                           if (value === null || value < 0) {
                             handleSpeciesChange(index, 'coefficient', 1.0);
                           } else {

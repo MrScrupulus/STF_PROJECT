@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { authService } from "../../services/authService";
-import styles from "../../styles/pages/account/edit.module.scss";
-import ProtectedRoute from "../../components/auth/ProtectedRoute";
-import Modal from "../../components/ui/Modal";
+import { authService } from "../../../services/authService";
+import styles from "../../../styles/pages/account/edit.module.scss";
+import ProtectedRoute from "../../../components/auth/ProtectedRoute";
+import Modal from "../../../components/ui/Modal";
 
 export default function EditAccountPage() {
   const router = useRouter();

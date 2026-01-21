@@ -161,7 +161,8 @@ class AdminFishCatchController extends AbstractController
                         $catch->getCaughtBy(),
                         $catch->getId(),
                         $catch->getSpecies()->getName(),
-                        $catch->getSize()
+                        $catch->getSize(),
+                        $catch->getTeam()->getId()
                     );
                 } catch (\Exception $e) {
                     error_log('Erreur lors de la création de la notification: ' . $e->getMessage());
@@ -253,13 +254,15 @@ class AdminFishCatchController extends AbstractController
                 // Créer une notification
                 try {
                     $user = $em->getRepository(\App\Entity\Security\User::class)->find($caughtById);
-                    if ($user) {
+                    $catch = $em->getRepository(\App\Entity\Competition\FishCatch::class)->find($catchId);
+                    if ($user && $catch && $catch->getTeam()) {
                         $this->notificationService->notifyCatchRejected(
                             $user,
                             $catchId,
                             $speciesName,
                             $catchSize,
-                            $rejectionReason
+                            $rejectionReason,
+                            $catch->getTeam()->getId()
                         );
                     }
                 } catch (\Exception $e) {

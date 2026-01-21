@@ -72,11 +72,14 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions', name: 'competition_list', methods: ['GET'])]
-    public function list(CompetitionRepository $repository, TeamRepository $teamRepository): JsonResponse
+    public function list(CompetitionRepository $repository, TeamRepository $teamRepository, Request $request): JsonResponse
     {
         try {
             $user = $this->getUser();
-            $competitions = $repository->findAll();
+            
+            // Pagination
+            $page = max(1, (int) $request->query->get('page', 1));
+            $limit = min(50, max(1, (int) $request->query->get('limit', 10))); // Par défaut 10, max 50
 
             // Récupérer les équipes de l'utilisateur pour déterminer s'il est inscrit
             $userTeamIds = [];
@@ -88,6 +91,22 @@ class CompetitionController extends AbstractController
                     }
                 }
             }
+
+            // Compter le total
+            $qbCount = $repository->createQueryBuilder('c')
+                ->select('COUNT(c.id)');
+            $total = (int) $qbCount->getQuery()->getSingleScalarResult();
+            $pages = (int) ceil($total / $limit);
+
+            // Récupérer les compétitions paginées
+            $qb = $repository->createQueryBuilder('c')
+                ->orderBy('c.startDate', 'DESC');
+            
+            $competitions = $qb
+                ->setFirstResult(($page - 1) * $limit)
+                ->setMaxResults($limit)
+                ->getQuery()
+                ->getResult();
 
             // Transformer les données comme dans la route admin
             $data = array_map(function ($competition) use ($userTeamIds) {
@@ -109,7 +128,14 @@ class CompetitionController extends AbstractController
 
             return $this->json([
                 'success' => true,
-                'competitions' => $data
+                'competitions' => $data,
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $total,
+                    'pages' => $pages,
+                    'count' => count($data),
+                ]
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la récupération des compétitions', [

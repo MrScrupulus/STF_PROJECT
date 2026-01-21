@@ -164,11 +164,11 @@ class NotificationTestController extends AbstractController
     {
         switch ($type) {
             case 'catch_validated':
-                $this->notificationService->notifyCatchValidated($user, 999, 'Truite arc-en-ciel', 45.5);
+                $this->notificationService->notifyCatchValidated($user, 999, 'Truite arc-en-ciel', 45.5, 1);
                 break;
 
             case 'catch_rejected':
-                $this->notificationService->notifyCatchRejected($user, 999, 'Truite arc-en-ciel', 45.5, 'Taille insuffisante');
+                $this->notificationService->notifyCatchRejected($user, 999, 'Truite arc-en-ciel', 45.5, 'Taille insuffisante', 1);
                 break;
 
             case 'team_invitation':

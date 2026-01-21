@@ -29,18 +29,41 @@ export default function NotificationInitializer() {
       (response) => {
         console.log('Notification tapée:', response);
         const data = response.notification.request.content.data;
+        console.log('Données de la notification:', JSON.stringify(data, null, 2));
         
-        // Navigation selon le type de notification
-        if (data?.type === 'team_invitation' && data?.teamId) {
-          // @ts-ignore
-          navigation.navigate('Invitations');
-        } else if (data?.type === 'catch_pending' && data?.catchId) {
-          // @ts-ignore
-          navigation.navigate('AdminCatchValidation', { catchId: data.catchId, action: 'view' });
-        } else if (data?.competitionId) {
-          // @ts-ignore
-          navigation.navigate('CompetitionDetail', { id: data.competitionId });
-        }
+        // Utiliser setTimeout pour s'assurer que la navigation se fait après le rendu
+        setTimeout(() => {
+          // Navigation selon le type de notification
+          if (data?.type === 'team_invitation' && data?.teamId) {
+            console.log('Navigation vers Invitations');
+            // @ts-ignore
+            navigation.navigate('Invitations');
+          } else if (data?.type === 'catch_pending' && data?.catchId) {
+            console.log('Navigation vers AdminCatchValidation');
+            // @ts-ignore
+            navigation.navigate('AdminCatchValidation', { catchId: data.catchId, action: 'view' });
+          } else if ((data?.type === 'catch_validated' || data?.type === 'catch_rejected')) {
+            // Rediriger vers la page de l'équipe avec la prise concernée
+            console.log('Type:', data?.type, 'teamId:', data?.teamId, 'catchId:', data?.catchId);
+            if (data?.teamId) {
+              console.log('Navigation vers TeamDetail', { id: data.teamId, highlightCatchId: data.catchId });
+              try {
+                // @ts-ignore
+                navigation.navigate('TeamDetail', { id: parseInt(data.teamId), highlightCatchId: parseInt(data.catchId) });
+              } catch (error) {
+                console.error('Erreur lors de la navigation vers TeamDetail:', error);
+              }
+            } else {
+              console.warn('teamId manquant dans les données de notification');
+            }
+          } else if (data?.competitionId) {
+            console.log('Navigation vers CompetitionDetail');
+            // @ts-ignore
+            navigation.navigate('CompetitionDetail', { id: data.competitionId });
+          } else {
+            console.warn('Type de notification non géré ou données manquantes:', data);
+          }
+        }, 100);
       }
     );
 

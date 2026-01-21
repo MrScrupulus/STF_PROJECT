@@ -18,10 +18,10 @@ use Symfony\Component\Routing\Annotation\Route;
 class FishCatchController extends AbstractController
 {
     /**
-     * Récupère toutes les prises de l'utilisateur connecté
+     * Récupère toutes les prises de l'utilisateur connecté avec pagination
      */
     #[Route('/catches', name: 'user_catches_list', methods: ['GET'])]
-    public function getUserCatches(FishCatchRepository $repository, TeamRepository $teamRepository): JsonResponse
+    public function getUserCatches(FishCatchRepository $repository, TeamRepository $teamRepository, Request $request): JsonResponse
     {
         try {
             $user = $this->getUser();
@@ -32,13 +32,17 @@ class FishCatchController extends AbstractController
                 ], 401);
             }
 
+            // Pagination
+            $page = max(1, (int) $request->query->get('page', 1));
+            $limit = min(50, max(1, (int) $request->query->get('limit', 10))); // Par défaut 10, max 50
+
             // Récupérer toutes les équipes de l'utilisateur
             $allTeams = $teamRepository->findUserHistory($user);
             $teamIds = array_map(function($team) {
                 return $team->getId();
             }, $allTeams);
 
-            // Récupérer toutes les prises de l'utilisateur
+            // Construire la requête de base
             $qb = $repository->createQueryBuilder('c')
                 ->join('c.team', 't')
                 ->leftJoin('c.species', 's')
@@ -59,7 +63,20 @@ class FishCatchController extends AbstractController
                 $qb->setParameter($key, $value);
             }
 
-            $allCatches = $qb->orderBy('c.createdAt', 'DESC')
+            // Compter le total
+            $qbCount = clone $qb;
+            $total = (int) $qbCount
+                ->select('COUNT(c.id)')
+                ->getQuery()
+                ->getSingleScalarResult();
+            $pages = (int) ceil($total / $limit);
+
+            // Récupérer les prises paginées
+            $catches = $qb
+                ->select('c', 't', 's', 'u', 'comp')
+                ->orderBy('c.createdAt', 'DESC')
+                ->setFirstResult(($page - 1) * $limit)
+                ->setMaxResults($limit)
                 ->getQuery()
                 ->getResult();
 
@@ -88,9 +105,19 @@ class FishCatchController extends AbstractController
                         'name' => $catch->getCompetition()->getName(),
                     ] : null,
                 ];
-            }, $allCatches);
+            }, $catches);
 
-            return $this->json($catchesData);
+            return $this->json([
+                'success' => true,
+                'catches' => $catchesData,
+                'pagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $total,
+                    'pages' => $pages,
+                    'count' => count($catchesData),
+                ]
+            ]);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la récupération des prises', [
                 'error' => $e->getMessage(),

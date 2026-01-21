@@ -2,6 +2,12 @@ import { api } from "./api";
 
 export const catchesService = {
   getAll: (competitionId) => api.get(`/api/competitions/${competitionId}/catches`),
+  
+  // Récupérer toutes les prises de l'utilisateur avec pagination
+  getUserCatches: async (page = 1, limit = 10) => {
+    const response = await api.get(`/api/catches?page=${page}&limit=${limit}`);
+    return response;
+  },
 
   getOne: (competitionId, id) => api.get(`/api/competitions/${competitionId}/catches/${id}`),
 

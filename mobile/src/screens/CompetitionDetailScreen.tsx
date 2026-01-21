@@ -170,8 +170,10 @@ export default function CompetitionDetailScreen({ route }: any) {
     mutationFn: ({ teamId, competitionId }: { teamId: number; competitionId: number }) =>
       teamService.registerToCompetition(teamId, competitionId),
     onSuccess: () => {
+      // Invalider toutes les requêtes liées pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
       Alert.alert('Succès', 'Équipe inscrite à la compétition avec succès.');
       setShowRegisterForm(false);
       setSelectedTeamId(null);
@@ -192,6 +194,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       return teamService.create({ name: teamName });
     },
     onSuccess: (response: any) => {
+      // Invalider les requêtes pour que la nouvelle équipe soit visible
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       // Après création de l'équipe, inscrire directement à la compétition
       if (response.team?.id) {
         registerMutation.mutate({ teamId: response.team.id, competitionId: competitionId });
@@ -288,22 +292,27 @@ export default function CompetitionDetailScreen({ route }: any) {
   });
   
   // Vérifier si déjà inscrit à cette compétition spécifique (et que la compétition est active)
-  // OU si l'utilisateur a une équipe inscrite à une autre compétition active
   const isAlreadyRegistered = myTeams.some((team: any) => {
     if (!team.competition) return false;
     
-    // Si l'équipe est inscrite à cette compétition, vérifier qu'elle est active
+    // Vérifier uniquement si l'équipe est inscrite à CETTE compétition spécifique
     if (team.competition.id === competition.id) {
       const teamCompetitionEndDate = new Date(team.competition.endDate);
       return teamCompetitionEndDate >= now; // En cours ou à venir
     }
     
-    // Si l'équipe est inscrite à une autre compétition, vérifier qu'elle est active
-    // Si oui, on ne peut pas s'inscrire à une nouvelle compétition
-    const otherCompetitionEndDate = new Date(team.competition.endDate);
-    if (otherCompetitionEndDate >= now) {
-      // L'équipe est inscrite à une compétition active (en cours ou à venir)
-      return true; // On considère qu'on est déjà inscrit (à une autre compétition active)
+    return false;
+  });
+
+  // Vérifier si l'utilisateur a une équipe inscrite à une autre compétition active
+  // (pour empêcher l'inscription à plusieurs compétitions simultanées)
+  const hasActiveCompetition = myTeams.some((team: any) => {
+    if (!team.competition) return false;
+    
+    // Si l'équipe est inscrite à une autre compétition (pas celle-ci), vérifier qu'elle est active
+    if (team.competition.id !== competition.id) {
+      const otherCompetitionEndDate = new Date(team.competition.endDate);
+      return otherCompetitionEndDate >= now; // En cours ou à venir
     }
     
     return false;
@@ -313,7 +322,12 @@ export default function CompetitionDetailScreen({ route }: any) {
   const isEnded = (competition as any).isEnded || new Date(competition.endDate) < now;
   // Vérifier si c'est une compétition individuelle (teamSize === 1)
   const isIndividualCompetition = (competition as any)?.teamSize === 1;
-  const canRegister = !isEnded && !isAlreadyRegistered && (hasAvailableTeams || isIndividualCompetition);
+  // On ne peut s'inscrire que si :
+  // - La compétition n'est pas terminée
+  // - On n'est pas déjà inscrit à cette compétition
+  // - On n'a pas d'autre compétition active (sauf si c'est une compétition individuelle)
+  // - On a des équipes disponibles OU c'est une compétition individuelle
+  const canRegister = !isEnded && !isAlreadyRegistered && !hasActiveCompetition && (hasAvailableTeams || isIndividualCompetition);
   
   // Fonction pour déterminer le statut de la compétition
   const getCompetitionStatus = () => {
@@ -546,7 +560,8 @@ export default function CompetitionDetailScreen({ route }: any) {
                 <Text style={styles.alreadyRegisteredText}>
                   ✓ Vous êtes déjà inscrit à cette compétition
                 </Text>
-                {status.text === 'À venir' && (
+                {/* Afficher le bouton "quitter" uniquement si la compétition est à venir (pas encore commencée) */}
+                {status.text === 'À venir' && competition.startDate && new Date(competition.startDate) > now && (
                   <TouchableOpacity
                     style={[styles.unregisterButton, unregisterMutation.isPending && styles.unregisterButtonDisabled]}
                     onPress={() => {
@@ -570,6 +585,17 @@ export default function CompetitionDetailScreen({ route }: any) {
                     </Text>
                   </TouchableOpacity>
                 )}
+                {status.text !== 'À venir' && (
+                  <Text style={[styles.alreadyRegisteredText, { marginTop: 8, fontSize: 12, color: '#666' }]}>
+                    Vous ne pouvez quitter que les compétitions à venir.
+                  </Text>
+                )}
+              </View>
+            ) : hasActiveCompetition ? (
+              <View style={styles.noTeams}>
+                <Text style={styles.noTeamsText}>
+                  Vous êtes déjà inscrit à une autre compétition active. Vous ne pouvez pas vous inscrire à plusieurs compétitions simultanément.
+                </Text>
               </View>
             ) : canRegister ? (
               <TouchableOpacity

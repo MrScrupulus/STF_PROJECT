@@ -22,7 +22,7 @@ import Header from '../components/Header';
 export default function TeamDetailScreen({ route }: any) {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
-  const { id } = route.params;
+  const { id, highlightCatchId } = route.params || {};
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -467,6 +467,7 @@ export default function TeamDetailScreen({ route }: any) {
                       isAdmin={isAdmin}
                       onValidate={handleValidateCatch}
                       onReject={handleRejectCatch}
+                      isHighlighted={highlightCatchId === catchItem.id}
                     />
                   ))}
                 </View>
@@ -483,6 +484,7 @@ export default function TeamDetailScreen({ route }: any) {
                       key={catchItem.id}
                       catchItem={catchItem}
                       onImagePress={(uri: string) => setSelectedImage(uri)}
+                      isHighlighted={highlightCatchId === catchItem.id}
                     />
                   ))}
                 </View>
@@ -503,6 +505,7 @@ export default function TeamDetailScreen({ route }: any) {
                       isAdmin={isAdmin}
                       onValidate={handleValidateCatch}
                       onReject={handleRejectCatch}
+                      isHighlighted={highlightCatchId === catchItem.id}
                     />
                   ))}
                 </View>
@@ -600,9 +603,9 @@ export default function TeamDetailScreen({ route }: any) {
   );
 }
 
-function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress, isAdmin, onValidate, onReject }: any) {
+function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress, isAdmin, onValidate, onReject, isHighlighted }: any) {
   return (
-    <View style={styles.catchCard}>
+    <View style={[styles.catchCard, isHighlighted && styles.catchCardHighlighted]}>
       {isTop5 && (
         <View style={styles.top5Badge}>
           <Text style={styles.top5BadgeText}>Top {index + 1}</Text>
@@ -922,6 +925,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
+  },
+  catchCardHighlighted: {
+    borderWidth: 3,
+    borderColor: '#007AFF',
+    backgroundColor: '#f0f8ff',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   top5Badge: {
     backgroundColor: '#007AFF',
