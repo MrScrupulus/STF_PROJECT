@@ -69,9 +69,11 @@ export const adminService = {
     return response;
   },
 
-  getPendingCatches: async () => {
+  getPendingCatches: async (page = 1, limit = 10) => {
     try {
-      const response = await api.get("/api/admin/catches/pending");
+      const response = await api.get("/api/admin/catches/pending", {
+        params: { page, limit },
+      });
       return response;
     } catch (error) {
       console.error("Error fetching pending catches:", error);

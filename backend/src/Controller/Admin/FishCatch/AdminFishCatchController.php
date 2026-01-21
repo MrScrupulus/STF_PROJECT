@@ -26,21 +26,44 @@ class AdminFishCatchController extends AbstractController
      * Liste toutes les prises en attente de validation
      */
     #[Route('/pending', name: 'admin_catches_pending', methods: ['GET'])]
-    public function listPending(FishCatchRepository $repository): JsonResponse
+    public function listPending(FishCatchRepository $repository, Request $request): JsonResponse
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-            $catches = $repository->createQueryBuilder('c')
-                ->select('c', 't', 's', 'u', 'comp')
+            // Pagination: page et limit en query string, avec valeurs par défaut
+            $page = max(1, (int) $request->query->get('page', 1));
+            // Limiter le nombre de prises par page pour alléger le dashboard (par défaut 10)
+            $limit = (int) $request->query->get('limit', 10);
+            if ($limit < 1) {
+                $limit = 10;
+            }
+            if ($limit > 50) {
+                $limit = 50;
+            }
+
+            $qb = $repository->createQueryBuilder('c')
                 ->leftJoin('c.team', 't')
                 ->leftJoin('c.species', 's')
                 ->leftJoin('c.caughtBy', 'u')
                 ->leftJoin('t.competition', 'comp')
                 ->where('c.isValidated = :validated')
                 ->andWhere('c.rejectionReason IS NULL')
-                ->setParameter('validated', false)
+                ->setParameter('validated', false);
+
+            // Cloner le QueryBuilder pour le total
+            $qbCount = clone $qb;
+            $total = (int) $qbCount
+                ->select('COUNT(c.id)')
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            // Appliquer l'ordre et la pagination
+            $catches = $qb
+                ->select('c', 't', 's', 'u', 'comp')
                 ->orderBy('c.createdAt', 'DESC')
+                ->setFirstResult(($page - 1) * $limit)
+                ->setMaxResults($limit)
                 ->getQuery()
                 ->getResult();
 
@@ -75,10 +98,16 @@ class AdminFishCatchController extends AbstractController
                 ];
             }, $catches);
 
+            $pages = $limit > 0 ? (int) ceil($total / $limit) : 1;
+
             return $this->json([
                 'success' => true,
                 'catches' => $catchesData,
                 'count' => count($catchesData),
+                'total' => $total,
+                'page' => $page,
+                'pages' => $pages,
+                'limit' => $limit,
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la récupération des prises (admin)', [

@@ -76,6 +76,9 @@ export default function Dashboard() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [userToModify, setUserToModify] = useState(null);
   const [pendingCatches, setPendingCatches] = useState([]);
+  const [pendingCatchesPage, setPendingCatchesPage] = useState(1);
+  const [pendingCatchesPages, setPendingCatchesPages] = useState(1);
+  const PENDING_CATCHES_LIMIT = 10;
   const [selectedCatch, setSelectedCatch] = useState(null);
   const [showCatchModal, setShowCatchModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -115,7 +118,9 @@ export default function Dashboard() {
           competitionService.getAllAdmin(),
           speciesService.getAll(),
           adminService.getTeams(),
-          adminService.getPendingCatches().catch(() => ({ success: true, catches: [] })),
+          adminService
+            .getPendingCatches(1, PENDING_CATCHES_LIMIT)
+            .catch(() => ({ success: true, catches: [], total: 0, page: 1, pages: 1 })),
         ]);
 
       // Logs détaillés pour chaque réponse
@@ -150,12 +155,36 @@ export default function Dashboard() {
       setSpecies(processedSpecies);
       setTeams(processedTeams);
       setPendingCatches(pendingCatchesData?.catches || []);
+      setPendingCatchesPage(pendingCatchesData?.page || 1);
+      setPendingCatchesPages(pendingCatchesData?.pages || 1);
 
       setLoading(false);
     } catch (error) {
       console.error("Fetch error:", error);
       setError("Erreur lors du chargement des données");
       setLoading(false);
+    }
+  };
+
+  const loadMorePendingCatches = async () => {
+    try {
+      const nextPage = pendingCatchesPage + 1;
+      if (nextPage > pendingCatchesPages) {
+        return;
+      }
+
+      const response = await adminService.getPendingCatches(
+        nextPage,
+        PENDING_CATCHES_LIMIT
+      );
+
+      const newCatches = response?.catches || [];
+      setPendingCatches((prev) => [...prev, ...newCatches]);
+      setPendingCatchesPage(response?.page || nextPage);
+      setPendingCatchesPages(response?.pages || pendingCatchesPages);
+    } catch (error) {
+      console.error("Error loading more pending catches:", error);
+      toast.error("Erreur lors du chargement des prises supplémentaires");
     }
   };
 
@@ -1632,89 +1661,103 @@ export default function Dashboard() {
                 <p>Aucune prise en attente de validation</p>
               </div>
             ) : (
-              <div className={styles.dashboard__catches_list}>
-                {pendingCatches.map((catchItem) => (
-                  <div key={catchItem.id} className={styles.dashboard__catch_card}>
-                    <div className={styles.dashboard__catch_header}>
-                      <div>
-                        <h3>{catchItem.species.name}</h3>
-                        <p className={styles.dashboard__catch_info}>
-                          {catchItem.size} cm - {catchItem.points} pts
-                        </p>
-                        <p className={styles.dashboard__catch_info}>
-                          Équipe: <strong>{catchItem.team.name}</strong>
-                          {catchItem.competition && (
-                            <> - {catchItem.competition.name}</>
-                          )}
-                        </p>
-                        {catchItem.caughtBy && (
+              <div>
+                <div className={styles.dashboard__catches_list}>
+                  {pendingCatches.map((catchItem) => (
+                    <div key={catchItem.id} className={styles.dashboard__catch_card}>
+                      <div className={styles.dashboard__catch_header}>
+                        <div>
+                          <h3>{catchItem.species.name}</h3>
                           <p className={styles.dashboard__catch_info}>
-                            Pêché par: {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+                            {catchItem.size} cm - {catchItem.points} pts
                           </p>
-                        )}
-                        <p className={styles.dashboard__catch_date}>
-                          {new Date(catchItem.createdAt).toLocaleString("fr-FR")}
-                        </p>
-                      </div>
-                      {catchItem.photoUrl && (
-                        <div 
-                          className={styles.dashboard__catch_photo}
-                          onClick={() => {
-                            setSelectedImage(catchItem.photoUrl);
-                            setShowImageModal(true);
-                          }}
-                          style={{ cursor: "pointer" }}
-                        >
-                          <img
-                            src={catchItem.photoUrl}
-                            alt={`${catchItem.species.name} de ${catchItem.size}cm`}
-                            style={{
-                              maxWidth: "150px",
-                              maxHeight: "150px",
-                              objectFit: "cover",
-                              borderRadius: "8px",
+                          <p className={styles.dashboard__catch_info}>
+                            Équipe: <strong>{catchItem.team.name}</strong>
+                            {catchItem.competition && (
+                              <> - {catchItem.competition.name}</>
+                            )}
+                          </p>
+                          {catchItem.caughtBy && (
+                            <p className={styles.dashboard__catch_info}>
+                              Pêché par: {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+                            </p>
+                          )}
+                          <p className={styles.dashboard__catch_date}>
+                            {new Date(catchItem.createdAt).toLocaleString("fr-FR")}
+                          </p>
+                        </div>
+                        {catchItem.photoUrl && (
+                          <div 
+                            className={styles.dashboard__catch_photo}
+                            onClick={() => {
+                              setSelectedImage(catchItem.photoUrl);
+                              setShowImageModal(true);
                             }}
-                          />
+                            style={{ cursor: "pointer" }}
+                          >
+                            <img
+                              src={catchItem.photoUrl}
+                              alt={`${catchItem.species.name} de ${catchItem.size}cm`}
+                              style={{
+                                maxWidth: "150px",
+                                maxHeight: "150px",
+                                objectFit: "cover",
+                                borderRadius: "8px",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {catchItem.comment && (
+                        <div className={styles.dashboard__catch_comment}>
+                          <strong>Commentaire:</strong> {catchItem.comment}
                         </div>
                       )}
-                    </div>
-                    {catchItem.comment && (
-                      <div className={styles.dashboard__catch_comment}>
-                        <strong>Commentaire:</strong> {catchItem.comment}
+                      <div className={styles.dashboard__catch_actions}>
+                        <button
+                          className={`${styles.dashboard__button} ${styles["dashboard__button--validate"]}`}
+                          onClick={async () => {
+                            setIsProcessing(true);
+                            try {
+                              await adminService.validateCatch(catchItem.id);
+                              toast.success("Prise validée avec succès !");
+                              fetchData();
+                            } catch (error) {
+                              toast.error(error.message || "Erreur lors de la validation");
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                          disabled={isProcessing}
+                        >
+                          <FaCheckCircle /> Valider
+                        </button>
+                        <button
+                          className={`${styles.dashboard__button} ${styles["dashboard__button--reject"]}`}
+                          onClick={() => {
+                            setSelectedCatch(catchItem);
+                            setShowCatchModal(true);
+                          }}
+                          disabled={isProcessing}
+                        >
+                          <FaTimesCircle /> Rejeter
+                        </button>
                       </div>
-                    )}
-                    <div className={styles.dashboard__catch_actions}>
-                      <button
-                        className={`${styles.dashboard__button} ${styles["dashboard__button--validate"]}`}
-                        onClick={async () => {
-                          setIsProcessing(true);
-                          try {
-                            await adminService.validateCatch(catchItem.id);
-                            toast.success("Prise validée avec succès !");
-                            fetchData();
-                          } catch (error) {
-                            toast.error(error.message || "Erreur lors de la validation");
-                          } finally {
-                            setIsProcessing(false);
-                          }
-                        }}
-                        disabled={isProcessing}
-                      >
-                        <FaCheckCircle /> Valider
-                      </button>
-                      <button
-                        className={`${styles.dashboard__button} ${styles["dashboard__button--reject"]}`}
-                        onClick={() => {
-                          setSelectedCatch(catchItem);
-                          setShowCatchModal(true);
-                        }}
-                        disabled={isProcessing}
-                      >
-                        <FaTimesCircle /> Rejeter
-                      </button>
                     </div>
+                  ))}
+                </div>
+                {pendingCatchesPage < pendingCatchesPages && (
+                  <div className={styles.dashboard__load_more}>
+                    <button
+                      type="button"
+                      className={styles.dashboard__load_more_button}
+                      onClick={loadMorePendingCatches}
+                      disabled={isProcessing}
+                    >
+                      Charger plus de prises
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
