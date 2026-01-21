@@ -51,7 +51,7 @@ export default function NotificationPreferencesScreen() {
       notificationPreferencesService.update(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-      Alert.alert('Succès', 'Préférences mises à jour avec succès');
+      Alert.alert('Succès', 'Préférences mises à jour avec succès.');
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la mise à jour. Veuillez réessayer.';

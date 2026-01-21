@@ -1070,7 +1070,7 @@ export default function Dashboard() {
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    toast.success('PDF téléchargé avec succès !');
+                    toast.success('PDF téléchargé avec succès.');
                   } catch (error) {
                     console.error('Erreur téléchargement PDF:', error);
                     toast.error('Erreur lors du téléchargement du PDF: ' + (error.message || 'Erreur inconnue'));
@@ -1753,7 +1753,7 @@ export default function Dashboard() {
                             setIsProcessing(true);
                             try {
                               await adminService.validateCatch(catchItem.id);
-                              toast.success("Prise validée avec succès !");
+                              toast.success("Prise validée avec succès.");
                               fetchData();
                             } catch (error) {
                               toast.error(error.message || "Erreur lors de la validation");
@@ -1903,7 +1903,7 @@ export default function Dashboard() {
                     setIsProcessing(true);
                     try {
                       await adminService.rejectCatch(selectedCatch.id, rejectionReason);
-                      toast.success("Prise rejetée avec succès");
+                      toast.success("Prise rejetée avec succès.");
                       setShowCatchModal(false);
                       setSelectedCatch(null);
                       setRejectionReason("");

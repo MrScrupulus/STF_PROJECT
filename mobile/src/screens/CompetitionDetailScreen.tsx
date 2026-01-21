@@ -172,7 +172,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      Alert.alert('Succès', 'Équipe inscrite avec succès !');
+      Alert.alert('Succès', 'Équipe inscrite à la compétition avec succès.');
       setShowRegisterForm(false);
       setSelectedTeamId(null);
     },

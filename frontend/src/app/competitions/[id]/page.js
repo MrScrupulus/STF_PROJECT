@@ -113,7 +113,7 @@ export default function CompetitionDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["competition", id] });
       queryClient.invalidateQueries({ queryKey: ["competitions"] });
       queryClient.invalidateQueries({ queryKey: ["my-teams"] });
-      toast.success("Vous avez quitté la compétition avec succès");
+      toast.success("Vous avez quitté la compétition avec succès.");
     },
     onError: (error) => {
       const message = error.response?.data?.message || "Une erreur est survenue lors de la désinscription. Veuillez réessayer.";
@@ -125,7 +125,7 @@ export default function CompetitionDetailPage() {
     mutationFn: ({ teamId, competitionId }) =>
       teamService.registerToCompetition(teamId, competitionId),
     onSuccess: () => {
-      toast.success("Équipe inscrite à la compétition avec succès !");
+      toast.success("Équipe inscrite à la compétition avec succès.");
       queryClient.invalidateQueries(["competition", id]);
       queryClient.invalidateQueries(["my-teams"]);
       setShowRegisterForm(false);
@@ -151,7 +151,7 @@ export default function CompetitionDetailPage() {
     mutationFn: (isPaused) => adminService.togglePause(id, isPaused),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["competition", id] });
-      toast.success(competition?.isPaused ? "Compétition reprise" : "Compétition mise en pause");
+      toast.success(competition?.isPaused ? "Compétition reprise." : "Compétition mise en pause.");
     },
     onError: (error) => {
       const message = error.response?.data?.message || "Une erreur est survenue lors de la modification. Veuillez réessayer.";

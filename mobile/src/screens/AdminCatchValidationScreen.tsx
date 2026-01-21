@@ -37,7 +37,7 @@ export default function AdminCatchValidationScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-catch', catchId] });
-      Alert.alert('Succès', 'Prise validée avec succès !', [
+      Alert.alert('Succès', 'Prise validée avec succès.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     },
@@ -52,7 +52,7 @@ export default function AdminCatchValidationScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-catch', catchId] });
-      Alert.alert('Succès', 'Prise rejetée avec succès !', [
+      Alert.alert('Succès', 'Prise rejetée avec succès.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     },

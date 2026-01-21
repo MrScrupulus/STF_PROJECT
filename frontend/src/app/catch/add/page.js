@@ -244,7 +244,7 @@ export default function AddCatchPage() {
       const response = await catchesService.create(formData.competitionId, catchData);
 
       if (response.success) {
-        toast.success("Prise enregistrée avec succès !");
+        toast.success("Prise enregistrée avec succès.");
         // Réinitialiser le formulaire
         setFormData({
           competitionId: selectedCompetition ? selectedCompetition.id.toString() : "",

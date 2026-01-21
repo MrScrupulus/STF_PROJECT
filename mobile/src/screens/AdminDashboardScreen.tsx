@@ -63,7 +63,7 @@ export default function AdminDashboardScreen() {
     mutationFn: (catchId: number) => adminService.validateCatch(catchId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
-      Alert.alert('Succès', 'Prise validée avec succès !');
+      Alert.alert('Succès', 'Prise validée avec succès.');
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';

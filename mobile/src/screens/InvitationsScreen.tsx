@@ -49,7 +49,7 @@ export default function InvitationsScreen() {
       queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       queryClient.invalidateQueries({ queryKey: ['team'] });
-      Alert.alert('Succès', 'Invitation acceptée ! Vous êtes maintenant membre de l\'équipe.', [
+      Alert.alert('Succès', 'Invitation acceptée. Vous êtes maintenant membre de l\'équipe.', [
         {
           text: 'Voir mon équipe',
           onPress: () => {
@@ -73,7 +73,7 @@ export default function InvitationsScreen() {
     mutationFn: (invitationId: number) => teamService.rejectInvitation(invitationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
-      Alert.alert('Succès', 'Invitation rejetée');
+      Alert.alert('Succès', 'Invitation rejetée.');
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors du rejet de l\'invitation. Veuillez réessayer.';

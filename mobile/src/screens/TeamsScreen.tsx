@@ -42,7 +42,7 @@ export default function TeamsScreen() {
     mutationFn: (teamId: number) => teamService.reactivate(teamId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      Alert.alert('Succès', 'Équipe réactivée avec succès');
+      Alert.alert('Succès', 'Équipe réactivée avec succès.');
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la réactivation. Veuillez réessayer.';

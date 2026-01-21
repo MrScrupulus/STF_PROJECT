@@ -60,7 +60,7 @@ export default function CreateCompetitionScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-competitions'] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
-      Alert.alert('Succès', 'Compétition créée avec succès', [
+      Alert.alert('Succès', 'Compétition créée avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),

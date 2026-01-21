@@ -39,7 +39,7 @@ export default function CreateTeamScreen() {
       teamService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      Alert.alert('Succès', 'Équipe créée avec succès !', [
+      Alert.alert('Succès', 'Équipe créée avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.navigate('Teams' as never),
@@ -56,7 +56,7 @@ export default function CreateTeamScreen() {
     mutationFn: (teamId: number) => teamService.reactivate(teamId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      Alert.alert('Succès', 'Équipe réactivée avec succès !', [
+      Alert.alert('Succès', 'Équipe réactivée avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.navigate('Teams' as never),

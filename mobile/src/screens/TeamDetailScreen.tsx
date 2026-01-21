@@ -48,7 +48,7 @@ export default function TeamDetailScreen({ route }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
       queryClient.invalidateQueries({ queryKey: ['team-invitations', id] });
-      Alert.alert('Succès', 'Invitation envoyée avec succès !');
+      Alert.alert('Succès', 'Invitation envoyée avec succès.');
       setInviteEmail('');
       setShowInviteForm(false);
     },
@@ -63,7 +63,7 @@ export default function TeamDetailScreen({ route }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       queryClient.invalidateQueries({ queryKey: ['team', id] });
-      Alert.alert('Succès', 'Vous avez quitté l\'équipe avec succès', [
+      Alert.alert('Succès', 'Vous avez quitté l\'équipe avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
@@ -96,7 +96,7 @@ export default function TeamDetailScreen({ route }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
-      Alert.alert('Succès', 'Prise validée avec succès !');
+      Alert.alert('Succès', 'Prise validée avec succès.');
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
@@ -111,7 +111,7 @@ export default function TeamDetailScreen({ route }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
-      Alert.alert('Succès', 'Prise rejetée avec succès !');
+      Alert.alert('Succès', 'Prise rejetée avec succès.');
       setShowRejectModal(false);
       setSelectedCatchForReject(null);
       setRejectionReason('');

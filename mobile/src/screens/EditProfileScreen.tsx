@@ -114,7 +114,7 @@ export default function EditProfileScreen() {
       // Invalider le cache pour recharger les données
       queryClient.invalidateQueries({ queryKey: ['current-user'] });
       
-      Alert.alert('Succès', 'Profil mis à jour avec succès', [
+      Alert.alert('Succès', 'Profil mis à jour avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),

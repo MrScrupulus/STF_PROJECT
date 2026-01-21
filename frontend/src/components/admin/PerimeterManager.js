@@ -30,7 +30,7 @@ export default function PerimeterManager({ competitionId, isEditMode = false }) 
       await queryClient.invalidateQueries({ queryKey: ["competition", competitionId] });
       // Recharger les données
       await refetch();
-      toast.success("Périmètre créé avec succès !");
+      toast.success("Périmètre créé avec succès.");
       setCurrentPolygon(null);
       setPerimeterName("");
       setShowMap(false);
@@ -48,7 +48,7 @@ export default function PerimeterManager({ competitionId, isEditMode = false }) 
       await queryClient.invalidateQueries({ queryKey: ["competition", competitionId] });
       // Recharger les données
       await queryClient.refetchQueries({ queryKey: ["perimeters", competitionId] });
-      toast.success("Périmètre mis à jour avec succès !");
+      toast.success("Périmètre mis à jour avec succès.");
       setCurrentPolygon(null);
       setPerimeterName("");
       setShowMap(false);
@@ -63,7 +63,7 @@ export default function PerimeterManager({ competitionId, isEditMode = false }) 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["perimeters", competitionId] });
       queryClient.invalidateQueries({ queryKey: ["competition", competitionId] });
-      toast.success("Périmètre supprimé avec succès !");
+      toast.success("Périmètre supprimé avec succès.");
     },
     onError: (error) => {
       toast.error(error.response?.data?.message || "Erreur lors de la suppression du périmètre");

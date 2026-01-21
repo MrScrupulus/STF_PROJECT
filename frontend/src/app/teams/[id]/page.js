@@ -218,7 +218,7 @@ export default function TeamDetailPage() {
                           try {
                             const response = await teamService.inviteMember(team.id, inviteEmail);
                             if (response.success) {
-                              toast.success("Invitation envoyée avec succès !");
+                              toast.success("Invitation envoyée avec succès.");
                               setInviteEmail("");
                               setShowInviteForm(false);
                               // Recharger les données de l'équipe

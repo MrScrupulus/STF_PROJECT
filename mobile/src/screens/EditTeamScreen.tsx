@@ -61,7 +61,7 @@ export default function EditTeamScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      Alert.alert('Succès', 'Équipe modifiée avec succès', [
+      Alert.alert('Succès', 'Équipe modifiée avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),

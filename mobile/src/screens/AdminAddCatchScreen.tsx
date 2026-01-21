@@ -156,7 +156,7 @@ export default function AdminAddCatchScreen() {
       queryClient.invalidateQueries({ queryKey: ['team'] });
       // Invalider toutes les requêtes liées aux compétitions pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition'] });
-      Alert.alert('Succès', 'Prise créée et validée avec succès !', [
+      Alert.alert('Succès', 'Prise créée et validée avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),

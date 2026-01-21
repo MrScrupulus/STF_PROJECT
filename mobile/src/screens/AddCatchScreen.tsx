@@ -323,7 +323,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
       queryClient.invalidateQueries({ queryKey: ['team'] });
       // Invalider toutes les requêtes liées aux compétitions pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition'] });
-      Alert.alert('Succès', 'Prise enregistrée avec succès !', [
+      Alert.alert('Succès', 'Prise enregistrée avec succès.', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
