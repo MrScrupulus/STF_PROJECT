@@ -92,9 +92,13 @@ class FishCatchController extends AbstractController
 
             return $this->json($catchesData);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des prises', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des prises: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des prises. Veuillez réessayer plus tard.'
             ], 500);
         }
     }

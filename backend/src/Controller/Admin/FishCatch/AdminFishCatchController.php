@@ -81,9 +81,13 @@ class AdminFishCatchController extends AbstractController
                 'count' => count($catchesData),
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des prises (admin)', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des prises: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des prises. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -144,9 +148,13 @@ class AdminFishCatchController extends AbstractController
                 ]
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la validation de la prise', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la validation: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la validation de la prise. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -240,9 +248,13 @@ class AdminFishCatchController extends AbstractController
                 ]
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors du rejet de la prise', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors du rejet: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors du rejet de la prise. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -362,9 +374,13 @@ class AdminFishCatchController extends AbstractController
                 ]
             ], 201);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la création de la prise (admin)', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création de la prise: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la création de la prise. Veuillez réessayer plus tard.'
             ], 500);
         }
     }

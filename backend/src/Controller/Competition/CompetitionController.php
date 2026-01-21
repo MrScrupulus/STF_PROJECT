@@ -55,9 +55,13 @@ class CompetitionController extends AbstractController
                 'competitions' => $data
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des compétitions (admin)', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'error' => 'Une erreur est survenue',
-                'message' => $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des compétitions. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -103,9 +107,13 @@ class CompetitionController extends AbstractController
                 'competitions' => $data
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des compétitions', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des compétitions: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des compétitions. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -141,9 +149,13 @@ class CompetitionController extends AbstractController
                 'competitions' => $data
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des compétitions en cours', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des compétitions en cours: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des compétitions en cours. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -404,10 +416,14 @@ class CompetitionController extends AbstractController
                 ]
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la mise à jour de la compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
                 'error' => 'Une erreur est survenue lors de la mise à jour',
-                'message' => $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la mise à jour de la compétition. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -432,9 +448,13 @@ class CompetitionController extends AbstractController
                 'message' => 'Compétition supprimée avec succès'
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la suppression de la compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'error' => 'Une erreur est survenue lors de la suppression',
-                'message' => $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la suppression de la compétition. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -551,9 +571,13 @@ class CompetitionController extends AbstractController
                 ]
             ], 201);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la création de la compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'error' => 'Une erreur est survenue lors de la création',
-                'message' => $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la création de la compétition. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -714,9 +738,13 @@ class CompetitionController extends AbstractController
                 ]
             ], 200);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de l\'inscription à la compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'inscription à la compétition: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de l\'inscription à la compétition. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -798,7 +826,7 @@ class CompetitionController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la désinscription: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la désinscription. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -969,10 +997,14 @@ class CompetitionController extends AbstractController
                 ]
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des statistiques de compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
                 'error' => 'Une erreur est survenue lors de la récupération des statistiques',
-                'message' => $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des statistiques. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -1032,10 +1064,14 @@ class CompetitionController extends AbstractController
                 ]
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la pause/reprise de la compétition', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
                 'error' => 'Une erreur est survenue',
-                'message' => $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la modification de l\'état de la compétition. Veuillez réessayer plus tard.'
             ], 500);
         }
     }

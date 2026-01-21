@@ -195,9 +195,13 @@ class CompetitionFishCatchController extends AbstractController
                 ]
             ], 201);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la création de la prise (compétition)', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création de la prise: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la création de la prise. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
