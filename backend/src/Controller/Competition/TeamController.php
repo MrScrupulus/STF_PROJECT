@@ -84,9 +84,13 @@ class TeamController extends AbstractController
                 'teams' => $teamsData
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des équipes', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des équipes: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des équipes. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -244,7 +248,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération de l\'historique: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération de l\'historique. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -291,7 +295,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des équipes: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des équipes. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -465,7 +469,7 @@ class TeamController extends AbstractController
 
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création de l\'équipe: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la création de l\'équipe. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -608,7 +612,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'invitation: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de l\'envoi de l\'invitation. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -875,7 +879,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la modification de l\'équipe: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la modification de l\'équipe. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -897,8 +901,12 @@ class TeamController extends AbstractController
                 'message' => 'Équipe supprimée avec succès'
             ]);
         } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la suppression de l\'équipe', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return $this->json([
-                'message' => 'Erreur lors de la suppression: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la suppression de l\'équipe. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -968,7 +976,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors du départ de l\'équipe: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors du départ de l\'équipe. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -1095,7 +1103,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la réactivation de l\'équipe: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la réactivation de l\'équipe. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -1143,7 +1151,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des invitations: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des invitations. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -1232,7 +1240,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'acceptation de l\'invitation: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de l\'acceptation de l\'invitation. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -1290,7 +1298,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors du rejet de l\'invitation: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors du rejet de l\'invitation. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
@@ -1347,7 +1355,7 @@ class TeamController extends AbstractController
             ]);
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la récupération des invitations: ' . $e->getMessage()
+                'message' => 'Une erreur est survenue lors de la récupération des invitations. Veuillez réessayer plus tard.'
             ], 500);
         }
     }
