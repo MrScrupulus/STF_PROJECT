@@ -47,6 +47,7 @@ class ExpoPushNotificationService
                     'data' => $data,
                     'sound' => 'default',
                     'priority' => 'high',
+                    'channelId' => 'default', // Canal Android pour les notifications en background
                 ],
             ]);
 
