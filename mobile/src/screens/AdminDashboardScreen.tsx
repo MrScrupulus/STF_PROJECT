@@ -36,7 +36,8 @@ export default function AdminDashboardScreen() {
       Alert.alert('Succès', 'Prise validée avec succès !');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la validation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

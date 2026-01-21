@@ -54,7 +54,8 @@ export default function NotificationPreferencesScreen() {
       Alert.alert('Succès', 'Préférences mises à jour avec succès');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la mise à jour');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la mise à jour. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

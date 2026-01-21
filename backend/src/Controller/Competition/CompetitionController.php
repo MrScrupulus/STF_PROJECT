@@ -21,10 +21,15 @@ use App\Repository\Competition\CompetitionPerimeterRepository;
 use App\Repository\Species\SpeciesRepository;
 use App\Entity\Competition\CompetitionSpecies;
 use App\Repository\Competition\CompetitionSpeciesRepository;
+use Psr\Log\LoggerInterface;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
 {
+    public function __construct(
+        private readonly LoggerInterface $logger,
+    ) {
+    }
     #[Route('/admin/competitions', name: 'app_admin_competitions_list', methods: ['GET'])]
     public function adminList(CompetitionRepository $repository): JsonResponse
     {

@@ -68,7 +68,8 @@ export default function CreateCompetitionScreen() {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la création');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la création. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

@@ -69,7 +69,8 @@ export default function EditTeamScreen() {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la modification');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la modification. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

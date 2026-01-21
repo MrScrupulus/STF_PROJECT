@@ -53,7 +53,8 @@ export default function TeamDetailScreen({ route }: any) {
       setShowInviteForm(false);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de l\'invitation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de l\'invitation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -70,7 +71,8 @@ export default function TeamDetailScreen({ route }: any) {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la sortie de l\'équipe');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la sortie de l\'équipe. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -97,7 +99,8 @@ export default function TeamDetailScreen({ route }: any) {
       Alert.alert('Succès', 'Prise validée avec succès !');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la validation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -114,7 +117,8 @@ export default function TeamDetailScreen({ route }: any) {
       setRejectionReason('');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors du rejet');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors du rejet. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

@@ -46,7 +46,7 @@ export default function EditAccountPage() {
           });
         }
       } catch (error) {
-        setError("Erreur lors du chargement des données");
+        setError("Une erreur est survenue lors du chargement des données. Veuillez rafraîchir la page.");
       } finally {
         setIsLoading(false);
       }
@@ -101,7 +101,13 @@ export default function EditAccountPage() {
         router.push('/account');
       }, 2000);
     } catch (error) {
-      setError(error.response?.data?.message || error.message || "Erreur lors de la modification du mot de passe");
+      // Utiliser le message du backend s'il est disponible, sinon message générique
+      const backendMessage = error.response?.data?.message;
+      if (backendMessage) {
+        setError(backendMessage);
+      } else {
+        setError("Une erreur est survenue lors de la modification du mot de passe. Veuillez réessayer.");
+      }
     } finally {
       setIsUpdatingPassword(false);
     }

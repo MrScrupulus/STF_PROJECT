@@ -116,7 +116,8 @@ export default function CompetitionDetailPage() {
       toast.success("Vous avez quitté la compétition avec succès");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || error.message || "Erreur lors de la désinscription");
+      const message = error.response?.data?.message || "Une erreur est survenue lors de la désinscription. Veuillez réessayer.";
+      toast.error(message);
     },
   });
 
@@ -131,7 +132,8 @@ export default function CompetitionDetailPage() {
       setSelectedTeamId(null);
     },
     onError: (error) => {
-      toast.error(error.message || "Erreur lors de l'inscription");
+      const message = error.response?.data?.message || error.message || "Une erreur est survenue lors de l'inscription. Veuillez réessayer.";
+      toast.error(message);
     },
   });
 
@@ -152,7 +154,8 @@ export default function CompetitionDetailPage() {
       toast.success(competition?.isPaused ? "Compétition reprise" : "Compétition mise en pause");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || "Erreur lors de la modification");
+      const message = error.response?.data?.message || "Une erreur est survenue lors de la modification. Veuillez réessayer.";
+      toast.error(message);
     },
   });
 
@@ -260,11 +263,12 @@ export default function CompetitionDetailPage() {
       if (response.team?.id) {
         registerMutation.mutate({ teamId: response.team.id, competitionId: id });
       } else {
-        toast.error("Erreur lors de la création de l'équipe");
+        toast.error("Une erreur est survenue lors de la création de l'équipe. Veuillez réessayer.");
       }
     },
     onError: (error) => {
-      toast.error(error.message || "Erreur lors de la création de l'équipe");
+      const message = error.response?.data?.message || error.message || "Une erreur est survenue lors de la création de l'équipe. Veuillez réessayer.";
+      toast.error(message);
     },
   });
 

@@ -42,7 +42,8 @@ export default function AdminCatchValidationScreen() {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la validation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -56,7 +57,8 @@ export default function AdminCatchValidationScreen() {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors du rejet');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors du rejet. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

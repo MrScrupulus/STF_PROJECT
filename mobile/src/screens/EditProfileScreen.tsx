@@ -121,15 +121,9 @@ export default function EditProfileScreen() {
         },
       ]);
     } catch (error: any) {
-      let errorMessage = 'Erreur lors de la mise à jour du profil';
-      
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Erreur', errorMessage);
+      // Prioriser le message du backend, sinon message générique
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la mise à jour du profil. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     } finally {
       setLoading(false);
     }

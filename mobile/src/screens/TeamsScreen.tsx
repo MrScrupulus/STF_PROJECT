@@ -45,7 +45,8 @@ export default function TeamsScreen() {
       Alert.alert('Succès', 'Équipe réactivée avec succès');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la réactivation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la réactivation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

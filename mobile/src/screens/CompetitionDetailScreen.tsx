@@ -161,8 +161,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de la désinscription';
-      Alert.alert('Erreur', errorMessage);
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la désinscription. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -177,7 +177,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       setSelectedTeamId(null);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de l\'inscription');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -195,11 +196,12 @@ export default function CompetitionDetailScreen({ route }: any) {
       if (response.team?.id) {
         registerMutation.mutate({ teamId: response.team.id, competitionId: competitionId });
       } else {
-        Alert.alert('Erreur', 'Erreur lors de la création de l\'équipe');
+        Alert.alert('Erreur', 'Une erreur est survenue lors de la création de l\'équipe. Veuillez réessayer.');
       }
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || error.message || 'Erreur lors de la création de l\'équipe');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la création de l\'équipe. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -212,7 +214,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       Alert.alert('Succès', comp?.isPaused ? 'Compétition reprise' : 'Compétition mise en pause');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la modification');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la modification. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -233,7 +236,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       );
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de la publication du classement');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de la publication du classement. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

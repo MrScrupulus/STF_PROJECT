@@ -64,7 +64,8 @@ export default function InvitationsScreen() {
       ]);
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors de l\'acceptation de l\'invitation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors de l\'acceptation de l\'invitation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 
@@ -75,7 +76,8 @@ export default function InvitationsScreen() {
       Alert.alert('Succès', 'Invitation rejetée');
     },
     onError: (error: any) => {
-      Alert.alert('Erreur', error.response?.data?.message || 'Erreur lors du rejet de l\'invitation');
+      const message = error.response?.data?.message || 'Une erreur est survenue lors du rejet de l\'invitation. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     },
   });
 

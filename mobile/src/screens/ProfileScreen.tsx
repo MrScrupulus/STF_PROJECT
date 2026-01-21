@@ -44,7 +44,8 @@ export default function ProfileScreen() {
       // @ts-ignore - navigation.replace exists but TypeScript doesn't recognize it
       navigation.replace('Login' as never);
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Erreur lors de la suppression');
+      const message = error.response?.data?.message || error.message || 'Une erreur est survenue lors de la suppression. Veuillez réessayer.';
+      Alert.alert('Erreur', message);
     }
   };
 
