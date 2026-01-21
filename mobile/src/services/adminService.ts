@@ -29,9 +29,9 @@ export interface PendingCatch {
 }
 
 export const adminService = {
-  getPendingCatches: async (): Promise<PendingCatch[]> => {
-    const response = await apiClient.get('/api/admin/catches/pending');
-    return response.data?.catches || response.data || [];
+  getPendingCatches: async (page: number = 1, limit: number = 10): Promise<any> => {
+    const response = await apiClient.get(`/api/admin/catches/pending?page=${page}&limit=${limit}`);
+    return response.data;
   },
 
   validateCatch: async (catchId: number): Promise<any> => {

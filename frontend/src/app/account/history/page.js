@@ -17,13 +17,20 @@ export default function HistoryPage() {
   const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeTab, setActiveTab] = useState("overview"); // overview, teams, catches
+  const [catchesPage, setCatchesPage] = useState(1);
+  const [catchesPages, setCatchesPages] = useState(1);
+  const [allCatches, setAllCatches] = useState([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await teamService.getMyHistory();
+        const response = await teamService.getMyHistory(1, 10);
         if (response.success) {
           setHistory(response);
+          setAllCatches(response.catches || []);
+          setCatchesPage(response.catchesPagination?.page || 1);
+          setCatchesPages(response.catchesPagination?.pages || 1);
         } else {
           setError("Erreur lors du chargement de l'historique");
         }
@@ -37,6 +44,25 @@ export default function HistoryPage() {
 
     fetchHistory();
   }, []);
+
+  const loadMoreCatches = async () => {
+    if (catchesPage >= catchesPages || isLoadingMore) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const nextPage = catchesPage + 1;
+      const response = await teamService.getMyHistory(nextPage, 10);
+      if (response.success) {
+        setAllCatches([...allCatches, ...(response.catches || [])]);
+        setCatchesPage(response.catchesPagination?.page || nextPage);
+        setCatchesPages(response.catchesPagination?.pages || catchesPages);
+      }
+    } catch (error) {
+      toast.error("Erreur lors du chargement des prises supplémentaires");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Gérer le body overflow quand la modal est ouverte
   useEffect(() => {
@@ -89,12 +115,11 @@ export default function HistoryPage() {
 
   const stats = history.statistics || {};
   const teams = history.teams || [];
-  const catches = history.catches || [];
   const activeTeams = teams.filter((t) => t.isActive);
   const inactiveTeams = teams.filter((t) => !t.isActive);
 
-  // Trier les prises par date décroissante
-  const sortedCatches = [...catches].sort(
+  // Trier les prises par date décroissante (utiliser allCatches au lieu de catches)
+  const sortedCatches = [...allCatches].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 
@@ -494,6 +519,27 @@ export default function HistoryPage() {
                 <Link href="/catch/add" className={styles.history__create_link}>
                   Ajouter une prise
                 </Link>
+              </div>
+            )}
+            {sortedCatches.length > 0 && catchesPage < catchesPages && (
+              <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                <button
+                  onClick={loadMoreCatches}
+                  disabled={isLoadingMore}
+                  className={styles.history__load_more_button}
+                  style={{
+                    padding: '0.75rem 2rem',
+                    fontSize: '1rem',
+                    backgroundColor: '#007AFF',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: isLoadingMore ? 'not-allowed' : 'pointer',
+                    opacity: isLoadingMore ? 0.6 : 1,
+                  }}
+                >
+                  {isLoadingMore ? 'Chargement...' : 'Charger plus de prises'}
+                </button>
               </div>
             )}
           </div>

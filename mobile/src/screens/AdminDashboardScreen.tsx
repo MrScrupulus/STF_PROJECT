@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  FlatList,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -18,11 +19,40 @@ import Header from '../components/Header';
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
+  const [catchesPage, setCatchesPage] = useState(1);
+  const [catchesPages, setCatchesPages] = useState(1);
+  const [allCatches, setAllCatches] = useState<any[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const { data: pendingCatches, isLoading: loadingCatches } = useQuery({
-    queryKey: ['admin-pending-catches'],
-    queryFn: () => adminService.getPendingCatches(),
+  // Charger la première page
+  const { data: pendingCatchesData, isLoading: loadingCatches } = useQuery({
+    queryKey: ['admin-pending-catches', catchesPage],
+    queryFn: () => adminService.getPendingCatches(catchesPage, 10),
   });
+
+  // Mettre à jour les prises
+  useEffect(() => {
+    if (pendingCatchesData) {
+      if (catchesPage === 1) {
+        setAllCatches(pendingCatchesData.catches || []);
+      } else {
+        setAllCatches(prev => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const uniqueNew = (pendingCatchesData.catches || []).filter(c => !existingIds.has(c.id));
+          return [...prev, ...uniqueNew];
+        });
+        setIsLoadingMore(false);
+      }
+      setCatchesPages(pendingCatchesData.pages || 1);
+    }
+  }, [pendingCatchesData, catchesPage]);
+
+  const loadMoreCatches = () => {
+    if (catchesPage < catchesPages && !isLoadingMore) {
+      setIsLoadingMore(true);
+      setCatchesPage(prev => prev + 1);
+    }
+  };
 
   const { data: competitions, isLoading: loadingCompetitions } = useQuery({
     queryKey: ['admin-competitions'],
@@ -74,7 +104,7 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  const pendingCount = pendingCatches?.length || 0;
+  const pendingCount = pendingCatchesData?.total || allCatches.length;
   const competitionsCount = competitions?.length || 0;
   const activeCompetitions = competitions?.filter((c: any) => {
     const now = new Date();
@@ -115,10 +145,11 @@ export default function AdminDashboardScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.catchesList}>
-                {pendingCatches?.map((catchItem: any) => (
+              <FlatList
+                data={allCatches}
+                keyExtractor={(item: any) => item.id.toString()}
+                renderItem={({ item: catchItem }: any) => (
                   <TouchableOpacity
-                    key={catchItem.id}
                     style={styles.catchCard}
                     onPress={() => handleViewCatch(catchItem.id)}
                   >
@@ -156,8 +187,19 @@ export default function AdminDashboardScreen() {
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
-                ))}
-              </View>
+                )}
+                onEndReached={loadMoreCatches}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  isLoadingMore ? (
+                    <View style={styles.loadingMore}>
+                      <ActivityIndicator size="small" color="#007AFF" />
+                      <Text style={styles.loadingMoreText}>Chargement...</Text>
+                    </View>
+                  ) : null
+                }
+                scrollEnabled={false}
+              />
             )}
           </View>
 

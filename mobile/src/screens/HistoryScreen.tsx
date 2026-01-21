@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,10 +21,41 @@ export default function HistoryScreen() {
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'catches'>('overview');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  const [catchesPage, setCatchesPage] = useState(1);
+  const [catchesPages, setCatchesPages] = useState(1);
+  const [allCatches, setAllCatches] = useState<any[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Charger la première page pour avoir équipes et stats
   const { data: history, isLoading, error } = useQuery({
-    queryKey: ['my-history'],
-    queryFn: () => teamService.getMyHistory(),
+    queryKey: ['my-history-base'],
+    queryFn: () => teamService.getMyHistory(1, 10),
   });
+
+  // Charger les pages suivantes de prises
+  const { data: moreCatchesData, isLoading: isLoadingMoreCatches } = useQuery({
+    queryKey: ['my-history-catches', catchesPage],
+    queryFn: () => teamService.getMyHistory(catchesPage, 10),
+    enabled: catchesPage > 1, // Ne charger que si on n'est pas sur la page 1
+  });
+
+  // Mettre à jour les prises
+  useEffect(() => {
+    if (history && catchesPage === 1) {
+      // Première page : initialiser avec les prises de l'historique de base
+      setAllCatches(history.catches || []);
+      setCatchesPages(history.catchesPagination?.pages || 1);
+    }
+  }, [history]);
+
+  useEffect(() => {
+    if (moreCatchesData && catchesPage > 1) {
+      // Pages suivantes : ajouter aux prises existantes
+      setAllCatches(prev => [...prev, ...(moreCatchesData.catches || [])]);
+      setCatchesPages(moreCatchesData.catchesPagination?.pages || catchesPages);
+      setIsLoadingMore(false);
+    }
+  }, [moreCatchesData, catchesPage]);
 
   if (isLoading) {
     return (
@@ -42,12 +73,20 @@ export default function HistoryScreen() {
     );
   }
 
-  const stats = history.statistics || {};
-  const teams = history.teams || [];
-  const catches = history.catches || [];
-  const sortedCatches = [...catches].sort(
+  const stats = history?.statistics || {};
+  const teams = history?.teams || [];
+  
+  // Trier les prises par date décroissante
+  const sortedCatches = [...allCatches].sort(
     (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  const loadMoreCatches = async () => {
+    if (catchesPage >= catchesPages || isLoadingMore || isLoadingMoreCatches) return;
+    setIsLoadingMore(true);
+    setCatchesPage(prev => prev + 1);
+    // Le useQuery se déclenchera automatiquement
+  };
 
   return (
     <>
@@ -77,22 +116,28 @@ export default function HistoryScreen() {
           onPress={() => setActiveTab('catches')}
         >
           <Text style={[styles.tabText, activeTab === 'catches' && styles.tabTextActive]}>
-            Prises ({catches.length})
+            Prises ({history?.statistics?.totalCatches || allCatches.length})
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {activeTab === 'overview' && (
-          <OverviewTab stats={stats} teams={teams} navigation={navigation} />
-        )}
-        {activeTab === 'teams' && (
-          <TeamsTab teams={teams} navigation={navigation} />
-        )}
-        {activeTab === 'catches' && (
-          <CatchesTab catches={sortedCatches} onImagePress={setSelectedImage} />
-        )}
-      </ScrollView>
+      {activeTab === 'catches' ? (
+        <CatchesTab 
+          catches={sortedCatches} 
+          onImagePress={setSelectedImage}
+          onLoadMore={catchesPage < catchesPages ? loadMoreCatches : undefined}
+          isLoadingMore={isLoadingMore || isLoadingMoreCatches}
+        />
+      ) : (
+        <ScrollView style={styles.content}>
+          {activeTab === 'overview' && (
+            <OverviewTab stats={stats} teams={teams} navigation={navigation} />
+          )}
+          {activeTab === 'teams' && (
+            <TeamsTab teams={teams} navigation={navigation} />
+          )}
+        </ScrollView>
+      )}
 
       {/* Modal pour agrandir l'image */}
       <Modal
@@ -239,10 +284,14 @@ function TeamsTab({ teams, navigation }: any) {
   );
 }
 
-function CatchesTab({ catches, onImagePress }: any) {
+function CatchesTab({ catches, onImagePress, onLoadMore, isLoadingMore }: any) {
   return (
-    <View style={styles.catchesTab}>
-      {catches.map((catchItem: any) => (
+    <FlatList
+      style={styles.content}
+      contentContainerStyle={styles.catchesTab}
+      data={catches}
+      keyExtractor={(item: any) => item.id.toString()}
+      renderItem={({ item: catchItem }: any) => (
         <View key={catchItem.id} style={styles.catchCard}>
           <View style={styles.catchHeader}>
             <Text style={styles.catchSpecies}>{catchItem.species.name}</Text>
@@ -291,8 +340,27 @@ function CatchesTab({ catches, onImagePress }: any) {
             </View>
           )}
         </View>
-      ))}
-    </View>
+        )}
+        onEndReached={() => {
+          if (onLoadMore && !isLoadingMore) {
+            onLoadMore();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <View style={styles.loadingMore}>
+              <ActivityIndicator size="small" color="#007AFF" />
+              <Text style={styles.loadingMoreText}>Chargement...</Text>
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucune prise dans votre historique</Text>
+          </View>
+        }
+      />
   );
 }
 
@@ -541,6 +609,25 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ff3b30',
     fontSize: 16,
+  },
+  loadingMore: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingMoreText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   imageModal: {
     flex: 1,

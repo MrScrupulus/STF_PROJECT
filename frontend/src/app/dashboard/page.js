@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [pendingCatches, setPendingCatches] = useState([]);
   const [pendingCatchesPage, setPendingCatchesPage] = useState(1);
   const [pendingCatchesPages, setPendingCatchesPages] = useState(1);
+  const [pendingCatchesTotal, setPendingCatchesTotal] = useState(0);
   const PENDING_CATCHES_LIMIT = 10;
   const [selectedCatch, setSelectedCatch] = useState(null);
   const [showCatchModal, setShowCatchModal] = useState(false);
@@ -157,6 +158,16 @@ export default function Dashboard() {
       setPendingCatches(pendingCatchesData?.catches || []);
       setPendingCatchesPage(pendingCatchesData?.page || 1);
       setPendingCatchesPages(pendingCatchesData?.pages || 1);
+      setPendingCatchesTotal(pendingCatchesData?.total || 0);
+      
+      // Debug: vérifier la pagination
+      console.log('Pagination prises en attente:', {
+        page: pendingCatchesData?.page,
+        pages: pendingCatchesData?.pages,
+        total: pendingCatchesData?.total,
+        count: pendingCatchesData?.count,
+        catches: pendingCatchesData?.catches?.length
+      });
 
       setLoading(false);
     } catch (error) {
@@ -167,24 +178,46 @@ export default function Dashboard() {
   };
 
   const loadMorePendingCatches = async () => {
+    if (isProcessing) return;
+    
     try {
+      setIsProcessing(true);
       const nextPage = pendingCatchesPage + 1;
       if (nextPage > pendingCatchesPages) {
         return;
       }
+
+      console.log('Chargement page suivante:', { nextPage, currentPage: pendingCatchesPage, totalPages: pendingCatchesPages });
 
       const response = await adminService.getPendingCatches(
         nextPage,
         PENDING_CATCHES_LIMIT
       );
 
+      console.log('Réponse backend:', {
+        page: response?.page,
+        pages: response?.pages,
+        total: response?.total,
+        catchesCount: response?.catches?.length
+      });
+
       const newCatches = response?.catches || [];
-      setPendingCatches((prev) => [...prev, ...newCatches]);
+      
+      // Filtrer les doublons en vérifiant les IDs
+      setPendingCatches((prev) => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const uniqueNewCatches = newCatches.filter(c => !existingIds.has(c.id));
+        return [...prev, ...uniqueNewCatches];
+      });
+      
       setPendingCatchesPage(response?.page || nextPage);
       setPendingCatchesPages(response?.pages || pendingCatchesPages);
+      setPendingCatchesTotal(response?.total || pendingCatchesTotal);
     } catch (error) {
       console.error("Error loading more pending catches:", error);
       toast.error("Erreur lors du chargement des prises supplémentaires");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1754,8 +1787,14 @@ export default function Dashboard() {
                       onClick={loadMorePendingCatches}
                       disabled={isProcessing}
                     >
-                      Charger plus de prises
+                      Charger plus de prises ({pendingCatches.length}/{pendingCatchesTotal})
                     </button>
+                  </div>
+                )}
+                {/* Debug info */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div style={{ padding: '10px', fontSize: '12px', color: '#666' }}>
+                    Debug: Page {pendingCatchesPage} / {pendingCatchesPages} | Total: {pendingCatchesTotal} | Affichées: {pendingCatches.length}
                   </div>
                 )}
               </div>

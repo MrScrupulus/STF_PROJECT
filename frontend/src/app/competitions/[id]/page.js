@@ -174,6 +174,27 @@ export default function CompetitionDetailPage() {
     }
   };
 
+  // Mutation pour créer une équipe individuelle (doit être avant les retours anticipés)
+  const createIndividualTeamMutation = useMutation({
+    mutationFn: () => {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const teamName = `${currentUser.firstname || ""} ${currentUser.lastname || ""}`.trim() || "Mon équipe";
+      return teamService.create({ name: teamName });
+    },
+    onSuccess: (response) => {
+      // Après création de l'équipe, inscrire directement à la compétition
+      if (response.team?.id) {
+        registerMutation.mutate({ teamId: response.team.id, competitionId: id });
+      } else {
+        toast.error("Une erreur est survenue lors de la création de l'équipe. Veuillez réessayer.");
+      }
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || error.message || "Une erreur est survenue lors de la création de l'équipe. Veuillez réessayer.";
+      toast.error(message);
+    },
+  });
+
   if (competitionLoading)
     return (
       <div className={classNames(layoutStyles.main, styles.loading)}>
@@ -250,27 +271,6 @@ export default function CompetitionDetailPage() {
   const isAlreadyRegistered = allMyTeams.some(
     team => team.competition && team.competition.id === parseInt(id)
   );
-
-  // Mutation pour créer une équipe individuelle
-  const createIndividualTeamMutation = useMutation({
-    mutationFn: () => {
-      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const teamName = `${currentUser.firstname || ""} ${currentUser.lastname || ""}`.trim() || "Mon équipe";
-      return teamService.create({ name: teamName });
-    },
-    onSuccess: (response) => {
-      // Après création de l'équipe, inscrire directement à la compétition
-      if (response.team?.id) {
-        registerMutation.mutate({ teamId: response.team.id, competitionId: id });
-      } else {
-        toast.error("Une erreur est survenue lors de la création de l'équipe. Veuillez réessayer.");
-      }
-    },
-    onError: (error) => {
-      const message = error.response?.data?.message || error.message || "Une erreur est survenue lors de la création de l'équipe. Veuillez réessayer.";
-      toast.error(message);
-    },
-  });
 
   // Si l'utilisateur n'a qu'une seule équipe, l'inscrire automatiquement au clic
   const handleRegisterClick = () => {

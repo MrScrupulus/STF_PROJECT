@@ -57,8 +57,8 @@ export const teamService = {
     return response.data;
   },
 
-  getMyHistory: async (): Promise<any> => {
-    const response = await apiClient.get('/api/teams/my-history');
+  getMyHistory: async (page: number = 1, limit: number = 10): Promise<any> => {
+    const response = await apiClient.get(`/api/teams/my-history?page=${page}&limit=${limit}`);
     return response.data;
   },
 

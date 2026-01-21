@@ -106,9 +106,9 @@ export const teamService = {
       throw error;
     }
   },
-  getMyHistory: async () => {
+  getMyHistory: async (page = 1, limit = 10) => {
     try {
-      const response = await api.get("/api/teams/my-history");
+      const response = await api.get(`/api/teams/my-history?page=${page}&limit=${limit}`);
       return response;
     } catch (error) {
       console.error("Error fetching history:", error);

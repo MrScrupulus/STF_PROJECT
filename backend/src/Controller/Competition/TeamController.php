@@ -98,7 +98,8 @@ class TeamController extends AbstractController
     #[Route('/my-history', name: 'my_history', methods: ['GET'])]
     public function getMyHistory(
         TeamRepository $teamRepository,
-        FishCatchRepository $catchRepository
+        FishCatchRepository $catchRepository,
+        Request $request
     ): JsonResponse {
         try {
             $user = $this->getUser();
@@ -139,9 +140,20 @@ class TeamController extends AbstractController
                 $qb->setParameter($key, $value);
             }
             
+            // Récupérer toutes les prises pour les statistiques (sans pagination)
             $allCatches = $qb->orderBy('c.createdAt', 'DESC')
                 ->getQuery()
                 ->getResult();
+
+            // Pagination pour les prises retournées
+            $page = max(1, (int) $request->query->get('page', 1));
+            $limit = min(50, max(1, (int) $request->query->get('limit', 10))); // Par défaut 10, max 50
+            $totalCatches = count($allCatches);
+            $totalPages = (int) ceil($totalCatches / $limit);
+            
+            // Récupérer seulement la page demandée
+            $offset = ($page - 1) * $limit;
+            $paginatedCatches = array_slice($allCatches, $offset, $limit);
 
             // Transformer les équipes
             $teamsData = array_map(function ($team) {
@@ -169,7 +181,7 @@ class TeamController extends AbstractController
                 ];
             }, $allTeams);
 
-            // Transformer les prises
+            // Transformer seulement les prises paginées
             $catchesData = array_map(function ($catch) {
                 return [
                     'id' => $catch->getId(),
@@ -201,7 +213,7 @@ class TeamController extends AbstractController
                         'endDate' => $catch->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
                     ] : null,
                 ];
-            }, $allCatches);
+            }, $paginatedCatches);
 
             // Calculer les statistiques
             $totalCatches = count($allCatches);
@@ -232,6 +244,13 @@ class TeamController extends AbstractController
                 'success' => true,
                 'teams' => $teamsData,
                 'catches' => $catchesData,
+                'catchesPagination' => [
+                    'page' => $page,
+                    'limit' => $limit,
+                    'total' => $totalCatches,
+                    'pages' => $totalPages,
+                    'count' => count($catchesData),
+                ],
                 'statistics' => [
                     'totalCatches' => $totalCatches,
                     'validatedCatches' => count($validatedCatches),
