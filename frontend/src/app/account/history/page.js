@@ -26,7 +26,6 @@ export default function HistoryPage() {
     const fetchHistory = async () => {
       try {
         const response = await teamService.getMyHistory(1, 10);
-        console.log("History response:", response); // Debug
         // Le backend retourne toujours success: true, donc on peut utiliser la réponse directement
         if (response && (response.success !== false)) {
           setHistory(response);
@@ -37,7 +36,6 @@ export default function HistoryPage() {
           setError(response?.message || "Erreur lors du chargement de l'historique");
         }
       } catch (error) {
-        console.error("Error fetching history:", error); // Debug
         setError(error.message || "Erreur lors du chargement de l'historique");
         toast.error("Erreur lors du chargement de l'historique");
       } finally {
@@ -131,15 +129,6 @@ export default function HistoryPage() {
   const sortedCatches = [...allCatches].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
-
-  // Debug: vérifier les données
-  console.log("History data:", { 
-    history, 
-    allCatches: allCatches.length, 
-    sortedCatches: sortedCatches.length,
-    stats,
-    teams: teams.length 
-  });
 
   return (
     <ProtectedRoute>

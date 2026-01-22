@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useState, useEffect } from "react";
+import { createElement, useState, useEffect, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { competitionsService } from "../../services/competitions";
@@ -30,7 +30,7 @@ const FILTERS = {
   PARTICIPATED: "participated",
 };
 
-export default function CompetitionsPage() {
+function CompetitionsPageContent() {
   const searchParams = useSearchParams();
   const filterParam = searchParams?.get("filter");
   const [activeFilter, setActiveFilter] = useState(
@@ -118,7 +118,6 @@ export default function CompetitionsPage() {
     );
   }
 
-  // Filtrer les compétitions selon le filtre actif
   // Filtrer les compétitions selon le filtre actif
   const filteredCompetitions = (allCompetitions || []).filter((competition) => {
     if (activeFilter === FILTERS.ALL) return true;
@@ -343,5 +342,15 @@ export default function CompetitionsPage() {
       )
       ]
     )
+  );
+}
+
+export default function CompetitionsPage() {
+  return createElement(
+    Suspense,
+    {
+      fallback: createElement("div", { className: `${layoutStyles.main} ${styles.loading}` }, "Chargement..."),
+    },
+    createElement(CompetitionsPageContent)
   );
 }

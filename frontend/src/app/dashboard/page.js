@@ -19,6 +19,7 @@ import layoutStyles from "../../styles/components/layout/layout.module.scss";
 import SpeciesPieChart from "../../components/competition/SpeciesPieChart";
 import CatchesMap from "../../components/competition/CatchesMap";
 import { perimeterService } from "../../services/perimeterService";
+import { logger } from "../../utils/logger";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -112,7 +113,7 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      console.log("Starting to fetch admin data...");
+      logger.debug("Starting to fetch admin data...");
       const [usersData, competitionsData, speciesData, teamsData, pendingCatchesData] =
         await Promise.all([
           adminService.getUsers(),
@@ -123,12 +124,6 @@ export default function Dashboard() {
             .getPendingCatches(1, PENDING_CATCHES_LIMIT)
             .catch(() => ({ success: true, catches: [], total: 0, page: 1, pages: 1 })),
         ]);
-
-      // Logs détaillés pour chaque réponse
-      console.log("Users raw data:", usersData);
-      console.log("Competitions raw data:", competitionsData);
-      console.log("Species raw data:", speciesData);
-      console.log("Teams raw data:", teamsData);
 
       // Extraction des données avec vérification de la structure
       const processedUsers = Array.isArray(usersData)
@@ -142,12 +137,11 @@ export default function Dashboard() {
         ? teamsData
         : teamsData?.teams || [];
 
-      // Log des données traitées
-      console.log("Processed data:", {
-        users: processedUsers,
-        competitions: processedCompetitions,
-        species: processedSpecies,
-        teams: processedTeams,
+      logger.debug("Processed data:", {
+        users: processedUsers.length,
+        competitions: processedCompetitions.length,
+        species: processedSpecies.length,
+        teams: processedTeams.length,
       });
 
       // Mise à jour du state avec vérification
@@ -159,19 +153,10 @@ export default function Dashboard() {
       setPendingCatchesPage(pendingCatchesData?.page || 1);
       setPendingCatchesPages(pendingCatchesData?.pages || 1);
       setPendingCatchesTotal(pendingCatchesData?.total || 0);
-      
-      // Debug: vérifier la pagination
-      console.log('Pagination prises en attente:', {
-        page: pendingCatchesData?.page,
-        pages: pendingCatchesData?.pages,
-        total: pendingCatchesData?.total,
-        count: pendingCatchesData?.count,
-        catches: pendingCatchesData?.catches?.length
-      });
 
       setLoading(false);
     } catch (error) {
-      console.error("Fetch error:", error);
+      logger.error("Fetch error:", error);
       setError("Erreur lors du chargement des données");
       setLoading(false);
     }
@@ -187,14 +172,14 @@ export default function Dashboard() {
         return;
       }
 
-      console.log('Chargement page suivante:', { nextPage, currentPage: pendingCatchesPage, totalPages: pendingCatchesPages });
+      logger.debug('Chargement page suivante:', { nextPage, currentPage: pendingCatchesPage, totalPages: pendingCatchesPages });
 
       const response = await adminService.getPendingCatches(
         nextPage,
         PENDING_CATCHES_LIMIT
       );
 
-      console.log('Réponse backend:', {
+      logger.debug('Réponse backend:', {
         page: response?.page,
         pages: response?.pages,
         total: response?.total,
@@ -214,7 +199,7 @@ export default function Dashboard() {
       setPendingCatchesPages(response?.pages || pendingCatchesPages);
       setPendingCatchesTotal(response?.total || pendingCatchesTotal);
     } catch (error) {
-      console.error("Error loading more pending catches:", error);
+      logger.error("Error loading more pending catches:", error);
       toast.error("Erreur lors du chargement des prises supplémentaires");
     } finally {
       setIsProcessing(false);
@@ -230,7 +215,7 @@ export default function Dashboard() {
           await fetchData();
         }
       } catch (error) {
-        console.error("Error loading data:", error);
+        logger.error("Error loading data:", error);
         setError("Erreur lors du chargement des données");
       }
     };
@@ -343,7 +328,7 @@ export default function Dashboard() {
       await fetchData();
       setShowRoleModal(false);
     } catch (error) {
-      console.error("Erreur lors du changement de rôle:", error);
+      logger.error("Erreur lors du changement de rôle:", error);
     }
   };
 
@@ -355,7 +340,7 @@ export default function Dashboard() {
         await adminService.deleteUser(userId);
         fetchData();
       } catch (error) {
-        console.error("Error deleting user:", error);
+        logger.error("Error deleting user:", error);
       }
     }
   };
@@ -366,7 +351,7 @@ export default function Dashboard() {
         await adminService.verifyUser(userId);
         fetchData();
       } catch (error) {
-        console.error("Error verifying user:", error);
+        logger.error("Error verifying user:", error);
       }
     }
   };
@@ -376,7 +361,7 @@ export default function Dashboard() {
       await competitionService.delete(competitionId);
       fetchData();
     } catch (error) {
-      console.error("Error deleting competition:", error);
+      logger.error("Error deleting competition:", error);
     }
   };
 
@@ -386,7 +371,7 @@ export default function Dashboard() {
         await speciesService.delete(speciesId);
         fetchData();
       } catch (error) {
-        console.error("Error deleting species:", error);
+        logger.error("Error deleting species:", error);
       }
     }
   };
@@ -492,7 +477,7 @@ export default function Dashboard() {
         setShowConfirm(false);
         onClose();
       } catch (error) {
-        console.error("Error toggling role:", error);
+        logger.error("Error toggling role:", error);
       }
     };
 
@@ -502,7 +487,7 @@ export default function Dashboard() {
         setShowDeleteConfirm(false);
         onClose();
       } catch (error) {
-        console.error("Error deleting user:", error);
+        logger.error("Error deleting user:", error);
       }
     };
 
@@ -641,7 +626,7 @@ export default function Dashboard() {
         setShowConfirm(false);
         onClose();
       } catch (error) {
-        console.error("Error deleting competition:", error);
+        logger.error("Error deleting competition:", error);
       }
     };
 
@@ -667,7 +652,7 @@ export default function Dashboard() {
           setPerimeters(perimetersResponse.perimeters || []);
         }
       } catch (error) {
-        console.error("Error loading stats:", error);
+        logger.error("Error loading stats:", error);
       } finally {
         setLoadingStats(false);
       }
@@ -699,7 +684,7 @@ export default function Dashboard() {
           );
         }
       } catch (error) {
-        console.error("Error updating ranking visibility:", error);
+        logger.error("Error updating ranking visibility:", error);
         toast.error("❌ Erreur lors de la mise à jour de la visibilité du classement.");
       } finally {
         setUpdatingRanking(false);
@@ -1072,7 +1057,7 @@ export default function Dashboard() {
                     document.body.removeChild(a);
                     toast.success('PDF téléchargé avec succès.');
                   } catch (error) {
-                    console.error('Erreur téléchargement PDF:', error);
+                    logger.error('Erreur téléchargement PDF:', error);
                     toast.error('Erreur lors du téléchargement du PDF: ' + (error.message || 'Erreur inconnue'));
                   }
                 },
@@ -1139,7 +1124,7 @@ export default function Dashboard() {
         setShowConfirm(false);
         onClose();
       } catch (error) {
-        console.error("Error saving species:", error);
+        logger.error("Error saving species:", error);
       }
     };
 
@@ -1276,7 +1261,7 @@ export default function Dashboard() {
         setShowConfirm(false);
         onClose();
       } catch (error) {
-        console.error("Error saving team:", error);
+        logger.error("Error saving team:", error);
       }
     };
 

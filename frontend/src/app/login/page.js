@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "../../services/authService";
 import styles from "../../styles/pages/auth/login.module.scss";
@@ -9,7 +9,7 @@ import Link from "next/link";
 import classNames from "classnames";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
-export default function Login() {
+function LoginContent() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -143,5 +143,19 @@ export default function Login() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className={classNames(layoutStyles.main, layoutStyles.form_page)}>
+        <div className={styles.login__container}>
+          <p>Chargement...</p>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

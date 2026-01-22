@@ -35,7 +35,6 @@ export interface CreateCatchData {
 export const catchesService = {
   getAll: async (): Promise<FishCatch[]> => {
     const response = await apiClient.get(API_ENDPOINTS.catches.list);
-    console.log('Catches API response:', response.data); // Debug
     // Le backend retourne { success: true, catches: [...], pagination: {...} }
     if (response.data && response.data.catches) {
       return response.data.catches;
