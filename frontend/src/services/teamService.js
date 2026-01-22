@@ -50,7 +50,10 @@ export const teamService = {
       const response = await api.get("/api/teams/my-teams");
       return response;
     } catch (error) {
-      console.error("Error fetching teams:", error);
+      // Ne pas logger les erreurs 401 (non authentifié) car elles sont attendues
+      if (error?.status !== 401 && !(error?.message && error.message.includes("401"))) {
+        console.error("Error fetching teams:", error);
+      }
       throw error;
     }
   },
@@ -122,6 +125,33 @@ export const teamService = {
       return response;
     } catch (error) {
       console.error("Error reactivating team:", error);
+      throw error;
+    }
+  },
+  getMyInvitations: async () => {
+    try {
+      const response = await api.get("/api/teams/invitations/my");
+      return response;
+    } catch (error) {
+      console.error("Error fetching invitations:", error);
+      throw error;
+    }
+  },
+  acceptInvitation: async (invitationId) => {
+    try {
+      const response = await api.post(`/api/teams/invitations/${invitationId}/accept`);
+      return response;
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      throw error;
+    }
+  },
+  rejectInvitation: async (invitationId) => {
+    try {
+      const response = await api.post(`/api/teams/invitations/${invitationId}/reject`);
+      return response;
+    } catch (error) {
+      console.error("Error rejecting invitation:", error);
       throw error;
     }
   },

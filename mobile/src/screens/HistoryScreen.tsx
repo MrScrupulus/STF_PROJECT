@@ -57,8 +57,8 @@ export default function HistoryScreen() {
       // Pages suivantes : ajouter aux prises existantes en filtrant les doublons
       const newCatches = moreCatchesData.catches || [];
       setAllCatches(prev => {
-        const existingIds = new Set(prev.map(c => c.id));
-        const uniqueNewCatches = newCatches.filter(c => !existingIds.has(c.id));
+        const existingIds = new Set(prev.map((c: any) => c.id));
+        const uniqueNewCatches = newCatches.filter((c: any) => !existingIds.has(c.id));
         return [...prev, ...uniqueNewCatches];
       });
       setCatchesPages(moreCatchesData.catchesPagination?.pages || catchesPages);
@@ -140,7 +140,7 @@ export default function HistoryScreen() {
       ) : (
         <ScrollView style={styles.content}>
           {activeTab === 'overview' && (
-            <OverviewTab stats={stats} teams={teams} navigation={navigation} />
+            <OverviewTab stats={stats} teams={teams} navigation={navigation} setActiveTab={setActiveTab} />
           )}
           {activeTab === 'teams' && (
             <TeamsTab teams={teams} navigation={navigation} />
@@ -176,32 +176,53 @@ export default function HistoryScreen() {
   );
 }
 
-function OverviewTab({ stats, teams, navigation }: any) {
+function OverviewTab({ stats, teams, navigation, setActiveTab }: any) {
   return (
     <View style={styles.overview}>
       {/* Statistiques principales */}
       <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={() => {
+            // Naviguer vers l'onglet "catches"
+            setActiveTab('catches');
+          }}
+          activeOpacity={0.7}
+        >
           <Text style={styles.statLabel}>Total de prises</Text>
           <Text style={styles.statValue}>{stats.totalCatches || 0}</Text>
           <Text style={styles.statDescription}>
             {stats.validatedCatches || 0} validées
           </Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Points totaux</Text>
-          <Text style={styles.statValue}>{stats.totalPoints || 0}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={() => {
+            // Naviguer vers la page des compétitions avec un filtre pour les compétitions auxquelles l'utilisateur a participé
+            navigation.navigate('Competitions' as never, { filter: 'participated' } as never);
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.statLabel}>Compétitions</Text>
+          <Text style={styles.statValue}>{stats.competitionsCount || 0}</Text>
           <Text style={styles.statDescription}>
-            Toutes compétitions confondues
+            Auxquelles vous avez participé
           </Text>
-        </View>
-        <View style={styles.statCard}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={() => {
+            // Naviguer vers l'onglet "teams"
+            setActiveTab('teams');
+          }}
+          activeOpacity={0.7}
+        >
           <Text style={styles.statLabel}>Équipes actives</Text>
           <Text style={styles.statValue}>{stats.activeTeamsCount || 0}</Text>
           <Text style={styles.statDescription}>
             {stats.inactiveTeamsCount || 0} dissoutes
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Répartition par espèce */}

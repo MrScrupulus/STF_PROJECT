@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { authService, LoginCredentials } from '../services/authService';
 
-export default function LoginScreen({ navigation, onLogin }: any) {
-  const [email, setEmail] = useState('');
+export default function LoginScreen({ navigation, onLogin, route }: any) {
+  // Pré-remplir l'email depuis les paramètres de route (après vérification d'email)
+  const initialEmail = route?.params?.email || '';
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

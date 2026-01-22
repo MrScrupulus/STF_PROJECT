@@ -30,6 +30,9 @@ class EmailVerificationController extends AbstractController
 
         $entityManager->flush();
 
-        return $this->json(['success' => true]);
+        return $this->json([
+            'success' => true,
+            'email' => $user->getEmail() // Retourner l'email pour pré-remplir le formulaire de login
+        ]);
     }
 }

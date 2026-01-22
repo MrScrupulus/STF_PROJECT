@@ -278,7 +278,8 @@ final class AuthController extends AbstractController
 
             return $this->json([
                 'success' => true,
-                'message' => 'Email vérifié avec succès'
+                'message' => 'Email vérifié avec succès',
+                'email' => $user->getEmail() // Retourner l'email pour pré-remplir le formulaire de login
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la vérification de l\'email', [

@@ -26,15 +26,18 @@ export default function HistoryPage() {
     const fetchHistory = async () => {
       try {
         const response = await teamService.getMyHistory(1, 10);
-        if (response.success) {
+        console.log("History response:", response); // Debug
+        // Le backend retourne toujours success: true, donc on peut utiliser la réponse directement
+        if (response && (response.success !== false)) {
           setHistory(response);
           setAllCatches(response.catches || []);
           setCatchesPage(response.catchesPagination?.page || 1);
           setCatchesPages(response.catchesPagination?.pages || 1);
         } else {
-          setError("Erreur lors du chargement de l'historique");
+          setError(response?.message || "Erreur lors du chargement de l'historique");
         }
       } catch (error) {
+        console.error("Error fetching history:", error); // Debug
         setError(error.message || "Erreur lors du chargement de l'historique");
         toast.error("Erreur lors du chargement de l'historique");
       } finally {
@@ -129,6 +132,15 @@ export default function HistoryPage() {
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 
+  // Debug: vérifier les données
+  console.log("History data:", { 
+    history, 
+    allCatches: allCatches.length, 
+    sortedCatches: sortedCatches.length,
+    stats,
+    teams: teams.length 
+  });
+
   return (
     <ProtectedRoute>
       <div className={classNames(layoutStyles.main, styles.history__container)}>
@@ -166,7 +178,7 @@ export default function HistoryPage() {
             }`}
             onClick={() => setActiveTab("catches")}
           >
-            Prises ({catches.length})
+            Prises ({allCatches.length})
           </button>
         </div>
 
@@ -175,7 +187,10 @@ export default function HistoryPage() {
           <div className={styles.history__overview}>
             {/* Statistiques principales */}
             <div className={styles.history__stats_grid}>
-              <div className={styles.history__stat_card}>
+              <div
+                className={styles.history__stat_card}
+                onClick={() => setActiveTab("catches")}
+              >
                 <div className={styles.history__stat_label}>Total de prises</div>
                 <div className={styles.history__stat_value}>
                   {stats.totalCatches || 0}
@@ -185,17 +200,23 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              <div className={styles.history__stat_card}>
-                <div className={styles.history__stat_label}>Points totaux</div>
+              <div
+                className={styles.history__stat_card}
+                onClick={() => router.push("/competitions?filter=participated")}
+              >
+                <div className={styles.history__stat_label}>Compétitions</div>
                 <div className={styles.history__stat_value}>
-                  {stats.totalPoints || 0}
+                  {stats.competitionsCount || 0}
                 </div>
                 <div className={styles.history__stat_description}>
-                  Toutes compétitions confondues
+                  Auxquelles vous avez participé
                 </div>
               </div>
 
-              <div className={styles.history__stat_card}>
+              <div
+                className={styles.history__stat_card}
+                onClick={() => setActiveTab("teams")}
+              >
                 <div className={styles.history__stat_label}>Équipes actives</div>
                 <div className={styles.history__stat_value}>
                   {stats.activeTeamsCount || 0}

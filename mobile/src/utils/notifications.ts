@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
+import * as SecureStore from 'expo-secure-store';
 
 // Configuration des notifications
 Notifications.setNotificationHandler({
@@ -98,12 +99,25 @@ export async function getExpoPushToken(): Promise<string | null> {
  */
 export async function registerPushToken(): Promise<void> {
   try {
-    const token = await getExpoPushToken();
-    if (token) {
-      await notificationPreferencesService.update({ expoPushToken: token });
+    // Vérifier que l'utilisateur est authentifié avant d'enregistrer le token
+    const token = await SecureStore.getItemAsync('jwtToken');
+    if (!token) {
+      console.log('Token JWT non trouvé, enregistrement du token push reporté');
+      return;
+    }
+
+    const expoToken = await getExpoPushToken();
+    if (expoToken) {
+      await notificationPreferencesService.update({ expoPushToken: expoToken });
       console.log('Token Expo Push enregistré avec succès');
     }
-  } catch (error) {
+  } catch (error: any) {
+    // Si c'est une erreur 401, c'est normal si l'utilisateur n'est pas encore authentifié
+    // On ne log pas d'erreur dans ce cas pour éviter les logs inutiles
+    if (error.response?.status === 401) {
+      console.log('Erreur 401 lors de l\'enregistrement du token push (utilisateur non authentifié)');
+      return;
+    }
     console.error('Erreur lors de l\'enregistrement du token:', error);
   }
 }

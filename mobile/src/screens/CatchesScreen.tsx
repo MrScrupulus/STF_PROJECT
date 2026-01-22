@@ -19,7 +19,16 @@ export default function CatchesScreen() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['catches'],
-    queryFn: () => catchesService.getAll(),
+    queryFn: async () => {
+      try {
+        const result = await catchesService.getAll();
+        console.log('Catches data received:', result); // Debug
+        return result;
+      } catch (err) {
+        console.error('Error fetching catches:', err); // Debug
+        throw err;
+      }
+    },
   });
 
   if (isLoading) {

@@ -30,7 +30,7 @@ export const competitionsService = {
   end: (id) => api.put(ENDPOINTS.competitions.end(id), {}),
 
   getStats: (id) => api.get(`/api/admin/competitions/${id}/stats`),
-  getPublicStats: (id) => api.get(`/api/admin/competitions/${id}/stats`), // Même endpoint, permissions gérées côté backend
+  getPublicStats: (id) => api.get(`/api/competitions/${id}/stats`), // Endpoint public pour les statistiques
   
   unregisterFromCompetition: async (competitionId) => {
     const response = await api.post(`/api/competitions/${competitionId}/teams/unregister`);

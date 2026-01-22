@@ -49,11 +49,16 @@ export const api = {
         "Content-Type": "application/json",
       };
 
-      if (
-        !endpoint.includes("/api/auth/login") &&
-        !endpoint.includes("/api/auth/register") &&
-        !endpoint.includes("/password-reset")
-      ) {
+      // Ne pas envoyer le token pour les routes publiques
+      const isPublicRoute = 
+        endpoint.includes("/api/auth/login") ||
+        endpoint.includes("/api/auth/register") ||
+        endpoint.includes("/password-reset") ||
+        /^\/api\/competitions\/\d+\/stats$/.test(endpoint) || // Routes GET pour les statistiques publiques
+        /^\/api\/teams\/\d+$/.test(endpoint); // Routes GET pour les détails d'équipe
+      
+      // Pour /api/competitions, envoyer le token si disponible pour avoir isRegistered
+      if (!isPublicRoute) {
         const token = localStorage.getItem("token");
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;
@@ -89,7 +94,11 @@ export const api = {
         } catch (e) {
           errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
-        throw new Error(errorMessage);
+        
+        // Créer une erreur avec le statut pour permettre la gestion gracieuse des 401
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
       }
 
       let responseData;
@@ -114,7 +123,11 @@ export const api = {
 
       return responseData;
     } catch (error) {
-      console.error("API error:", error);
+      // Ne pas logger les erreurs 401 et 403 pour les routes qui nécessitent une authentification
+      // car elles sont attendues quand l'utilisateur n'est pas connecté ou n'a pas accès
+      if (error?.status !== 401 && error?.status !== 403 && error?.message !== "Expired JWT Token") {
+        console.error("API error:", error);
+      }
       if (error.message === "Expired JWT Token") {
         localStorage.removeItem("token");
         window.location.href = "/login";

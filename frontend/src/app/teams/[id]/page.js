@@ -6,6 +6,8 @@ import Link from "next/link";
 import { teamService } from "../../../services/teamService";
 import styles from "../../../styles/pages/teams.module.scss";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
+import { useAuth } from "../../../components/auth/ConditionalAuth";
+import Link from "next/link";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
@@ -13,6 +15,7 @@ import { toast } from "react-hot-toast";
 export default function TeamDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { isAuthenticated, currentUser: authUser, isLoading: authLoading } = useAuth();
   const [team, setTeam] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,8 +33,15 @@ export default function TeamDetailPage() {
         } else {
           setError("Équipe non trouvée");
         }
-      } catch (error) {
-        setError(error.message || "Erreur lors du chargement de l'équipe");
+      } catch (error: any) {
+        // Gérer gracieusement les erreurs 401 (non authentifié)
+        if (error.status === 401 || (error.message && error.message.includes("401"))) {
+          // L'équipe peut être consultée sans authentification, donc cette erreur ne devrait pas arriver
+          // Mais on la gère quand même au cas où
+          setError("Erreur d'authentification lors du chargement de l'équipe");
+        } else {
+          setError(error.message || "Erreur lors du chargement de l'équipe");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -95,8 +105,43 @@ export default function TeamDetailPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className={classNames(layoutStyles.main, styles.teams__container)}>
+    <div className={classNames(layoutStyles.main, styles.teams__container)}>
+      {/* Message d'information si l'utilisateur n'est pas connecté */}
+      {!isAuthenticated && !authLoading && (
+        <div style={{
+          backgroundColor: "#e3f2fd",
+          border: "1px solid #2196f3",
+          borderRadius: "8px",
+          padding: "16px",
+          marginBottom: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "10px"
+        }}>
+          <div>
+            <strong style={{ color: "#1976d2" }}>Consultation uniquement</strong>
+            <p style={{ margin: "8px 0 0 0", color: "#555" }}>
+              Connectez-vous pour inviter des membres ou effectuer d'autres actions sur cette équipe.
+            </p>
+          </div>
+          <Link 
+            href="/login"
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#007AFF",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "5px",
+              fontWeight: "600",
+              whiteSpace: "nowrap"
+            }}
+          >
+            Se connecter
+          </Link>
+        </div>
+      )}
         <div className={styles.teams__detail_header}>
           <button
             onClick={() => router.back()}
@@ -178,7 +223,7 @@ export default function TeamDetailPage() {
             // Sinon, permettre jusqu'à 2 membres minimum
             const maxTeamSize = team.competition?.teamSize || 2;
             return team.members && team.members.length < maxTeamSize;
-          })() && (
+          })() && isAuthenticated && (
             <div className={styles.teams__invite_section}>
               {!showInviteForm ? (
                 <button
@@ -209,6 +254,12 @@ export default function TeamDetailPage() {
                     <div className={styles.teams__invite_actions}>
                       <button
                         onClick={async () => {
+                          if (!isAuthenticated) {
+                            toast.error("Vous devez être connecté pour inviter un membre.");
+                            router.push("/login");
+                            return;
+                          }
+                          
                           if (!inviteEmail.trim()) {
                             toast.error("Veuillez entrer un email");
                             return;

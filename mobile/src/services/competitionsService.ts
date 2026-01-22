@@ -37,7 +37,12 @@ export interface Team {
 export const competitionsService = {
   getAll: async (): Promise<Competition[]> => {
     const response = await apiClient.get(API_ENDPOINTS.competitions.list);
-    return response.data.competitions || response.data;
+    // Le backend retourne { success: true, competitions: [...], pagination: {...} }
+    if (response.data && response.data.competitions) {
+      return response.data.competitions;
+    }
+    // Fallback si la structure est différente
+    return response.data || [];
   },
 
   getOne: async (id: number): Promise<Competition> => {

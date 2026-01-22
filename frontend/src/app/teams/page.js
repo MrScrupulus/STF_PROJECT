@@ -24,6 +24,12 @@ export default function TeamsPage() {
         const teamsData = response?.teams || [];
         setTeams(teamsData);
       } catch (error) {
+        // Gérer gracieusement les erreurs 401 (non authentifié) et 500 (erreur serveur)
+        if (error?.status === 401 || (error?.message && error.message.includes("401"))) {
+          // L'utilisateur n'est pas connecté, rediriger vers la page de connexion
+          router.push("/login");
+          return;
+        }
         // Ne pas logger l'erreur complète pour éviter les problèmes de taille
         const errorMessage = error?.message || "Une erreur est survenue lors du chargement des équipes";
         setError(errorMessage);
@@ -33,7 +39,7 @@ export default function TeamsPage() {
     };
 
     fetchTeams();
-  }, []);
+  }, [router]);
 
   const handleReactivateTeam = async (teamId) => {
     if (!confirm("Voulez-vous réactiver cette équipe ? Le score sera réinitialisé à zéro pour la nouvelle compétition.")) {

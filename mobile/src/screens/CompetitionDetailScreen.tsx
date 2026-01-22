@@ -336,11 +336,11 @@ export default function CompetitionDetailScreen({ route }: any) {
     const end = new Date(competition.endDate);
     
     if (now < start) {
-      return { text: 'À venir', style: styles.statusUpcoming };
+      return { text: 'À venir', style: styles.statusUpcoming, isEnded: false };
     } else if (now >= start && now <= end) {
-      return { text: 'En cours', style: styles.statusOngoing };
+      return { text: 'En cours', style: styles.statusOngoing, isEnded: false };
     } else {
-      return { text: 'Terminée', style: styles.statusEnded };
+      return { text: 'Terminée', style: styles.statusEnded, isEnded: true };
     }
   };
   
@@ -378,8 +378,20 @@ export default function CompetitionDetailScreen({ route }: any) {
             <Text style={styles.date}>
               {formatCompetitionDateRange(competition.startDate, competition.endDate)}
             </Text>
-            <View style={[styles.statusBadge, status.style]}>
-              <Text style={styles.statusBadgeText}>{status.text}</Text>
+            <View style={styles.badgesContainer}>
+              {competition.isRegistered && !status.isEnded && (
+                <View style={styles.registeredBadge}>
+                  <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
+                </View>
+              )}
+              {competition.isRegistered && status.isEnded && (
+                <View style={styles.participatedBadge}>
+                  <Text style={styles.participatedBadgeText}>✓ Participé</Text>
+                </View>
+              )}
+              <View style={[styles.statusBadge, status.style]}>
+                <Text style={styles.statusBadgeText}>{status.text}</Text>
+              </View>
             </View>
           </View>
 
@@ -884,22 +896,51 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+    flexWrap: 'wrap',
   },
   date: {
     fontSize: 16,
     color: '#666',
     flex: 1,
   },
+  badgesContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginLeft: 12,
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    marginLeft: 12,
   },
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
+  },
+  registeredBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#dbeafe',
+  },
+  registeredBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#1e40af',
+  },
+  participatedBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#fef3c7',
+  },
+  participatedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#92400e',
   },
   statusUpcoming: {
     backgroundColor: '#60a5fa',

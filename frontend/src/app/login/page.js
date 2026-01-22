@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authService } from "../../services/authService";
 import styles from "../../styles/pages/auth/login.module.scss";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -18,6 +18,20 @@ export default function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Pré-remplir l'email depuis les query params (après vérification d'email)
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    if (emailParam) {
+      setFormData(prev => ({ ...prev, email: decodeURIComponent(emailParam) }));
+      // Nettoyer l'URL en enlevant le paramètre email pour éviter qu'il reste pré-rempli
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('email');
+      const newQuery = newSearchParams.toString();
+      router.replace(newQuery ? `/login?${newQuery}` : '/login', { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

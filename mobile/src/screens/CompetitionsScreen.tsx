@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
 import { formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
@@ -19,11 +19,16 @@ const FILTERS = {
   ONGOING: 'ongoing',
   UPCOMING: 'upcoming',
   ENDED: 'ended',
+  PARTICIPATED: 'participated',
 };
 
 export default function CompetitionsScreen() {
   const navigation = useNavigation();
-  const [activeFilter, setActiveFilter] = useState(FILTERS.ALL);
+  const route = useRoute();
+  const routeParams = route.params as { filter?: string } | undefined;
+  const [activeFilter, setActiveFilter] = useState(
+    routeParams?.filter === 'participated' ? FILTERS.PARTICIPATED : FILTERS.ALL
+  );
   const { data, isLoading, error } = useQuery({
     queryKey: ['competitions'],
     queryFn: () => competitionsService.getAll(),
@@ -51,17 +56,21 @@ export default function CompetitionsScreen() {
     const end = new Date(endDate);
 
     if (now < start) {
-      return { text: 'À venir', style: styles.statusUpcoming, sortOrder: 2 };
+      return { text: 'À venir', style: styles.statusUpcoming, sortOrder: 2, isEnded: false };
     } else if (now >= start && now <= end) {
-      return { text: 'En cours', style: styles.statusOngoing, sortOrder: 1 };
+      return { text: 'En cours', style: styles.statusOngoing, sortOrder: 1, isEnded: false };
     } else {
-      return { text: 'Terminée', style: styles.statusEnded, sortOrder: 3 };
+      return { text: 'Terminée', style: styles.statusEnded, sortOrder: 3, isEnded: true };
     }
   };
 
   // Filtrer les compétitions selon le filtre actif
   const filteredData = (data || []).filter((competition) => {
     if (activeFilter === FILTERS.ALL) return true;
+    if (activeFilter === FILTERS.PARTICIPATED) {
+      // Afficher seulement les compétitions auxquelles l'utilisateur est inscrit ou a participé
+      return competition.isRegistered === true;
+    }
     const status = getCompetitionStatus(competition.startDate, competition.endDate);
     if (activeFilter === FILTERS.ONGOING) return status.text === 'En cours';
     if (activeFilter === FILTERS.UPCOMING) return status.text === 'À venir';
@@ -72,7 +81,7 @@ export default function CompetitionsScreen() {
 
   const renderCompetition = ({ item }: { item: Competition }) => {
     const status = getCompetitionStatus(item.startDate, item.endDate);
-    const isEnded = status.text === 'Terminée';
+    const isEnded = status.isEnded;
     const handlePress = () => {
       (navigation as any).navigate('CompetitionDetail', { id: item.id });
     };
@@ -86,14 +95,19 @@ export default function CompetitionsScreen() {
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{item.name}</Text>
           <View style={styles.badgesContainer}>
-            <View style={[styles.statusBadge, status.style]}>
-              <Text style={styles.statusBadgeText}>{status.text}</Text>
-            </View>
-            {item.isRegistered && (
+            {item.isRegistered && !isEnded && (
               <View style={styles.registeredBadge}>
                 <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
               </View>
             )}
+            {item.isRegistered && isEnded && (
+              <View style={styles.participatedBadge}>
+                <Text style={styles.participatedBadgeText}>✓ Participé</Text>
+              </View>
+            )}
+            <View style={[styles.statusBadge, status.style]}>
+              <Text style={styles.statusBadgeText}>{status.text}</Text>
+            </View>
           </View>
         </View>
         <Text style={styles.cardDate}>
@@ -203,6 +217,8 @@ export default function CompetitionsScreen() {
               <Text style={styles.emptyText}>
                 {activeFilter === FILTERS.ALL
                   ? 'Aucune compétition'
+                  : activeFilter === FILTERS.PARTICIPATED
+                  ? 'Aucune compétition à laquelle vous avez participé'
                   : activeFilter === FILTERS.ONGOING
                   ? 'Aucune compétition en cours'
                   : activeFilter === FILTERS.UPCOMING
@@ -222,6 +238,11 @@ export default function CompetitionsScreen() {
               {activeFilter === FILTERS.ENDED && (
                 <Text style={styles.emptySubtext}>
                   Aucune compétition n'a encore été terminée.
+                </Text>
+              )}
+              {activeFilter === FILTERS.PARTICIPATED && (
+                <Text style={styles.emptySubtext}>
+                  Vous n'avez pas encore participé à une compétition.
                 </Text>
               )}
             </View>
@@ -359,6 +380,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#1e40af',
+  },
+  participatedBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#fef3c7',
+  },
+  participatedBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#92400e',
   },
   cardDate: {
     fontSize: 14,

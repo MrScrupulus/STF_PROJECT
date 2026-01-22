@@ -15,8 +15,28 @@ export default function NotificationInitializer() {
       return;
     }
 
-    // Enregistrer le token push
-    registerPushToken().catch((error) => {
+    // Fonction pour enregistrer le token avec retry
+    const registerTokenWithRetry = async (retries = 3, delay = 1000) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          await registerPushToken();
+          break; // Succès, sortir de la boucle
+        } catch (error: any) {
+          // Si c'est une erreur 401 et qu'il reste des tentatives, réessayer
+          if (error.response?.status === 401 && i < retries - 1) {
+            console.log(`Tentative ${i + 1}/${retries} échouée, nouvelle tentative dans ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          // Sinon, logger l'erreur et arrêter
+          console.error('Erreur lors de l\'enregistrement du token push:', error);
+          break;
+        }
+      }
+    };
+
+    // Enregistrer le token push avec retry
+    registerTokenWithRetry().catch((error) => {
       console.error('Erreur lors de l\'enregistrement du token push:', error);
     });
 

@@ -240,6 +240,28 @@ class TeamController extends AbstractController
                 $speciesStats[$speciesId]['totalPoints'] += $catch->calculatePoints();
             }
 
+            // Compter le nombre de compétitions uniques auxquelles l'utilisateur a participé
+            // 1. Via les équipes
+            $competitionIds = [];
+            foreach ($allTeams as $team) {
+                if ($team->getCompetition()) {
+                    $competitionId = $team->getCompetition()->getId();
+                    if (!in_array($competitionId, $competitionIds)) {
+                        $competitionIds[] = $competitionId;
+                    }
+                }
+            }
+            // 2. Via les prises (certaines prises peuvent avoir une compétition même si l'équipe n'en a plus)
+            foreach ($allCatches as $catch) {
+                if ($catch->getCompetition()) {
+                    $competitionId = $catch->getCompetition()->getId();
+                    if (!in_array($competitionId, $competitionIds)) {
+                        $competitionIds[] = $competitionId;
+                    }
+                }
+            }
+            $competitionsCount = count($competitionIds);
+
             return $this->json([
                 'success' => true,
                 'teams' => $teamsData,
@@ -255,6 +277,7 @@ class TeamController extends AbstractController
                     'totalCatches' => $totalCatches,
                     'validatedCatches' => count($validatedCatches),
                     'totalPoints' => $totalPoints,
+                    'competitionsCount' => $competitionsCount,
                     'speciesStats' => array_values($speciesStats),
                     'activeTeamsCount' => count(array_filter($allTeams, function($t) { return $t->getIsActive(); })),
                     'inactiveTeamsCount' => count(array_filter($allTeams, function($t) { return !$t->getIsActive(); })),

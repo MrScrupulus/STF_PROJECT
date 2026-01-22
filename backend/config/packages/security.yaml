@@ -49,12 +49,15 @@ security:
     - { path: ^/api/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/password-reset, roles: PUBLIC_ACCESS }
     - { path: ^/auth/verify-email, roles: PUBLIC_ACCESS }
+    - { path: ^/redirect, roles: PUBLIC_ACCESS }
+    - { path: ^/api/competitions, roles: PUBLIC_ACCESS }
+    - { path: ^/api/competitions/\d+/stats, roles: PUBLIC_ACCESS }
+    - { path: ^/api/teams/\d+, roles: PUBLIC_ACCESS }
     - { path: ^/auth/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/auth/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/admin, roles: ROLE_ADMIN }
-    - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/admin, roles: ROLE_ADMIN }
-    - { path: ^/api/competitions, roles: PUBLIC_ACCESS }
+    - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/users/update/password, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

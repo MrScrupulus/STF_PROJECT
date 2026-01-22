@@ -14,6 +14,8 @@ import CatchesMap from "../../../components/competition/CatchesMap";
 import styles from "../../../styles/pages/competitions.module.scss";
 import { toast } from "react-hot-toast";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
+import { useAuth } from "../../../components/auth/ConditionalAuth";
+import Link from "next/link";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 
@@ -22,6 +24,7 @@ export default function CompetitionDetailPage() {
   const id = parseInt(params.id, 10);
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isAuthenticated, currentUser: authUser, isLoading: authLoading } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,9 +33,10 @@ export default function CompetitionDetailPage() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
 
-  const { data: competitionResponse, isLoading: competitionLoading } = useQuery({
+  const { data: competitionResponse, isLoading: competitionLoading, error: competitionError } = useQuery({
     queryKey: ["competition", id],
     queryFn: () => competitionsService.getOne(id),
+    retry: false, // Ne pas réessayer en cas d'erreur 403
   });
 
   // Le backend retourne maintenant { success: true, ...competition }
@@ -44,10 +48,21 @@ export default function CompetitionDetailPage() {
   const { data: myTeamsData, isLoading: teamsLoading } = useQuery({
     queryKey: ["my-teams"],
     queryFn: async () => {
-      const response = await teamService.getMyTeams();
-      return response.teams || [];
+      try {
+        const response = await teamService.getMyTeams();
+        return response.teams || [];
+      } catch (error) {
+        // Gérer gracieusement les erreurs 401 (non authentifié)
+        if (error?.status === 401 || (error?.message && error.message.includes("401"))) {
+          // Retourner un tableau vide si l'utilisateur n'est pas authentifié
+          return [];
+        }
+        throw error;
+      }
     },
-    // Charger les équipes dès que la page est chargée pour vérifier la disponibilité
+    enabled: isAuthenticated === true, // Ne charger que si l'utilisateur est authentifié (strictement true)
+    retry: false, // Ne pas réessayer en cas d'erreur 401
+    staleTime: 5 * 60 * 1000, // Considérer les données comme fraîches pendant 5 minutes
   });
 
   // Utiliser les espèces de la compétition si disponibles, sinon toutes les espèces
@@ -58,19 +73,14 @@ export default function CompetitionDetailPage() {
 
   // Charger l'utilisateur connecté pour vérifier son rôle
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userResponse = await authService.getCurrentUser();
-        if (userResponse.success && userResponse.user) {
-          setCurrentUser(userResponse.user);
-          setIsAdmin(userResponse.user.roles?.includes("ROLE_ADMIN") || false);
-        }
-      } catch (error) {
-        console.error("Error fetching user:", error);
-      }
-    };
-    fetchUser();
-  }, []);
+    if (isAuthenticated && authUser) {
+      setCurrentUser(authUser);
+      setIsAdmin(authUser.roles?.includes("ROLE_ADMIN") || false);
+    } else {
+      setCurrentUser(null);
+      setIsAdmin(false);
+    }
+  }, [isAuthenticated, authUser]);
 
   // Charger les statistiques si le classement est public
   useEffect(() => {
@@ -97,7 +107,10 @@ export default function CompetitionDetailPage() {
           setStats(response.stats);
         }
       } catch (error) {
-        console.error("Error loading stats:", error);
+        // Ne pas logger les erreurs 403 (statistiques non disponibles) car elles sont attendues
+        if (error?.status !== 403 && !(error?.message && error.message.includes("403"))) {
+          console.error("Error loading stats:", error);
+        }
       } finally {
         setLoadingStats(false);
       }
@@ -274,6 +287,13 @@ export default function CompetitionDetailPage() {
 
   // Si l'utilisateur n'a qu'une seule équipe, l'inscrire automatiquement au clic
   const handleRegisterClick = () => {
+    // Vérifier l'authentification avant d'effectuer l'action
+    if (!isAuthenticated) {
+      toast.error("Vous devez être connecté pour vous inscrire à une compétition.");
+      router.push("/login");
+      return;
+    }
+
     // Pour les compétitions individuelles, créer automatiquement une équipe si nécessaire
     if (isIndividualCompetition && !hasAvailableTeams) {
       createIndividualTeamMutation.mutate();
@@ -289,16 +309,144 @@ export default function CompetitionDetailPage() {
     }
   };
 
-  return (
-    <ProtectedRoute>
+  const handleUnregister = () => {
+    if (!isAuthenticated) {
+      toast.error("Vous devez être connecté pour quitter une compétition.");
+      router.push("/login");
+      return;
+    }
+    unregisterMutation.mutate();
+  };
+
+  // Gérer l'erreur 403 (compétition non publiée)
+  if (competitionError && (competitionError?.status === 403 || (competitionError?.message && competitionError.message.includes("403")))) {
+    return (
       <div className={classNames(layoutStyles.main, styles.competitions__container)}>
+        <div style={{
+          backgroundColor: "#fff3cd",
+          border: "1px solid #ffc107",
+          borderRadius: "8px",
+          padding: "20px",
+          marginBottom: "20px",
+          textAlign: "center"
+        }}>
+          <strong style={{ color: "#856404", fontSize: "18px" }}>Compétition non publiée</strong>
+          <p style={{ margin: "10px 0 0 0", color: "#856404" }}>
+            Les détails de cette compétition ne sont pas encore publics. Connectez-vous pour voir plus d'informations.
+          </p>
+          <Link 
+            href="/login"
+            style={{
+              display: "inline-block",
+              marginTop: "15px",
+              padding: "10px 20px",
+              backgroundColor: "#007AFF",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "5px",
+              fontWeight: "600"
+            }}
+          >
+            Se connecter
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={classNames(layoutStyles.main, styles.competitions__container)}>
+      {/* Vérifier si la compétition est publiée pour les utilisateurs non connectés */}
+      {!isAuthenticated && !authLoading && competition && !competition.isRankingPublic && (
+        <div style={{
+          backgroundColor: "#fff3cd",
+          border: "1px solid #ffc107",
+          borderRadius: "8px",
+          padding: "20px",
+          marginBottom: "20px",
+          textAlign: "center"
+        }}>
+          <strong style={{ color: "#856404", fontSize: "18px" }}>Compétition non publiée</strong>
+          <p style={{ margin: "10px 0 0 0", color: "#856404" }}>
+            Les détails de cette compétition ne sont pas encore publics. Connectez-vous pour voir plus d'informations.
+          </p>
+          <Link 
+            href="/login"
+            style={{
+              display: "inline-block",
+              marginTop: "15px",
+              padding: "10px 20px",
+              backgroundColor: "#007AFF",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "5px",
+              fontWeight: "600"
+            }}
+          >
+            Se connecter
+          </Link>
+        </div>
+      )}
+
+      {/* Message d'information si l'utilisateur n'est pas connecté mais la compétition est publiée */}
+      {!isAuthenticated && !authLoading && competition && competition.isRankingPublic && (
+        <div style={{
+          backgroundColor: "#e3f2fd",
+          border: "1px solid #2196f3",
+          borderRadius: "8px",
+          padding: "16px",
+          marginBottom: "20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "10px"
+        }}>
+          <div>
+            <strong style={{ color: "#1976d2" }}>Consultation uniquement</strong>
+            <p style={{ margin: "8px 0 0 0", color: "#555" }}>
+              Connectez-vous pour vous inscrire à cette compétition ou effectuer d'autres actions.
+            </p>
+          </div>
+          <Link 
+            href="/login"
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#007AFF",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "5px",
+              fontWeight: "600",
+              whiteSpace: "nowrap"
+            }}
+          >
+            Se connecter
+          </Link>
+        </div>
+      )}
+
+      {/* Afficher les détails seulement si la compétition est publiée OU si l'utilisateur est connecté */}
+      {competition && (isAuthenticated || competition.isRankingPublic) && (
+        <>
         <div className={styles.competitions__header}>
           <h1 className={styles.competitions__title}>{competition.name}</h1>
-          {competition.startDate && competition.endDate && (
-            <span className={getCompetitionStatus(competition.startDate, competition.endDate).className}>
-              {getCompetitionStatus(competition.startDate, competition.endDate).text}
-            </span>
-          )}
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+            {competition.startDate && competition.endDate && (
+              <span className={getCompetitionStatus(competition.startDate, competition.endDate).className}>
+                {getCompetitionStatus(competition.startDate, competition.endDate).text}
+              </span>
+            )}
+            {competition.isRegistered && !competition.isEnded && (
+              <span className={styles.statusRegistered}>
+                ✓ Inscrit
+              </span>
+            )}
+            {competition.isRegistered && competition.isEnded && (
+              <span className={styles.statusParticipated}>
+                ✓ Participé
+              </span>
+            )}
+          </div>
         </div>
 
         <div className={styles.competitions__card}>
@@ -431,14 +579,33 @@ export default function CompetitionDetailPage() {
 
         {!showRegisterForm ? (
           <div className={styles.competitions__actions}>
-            {isAlreadyRegistered ? (
+            {!isAuthenticated && !authLoading ? (
+              <div className={styles.competitions__no_auth}>
+                <p>Connectez-vous pour vous inscrire à cette compétition.</p>
+                <Link 
+                  href="/login"
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 20px",
+                    backgroundColor: "#007AFF",
+                    color: "white",
+                    textDecoration: "none",
+                    borderRadius: "5px",
+                    fontWeight: "600",
+                    marginTop: "10px"
+                  }}
+                >
+                  Se connecter
+                </Link>
+              </div>
+            ) : isAlreadyRegistered ? (
               <div className={styles.competitions__already_registered}>
                 <p>✓ Vous êtes déjà inscrit à cette compétition avec votre équipe.</p>
                 {competitionStatus?.text === "À venir" && (
                   <button
                     onClick={() => {
                       if (confirm("Êtes-vous sûr de vouloir quitter cette compétition ?")) {
-                        unregisterMutation.mutate();
+                        handleUnregister();
                       }
                     }}
                     disabled={unregisterMutation.isPending}
@@ -810,7 +977,8 @@ export default function CompetitionDetailPage() {
             )}
           </div>
         )}
-      </div>
-    </ProtectedRoute>
+        </>
+      )}
+    </div>
   );
 }

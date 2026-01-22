@@ -3,11 +3,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
+import { useEffect, useRef } from 'react';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import CompetitionsScreen from './src/screens/CompetitionsScreen';
 import CompetitionDetailScreen from './src/screens/CompetitionDetailScreen';
@@ -45,13 +49,82 @@ const queryClient = new QueryClient({
 
 function AppNavigator() {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
+  const navigationRef = useRef<any>(null);
+  const linkingRef = useRef<any>(null);
+
+  // Configuration des deep links
+  const linking = {
+    prefixes: ['stf://'],
+    config: {
+      screens: {
+        VerifyEmail: 'verify-email/:token',
+        ResetPassword: 'reset-password/:token',
+        Login: 'login',
+      },
+    },
+  };
+
+  // Gérer les deep links au démarrage de l'app
+  useEffect(() => {
+    const handleInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        handleDeepLink(initialUrl);
+      }
+    };
+
+    handleInitialURL();
+
+    // Écouter les deep links pendant l'exécution de l'app
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleDeepLink = (url: string) => {
+    console.log('Deep link reçu:', url);
+    
+    // Parser l'URL manuellement pour stf://verify-email/{token}
+    if (url.startsWith('stf://verify-email/')) {
+      const token = url.replace('stf://verify-email/', '');
+      console.log('Token extrait (verify-email):', token);
+      
+      // Naviguer vers l'écran de vérification avec le token
+      if (navigationRef.current) {
+        // @ts-ignore
+        navigationRef.current.navigate('VerifyEmail', { token });
+      }
+    }
+    
+    // Parser l'URL manuellement pour stf://reset-password/{token}
+    if (url.startsWith('stf://reset-password/')) {
+      const token = url.replace('stf://reset-password/', '');
+      console.log('Token extrait (reset-password):', token);
+      
+      // Naviguer vers l'écran de réinitialisation avec le token
+      if (navigationRef.current) {
+        // @ts-ignore
+        navigationRef.current.navigate('ResetPassword', { token });
+      }
+    }
+  };
 
   if (isAuthenticated === null) {
     return null; // Splash screen is showing
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer 
+      ref={navigationRef}
+      linking={linking}
+      onReady={() => {
+        linkingRef.current = navigationRef.current;
+      }}
+    >
       <NotificationInitializer />
       <StatusBar style="auto" />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -62,6 +135,8 @@ function AppNavigator() {
             </Stack.Screen>
             <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
           </>
         ) : (
           <>

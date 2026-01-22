@@ -16,6 +16,7 @@ final class EmailService
 {
     private string $fromEmail;
     private string $frontendUrl;
+    private string $backendUrl;
 
     public function __construct(
         private readonly MailerInterface $mailer,
@@ -24,6 +25,7 @@ final class EmailService
     ) {
         $this->fromEmail = $mailerFromEmail;
         $this->frontendUrl = $params->get('app.frontend_url');
+        $this->backendUrl = $params->get('app.backend_url', 'http://localhost:8001');
     }
 
     public function sendVerificationEmail(User $user): void
@@ -32,7 +34,10 @@ final class EmailService
         error_log("Avec le token: " . $user->getVerificationToken());
 
         $verificationUrl = rtrim($this->frontendUrl, '/') . "/verify-email/" . $user->getVerificationToken();
-        error_log("URL complète: " . $verificationUrl);
+        // Lien universel qui redirige automatiquement vers mobile ou web
+        $universalLink = rtrim($this->backendUrl, '/') . "/redirect/verify-email/" . $user->getVerificationToken();
+        error_log("URL complète (web): " . $verificationUrl);
+        error_log("Lien universel (redirection): " . $universalLink);
 
         try {
             error_log("Tentative d'envoi d'email à: " . $user->getEmail());
@@ -44,12 +49,18 @@ final class EmailService
                 ->subject('Vérification de votre compte Street Fishing')
                 ->html(
                     "<h1>Vérification de votre adresse email</h1>
-                    <p>Pour confirmer votre inscription, veuillez cliquer sur ce lien : 
-                        <a href='{$verificationUrl}'>Vérifier mon email</a>
-                    </p>
-                    <p>Si le lien ne fonctionne pas, copiez cette URL dans votre navigateur :</p>
-                    <p>{$verificationUrl}</p>
-                    <p>Ce lien est valable pendant 24 heures.</p>
+                    <p>Pour confirmer votre inscription, cliquez sur le lien ci-dessous :</p>
+                    
+                    <div style='margin: 20px 0; padding: 15px; background-color: #f0f0f0; border-radius: 5px; text-align: center;'>
+                        <p style='margin: 10px 0;'>
+                            <a href='{$universalLink}' style='display: inline-block; padding: 12px 24px; background-color: #007AFF; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;'>Vérifier mon email</a>
+                        </p>
+                        <p style='font-size: 12px; color: #666; margin-top: 10px;'>
+                            Ce lien fonctionne sur mobile et web. Si le lien ne fonctionne pas, copiez cette URL dans votre navigateur : <code style='background-color: #e0e0e0; padding: 2px 6px; border-radius: 3px;'>{$universalLink}</code>
+                        </p>
+                    </div>
+                    
+                    <p><strong>Ce lien est valable pendant 24 heures.</strong></p>
                     <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>"
                 );
 
@@ -79,7 +90,9 @@ final class EmailService
 
     public function sendPasswordResetEmail(User $user, string $token): void
     {
-        $resetUrl = "{$this->frontendUrl}/reset-password/{$token}";
+        $resetUrl = rtrim($this->frontendUrl, '/') . "/reset-password/{$token}";
+        // Lien universel qui redirige automatiquement vers mobile ou web
+        $universalLink = rtrim($this->backendUrl, '/') . "/redirect/reset-password/{$token}";
 
         try {
             $email = (new Email())
@@ -89,10 +102,18 @@ final class EmailService
                 ->html(
                     "<h1>Réinitialisation de votre mot de passe</h1>
                     <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.</p>
-                    <p>Pour définir un nouveau mot de passe, cliquez sur ce lien : 
-                        <a href='{$resetUrl}'>Réinitialiser mon mot de passe</a>
-                    </p>
-                    <p>Ce lien est valable pendant 1 heure.</p>
+                    <p>Pour définir un nouveau mot de passe, cliquez sur le lien ci-dessous :</p>
+                    
+                    <div style='margin: 20px 0; padding: 15px; background-color: #f0f0f0; border-radius: 5px; text-align: center;'>
+                        <p style='margin: 10px 0;'>
+                            <a href='{$universalLink}' style='display: inline-block; padding: 12px 24px; background-color: #007AFF; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;'>Réinitialiser mon mot de passe</a>
+                        </p>
+                        <p style='font-size: 12px; color: #666; margin-top: 10px;'>
+                            Ce lien fonctionne sur mobile et web. Si le lien ne fonctionne pas, copiez cette URL dans votre navigateur : <code style='background-color: #e0e0e0; padding: 2px 6px; border-radius: 3px;'>{$universalLink}</code>
+                        </p>
+                    </div>
+                    
+                    <p><strong>Ce lien est valable pendant 1 heure.</strong></p>
                     <p>Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>"
                 );
 

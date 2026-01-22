@@ -85,10 +85,28 @@ export default function AccountPage() {
                 Modifier mon profil
               </button>
               <button
+                onClick={() => router.push("/account/change-password")}
+                className={styles.account__edit_button}
+              >
+                Modifier le mot de passe
+              </button>
+              <button
                 onClick={() => router.push("/account/history")}
                 className={styles.account__history_button}
               >
                 Voir mon historique
+              </button>
+              <button
+                onClick={() => router.push("/account/invitations")}
+                className={styles.account__edit_button}
+              >
+                Mes invitations
+              </button>
+              <button
+                onClick={() => router.push("/account/notification-preferences")}
+                className={styles.account__edit_button}
+              >
+                🔔 Préférences notifications
               </button>
             </div>
           </div>

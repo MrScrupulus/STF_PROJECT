@@ -40,6 +40,16 @@
   font-weight: 600;
 }
 
+.statusParticipated {
+  display: inline-flex;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  background-color: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
 .competitions {
   &__container {
     width: 100%;

@@ -72,7 +72,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions', name: 'competition_list', methods: ['GET'])]
-    public function list(CompetitionRepository $repository, TeamRepository $teamRepository, Request $request): JsonResponse
+    public function list(CompetitionRepository $repository, TeamRepository $teamRepository, FishCatchRepository $catchRepository, Request $request): JsonResponse
     {
         try {
             $user = $this->getUser();
@@ -81,13 +81,44 @@ class CompetitionController extends AbstractController
             $page = max(1, (int) $request->query->get('page', 1));
             $limit = min(50, max(1, (int) $request->query->get('limit', 10))); // Par défaut 10, max 50
 
-            // Récupérer les équipes de l'utilisateur pour déterminer s'il est inscrit
+            // Récupérer les équipes de l'utilisateur pour déterminer s'il est inscrit ou a participé
             $userTeamIds = [];
+            $userParticipatedCompetitionIds = [];
             if ($user) {
-                $userTeams = $teamRepository->findTeamsByMember($user);
-                foreach ($userTeams as $team) {
+                // Récupérer toutes les équipes (actives et inactives) pour vérifier la participation historique
+                $allUserTeams = $teamRepository->findUserHistory($user);
+                $teamIds = array_map(function($team) {
+                    return $team->getId();
+                }, $allUserTeams);
+                
+                foreach ($allUserTeams as $team) {
                     if ($team->getCompetition()) {
                         $userTeamIds[] = $team->getCompetition()->getId();
+                    }
+                }
+                
+                // Vérifier aussi via les prises pour les compétitions terminées
+                if (!empty($teamIds)) {
+                    $now = new \DateTime();
+                    $userCatches = $catchRepository->createQueryBuilder('c')
+                        ->join('c.team', 't')
+                        ->leftJoin('c.competition', 'comp')
+                        ->where('c.caughtBy = :user OR t.id IN (:teamIds)')
+                        ->andWhere('c.competition IS NOT NULL')
+                        ->setParameter('user', $user)
+                        ->setParameter('teamIds', $teamIds)
+                        ->getQuery()
+                        ->getResult();
+                    
+                    foreach ($userCatches as $catch) {
+                        if ($catch->getCompetition()) {
+                            $competitionId = $catch->getCompetition()->getId();
+                            $competition = $catch->getCompetition();
+                            // Vérifier si la compétition est terminée
+                            if ($competition->getEndDate() < $now && !in_array($competitionId, $userParticipatedCompetitionIds)) {
+                                $userParticipatedCompetitionIds[] = $competitionId;
+                            }
+                        }
                     }
                 }
             }
@@ -109,8 +140,12 @@ class CompetitionController extends AbstractController
                 ->getResult();
 
             // Transformer les données comme dans la route admin
-            $data = array_map(function ($competition) use ($userTeamIds) {
-                $isRegistered = in_array($competition->getId(), $userTeamIds);
+            $data = array_map(function ($competition) use ($userTeamIds, $userParticipatedCompetitionIds) {
+                $now = new \DateTime();
+                $isEnded = $competition->getEndDate() < $now;
+                // Vérifier si l'utilisateur est inscrit (équipe active) ou a participé (équipe inactive ou prises)
+                $isRegistered = in_array($competition->getId(), $userTeamIds) || 
+                                ($isEnded && in_array($competition->getId(), $userParticipatedCompetitionIds));
                 return [
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
@@ -192,7 +227,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
-    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository, CompetitionPerimeterRepository $perimeterRepository): JsonResponse
+    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, FishCatchRepository $catchRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository, CompetitionPerimeterRepository $perimeterRepository): JsonResponse
     {
         // Charger la compétition avec les équipes et leurs membres pour éviter les requêtes N+1
         $competition = $repository->createQueryBuilder('c')
@@ -213,6 +248,15 @@ class CompetitionController extends AbstractController
         
         $user = $this->getUser();
         $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
+        
+        // Si la compétition n'est pas publiée et que l'utilisateur n'est pas connecté/admin, refuser l'accès
+        if (!$competition->getIsRankingPublic() && !$user) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Les détails de cette compétition ne sont pas encore publics'
+            ], 403);
+        }
+        
         $now = new \DateTime();
         $isEnded = $competition->getEndDate() < $now;
         
@@ -319,6 +363,46 @@ class CompetitionController extends AbstractController
             ];
         }, $competitionSpecies->toArray());
         
+        // Déterminer si l'utilisateur est inscrit à cette compétition ou y a participé
+        $isRegistered = false;
+        if ($user) {
+            // Vérifier via les équipes actives
+            $userTeams = $teamRepository->findTeamsByMember($user);
+            foreach ($userTeams as $team) {
+                if ($team->getCompetition() && $team->getCompetition()->getId() === $competition->getId()) {
+                    $isRegistered = true;
+                    break;
+                }
+            }
+            
+            // Si la compétition est terminée et que l'utilisateur n'est pas inscrit via une équipe active,
+            // vérifier via les équipes historiques et les prises
+            if (!$isRegistered && $isEnded) {
+                $allUserTeams = $teamRepository->findUserHistory($user);
+                $teamIds = array_map(function($team) {
+                    return $team->getId();
+                }, $allUserTeams);
+                
+                // Vérifier si l'utilisateur a des prises pour cette compétition
+                if (!empty($teamIds)) {
+                    $userCatches = $catchRepository->createQueryBuilder('c')
+                        ->join('c.team', 't')
+                        ->where('(c.caughtBy = :user OR t.id IN (:teamIds))')
+                        ->andWhere('c.competition = :competitionId')
+                        ->setParameter('user', $user)
+                        ->setParameter('teamIds', $teamIds)
+                        ->setParameter('competitionId', $competition->getId())
+                        ->setMaxResults(1)
+                        ->getQuery()
+                        ->getResult();
+                    
+                    if (!empty($userCatches)) {
+                        $isRegistered = true;
+                    }
+                }
+            }
+        }
+        
         return $this->json([
             'success' => true,
             'id' => $competition->getId(),
@@ -334,6 +418,7 @@ class CompetitionController extends AbstractController
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
             'isBonusEnabled' => $competition->getIsBonusEnabled(),
+            'isRegistered' => $isRegistered,
             'scheduledPauses' => $scheduledPausesData,
             'perimeters' => $perimetersData,
             'species' => $speciesData,
@@ -862,6 +947,13 @@ class CompetitionController extends AbstractController
         }
     }
 
+    #[Route('/competitions/{id}/stats', name: 'app_competition_stats_public', methods: ['GET'])]
+    public function getCompetitionStatsPublic(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
+    {
+        // Utiliser la même méthode que l'endpoint admin, mais accessible publiquement
+        return $this->getCompetitionStats($id, $competitionRepo, $catchRepo, $competitionSpeciesRepo);
+    }
+
     #[Route('/admin/competitions/{id}/stats', name: 'app_admin_competition_stats', methods: ['GET'])]
     public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
     {
@@ -883,7 +975,8 @@ class CompetitionController extends AbstractController
             }
 
             // Vérifier les permissions : admin OU classement public
-            $isAdmin = $this->isGranted('ROLE_ADMIN');
+            $user = $this->getUser();
+            $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
             $isRankingPublic = $competition->getIsRankingPublic();
             
             if (!$isAdmin && !$isRankingPublic) {

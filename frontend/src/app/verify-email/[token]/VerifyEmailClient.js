@@ -23,6 +23,10 @@ export default function VerifyEmailClient({ token }) {
         console.log("Réponse de vérification:", response);
         setStatus("success");
         setMessage("Votre email a été vérifié avec succès !");
+        // Stocker l'email pour le passer à la page de login
+        if (response.email) {
+          sessionStorage.setItem('verifiedEmail', response.email);
+        }
       } catch (error) {
         console.error("Erreur de vérification:", error);
         setStatus("error");
@@ -53,7 +57,16 @@ export default function VerifyEmailClient({ token }) {
               <p>{message}</p>
             </div>
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => {
+                // Passer l'email via query params pour pré-remplir le formulaire
+                const email = sessionStorage.getItem('verifiedEmail');
+                sessionStorage.removeItem('verifiedEmail'); // Nettoyer après utilisation
+                if (email) {
+                  router.push(`/login?email=${encodeURIComponent(email)}`);
+                } else {
+                  router.push("/login");
+                }
+              }}
               className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Se connecter
