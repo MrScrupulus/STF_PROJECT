@@ -1,0 +1,98 @@
+@startuml
+title STF - MVC (Backend Symfony) - simple
+
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+
+package "Clients" {
+  [Web (Next.js)] as WEB
+  [Mobile (Expo)] as MOB
+}
+
+package "Backend API (Symfony)" {
+  package "Controller" {
+    [AuthController]
+    [CompetitionController]
+    [TeamController]
+    [FishCatchController]
+    [NotificationController]
+    [NotificationPreferencesController]
+  }
+
+  package "Service (métier/infra)" {
+    [NotificationService]
+    [EmailService]
+    [CompetitionSnapshotService]
+  }
+
+  package "Repository (Doctrine)" {
+    [UserRepository]
+    [CompetitionRepository]
+    [TeamRepository]
+    [FishCatchRepository]
+    [NotificationRepository]
+    [NotificationPreferencesRepository]
+  }
+
+  package "Model (Entities)" {
+    [User]
+    [Competition]
+    [Team]
+    [FishCatch]
+    [Species]
+    [TeamInvitation]
+    [Notification]
+    [NotificationPreferences]
+  }
+}
+
+database "MariaDB" as DB
+
+WEB --> AuthController : HTTP JSON
+WEB --> CompetitionController : HTTP JSON
+WEB --> TeamController : HTTP JSON
+WEB --> FishCatchController : HTTP JSON
+WEB --> NotificationController : HTTP JSON
+WEB --> NotificationPreferencesController : HTTP JSON
+
+MOB --> AuthController : HTTP JSON
+MOB --> CompetitionController : HTTP JSON
+MOB --> TeamController : HTTP JSON
+MOB --> FishCatchController : HTTP JSON
+MOB --> NotificationController : HTTP JSON
+MOB --> NotificationPreferencesController : HTTP JSON
+
+AuthController --> UserRepository
+CompetitionController --> CompetitionRepository
+CompetitionController --> TeamRepository
+CompetitionController --> FishCatchRepository
+TeamController --> TeamRepository
+TeamController --> FishCatchRepository
+FishCatchController --> FishCatchRepository
+FishCatchController --> TeamRepository
+NotificationController --> NotificationRepository
+NotificationPreferencesController --> NotificationPreferencesRepository
+
+AuthController --> EmailService
+CompetitionController --> CompetitionSnapshotService
+TeamController --> NotificationService
+FishCatchController --> NotificationService
+
+UserRepository --> User
+CompetitionRepository --> Competition
+TeamRepository --> Team
+FishCatchRepository --> FishCatch
+NotificationRepository --> Notification
+NotificationPreferencesRepository --> NotificationPreferences
+
+User --> DB
+Competition --> DB
+Team --> DB
+FishCatch --> DB
+Species --> DB
+TeamInvitation --> DB
+Notification --> DB
+NotificationPreferences --> DB
+
+@enduml
+

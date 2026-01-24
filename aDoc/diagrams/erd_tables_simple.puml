@@ -1,0 +1,171 @@
+@startuml
+title STF - ERD (relations des tables) - simple
+
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  *id : int <<PK>>
+  --
+  email : varchar
+  password : varchar
+  roles : json
+  firstname : varchar
+  lastname : varchar
+  phone_number : varchar?
+  country : varchar?
+  birth_date : date?
+  subscriber_number : varchar?
+  is_verified : bool
+}
+
+entity "competitions" as competitions {
+  *id : int <<PK>>
+  --
+  name : varchar
+  type : varchar
+  start_date : datetime
+  end_date : datetime
+  team_size : int
+  max_participants : int?
+  has_no_limit : bool
+  description : text?
+  is_ranking_public : bool
+  is_paused : bool
+  is_bonus_enabled : bool
+}
+
+entity "teams" as teams {
+  *id : int <<PK>>
+  --
+  name : varchar
+  total_score : int
+  has_bonus : bool
+  registration_number : int?
+  is_active : bool
+  competition_id : int? <<FK>>
+}
+
+entity "competition_team_members" as ctm {
+  *team_id : int <<FK>>
+  *user_id : int <<FK>>
+}
+
+entity "fish_catch" as fish_catch {
+  *id : int <<PK>>
+  --
+  team_id : int <<FK>>
+  competition_id : int? <<FK>>
+  species_id : int <<FK>>
+  caught_by_id : int? <<FK>>
+  size : float
+  is_validated : bool
+  photo_url : text?
+  comment : text?
+  rejection_reason : text?
+  latitude : decimal?
+  longitude : decimal?
+  created_at : datetime
+}
+
+entity "species" as species {
+  *id : int <<PK>>
+  --
+  name : varchar
+  coefficient : float
+}
+
+entity "competition_species" as competition_species {
+  *id : int <<PK>>
+  --
+  competition_id : int <<FK>>
+  species_id : int <<FK>>
+  coefficient : float
+  is_bonus_enabled : bool
+  base_points : int?
+}
+
+entity "competition_perimeters" as competition_perimeters {
+  *id : int <<PK>>
+  --
+  competition_id : int <<FK>>
+  coordinates : json
+  name : varchar?
+  is_active : bool
+}
+
+entity "scheduled_pauses" as scheduled_pauses {
+  *id : int <<PK>>
+  --
+  competition_id : int <<FK>>
+  start_date : datetime
+  end_date : datetime
+  reason : text?
+  is_active : bool
+  created_at : datetime
+}
+
+entity "team_invitations" as team_invitations {
+  *id : int <<PK>>
+  --
+  team_id : int <<FK>>
+  invited_user_id : int <<FK>>
+  invited_by_id : int <<FK>>
+  status : varchar
+  created_at : datetime
+  responded_at : datetime?
+}
+
+entity "notifications" as notifications {
+  *id : int <<PK>>
+  --
+  user_id : int <<FK>>
+  type : varchar
+  message : text
+  data : json?
+  is_read : bool
+  created_at : datetime
+}
+
+entity "notification_preferences" as notification_preferences {
+  *id : int <<PK>>
+  --
+  user_id : int <<FK>> <<UNIQUE>>
+  expo_push_token : varchar?
+  catch_validated : bool
+  catch_rejected : bool
+  team_invitation : bool
+  competition_registered : bool
+  competition_started : bool
+  competition_ended : bool
+  competition_paused : bool
+  competition_resumed : bool
+  catch_pending : bool
+  updated_at : datetime?
+}
+
+competitions ||--o{ teams : "competition_id"
+teams ||--o{ fish_catch : "team_id"
+competitions ||--o{ fish_catch : "competition_id (historique)"
+
+species ||--o{ fish_catch : "species_id"
+users ||--o{ fish_catch : "caught_by_id"
+
+competitions ||--o{ competition_species : "competition_id"
+species ||--o{ competition_species : "species_id"
+
+competitions ||--o{ competition_perimeters : "competition_id"
+competitions ||--o{ scheduled_pauses : "competition_id"
+
+teams ||--o{ team_invitations : "team_id"
+users ||--o{ team_invitations : "invited_user_id"
+users ||--o{ team_invitations : "invited_by_id"
+
+users ||--o{ notifications : "user_id"
+users ||--|| notification_preferences : "user_id (unique)"
+
+teams ||--o{ ctm : "team_id"
+users ||--o{ ctm : "user_id"
+
+@enduml
+
