@@ -1,4 +1,4 @@
-@startuml
+@startuml erd_tables_simple
 title STF - ERD (relations des tables) - simple
 
 hide circle
@@ -144,28 +144,52 @@ entity "notification_preferences" as notification_preferences {
   updated_at : datetime?
 }
 
-competitions ||--o{ teams : "competition_id"
-teams ||--o{ fish_catch : "team_id"
-competitions ||--o{ fish_catch : "competition_id (historique)"
+competitions ||--o{ teams : "OneToMany (Competition -> Teams)\nFK: teams.competition_id"
+teams }o--|| competitions : "ManyToOne (Team -> Competition)\nFK: teams.competition_id"
 
-species ||--o{ fish_catch : "species_id"
-users ||--o{ fish_catch : "caught_by_id"
+teams ||--o{ fish_catch : "OneToMany (Team -> FishCatch)\nFK: fish_catch.team_id"
+fish_catch }o--|| teams : "ManyToOne (FishCatch -> Team)\nFK: fish_catch.team_id"
 
-competitions ||--o{ competition_species : "competition_id"
-species ||--o{ competition_species : "species_id"
+competitions ||--o{ fish_catch : "OneToMany (Competition -> FishCatch)\nFK: fish_catch.competition_id (historique)"
+fish_catch }o--|| competitions : "ManyToOne (FishCatch -> Competition)\nFK: fish_catch.competition_id (nullable)"
 
-competitions ||--o{ competition_perimeters : "competition_id"
-competitions ||--o{ scheduled_pauses : "competition_id"
+species ||--o{ fish_catch : "OneToMany (Species -> FishCatch)\nFK: fish_catch.species_id"
+fish_catch }o--|| species : "ManyToOne (FishCatch -> Species)\nFK: fish_catch.species_id"
 
-teams ||--o{ team_invitations : "team_id"
-users ||--o{ team_invitations : "invited_user_id"
-users ||--o{ team_invitations : "invited_by_id"
+users ||--o{ fish_catch : "OneToMany (User -> FishCatch)\nFK: fish_catch.caught_by_id"
+fish_catch }o--|| users : "ManyToOne (FishCatch -> User)\nFK: fish_catch.caught_by_id (nullable)"
 
-users ||--o{ notifications : "user_id"
-users ||--|| notification_preferences : "user_id (unique)"
+competitions ||--o{ competition_species : "OneToMany (Competition -> CompetitionSpecies)\nFK: competition_species.competition_id"
+competition_species }o--|| competitions : "ManyToOne (CompetitionSpecies -> Competition)\nFK: competition_species.competition_id"
 
-teams ||--o{ ctm : "team_id"
-users ||--o{ ctm : "user_id"
+species ||--o{ competition_species : "OneToMany (Species -> CompetitionSpecies)\nFK: competition_species.species_id"
+competition_species }o--|| species : "ManyToOne (CompetitionSpecies -> Species)\nFK: competition_species.species_id"
+
+competitions ||--o{ competition_perimeters : "OneToMany (Competition -> Perimeters)\nFK: competition_perimeters.competition_id"
+competition_perimeters }o--|| competitions : "ManyToOne (Perimeter -> Competition)\nFK: competition_perimeters.competition_id"
+
+competitions ||--o{ scheduled_pauses : "OneToMany (Competition -> ScheduledPauses)\nFK: scheduled_pauses.competition_id"
+scheduled_pauses }o--|| competitions : "ManyToOne (ScheduledPause -> Competition)\nFK: scheduled_pauses.competition_id"
+
+teams ||--o{ team_invitations : "OneToMany (Team -> Invitations)\nFK: team_invitations.team_id"
+team_invitations }o--|| teams : "ManyToOne (Invitation -> Team)\nFK: team_invitations.team_id"
+
+users ||--o{ team_invitations : "OneToMany (User -> Invitations reçues)\nFK: team_invitations.invited_user_id"
+team_invitations }o--|| users : "ManyToOne (Invitation -> User invité)\nFK: team_invitations.invited_user_id"
+
+users ||--o{ team_invitations : "OneToMany (User -> Invitations envoyées)\nFK: team_invitations.invited_by_id"
+team_invitations }o--|| users : "ManyToOne (Invitation -> User invitant)\nFK: team_invitations.invited_by_id"
+
+users ||--o{ notifications : "OneToMany (User -> Notifications)\nFK: notifications.user_id"
+notifications }o--|| users : "ManyToOne (Notification -> User)\nFK: notifications.user_id"
+
+users ||--|| notification_preferences : "OneToOne (User <-> Preferences)\nFK UNIQUE: notification_preferences.user_id"
+notification_preferences }o--|| users : "OneToOne (Preferences -> User)\nFK UNIQUE: notification_preferences.user_id"
+
+teams ||--o{ ctm : "ManyToMany (Team <-> User)\nvia competition_team_members"
+users ||--o{ ctm : "ManyToMany (User <-> Team)\nvia competition_team_members"
+ctm }o--|| teams : "FK: competition_team_members.team_id"
+ctm }o--|| users : "FK: competition_team_members.user_id"
 
 @enduml
 
