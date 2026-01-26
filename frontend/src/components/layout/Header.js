@@ -281,6 +281,14 @@ export function Header() {
         <nav role="navigation" aria-label="Navigation principale">
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", justifyContent: "flex-end", width: "100%" }}>
             {renderMenu()}
+            {/* Bouton profil toujours visible */}
+            <Link
+              href={user ? "/account" : "/login"}
+              className={styles.Header__profileButton}
+              aria-label={user ? "Profil" : "Connexion"}
+            >
+              <span className={styles.Header__profileIcon}>👤</span>
+            </Link>
             {user && <NotificationBell />}
           </div>
         </nav>

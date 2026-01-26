@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { teamService } from "../../services/teamService";
+import { authService } from "../../services/authService";
 import styles from "../../styles/pages/teams.module.scss";
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
 import classNames from "classnames";
@@ -18,6 +19,13 @@ export default function TeamsPage() {
 
   useEffect(() => {
     const fetchTeams = async () => {
+      // Vérifier si l'utilisateur est authentifié avant de faire l'appel API
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
       try {
         // Utiliser getMyTeams pour récupérer uniquement les équipes de l'utilisateur connecté
         const response = await teamService.getMyTeams();
@@ -25,8 +33,8 @@ export default function TeamsPage() {
         setTeams(teamsData);
       } catch (error) {
         // Gérer gracieusement les erreurs 401 (non authentifié) et 500 (erreur serveur)
-        if (error?.status === 401 || (error?.message && error.message.includes("401"))) {
-          // L'utilisateur n'est pas connecté, rediriger vers la page de connexion
+        if (error?.status === 401 || error?.status === 500 || (error?.message && (error.message.includes("401") || error.message.includes("500")))) {
+          // L'utilisateur n'est pas connecté ou erreur serveur, rediriger vers la page de connexion
           router.push("/login");
           return;
         }

@@ -4,7 +4,6 @@ import HomeScreen from '../screens/HomeScreen';
 import CompetitionsScreen from '../screens/CompetitionsScreen';
 import TeamsScreen from '../screens/TeamsScreen';
 import AdminCatchValidationListScreen from '../screens/AdminCatchValidationListScreen';
-import BottomTabBar from '../components/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
 
 const Tab = createBottomTabNavigator();
@@ -14,7 +13,7 @@ export default function MainTabs() {
 
   return (
     <Tab.Navigator
-      tabBar={(props) => <BottomTabBar {...props} />}
+      tabBar={() => null}
       screenOptions={{
         headerShown: false,
       }}

@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -203,6 +204,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
       </ScrollView>
+      <Footer />
     </>
   );
 }

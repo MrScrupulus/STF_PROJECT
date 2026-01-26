@@ -45,8 +45,7 @@ export default function Footer() {
 
         <div className={styles.footer__bottom}>
           <p className={styles.footer__copyright}>
-            © {new Date().getFullYear()} Street Fishing Tournament. Tous droits
-            réservés.
+            © {new Date().getFullYear()} MrScrupulus - Tous droits réservés.
           </p>
         </div>
       </div>

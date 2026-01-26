@@ -30,7 +30,9 @@ import InvitationsScreen from './src/screens/InvitationsScreen';
 import EditTeamScreen from './src/screens/EditTeamScreen';
 import CreateCompetitionScreen from './src/screens/CreateCompetitionScreen';
 import NotificationPreferencesScreen from './src/screens/NotificationPreferencesScreen';
+import LegalNoticeScreen from './src/screens/LegalNoticeScreen';
 import NotificationInitializer from './src/components/NotificationInitializer';
+import GlobalBottomTabBar from './src/components/GlobalBottomTabBar';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainTabs from './src/navigation/MainTabs';
 
@@ -141,6 +143,7 @@ function AppNavigator() {
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
             <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
             <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+            <Stack.Screen name="LegalNotice" component={LegalNoticeScreen} />
           </>
         ) : (
           <>
@@ -170,9 +173,12 @@ function AppNavigator() {
             <Stack.Screen name="EditTeam" component={EditTeamScreen} />
             <Stack.Screen name="CreateCompetition" component={CreateCompetitionScreen} />
             <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+            <Stack.Screen name="LegalNotice" component={LegalNoticeScreen} />
           </>
         )}
       </Stack.Navigator>
+      {/* Barre de navigation globale visible sur toutes les pages sauf Login et Register */}
+      <GlobalBottomTabBar />
     </NavigationContainer>
   );
 }

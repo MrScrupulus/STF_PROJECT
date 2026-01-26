@@ -1,0 +1,92 @@
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  border-top: 1px solid #e0e0e0;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  z-index: 1000;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+
+  @media (min-width: 768px) {
+    display: none; // Cacher sur desktop
+  }
+}
+
+.bottomNav__container {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.bottomNav__button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+
+  &:hover {
+    opacity: 0.7;
+  }
+
+  &:active {
+    opacity: 0.5;
+  }
+}
+
+.bottomNav__button_active {
+  color: #007AFF;
+  font-weight: 600;
+}
+
+.bottomNav__icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.bottomNav__label {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.bottomNav__addButton {
+  width: 64px;
+  height: 64px;
+  border-radius: 32px;
+  background-color: #007AFF;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 0 16px;
+  box-shadow: 0 4px 8px rgba(0, 122, 255, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 122, 255, 0.4);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.bottomNav__addIcon {
+  font-size: 28px;
+  color: #fff;
+}

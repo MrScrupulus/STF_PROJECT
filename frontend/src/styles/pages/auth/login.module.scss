@@ -1,4 +1,49 @@
 .login {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background-color: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  &__homeButton {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f5f5f5;
+    }
+  }
+
+  &__homeIcon {
+    font-size: 24px;
+    color: #007AFF;
+  }
+
+  &__headerPlaceholder {
+    width: 40px;
+    height: 40px;
+  }
+
+  &__headerTitle {
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+    flex: 1;
+    margin: 0;
+  }
+
   &__container {
     width: 100%;
     max-width: 400px;

@@ -113,12 +113,18 @@ export async function registerPushToken(): Promise<void> {
     }
   } catch (error: any) {
     // Si c'est une erreur 401, c'est normal si l'utilisateur n'est pas encore authentifié
-    // On ne log pas d'erreur dans ce cas pour éviter les logs inutiles
     if (error.response?.status === 401) {
       console.log('Erreur 401 lors de l\'enregistrement du token push (utilisateur non authentifié)');
       return;
     }
-    console.error('Erreur lors de l\'enregistrement du token:', error);
+    // Si c'est une erreur 502 (Bad Gateway), c'est probablement un problème temporaire du backend
+    // On ne log pas d'erreur pour éviter les logs inutiles
+    if (error.response?.status === 502) {
+      console.log('Erreur 502 lors de l\'enregistrement du token push (backend temporairement indisponible)');
+      return;
+    }
+    // Pour les autres erreurs, logger mais ne pas bloquer
+    console.warn('Erreur lors de l\'enregistrement du token push:', error.response?.status || error.message);
   }
 }
 

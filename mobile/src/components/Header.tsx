@@ -57,11 +57,13 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         { name: 'Notifications', label: 'Notifications', icon: '🔔' },
         { name: 'Invitations', label: 'Mes Invitations', icon: '✉️' },
         ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: '⚙️' }] : []),
+        { name: 'LegalNotice', label: 'Mentions légales', icon: '📄' },
       ]
     : [
         { name: 'Home', label: 'Accueil', icon: '🏠' },
         { name: 'Login', label: 'Connexion', icon: '🔐' },
         { name: 'Register', label: 'Inscription', icon: '📝' },
+        { name: 'LegalNotice', label: 'Mentions légales', icon: '📄' },
       ];
 
   const handleProfilePress = () => {

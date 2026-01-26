@@ -22,14 +22,16 @@ export default function NotificationInitializer() {
           await registerPushToken();
           break; // Succès, sortir de la boucle
         } catch (error: any) {
-          // Si c'est une erreur 401 et qu'il reste des tentatives, réessayer
-          if (error.response?.status === 401 && i < retries - 1) {
-            console.log(`Tentative ${i + 1}/${retries} échouée, nouvelle tentative dans ${delay}ms...`);
+          // Si c'est une erreur 401 ou 502 et qu'il reste des tentatives, réessayer
+          if ((error.response?.status === 401 || error.response?.status === 502) && i < retries - 1) {
+            console.log(`Tentative ${i + 1}/${retries} échouée (${error.response?.status}), nouvelle tentative dans ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
           }
-          // Sinon, logger l'erreur et arrêter
-          console.error('Erreur lors de l\'enregistrement du token push:', error);
+          // Pour les erreurs 502, ne pas logger d'erreur car c'est probablement temporaire
+          if (error.response?.status !== 502) {
+            console.warn('Erreur lors de l\'enregistrement du token push:', error.response?.status || error.message);
+          }
           break;
         }
       }

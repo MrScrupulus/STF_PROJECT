@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { teamService, Team } from '../services/teamService';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 export default function TeamsScreen() {
   const navigation = useNavigation();
@@ -85,7 +86,7 @@ export default function TeamsScreen() {
   const renderTeam = ({ item }: { item: Team }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('TeamDetail' as never, { id: item.id } as never)}
+      onPress={() => (navigation as any).navigate('TeamDetail', { id: item.id })}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.name}</Text>
@@ -152,6 +153,7 @@ export default function TeamsScreen() {
             <Text style={styles.createButtonText}>+ Créer une équipe</Text>
           </TouchableOpacity>
         }
+        ListFooterComponent={<Footer />}
       />
       </View>
     </>
@@ -253,5 +255,11 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     marginBottom: 16,
+  },
+  emptySubtext: {
+    color: '#999',
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: 'center',
   },
 });

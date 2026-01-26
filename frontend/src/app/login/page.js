@@ -69,9 +69,16 @@ function LoginContent() {
 
   return (
     <div className={classNames(layoutStyles.main, layoutStyles.form_page)}>
-      <div className={styles.login__container}>
-        <h1 className={styles.login__title}>Connexion</h1>
+      {/* Header avec bouton maison */}
+      <div className={styles.login__header}>
+        <Link href="/" className={styles.login__homeButton} aria-label="Retour à l'accueil">
+          <span className={styles.login__homeIcon}>🏠</span>
+        </Link>
+        <h1 className={styles.login__headerTitle}>Connexion</h1>
+        <div className={styles.login__headerPlaceholder}></div>
+      </div>
 
+      <div className={styles.login__container}>
         {error && <div className={styles.error}>{error}</div>}
 
         <form onSubmit={handleSubmit} className={styles.login__form}>

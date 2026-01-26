@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
 import { formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 const FILTERS = {
   ALL: 'all',
@@ -247,6 +248,7 @@ export default function CompetitionsScreen() {
               )}
             </View>
           }
+          ListFooterComponent={<Footer />}
         />
       </View>
     </>

@@ -176,6 +176,26 @@
     }
   }
 
+  &__profileButton {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    color: #ffffff;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  &__profileIcon {
+    font-size: 24px;
+  }
+
   &__admin-link {
     color: #059669;
     font-weight: 600;
