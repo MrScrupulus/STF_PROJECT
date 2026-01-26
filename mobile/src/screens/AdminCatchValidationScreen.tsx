@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,10 +21,19 @@ export default function AdminCatchValidationScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const queryClient = useQueryClient();
-  const { catchId, action } = route.params as { catchId: number; action: 'view' | 'reject' };
+  const routeParams = route.params as { catchId: number; action?: 'view' | 'reject' };
+  const catchId = routeParams?.catchId;
+  const [currentAction, setCurrentAction] = useState<'view' | 'reject'>(routeParams?.action || 'view');
 
   const [rejectionReason, setRejectionReason] = useState('');
   const [showImageModal, setShowImageModal] = useState(false);
+
+  // Mettre à jour l'action quand les paramètres de route changent
+  useEffect(() => {
+    if (routeParams?.action) {
+      setCurrentAction(routeParams.action);
+    }
+  }, [routeParams?.action]);
 
   const { data: catchData, isLoading } = useQuery({
     queryKey: ['admin-catch', catchId],
@@ -182,7 +191,7 @@ export default function AdminCatchValidationScreen() {
           )}
 
           {/* Formulaire de rejet */}
-          {action === 'reject' && (
+          {currentAction === 'reject' && (
             <View style={styles.card}>
               <Text style={styles.label}>Motif de rejet *</Text>
               <TextInput
@@ -199,7 +208,7 @@ export default function AdminCatchValidationScreen() {
 
           {/* Actions */}
           <View style={styles.actions}>
-            {action === 'view' && (
+            {currentAction === 'view' && (
               <>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.validateButton]}
@@ -214,24 +223,40 @@ export default function AdminCatchValidationScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.rejectButton]}
-                  onPress={() => setRejectionReason('')}
+                  onPress={() => {
+                    // Passer en mode rejet
+                    setCurrentAction('reject');
+                    setRejectionReason('');
+                  }}
                 >
                   <Text style={styles.actionButtonText}>✗ Rejeter</Text>
                 </TouchableOpacity>
               </>
             )}
-            {action === 'reject' && (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.rejectButton, styles.fullWidth]}
-                onPress={handleReject}
-                disabled={rejectMutation.isPending || !rejectionReason.trim()}
-              >
-                {rejectMutation.isPending ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.actionButtonText}>Confirmer le rejet</Text>
-                )}
-              </TouchableOpacity>
+            {currentAction === 'reject' && (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.cancelButton]}
+                  onPress={() => {
+                    // Revenir en mode view
+                    setCurrentAction('view');
+                    setRejectionReason('');
+                  }}
+                >
+                  <Text style={styles.actionButtonText}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.rejectButton]}
+                  onPress={handleReject}
+                  disabled={rejectMutation.isPending || !rejectionReason.trim()}
+                >
+                  {rejectMutation.isPending ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.actionButtonText}>Confirmer le rejet</Text>
+                  )}
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -333,6 +358,9 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     backgroundColor: '#FF3B30',
+  },
+  cancelButton: {
+    backgroundColor: '#8E8E93',
   },
   actionButtonText: {
     color: '#fff',

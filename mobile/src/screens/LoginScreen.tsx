@@ -9,7 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  SafeAreaView,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { authService, LoginCredentials } from '../services/authService';
 
 export default function LoginScreen({ navigation, onLogin, route }: any) {
@@ -19,6 +21,17 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleHomePress = () => {
+    // Naviguer vers MainTabs avec Home
+    const parent = navigation.getParent();
+    if (parent) {
+      // @ts-ignore - nested navigation typing
+      parent.navigate('MainTabs', { screen: 'Home' });
+    } else {
+      navigation.navigate('Home' as never);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -63,10 +76,27 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <>
+      {/* Header avec bouton maison */}
+      <SafeAreaView style={styles.headerSafeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={handleHomePress}
+          >
+            <Text style={styles.homeIcon}>🏠</Text>
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Connexion</Text>
+          </View>
+          <View style={styles.headerPlaceholder} />
+        </View>
+      </SafeAreaView>
+      
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Street Fishing</Text>
@@ -129,10 +159,50 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  headerSafeArea: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    minHeight: 56,
+  },
+  homeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  homeIcon: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  headerPlaceholder: {
+    width: 40,
+    height: 40,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

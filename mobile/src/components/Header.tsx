@@ -17,48 +17,82 @@ interface HeaderProps {
   title?: string;
   showBack?: boolean;
   showMenu?: boolean;
+  showProfile?: boolean;
 }
 
-export default function Header({ title, showBack = true, showMenu = true }: HeaderProps) {
+export default function Header({ title, showBack = true, showMenu = true, showProfile = true }: HeaderProps) {
   const navigation = useNavigation();
   const route = useRoute();
   const [menuVisible, setMenuVisible] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, isAuthenticated } = useAuth();
 
   const canGoBack = navigation.canGoBack();
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      try {
-        const response = await authService.getCurrentUser();
-        const user = response.user || response;
-        setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
-      } catch (error) {
-        setIsAdmin(false);
-      }
-    };
-    checkAdmin();
-  }, []);
+    // Vérifier si admin seulement si connecté
+    if (isAuthenticated) {
+      const checkAdmin = async () => {
+        try {
+          const response = await authService.getCurrentUser();
+          const user = response.user || response;
+          setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
+        } catch (error) {
+          setIsAdmin(false);
+        }
+      };
+      checkAdmin();
+    } else {
+      setIsAdmin(false);
+    }
+  }, [isAuthenticated]);
 
-  const menuItems = [
-    { name: 'Home', label: 'Accueil', icon: '🏠' },
-    { name: 'Competitions', label: 'Compétitions', icon: '🏆' },
-    { name: 'Teams', label: 'Mes Équipes', icon: '👥' },
-    { name: 'Catches', label: 'Mes Prises', icon: '🎣' },
-    { name: 'AddCatch', label: 'Ajouter une Prise', icon: '➕' },
-    { name: 'Species', label: 'Espèces', icon: '🐟' },
-    { name: 'History', label: 'Historique', icon: '📜' },
-    { name: 'Notifications', label: 'Notifications', icon: '🔔' },
-    { name: 'Invitations', label: 'Mes Invitations', icon: '✉️' },
-    { name: 'Profile', label: 'Profil', icon: '👤' },
-    ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: '⚙️' }] : []),
-  ];
+  // Menu items selon l'état d'authentification
+  const menuItems = isAuthenticated
+    ? [
+        { name: 'Home', label: 'Accueil', icon: '🏠' },
+        { name: 'Catches', label: 'Mes Prises', icon: '🎣' },
+        { name: 'Species', label: 'Espèces', icon: '🐟' },
+        { name: 'History', label: 'Historique', icon: '📜' },
+        { name: 'Notifications', label: 'Notifications', icon: '🔔' },
+        { name: 'Invitations', label: 'Mes Invitations', icon: '✉️' },
+        ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: '⚙️' }] : []),
+      ]
+    : [
+        { name: 'Home', label: 'Accueil', icon: '🏠' },
+        { name: 'Login', label: 'Connexion', icon: '🔐' },
+        { name: 'Register', label: 'Inscription', icon: '📝' },
+      ];
+
+  const handleProfilePress = () => {
+    if (isAuthenticated) {
+      navigation.navigate('Profile' as never);
+    } else {
+      navigation.navigate('Login' as never);
+    }
+  };
 
   const handleMenuPress = (screenName: string) => {
     setMenuVisible(false);
     if (route.name !== screenName) {
-      navigation.navigate(screenName as never);
+      // Si on navigue vers Home, Competitions ou Teams, naviguer dans le Tab Navigator
+      if (screenName === 'Home' || screenName === 'Competitions' || screenName === 'Teams') {
+        // Obtenir le navigateur parent (Stack) et naviguer vers MainTabs avec l'écran spécifique
+        const parent = navigation.getParent();
+        if (parent) {
+          // Naviguer vers MainTabs, puis vers l'écran spécifique dans les tabs
+          // @ts-ignore - nested navigation typing
+          parent.navigate('MainTabs', {
+            screen: screenName,
+          });
+        } else {
+          // Si on est déjà dans MainTabs, naviguer directement
+          navigation.navigate(screenName as never);
+        }
+      } else {
+        // Pour les autres écrans, navigation normale dans le Stack
+        navigation.navigate(screenName as never);
+      }
     }
   };
 
@@ -80,29 +114,60 @@ export default function Header({ title, showBack = true, showMenu = true }: Head
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        {showBack && canGoBack && (
+        {/* Bouton retour toujours visible à gauche */}
+        {canGoBack ? (
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              // Si on ne peut pas revenir, naviguer vers Home
+              const parent = navigation.getParent();
+              if (parent) {
+                // @ts-ignore - nested navigation typing
+                parent.navigate('MainTabs', { screen: 'Home' });
+              } else {
+                navigation.navigate('Home' as never);
+              }
+            }}
+          >
+            <Text style={[styles.backIcon, styles.backIconDisabled]}>←</Text>
+          </TouchableOpacity>
         )}
 
+        {/* Titre au centre */}
         <View style={styles.titleContainer}>
           <Text style={styles.title} numberOfLines={1}>
             {title || 'Street Fishing'}
           </Text>
         </View>
 
-        {showMenu && (
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => setMenuVisible(true)}
-          >
-            <Text style={styles.menuIcon}>☰</Text>
-          </TouchableOpacity>
-        )}
+        {/* Menu burger et profil à droite */}
+        <View style={styles.rightButtons}>
+          {showMenu && (
+            <TouchableOpacity
+              style={styles.menuButton}
+              onPress={() => setMenuVisible(true)}
+            >
+              <Text style={styles.menuIcon}>☰</Text>
+            </TouchableOpacity>
+          )}
+          {showProfile ? (
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+            >
+              <Text style={styles.profileIcon}>👤</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.placeholder} />
+          )}
+        </View>
       </View>
 
       {/* Menu Burger Modal */}
@@ -146,15 +211,18 @@ export default function Header({ title, showBack = true, showMenu = true }: Head
                 </TouchableOpacity>
               ))}
 
-              <TouchableOpacity
-                style={[styles.menuItem, styles.logoutItem]}
-                onPress={handleLogout}
-              >
-                <Text style={styles.menuItemIcon}>🚪</Text>
-                <Text style={[styles.menuItemText, styles.logoutText]}>
-                  Déconnexion
-                </Text>
-              </TouchableOpacity>
+              {/* Afficher le bouton de déconnexion seulement si connecté */}
+              {isAuthenticated && (
+                <TouchableOpacity
+                  style={[styles.menuItem, styles.logoutItem]}
+                  onPress={handleLogout}
+                >
+                  <Text style={styles.menuItemIcon}>🚪</Text>
+                  <Text style={[styles.menuItemText, styles.logoutText]}>
+                    Déconnexion
+                  </Text>
+                </TouchableOpacity>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -178,6 +246,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     minHeight: 56,
   },
+  placeholder: {
+    width: 40,
+    height: 40,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -189,6 +261,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  backIconDisabled: {
+    opacity: 0.5,
   },
   titleContainer: {
     flex: 1,
@@ -206,12 +281,27 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginRight: 8,
   },
   menuIcon: {
     fontSize: 24,
     color: '#333',
     fontWeight: '600',
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 0,
+  },
+  profileIcon: {
+    fontSize: 24,
+    color: '#007AFF',
   },
   modalOverlay: {
     flex: 1,

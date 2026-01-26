@@ -12,11 +12,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
+  const { setIsAuthenticated } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { data: userResponse, isLoading } = useQuery({
@@ -30,19 +32,25 @@ export default function ProfileScreen() {
   const user = userResponse?.user;
 
   const handleLogout = async () => {
-    await authService.logout();
-    // Invalider tous les caches React Query pour éviter d'afficher les données de l'ancien utilisateur
-    queryClient.clear();
-    // @ts-ignore - navigation.replace exists but TypeScript doesn't recognize it
-    navigation.replace('Login' as never);
+    try {
+      await authService.logout();
+      // Invalider tous les caches React Query pour éviter d'afficher les données de l'ancien utilisateur
+      queryClient.clear();
+      // Mettre à jour l'état d'authentification pour que App.tsx change le stack
+      setIsAuthenticated(false);
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
   };
 
   const handleDeleteAccount = async () => {
     try {
       await authService.deleteAccount();
       Alert.alert('Succès', 'Compte supprimé avec succès');
-      // @ts-ignore - navigation.replace exists but TypeScript doesn't recognize it
-      navigation.replace('Login' as never);
+      // Invalider tous les caches React Query
+      queryClient.clear();
+      // Mettre à jour l'état d'authentification pour que App.tsx change le stack
+      setIsAuthenticated(false);
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Une erreur est survenue lors de la suppression. Veuillez réessayer.';
       Alert.alert('Erreur', message);

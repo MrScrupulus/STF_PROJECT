@@ -1,102 +1,88 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { authService } from '../services/authService';
 import Header from '../components/Header';
 
 export default function HomeScreen() {
-  const navigation = useNavigation();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      try {
-        const response = await authService.getCurrentUser();
-        const user = response.user || response;
-        setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
-      } catch (error) {
-        setIsAdmin(false);
-      }
-    };
-    checkAdmin();
-  }, []);
-
   return (
     <>
-      <Header title="Street Fishing" showBack={false} showMenu={true} />
+      <Header title="Street Fishing" showBack={false} showMenu={true} showProfile={true} />
       <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Street Fishing</Text>
-        <Text style={styles.subtitle}>Bienvenue !</Text>
+        <View style={styles.content}>
+          <View style={styles.headerSection}>
+            <Text style={styles.title}>Street Fishing</Text>
+            <Text style={styles.subtitle}>L'application de compétition de pêche urbaine</Text>
+          </View>
 
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('Competitions' as never)}
-        >
-          <Text style={styles.cardTitle}>Compétitions</Text>
-          <Text style={styles.cardDescription}>
-            Voir et gérer les compétitions
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.card, styles.primaryCard]}
-          onPress={() => navigation.navigate('AddCatch' as never)}
-        >
-          <Text style={[styles.cardTitle, styles.primaryCardTitle]}>📷 Ajouter une prise</Text>
-          <Text style={[styles.cardDescription, styles.primaryCardDescription]}>
-            Prendre une photo et enregistrer votre prise
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('Catches' as never)}
-        >
-          <Text style={styles.cardTitle}>Mes Prises</Text>
-          <Text style={styles.cardDescription}>
-            Voir toutes vos prises enregistrées
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('Teams' as never)}
-        >
-          <Text style={styles.cardTitle}>Mon Équipe</Text>
-          <Text style={styles.cardDescription}>
-            Voir et gérer votre équipe
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate('Profile' as never)}
-        >
-          <Text style={styles.cardTitle}>Profil</Text>
-          <Text style={styles.cardDescription}>
-            Gérer votre profil
-          </Text>
-        </TouchableOpacity>
-
-        {isAdmin && (
-          <TouchableOpacity
-            style={[styles.card, styles.adminCard]}
-            onPress={() => navigation.navigate('AdminDashboard' as never)}
-          >
-            <Text style={[styles.cardTitle, styles.adminCardTitle]}>⚙️ Dashboard Admin</Text>
-            <Text style={[styles.cardDescription, styles.adminCardDescription]}>
-              Gérer les utilisateurs, compétitions et valider les prises
+          <View style={styles.descriptionSection}>
+            <Text style={styles.descriptionTitle}>À propos de l'application</Text>
+            <Text style={styles.description}>
+              Street Fishing est une application dédiée aux compétitions de pêche urbaine. 
+              Participez à des compétitions, enregistrez vos prises, formez des équipes et 
+              suivez vos statistiques en temps réel.
             </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          </View>
+
+          <View style={styles.featuresSection}>
+            <Text style={styles.featuresTitle}>Fonctionnalités principales</Text>
+            
+            <View style={styles.featureCard}>
+              <Text style={styles.featureIcon}>🏆</Text>
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Compétitions</Text>
+                <Text style={styles.featureDescription}>
+                  Consultez les compétitions en cours, à venir ou terminées. 
+                  Inscrivez-vous avec votre équipe et suivez le classement en direct.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featureCard}>
+              <Text style={styles.featureIcon}>📷</Text>
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Enregistrement de prises</Text>
+                <Text style={styles.featureDescription}>
+                  Photographiez et enregistrez vos prises directement depuis l'application. 
+                  Géolocalisation automatique et validation par les administrateurs.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featureCard}>
+              <Text style={styles.featureIcon}>👥</Text>
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Gestion d'équipe</Text>
+                <Text style={styles.featureDescription}>
+                  Créez ou rejoignez une équipe, invitez vos amis et participez ensemble 
+                  aux compétitions. Suivez les performances de votre équipe.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featureCard}>
+              <Text style={styles.featureIcon}>📊</Text>
+              <View style={styles.featureContent}>
+                <Text style={styles.featureTitle}>Statistiques</Text>
+                <Text style={styles.featureDescription}>
+                  Consultez votre historique de prises, le nombre de compétitions auxquelles 
+                  vous avez participé et vos statistiques par espèce de poisson.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.footerSection}>
+            <Text style={styles.footerText}>
+              Utilisez la barre de navigation en bas pour accéder rapidement aux compétitions 
+              et à votre équipe. Le bouton central permet d'ajouter une prise rapidement.
+            </Text>
+          </View>
+        </View>
       </ScrollView>
     </>
   );
@@ -110,57 +96,92 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  headerSection: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
+    color: '#007AFF',
     marginBottom: 8,
-    color: '#333',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#666',
-    marginBottom: 24,
+    textAlign: 'center',
   },
-  card: {
+  descriptionSection: {
+    marginBottom: 32,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  cardTitle: {
+  descriptionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 8,
     color: '#333',
+    marginBottom: 12,
   },
-  cardDescription: {
+  description: {
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 24,
+  },
+  featuresSection: {
+    marginBottom: 32,
+  },
+  featuresTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  featureIcon: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+  },
+  featureDescription: {
     fontSize: 14,
     color: '#666',
+    lineHeight: 20,
   },
-  primaryCard: {
-    backgroundColor: '#007AFF',
+  footerSection: {
+    backgroundColor: '#e8f4fd',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
   },
-  primaryCardTitle: {
-    color: '#fff',
-  },
-  primaryCardDescription: {
-    color: '#fff',
-    opacity: 0.9,
-  },
-  adminCard: {
-    backgroundColor: '#FF9500',
-  },
-  adminCardTitle: {
-    color: '#fff',
-  },
-  adminCardDescription: {
-    color: '#fff',
-    opacity: 0.9,
+  footerText: {
+    fontSize: 14,
+    color: '#007AFF',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
-

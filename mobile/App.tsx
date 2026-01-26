@@ -12,20 +12,17 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import CompetitionsScreen from './src/screens/CompetitionsScreen';
 import CompetitionDetailScreen from './src/screens/CompetitionDetailScreen';
 import CatchesScreen from './src/screens/CatchesScreen';
 import AddCatchScreen from './src/screens/AddCatchScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
-import TeamsScreen from './src/screens/TeamsScreen';
 import TeamDetailScreen from './src/screens/TeamDetailScreen';
 import CreateTeamScreen from './src/screens/CreateTeamScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import SpeciesScreen from './src/screens/SpeciesScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
-import AdminCatchValidationScreen from './src/screens/AdminCatchValidationScreen';
 import AdminAddCatchScreen from './src/screens/AdminAddCatchScreen';
+import AdminCatchValidationScreen from './src/screens/AdminCatchValidationScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
@@ -35,6 +32,7 @@ import CreateCompetitionScreen from './src/screens/CreateCompetitionScreen';
 import NotificationPreferencesScreen from './src/screens/NotificationPreferencesScreen';
 import NotificationInitializer from './src/components/NotificationInitializer';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import MainTabs from './src/navigation/MainTabs';
 
 const Stack = createNativeStackNavigator();
 
@@ -130,6 +128,12 @@ function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <>
+            {/* MainTabs accessible même sans authentification pour HomeScreen */}
+            <Stack.Screen 
+              name="MainTabs" 
+              component={MainTabs}
+              options={{ headerShown: false }}
+            />
             <Stack.Screen name="Login">
               {(props) => <LoginScreen {...props} onLogin={() => setIsAuthenticated(true)} />}
             </Stack.Screen>
@@ -140,20 +144,25 @@ function AppNavigator() {
           </>
         ) : (
           <>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Competitions" component={CompetitionsScreen} />
+            {/* Tab Navigator pour les écrans principaux (inclut Home mais caché dans la barre) - DOIT ÊTRE EN PREMIER */}
+            <Stack.Screen 
+              name="MainTabs" 
+              component={MainTabs}
+              options={{ headerShown: false }}
+            />
+            
+            {/* Écrans secondaires accessibles depuis les tabs ou le menu */}
             <Stack.Screen name="CompetitionDetail" component={CompetitionDetailScreen} />
             <Stack.Screen name="Catches" component={CatchesScreen} />
             <Stack.Screen name="AddCatch" component={AddCatchScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="Teams" component={TeamsScreen} />
             <Stack.Screen name="TeamDetail" component={TeamDetailScreen} />
             <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
             <Stack.Screen name="History" component={HistoryScreen} />
             <Stack.Screen name="Species" component={SpeciesScreen} />
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-            <Stack.Screen name="AdminCatchValidation" component={AdminCatchValidationScreen} />
             <Stack.Screen name="AdminAddCatch" component={AdminAddCatchScreen} />
+            <Stack.Screen name="AdminCatchValidation" component={AdminCatchValidationScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
