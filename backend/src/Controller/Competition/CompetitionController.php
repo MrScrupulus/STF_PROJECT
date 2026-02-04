@@ -446,7 +446,7 @@ class CompetitionController extends AbstractController
                         'registrationNumber' => $teamOrSnapshot->getRegistrationNumber(),
                         'isActive' => $teamOrSnapshot->getIsActive(),
                         'members' => array_map(function ($member) {
-                            return [
+                return [
                                 'id' => $member->getId(),
                                 'firstname' => $member->getFirstname(),
                                 'lastname' => $member->getLastname(),

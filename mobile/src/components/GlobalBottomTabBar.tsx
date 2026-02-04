@@ -6,105 +6,20 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 
 // Routes où la barre de navigation ne doit pas être affichée
 const HIDDEN_ROUTES = ['Login', 'Register'];
 
-// Fonction récursive pour trouver la route active dans l'état de navigation
-const getActiveRouteName = (state: any): string | null => {
-  if (!state || !state.routes) {
-    return null;
-  }
-  
-  const route = state.routes[state.index];
-  if (!route) {
-    return null;
-  }
-  
-  // Si la route a un état imbriqué (comme dans un Tab Navigator), continuer la récursion
-  if (route.state) {
-    const nestedRoute = getActiveRouteName(route.state);
-    // Si on trouve une route imbriquée, la retourner
-    if (nestedRoute) {
-      return nestedRoute;
-    }
-    // Si on est dans MainTabs, essayer de trouver la route active dans les tabs
-    if (route.name === 'MainTabs' && route.state?.routes) {
-      const tabIndex = route.state.index !== undefined ? route.state.index : 0;
-      const tabRoute = route.state.routes[tabIndex];
-      if (tabRoute && tabRoute.name) {
-        return tabRoute.name;
-      }
-      // Si aucune route n'est trouvée mais qu'on a des routes, prendre la première (Home par défaut)
-      if (route.state.routes.length > 0) {
-        const firstRoute = route.state.routes[0];
-        if (firstRoute && firstRoute.name) {
-          return firstRoute.name;
-        }
-      }
-      // Par défaut, si on est dans MainTabs sans route détectée, c'est Home
-      return 'Home';
-    }
-  }
-  
-  return route.name;
-};
+interface GlobalBottomTabBarProps {
+  navigationRef: React.RefObject<any>;
+  currentRoute: string | null;
+}
 
-export default function GlobalBottomTabBar() {
+export default function GlobalBottomTabBar({ navigationRef, currentRoute }: GlobalBottomTabBarProps) {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const { isAuthenticated } = useAuth();
-  const navigation = useNavigation();
-  const [currentRoute, setCurrentRoute] = React.useState<string | null>(null);
-  
-  // Obtenir la route actuelle depuis le Stack Navigator
-  const navigationState = useNavigationState((state) => state);
-  
-  // Initialiser la route au montage et écouter les changements
-  React.useEffect(() => {
-    const updateRoute = () => {
-      try {
-        const state = (navigation as any).getState();
-        if (state) {
-          const routeName = getActiveRouteName(state);
-          if (routeName) {
-            setCurrentRoute(routeName);
-          } else {
-            // Si aucune route n'est détectée mais qu'on a un état, 
-            // on est probablement sur MainTabs/Home
-            const mainRoute = state.routes?.[state.index];
-            if (mainRoute?.name === 'MainTabs') {
-              setCurrentRoute('Home');
-            }
-          }
-        }
-      } catch (error) {
-        // Ignorer les erreurs silencieusement
-      }
-    };
-
-    // Mettre à jour immédiatement
-    updateRoute();
-
-    // Écouter les changements de navigation
-    const unsubscribe = navigation.addListener('state', () => {
-      updateRoute();
-    });
-
-    return unsubscribe;
-  }, [navigation]);
-
-  // Aussi mettre à jour quand navigationState change
-  React.useEffect(() => {
-    if (navigationState) {
-      const routeName = getActiveRouteName(navigationState);
-      if (routeName) {
-        setCurrentRoute(routeName);
-      }
-    }
-  }, [navigationState]);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -130,40 +45,30 @@ export default function GlobalBottomTabBar() {
   }
 
   const handleNavigation = (screenName: string) => {
+    const nav = navigationRef.current;
+    if (!nav) return;
+
     if (!isAuthenticated) {
-      // Rediriger vers Login si non connecté
-      (navigation as any).navigate('Login');
+      nav.navigate('Login');
       return;
     }
     
-    // Navigation vers les écrans du Tab Navigator
     if (screenName === 'Competitions' || screenName === 'Teams' || screenName === 'AdminCatchValidation') {
-      // Si on est déjà dans MainTabs, naviguer directement vers l'écran dans le Tab Navigator
-      // Sinon, naviguer vers MainTabs puis vers l'écran spécifique
-      const navState = (navigation as any).getState();
-      const isInMainTabs = navState?.routes[navState.index]?.name === 'MainTabs';
-      
-      if (isInMainTabs) {
-        // Naviguer dans le Tab Navigator
-        (navigation as any).navigate('MainTabs', { screen: screenName });
-      } else {
-        // Naviguer vers MainTabs puis vers l'écran spécifique
-        (navigation as any).navigate('MainTabs', { screen: screenName });
-      }
+      nav.navigate('MainTabs', { screen: screenName });
     } else {
-      // Pour Home, naviguer vers MainTabs
-      (navigation as any).navigate('MainTabs');
+      nav.navigate('MainTabs');
     }
   };
 
   const handleAddCatchPress = () => {
+    const nav = navigationRef.current;
+    if (!nav) return;
+
     if (!isAuthenticated) {
-      // Rediriger vers Login si non connecté
-      (navigation as any).navigate('Login');
+      nav.navigate('Login');
       return;
     }
-    // Naviguer vers AddCatch
-    (navigation as any).navigate('AddCatch');
+    nav.navigate('AddCatch');
   };
 
   // Déterminer quel onglet est actif

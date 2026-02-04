@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -47,10 +47,26 @@ const queryClient = new QueryClient({
   },
 });
 
+function getActiveRouteName(state: any): string | null {
+  if (!state || !state.routes) return null;
+  const route = state.routes[state.index];
+  if (!route) return null;
+  if (route.state) {
+    const nested = getActiveRouteName(route.state);
+    if (nested) return nested;
+    if (route.name === 'MainTabs' && route.state?.routes?.length) {
+      const tabRoute = route.state.routes[route.state.index ?? 0];
+      return tabRoute?.name ?? 'Home';
+    }
+  }
+  return route.name;
+}
+
 function AppNavigator() {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const navigationRef = useRef<any>(null);
   const linkingRef = useRef<any>(null);
+  const [currentRoute, setCurrentRoute] = useState<string | null>(null);
 
   // Configuration des deep links
   const linking = {
@@ -123,6 +139,12 @@ function AppNavigator() {
       linking={linking}
       onReady={() => {
         linkingRef.current = navigationRef.current;
+        const state = navigationRef.current?.getRootState?.();
+        if (state) setCurrentRoute(getActiveRouteName(state));
+      }}
+      onStateChange={() => {
+        const state = navigationRef.current?.getRootState?.();
+        if (state) setCurrentRoute(getActiveRouteName(state));
       }}
     >
       <NotificationInitializer />
@@ -178,7 +200,7 @@ function AppNavigator() {
         )}
       </Stack.Navigator>
       {/* Barre de navigation globale visible sur toutes les pages sauf Login et Register */}
-      <GlobalBottomTabBar />
+      <GlobalBottomTabBar navigationRef={navigationRef} currentRoute={currentRoute} />
     </NavigationContainer>
   );
 }
