@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { teamService } from "../../../services/teamService";
 import styles from "../../../styles/pages/teams.module.scss";
-import ProtectedRoute from "../../../components/auth/ProtectedRoute";
 import { useAuth } from "../../../components/auth/ConditionalAuth";
 import Link from "next/link";
 import classNames from "classnames";
@@ -33,14 +31,14 @@ export default function TeamDetailPage() {
         } else {
           setError("Équipe non trouvée");
         }
-      } catch (error: any) {
+      } catch (error) {
         // Gérer gracieusement les erreurs 401 (non authentifié)
-        if (error.status === 401 || (error.message && error.message.includes("401"))) {
+        if (error?.status === 401 || (error?.message && error.message.includes("401"))) {
           // L'équipe peut être consultée sans authentification, donc cette erreur ne devrait pas arriver
           // Mais on la gère quand même au cas où
           setError("Erreur d'authentification lors du chargement de l'équipe");
         } else {
-          setError(error.message || "Erreur lors du chargement de l'équipe");
+          setError(error?.message || "Erreur lors du chargement de l'équipe");
         }
       } finally {
         setIsLoading(false);
@@ -671,7 +669,6 @@ export default function TeamDetailPage() {
           </div>
         )}
       </div>
-    </ProtectedRoute>
   );
 }
 
