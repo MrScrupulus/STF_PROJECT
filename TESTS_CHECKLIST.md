@@ -19,7 +19,7 @@
 
 ##### Prise rejetée (catchRejected)
 - [ok] Créer une prise → Admin rejette → Notification reçue sur mobile (testé via outils automatisés)
-- [ok] Désactiver "Prise rejetée" → Admin rejette → Pas de notification (toutes les notifications OFF → aucune reçue)
+- [ok] Désactiver "Prise rejetée" → Admin rejette → Pas de notificationA (toutes les notifications OFF → aucune reçue)
 
 ##### Invitation d'équipe (teamInvitation)
 - [ok] Inviter un utilisateur à rejoindre une équipe → Notification reçue (testé via outils automatisés)

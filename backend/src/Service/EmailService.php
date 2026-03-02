@@ -11,6 +11,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use App\Entity\Security\User;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\Competition;
+use App\Repository\NotificationPreferencesRepository;
 
 final class EmailService
 {
@@ -22,10 +23,21 @@ final class EmailService
         private readonly MailerInterface $mailer,
         private string $mailerFromEmail,
         ParameterBagInterface $params,
+        private readonly NotificationPreferencesRepository $preferencesRepository,
     ) {
         $this->fromEmail = $mailerFromEmail;
         $this->frontendUrl = $params->get('app.frontend_url');
         $this->backendUrl = $params->get('app.backend_url', 'http://localhost:8001');
+    }
+
+    /**
+     * Vérifie si l'utilisateur souhaite recevoir des notifications par email.
+     * Utilisé uniquement pour les emails de notification (pas pour la vérification de compte ou le reset de mot de passe).
+     */
+    private function shouldSendNotificationEmail(User $user): bool
+    {
+        $preferences = $this->preferencesRepository->findOrCreateForUser($user);
+        return $preferences->isReceiveEmailNotifications();
     }
 
     public function sendVerificationEmail(User $user): void
@@ -142,6 +154,10 @@ final class EmailService
         try {
             // Envoyer l'email à tous les membres de l'équipe
             foreach ($team->getMembers() as $member) {
+                if (!$this->shouldSendNotificationEmail($member)) {
+                    continue;
+                }
+
                 $email = (new Email())
                     ->from($this->fromEmail)
                     ->to($member->getEmail())
@@ -197,6 +213,10 @@ final class EmailService
         try {
             // Envoyer l'email à tous les membres de l'équipe
             foreach ($team->getMembers() as $member) {
+                if (!$this->shouldSendNotificationEmail($member)) {
+                    continue;
+                }
+
                 $email = (new Email())
                     ->from($this->fromEmail)
                     ->to($member->getEmail())
@@ -263,6 +283,10 @@ final class EmailService
         $teamUrl = rtrim($this->frontendUrl, '/') . '/teams/' . $team->getId();
 
         try {
+            if (!$this->shouldSendNotificationEmail($invitedUser)) {
+                return;
+            }
+
             $email = (new Email())
                 ->from($this->fromEmail)
                 ->to($invitedUser->getEmail())
@@ -321,6 +345,10 @@ final class EmailService
 
         try {
             if ($validated) {
+                if (!$this->shouldSendNotificationEmail($user)) {
+                    return;
+                }
+
                 // Email de validation
                 $email = (new Email())
                     ->from($this->fromEmail)
@@ -348,6 +376,10 @@ final class EmailService
                     );
             } else {
                 // Email de rejet
+                if (!$this->shouldSendNotificationEmail($user)) {
+                    return;
+                }
+
                 $rejectionReasonHtml = $rejectionReason ? nl2br(htmlspecialchars($rejectionReason)) : 'Aucun motif spécifié.';
                 
                 $email = (new Email())

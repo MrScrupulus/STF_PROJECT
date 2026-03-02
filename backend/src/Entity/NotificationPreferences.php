@@ -53,6 +53,10 @@ class NotificationPreferences
     #[ORM\Column(type: 'boolean', options: ['default' => true])]
     private bool $catchPending = true;
 
+    /** Recevoir les notifications par email (en plus ou à la place du push) */
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    private bool $receiveEmailNotifications = true;
+
     #[ORM\Column(type: 'datetime', nullable: true)]
     private ?\DateTimeInterface $updatedAt = null;
 
@@ -193,6 +197,18 @@ class NotificationPreferences
     public function setCatchPending(bool $catchPending): static
     {
         $this->catchPending = $catchPending;
+        $this->updatedAt = new \DateTime();
+        return $this;
+    }
+
+    public function isReceiveEmailNotifications(): bool
+    {
+        return $this->receiveEmailNotifications;
+    }
+
+    public function setReceiveEmailNotifications(bool $receiveEmailNotifications): static
+    {
+        $this->receiveEmailNotifications = $receiveEmailNotifications;
         $this->updatedAt = new \DateTime();
         return $this;
     }

@@ -84,6 +84,23 @@ export default function NotificationPreferencesPage() {
           <div className={styles.preferences__list}>
             <div className={styles.preferences__item}>
               <div className={styles.preferences__item_info}>
+                <label className={styles.preferences__item_label}>Notifications par email</label>
+                <p className={styles.preferences__item_description}>
+                  Recevoir également les notifications par email (en plus des notifications push)
+                </p>
+              </div>
+              <label className={styles.preferences__switch}>
+                <input
+                  type="checkbox"
+                  checked={preferences.receiveEmailNotifications !== false}
+                  onChange={() => handleToggle("receiveEmailNotifications")}
+                />
+                <span className={styles.preferences__slider}></span>
+              </label>
+            </div>
+
+            <div className={styles.preferences__item}>
+              <div className={styles.preferences__item_info}>
                 <label className={styles.preferences__item_label}>Prise validée</label>
                 <p className={styles.preferences__item_description}>
                   Recevoir une notification quand votre prise est validée

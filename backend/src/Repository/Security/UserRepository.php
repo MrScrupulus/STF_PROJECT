@@ -20,7 +20,38 @@ class UserRepository extends ServiceEntityRepository
         // On recherche la chaîne "ROLE_XYZ" entourée de guillemets pour éviter les faux positifs.
         return $this->createQueryBuilder('u')
             ->andWhere('u.roles LIKE :role')
+            ->andWhere('u.isDeleted = :false')
             ->setParameter('role', '%"' . $role . '"%')
+            ->setParameter('false', false)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Trouve un utilisateur par email ou numéro d'abonné pour l'authentification.
+     * Ne retourne pas les comptes supprimés (anonymisés).
+     */
+    public function findByEmailOrSubscriberNumber(string $identifier): ?User
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->andWhere('u.isDeleted = :false')
+            ->setParameter('false', false);
+
+        $qb->andWhere($qb->expr()->orX(
+            'u.email = :identifier',
+            'u.subscriber_number = :identifier'
+        ))->setParameter('identifier', $identifier);
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    /** Utilisateurs non supprimés (pour liste admin, etc.) */
+    public function findAllActive(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.isDeleted = :false')
+            ->setParameter('false', false)
+            ->orderBy('u.id', 'DESC')
             ->getQuery()
             ->getResult();
     }

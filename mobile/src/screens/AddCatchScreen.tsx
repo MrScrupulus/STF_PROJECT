@@ -13,6 +13,7 @@ import {
   Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import * as Location from 'expo-location';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catchesService, CreateCatchData } from '../services/catchesService';
@@ -375,14 +376,23 @@ export default function AddCatchScreen({ navigation, route }: any) {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
         quality: 0.8,
         base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        const asset = result.assets[0];
+        const base64Image = `data:image/jpeg;base64,${asset.base64}`;
         setPhoto(base64Image);
+
+        try {
+          const { status } = await MediaLibrary.requestPermissionsAsync();
+          if (status === 'granted' && asset.uri) {
+            await MediaLibrary.saveToLibraryAsync(asset.uri);
+          }
+        } catch (_) {
+          // Ne pas bloquer si la sauvegarde en galerie échoue
+        }
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de prendre la photo');
@@ -430,7 +440,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
     }
 
     // Vérifier si la compétition a des périmètres définis
-    // Si oui, la position GPS est obligatoire
+    // Si oui, la position GPS est obligatoire et doit être dans la zone
     const hasPerimeters = selectedCompetition.perimeters && selectedCompetition.perimeters.length > 0;
     
     if (hasPerimeters && !location) {
@@ -450,6 +460,14 @@ export default function AddCatchScreen({ navigation, route }: any) {
             },
           },
         ]
+      );
+      return;
+    }
+
+    if (hasPerimeters && location && locationStatus === 'out-of-zone') {
+      Alert.alert(
+        'Hors zone autorisée',
+        'Votre position actuelle n\'est pas dans une zone autorisée pour cette compétition. Les prises doivent être effectuées dans les périmètres définis. Déplacez-vous dans la zone ou capturez à nouveau votre position.'
       );
       return;
     }

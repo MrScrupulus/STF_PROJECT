@@ -1,7 +1,10 @@
 parameters:
   app.mailer_from_email: "streetfishingroubaix@gmail.com"
-  app.frontend_url: "http://localhost:3000"
-  app.backend_url: "http://localhost:8001"
+  # URLs utilisées dans les emails (vérification, reset mot de passe). En dev avec téléphone réel, utiliser ngrok (voir .env / EMAIL_LINKS_README).
+  app.frontend_url.default: "http://localhost:3000"
+  app.backend_url.default: "http://localhost:8001"
+  app.frontend_url: "%env(default:app.frontend_url.default:APP_FRONTEND_URL)%"
+  app.backend_url: "%env(default:app.backend_url.default:APP_BACKEND_URL)%"
 
 services:
   _defaults:

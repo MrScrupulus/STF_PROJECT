@@ -637,14 +637,18 @@ class CompetitionController extends AbstractController
 
             // Créer les pauses programmées si elles sont fournies
             if (isset($data['scheduledPauses']) && is_array($data['scheduledPauses'])) {
+                $timezoneParis = new \DateTimeZone('Europe/Paris');
                 foreach ($data['scheduledPauses'] as $pauseData) {
                     if (!isset($pauseData['startDate']) || !isset($pauseData['endDate'])) {
                         continue; // Ignorer les pauses incomplètes
                     }
 
                     try {
-                        $startDate = new \DateTime($pauseData['startDate']);
-                        $endDate = new \DateTime($pauseData['endDate']);
+                        // Interpréter les dates comme heure Europe/Paris (saisie utilisateur) puis convertir en UTC pour le stockage
+                        $startDate = new \DateTime($pauseData['startDate'], $timezoneParis);
+                        $endDate = new \DateTime($pauseData['endDate'], $timezoneParis);
+                        $startDate->setTimezone(new \DateTimeZone('UTC'));
+                        $endDate->setTimezone(new \DateTimeZone('UTC'));
 
                         // Vérifier que la pause est dans les dates de la compétition
                         if ($startDate < $competition->getStartDate() || $endDate > $competition->getEndDate()) {

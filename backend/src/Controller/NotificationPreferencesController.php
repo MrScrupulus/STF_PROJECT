@@ -38,6 +38,7 @@ class NotificationPreferencesController extends AbstractController
                 'competitionPaused' => $preferences->isCompetitionPaused(),
                 'competitionResumed' => $preferences->isCompetitionResumed(),
                 'catchPending' => $preferences->isCatchPending(),
+                'receiveEmailNotifications' => $preferences->isReceiveEmailNotifications(),
             ]
         ]);
     }
@@ -95,6 +96,10 @@ class NotificationPreferencesController extends AbstractController
             $preferences->setCatchPending((bool) $data['catchPending']);
         }
 
+        if (isset($data['receiveEmailNotifications'])) {
+            $preferences->setReceiveEmailNotifications((bool) $data['receiveEmailNotifications']);
+        }
+
         $entityManager->flush();
 
         return $this->json([
@@ -111,6 +116,7 @@ class NotificationPreferencesController extends AbstractController
                 'competitionPaused' => $preferences->isCompetitionPaused(),
                 'competitionResumed' => $preferences->isCompetitionResumed(),
                 'catchPending' => $preferences->isCatchPending(),
+                'receiveEmailNotifications' => $preferences->isReceiveEmailNotifications(),
             ]
         ]);
     }

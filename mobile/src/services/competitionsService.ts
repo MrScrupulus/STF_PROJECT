@@ -75,7 +75,11 @@ export const competitionsService = {
   },
 
   getPublicStats: async (id: number): Promise<any> => {
-    const response = await apiClient.get(`/api/admin/competitions/${id}/stats`);
+    const response = await apiClient.get(API_ENDPOINTS.competitions.statsPublic(id));
+    return response.data;
+  },
+  getAdminStats: async (id: number): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.competitions.stats(id));
     return response.data;
   },
 

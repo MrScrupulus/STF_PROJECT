@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     start: (id: number) => `/api/competitions/${id}/start`,
     end: (id: number) => `/api/competitions/${id}/end`,
     stats: (id: number) => `/api/admin/competitions/${id}/stats`,
+    statsPublic: (id: number) => `/api/competitions/${id}/stats`,
     registerTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/register`,
     unregisterTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/unregister`,
   },

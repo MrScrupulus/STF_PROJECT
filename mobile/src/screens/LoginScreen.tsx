@@ -22,15 +22,11 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleHomePress = () => {
-    // Naviguer vers MainTabs avec Home
-    const parent = navigation.getParent();
-    if (parent) {
-      // @ts-ignore - nested navigation typing
-      parent.navigate('MainTabs', { screen: 'Home' });
-    } else {
-      navigation.navigate('Home' as never);
-    }
+  const handleBackToHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs', params: { screen: 'Home' } }] as any,
+    });
   };
 
   const handleLogin = async () => {
@@ -77,14 +73,14 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
 
   return (
     <>
-      {/* Header avec bouton maison */}
+      {/* Header avec flèche retour vers l'accueil */}
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.homeButton}
-            onPress={handleHomePress}
+            style={styles.backButton}
+            onPress={handleBackToHome}
           >
-            <Text style={styles.homeIcon}>🏠</Text>
+            <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Connexion</Text>
@@ -178,15 +174,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     minHeight: 56,
   },
-  homeButton: {
+  backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  homeIcon: {
-    fontSize: 24,
+  backIcon: {
+    fontSize: 28,
     color: '#007AFF',
+    fontWeight: '600',
   },
   headerTitleContainer: {
     flex: 1,

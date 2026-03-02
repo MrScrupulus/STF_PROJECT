@@ -10,19 +10,21 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\Competition\Team;
+use App\Service\UserAnonymizerService;
 
 #[Route('/admin')]
 class AdminController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private UserRepository $userRepository
+        private UserRepository $userRepository,
+        private UserAnonymizerService $userAnonymizerService
     ) {}
 
     #[Route('/users', name: 'admin_users_list', methods: ['GET'])]
     public function listUsers(): JsonResponse
     {
-        $users = $this->userRepository->findAll();
+        $users = $this->userRepository->findAllActive();
         $usersData = array_map(function ($user) {
             return [
                 'id' => $user->getId(),
@@ -34,7 +36,7 @@ class AdminController extends AbstractController
                 'country' => $user->getCountry(),
                 'phoneNumber' => $user->getPhoneNumber(),
                 'isVerified' => $user->isVerified(),
-                'birthdate' => $user->getBirthdate() ? $user->getBirthdate()->format('Y-m-d') : null,
+                'birthdate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
             ];
         }, $users);
 
@@ -91,11 +93,12 @@ class AdminController extends AbstractController
     #[Route('/users/{id}', name: 'admin_delete_user', methods: ['DELETE'])]
     public function deleteUser(User $user): JsonResponse
     {
-        $this->entityManager->remove($user);
-        $this->entityManager->flush();
-
+        if ($user->isDeleted()) {
+            return $this->json(['message' => 'Ce compte est déjà supprimé.'], 400);
+        }
+        $this->userAnonymizerService->anonymize($user);
         return $this->json([
-            'message' => 'Utilisateur supprimé avec succès'
+            'message' => 'Utilisateur supprimé avec succès. Ses prises restent visibles sous "Anonyme" dans les historiques.'
         ]);
     }
 

@@ -12,6 +12,7 @@ export interface NotificationPreferences {
   competitionPaused: boolean;
   competitionResumed: boolean;
   catchPending: boolean;
+  receiveEmailNotifications: boolean;
 }
 
 export interface NotificationPreferencesResponse {

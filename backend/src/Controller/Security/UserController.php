@@ -3,7 +3,7 @@
 namespace App\Controller\Security;
 
 use App\Entity\Security\User;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\UserAnonymizerService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class UserController extends AbstractController
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly UserAnonymizerService $userAnonymizerService,
     ) {}
 
     #[Route('/profile', name: 'app_user_profile', methods: ['GET'])]
@@ -58,11 +58,14 @@ class UserController extends AbstractController
             return $this->json(['message' => 'Non authentifié'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $this->entityManager->remove($user);
-        $this->entityManager->flush();
+        if ($user->isDeleted()) {
+            return $this->json(['message' => 'Ce compte est déjà supprimé.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->userAnonymizerService->anonymize($user);
 
         return $this->json([
-            'message' => 'Compte supprimé avec succès'
+            'message' => 'Compte supprimé avec succès. Vos prises restent visibles sous "Anonyme" dans les historiques.'
         ]);
     }
 }

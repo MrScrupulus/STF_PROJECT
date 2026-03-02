@@ -87,6 +87,19 @@ export default function NotificationPreferencesScreen() {
             Choisissez les types de notifications que vous souhaitez recevoir
           </Text>
 
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceLabel}>Notifications par email</Text>
+              <Text style={styles.preferenceDescription}>
+                Recevoir également les notifications par email (en plus des notifications push)
+              </Text>
+            </View>
+            <Switch
+              value={preferences.receiveEmailNotifications ?? true}
+              onValueChange={() => handleToggle('receiveEmailNotifications')}
+            />
+          </View>
+
           {/* Notifications générales */}
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>

@@ -20,6 +20,7 @@ use Psr\Log\LoggerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use App\Repository\Security\UserRepository;
+use App\Service\UserAnonymizerService;
 use Symfony\Component\HttpFoundation\Response;
 
 #[Route('/api/auth', name: 'app_auth_')]
@@ -32,6 +33,7 @@ final class AuthController extends AbstractController
         private readonly LoggerInterface $logger,
         private readonly UserRepository $userRepository,
         private readonly JWTTokenManagerInterface $jwtManager,
+        private readonly UserAnonymizerService $userAnonymizerService,
     ) {}
 
     #[Route('/register', name: 'auth_register', methods: ['POST'])]
@@ -221,6 +223,23 @@ final class AuthController extends AbstractController
             'token' => $token,
             'user' => $user->getUserIdentifier(),
             'roles' => $user->getRoles()
+        ]);
+    }
+
+    #[Route('/account', name: 'auth_delete_account', methods: ['DELETE'])]
+    public function deleteAccount(): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['success' => false, 'message' => 'Non authentifié'], Response::HTTP_UNAUTHORIZED);
+        }
+        if ($user->isDeleted()) {
+            return $this->json(['success' => false, 'message' => 'Ce compte est déjà supprimé.'], Response::HTTP_BAD_REQUEST);
+        }
+        $this->userAnonymizerService->anonymize($user);
+        return $this->json([
+            'success' => true,
+            'message' => 'Compte supprimé avec succès. Vos prises restent visibles sous "Anonyme" dans les historiques.',
         ]);
     }
 

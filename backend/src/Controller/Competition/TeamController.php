@@ -113,32 +113,14 @@ class TeamController extends AbstractController
             // Récupérer toutes les équipes de l'utilisateur (actives et inactives)
             $allTeams = $teamRepository->findUserHistory($user);
             
-            // Récupérer TOUTES les prises de l'utilisateur :
-            // 1. Toutes les prises où l'utilisateur est "caughtBy" (même s'il n'est plus membre de l'équipe)
-            // 2. OU toutes les prises des équipes où l'utilisateur était membre
-            $teamIds = array_map(function($team) {
-                return $team->getId();
-            }, $allTeams);
-            
+            // Récupérer uniquement les prises personnelles (où l'utilisateur est "caughtBy")
             $qb = $catchRepository->createQueryBuilder('c')
                 ->join('c.team', 't')
                 ->leftJoin('c.species', 's')
                 ->leftJoin('c.caughtBy', 'u')
-                ->leftJoin('c.competition', 'comp'); // Utiliser la relation directe avec competition
-            
-            // Construire la condition : caughtBy = user OU team IN (teams de l'utilisateur)
-            $conditions = ['c.caughtBy = :user'];
-            $parameters = ['user' => $user];
-            
-            if (!empty($teamIds)) {
-                $conditions[] = 't.id IN (:teamIds)';
-                $parameters['teamIds'] = $teamIds;
-            }
-            
-            $qb->where(implode(' OR ', $conditions));
-            foreach ($parameters as $key => $value) {
-                $qb->setParameter($key, $value);
-            }
+                ->leftJoin('c.competition', 'comp')
+                ->where('c.caughtBy = :user')
+                ->setParameter('user', $user);
             
             // Récupérer toutes les prises pour les statistiques (sans pagination)
             $allCatches = $qb->orderBy('c.createdAt', 'DESC')

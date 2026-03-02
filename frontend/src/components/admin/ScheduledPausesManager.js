@@ -174,8 +174,9 @@ function PauseModal({ pause, onClose, onSubmit, isSubmitting }) {
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "";
-    const date = new Date(dateString + "Z");
-    // Convertir en format local pour input datetime-local
+    // Le backend envoie les dates en heure Europe/Paris au format 'Y-m-d H:i:s' (sans Z)
+    const dateStr = dateString.replace(" ", "T");
+    const date = new Date(dateStr);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
