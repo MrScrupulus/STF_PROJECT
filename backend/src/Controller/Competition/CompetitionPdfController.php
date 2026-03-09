@@ -6,6 +6,7 @@ use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\TeamRepository;
 use App\Repository\Competition\FishCatchRepository;
 use App\Service\CompetitionSnapshotService;
+use App\Service\PdfChartImageService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,6 +18,7 @@ class CompetitionPdfController extends AbstractController
 {
     public function __construct(
         private Environment $twig,
+        private PdfChartImageService $chartImageService,
     ) {
     }
     #[Route('/{id}/pdf', name: 'app_admin_competition_pdf', methods: ['GET'])]
@@ -103,6 +105,7 @@ class CompetitionPdfController extends AbstractController
 
             if (!isset($speciesStats[$speciesId])) {
                 $speciesStats[$speciesId] = [
+                    'id' => $speciesId,
                     'name' => $speciesName,
                     'count' => 0,
                 ];
@@ -134,14 +137,78 @@ class CompetitionPdfController extends AbstractController
         }
         unset($catchesForSpecies); // Important pour éviter les références
 
-        // Générer le HTML avec Twig
+        // Données pour le camembert et la chronologie
+        $speciesStatsList = array_values($speciesStats);
+        $speciesColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#a78bfa', '#34d399'];
+
+        // Préparer les données du graphique chronologique (prises par heure depuis le début)
+        $startDate = $competition->getStartDate();
+        $endDate = $competition->getEndDate();
+        $speciesIdToIndex = array_flip(array_column($speciesStatsList, 'id'));
+        $timelinePoints = [];
+        $totalHours = 24.0;
+
+        if ($startDate && $endDate) {
+            $totalHours = max(1, ($endDate->getTimestamp() - $startDate->getTimestamp()) / 3600);
+        }
+
+        // Intervalle de référence : dates compétition ou min/max des prises
+        $minTs = null;
+        $maxTs = null;
+        foreach ($catches as $catch) {
+            $createdAt = $catch->getCreatedAt();
+            if (!$createdAt) continue;
+            $ts = $createdAt->getTimestamp();
+            if ($minTs === null || $ts < $minTs) $minTs = $ts;
+            if ($maxTs === null || $ts > $maxTs) $maxTs = $ts;
+        }
+        if ($minTs !== null && $maxTs !== null && $maxTs > $minTs && (!$startDate || !$endDate)) {
+            $totalHours = max(1, ($maxTs - $minTs) / 3600);
+        }
+        $refTs = $startDate ? $startDate->getTimestamp() : $minTs;
+
+        foreach ($catches as $catch) {
+            $createdAt = $catch->getCreatedAt();
+            if (!$createdAt || $refTs === null) continue;
+            $ts = $createdAt->getTimestamp();
+            $hoursFromStart = ($ts - $refTs) / 3600;
+            if ($hoursFromStart < 0) $hoursFromStart = 0;
+            if ($hoursFromStart > $totalHours) $hoursFromStart = $totalHours;
+
+            $speciesId = $catch->getSpecies()->getId();
+            $speciesIdx = $speciesIdToIndex[$speciesId] ?? 0;
+            $colorIdx = isset($speciesIdToIndex[$speciesId]) ? $speciesIdToIndex[$speciesId] : 0;
+            $timelinePoints[] = [
+                'x' => $hoursFromStart,
+                'y' => $speciesIdx,
+                'speciesName' => $catch->getSpecies()->getName(),
+                'size' => $catch->getSize(),
+                'color' => $speciesColors[$colorIdx % count($speciesColors)],
+            ];
+        }
+
+        $pieChartBase64 = $this->chartImageService->generatePieChartBase64($speciesStatsList);
+        $scatterChartBase64 = $this->chartImageService->generateScatterChartBase64(
+            $timelinePoints,
+            $totalHours,
+            max(1, count($speciesStatsList)),
+            $startDate
+        );
+
         $html = $this->twig->render('pdf/competition_ranking.html.twig', [
             'competition' => $competition,
             'teams' => $teams,
-            'speciesStats' => $speciesStats, // Garder le tableau associatif pour l'accès par ID
-            'speciesStatsList' => array_values($speciesStats), // Pour l'affichage de la liste
+            'speciesStats' => $speciesStats,
+            'speciesStatsList' => $speciesStatsList,
+            'speciesColors' => $speciesColors,
             'top3BySpecies' => $top3BySpecies,
             'totalCatches' => count($catches),
+            'timelinePoints' => $timelinePoints,
+            'totalHours' => $totalHours,
+            'uniqueSpeciesCount' => max(1, count($speciesStatsList)),
+            'totalPie' => array_sum(array_column($speciesStatsList, 'count')),
+            'pieChartBase64' => $pieChartBase64,
+            'scatterChartBase64' => $scatterChartBase64,
         ]);
 
         // Configuration DomPDF - Utilisation directe sans Options pour éviter les problèmes d'autoloader

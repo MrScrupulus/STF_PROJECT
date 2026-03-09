@@ -80,10 +80,10 @@
     <h1>{{ competition.name }}</h1>
     
     <div class="info">
-        <strong>Date de début:</strong> {{ competition.startDate|date('d/m/Y H:i') }}<br>
-        <strong>Date de fin:</strong> {{ competition.endDate|date('d/m/Y H:i') }}<br>
-        <strong>Statut:</strong> {% if competition.endDate < date() %}Terminée{% else %}En cours{% endif %}<br>
-        <strong>Total de poissons pêchés:</strong> {{ totalCatches }}
+        <strong>Date de début:</strong> {{ competition.startDate ? competition.startDate|date('d/m/Y H:i') : '-' }}<br>
+        <strong>Date de fin:</strong> {{ competition.endDate ? competition.endDate|date('d/m/Y H:i') : '-' }}<br>
+        <strong>Statut:</strong> {% if competition.endDate and competition.endDate < date() %}Terminée{% else %}En cours{% endif %}<br>
+        <strong>Total de poissons pêchés:</strong> {{ totalCatches|default(0) }}
     </div>
 
     <h2>Classement des équipes</h2>
@@ -114,7 +114,7 @@
         </tbody>
     </table>
 
-    <h2>Répartition par espèce</h2>
+    <h2>Répartition par espèce (détail)</h2>
     <table>
         <thead>
             <tr>
@@ -131,6 +131,41 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <h2>Statistiques des prises</h2>
+    <div style="page-break-inside: avoid;">
+    {% if pieChartBase64 %}
+    <h3 style="font-size: 12pt; margin-top: 15px; margin-bottom: 10px;">Répartition des espèces capturées (camembert)</h3>
+    <div style="margin-bottom: 15px; text-align: center;">
+        <img src="data:image/png;base64,{{ pieChartBase64 }}" alt="Camembert" style="max-width: 220px; height: auto;" />
+    </div>
+    {% set totalLegend = totalPie|default(0) %}
+    <table style="width: auto; margin: 0 auto 20px;">
+        <tbody>
+            {% for stat in speciesStatsList %}
+            <tr>
+                <td style="padding: 4px 12px 4px 0;"><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: {{ speciesColors[loop.index0 % speciesColors|length] }};"></span></td>
+                <td style="padding: 4px;">{{ stat.name }}: {{ stat.count }} ({{ totalLegend > 0 ? ((stat.count / totalLegend) * 100)|number_format(1) : 0 }}%)</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if scatterChartBase64 %}
+    <h3 style="font-size: 12pt; margin-top: 15px; margin-bottom: 10px;">Chronologie des prises</h3>
+    <div style="margin-bottom: 20px; text-align: center;">
+        <img src="data:image/png;base64,{{ scatterChartBase64 }}" alt="Chronologie" style="max-width: 600px; width: 100%; height: auto;" />
+    </div>
+    {% if speciesStatsList is not empty %}
+    <div style="text-align: center; font-size: 9pt; color: #666;">
+        {% for stat in speciesStatsList %}
+        <span style="display: inline-block; margin: 0 8px;"><span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ speciesColors[loop.index0 % speciesColors|length] }}; vertical-align: middle; margin-right: 4px;"></span>{{ stat.name }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+    </div>
 
     <h2>Top 3 des plus grands poissons par espèce</h2>
     {% for speciesId, top3 in top3BySpecies %}

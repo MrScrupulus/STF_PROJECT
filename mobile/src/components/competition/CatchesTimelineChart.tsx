@@ -104,9 +104,17 @@ export default function CatchesTimelineChart({
   }
 
   const startHour = start.getHours() + start.getMinutes() / 60;
-
-  const numTicks = totalHours <= 12 ? Math.ceil(totalHours) + 1 : 7;
-  const tickPositions = Array.from({ length: numTicks }, (_, i) => i / (numTicks - 1 || 1));
+  const tickStep = totalHours > 18 ? 2 : 1;
+  const xTicks = useMemo(() => {
+    const ticks: number[] = [];
+    for (let h = 0; h <= totalHours; h += tickStep) {
+      ticks.push(h);
+    }
+    if (ticks[ticks.length - 1] < totalHours - 0.01) {
+      ticks.push(totalHours);
+    }
+    return ticks;
+  }, [totalHours, tickStep]);
 
   return (
     <View style={styles.container}>
@@ -114,15 +122,10 @@ export default function CatchesTimelineChart({
       <View style={styles.chartWrapper}>
         <View style={[styles.chartArea, { width: CHART_WIDTH, height: CHART_HEIGHT }]}>
           {/* Lignes verticales de graduation (heures) */}
-          {tickPositions.map((ratio, i) => (
-            <View
-              key={`vl-${i}`}
-              style={[
-                styles.gridLine,
-                { left: 12 + ratio * (CHART_WIDTH - 24) },
-              ]}
-            />
-          ))}
+          {xTicks.map((hoursFromStart, i) => {
+            const pos = Math.min(hoursFromStart / totalHours, 1) * (CHART_WIDTH - 24) + 12;
+            return <View key={`vl-${i}`} style={[styles.gridLine, { left: pos }]} />;
+          })}
           {points.map((p, i) => (
             <View
               key={i}
@@ -140,17 +143,26 @@ export default function CatchesTimelineChart({
             />
           ))}
         </View>
-        <View style={[styles.xLabels, { width: CHART_WIDTH }]}>
-          {tickPositions.map((ratio, i) => {
-            const hrs = startHour + ratio * totalHours;
+        <View style={[styles.xLabels, { width: CHART_WIDTH, position: 'relative' }]}>
+          {xTicks.map((hoursFromStart, i) => {
             const label =
               totalHours <= 24
-                ? `${Math.floor(hrs) % 24}h`
-                : ratio === 0
+                ? `${Math.floor(startHour + hoursFromStart) % 24}h`
+                : hoursFromStart === 0
                   ? '0h'
-                  : `+${Math.floor(ratio * totalHours)}h`;
+                  : `+${hoursFromStart}h`;
+            const prevLabel =
+              i > 0
+                ? totalHours <= 24
+                  ? `${Math.floor(startHour + xTicks[i - 1]) % 24}h`
+                  : xTicks[i - 1] === 0
+                    ? '0h'
+                    : `+${xTicks[i - 1]}h`
+                : null;
+            if (prevLabel === label) return null;
+            const left = Math.min(hoursFromStart / totalHours, 1) * (CHART_WIDTH - 24) + 12;
             return (
-              <Text key={`h-${i}`} style={styles.xLabel}>
+              <Text key={`h-${i}`} style={[styles.xLabel, { position: 'absolute', left: left - 8 }]}>
                 {label}
               </Text>
             );
@@ -208,9 +220,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.8)',
   },
   xLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: CHART_WIDTH,
+    height: 24,
     marginTop: 8,
   },
   xLabel: {
