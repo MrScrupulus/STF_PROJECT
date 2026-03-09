@@ -152,13 +152,11 @@ function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <>
-            {/* MainTabs accessible même sans authentification pour HomeScreen */}
-            <Stack.Screen 
-              name="MainTabs" 
-              component={MainTabs}
+            {/* Connexion obligatoire : Login en premier, pas d'accès au contenu */}
+            <Stack.Screen
+              name="Login"
               options={{ headerShown: false }}
-            />
-            <Stack.Screen name="Login">
+            >
               {(props) => <LoginScreen {...props} onLogin={() => setIsAuthenticated(true)} />}
             </Stack.Screen>
             <Stack.Screen name="Register" component={RegisterScreen} />

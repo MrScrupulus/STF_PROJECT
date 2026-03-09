@@ -22,8 +22,8 @@ export const authService = {
           console.log("🎯 Redirection: /dashboard (ADMIN)");
           window.location.href = "/dashboard";
         } else {
-          console.log("🎯 Redirection: / (USER)");
-          window.location.href = "/";
+          console.log("🎯 Redirection: /competitions (USER)");
+          window.location.href = "/competitions";
         }
         console.groupEnd();
         return true;
@@ -47,39 +47,19 @@ export const authService = {
 
   register: async (userData) => {
     try {
-      console.group("�� Inscription utilisateur");
-      console.log("📤 Données envoyées brutes:", {
+      console.group("📝 Inscription utilisateur");
+      console.log("📤 Données envoyées:", {
         ...userData,
-        birth_date: userData.birth_date, // Afficher la date brute
         password: "********",
       });
 
-      // Debug de la transformation de la date
-      let formattedDate = null;
-      if (userData.birth_date) {
-        console.log("🗓️ Données date:", {
-          reçu: userData.birth_date,
-          type: typeof userData.birth_date,
-        });
-        const dateObj = new Date(userData.birth_date);
-        formattedDate = dateObj.toISOString().split("T")[0];
-        console.log("🗓️ Transformation date:", {
-          original: userData.birth_date,
-          dateObj: dateObj,
-          formatted: formattedDate,
-          valide: !isNaN(dateObj.getTime()),
-        });
-      }
-
       const transformedData = {
+        username: userData.username,
         firstname: userData.firstName,
         lastname: userData.lastName,
         email: userData.email,
         password: userData.password,
-        phone_number: userData.phone_number,
-        birthdate: formattedDate,
-        country: userData.country,
-        subscriber_number: userData.subscriber_number,
+        ...(userData.phone_number && { phone_number: userData.phone_number }),
       };
 
       console.log("🔄 Données transformées:", {
@@ -188,11 +168,6 @@ export const authService = {
         lastname: userData.lastName,
         email: userData.email,
         phone_number: userData.phone_number,
-        birthdate: userData.birth_date
-          ? new Date(userData.birth_date).toISOString().split("T")[0]
-          : null,
-        country: userData.country,
-        subscriber_number: userData.subscriber_number,
       };
 
       const response = await api.post("/api/auth/profile", transformedData);
@@ -232,7 +207,7 @@ export const authService = {
       localStorage.removeItem("token");
       toast.success("Votre compte a été supprimé avec succès");
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = "/login";
       }, 2000);
       return response;
     } catch (error) {

@@ -30,14 +30,12 @@ class JWTController extends AbstractController
             'success' => true,
             'user' => [
                 'id' => $user->getId(),
+                'username' => $user->getUsername(),
                 'email' => $user->getEmail(),
                 'roles' => $user->getRoles(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
                 'phone_number' => $user->getPhoneNumber(),
-                'country' => $user->getCountry(),
-                'subscriber_number' => $user->getSubscriberNumber(),
-                'birth_date' => $user->getBirthDate()?->format('Y-m-d'),
                 'team' => $team ? [
                     'id' => $team->getId(),
                     'name' => $team->getName(),

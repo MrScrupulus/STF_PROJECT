@@ -4,17 +4,15 @@ import { API_ENDPOINTS } from '../config/api';
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^[0-9]{10}$/;
+const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
 
 export interface RegisterData {
+  username: string;
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-  phoneNumber: string;
-  birthDate: string;
-  country?: string;
-  subscriber_number?: string;
+  phoneNumber?: string;
 }
 
 export interface LoginCredentials {
@@ -24,44 +22,27 @@ export interface LoginCredentials {
 
 export const authService = {
   async register(userData: RegisterData) {
-    // Validation côté client
+    if (!USERNAME_REGEX.test(userData.username)) {
+      throw new Error("Le pseudo doit contenir entre 3 et 30 caractères (lettres, chiffres, tirets, underscores)");
+    }
     if (!EMAIL_REGEX.test(userData.email)) {
       throw new Error("Format d'email invalide");
     }
-
     if (!PASSWORD_REGEX.test(userData.password)) {
       throw new Error(
         "Le mot de passe doit contenir au moins une lettre, un chiffre et un caractère spécial"
       );
     }
 
-    // Validation du téléphone seulement s'il est fourni
-    if (userData.phoneNumber && userData.phoneNumber.trim() !== '') {
-      if (!PHONE_REGEX.test(userData.phoneNumber)) {
-        throw new Error("Le numéro de téléphone doit contenir 10 chiffres");
-      }
-    }
-
-    // Formatage des données pour l'API (ne pas envoyer les champs vides)
-    const formattedData: any = {
+    const formattedData: Record<string, string> = {
+      username: userData.username.trim(),
       email: userData.email,
       password: userData.password,
       firstname: userData.firstName,
       lastname: userData.lastName,
     };
-
-    // Ajouter les champs optionnels seulement s'ils sont remplis
     if (userData.phoneNumber && userData.phoneNumber.trim() !== '') {
-      formattedData.phone_number = userData.phoneNumber.replace(/\D/g, '');
-    }
-    if (userData.birthDate && userData.birthDate.trim() !== '') {
-      formattedData.birthdate = userData.birthDate;
-    }
-    if (userData.country && userData.country.trim() !== '') {
-      formattedData.country = userData.country;
-    }
-    if (userData.subscriber_number && userData.subscriber_number.trim() !== '') {
-      formattedData.subscriber_number = userData.subscriber_number;
+      formattedData.phone_number = userData.phoneNumber.trim();
     }
 
     const response = await apiClient.post(API_ENDPOINTS.auth.register, formattedData);
@@ -149,9 +130,6 @@ export const authService = {
     firstname?: string;
     lastname?: string;
     phone_number?: string | null;
-    birthdate?: string | null;
-    country?: string | null;
-    subscriber_number?: string | null;
   }): Promise<any> {
     const response = await apiClient.post(API_ENDPOINTS.auth.updateProfile, profileData);
     return response.data;

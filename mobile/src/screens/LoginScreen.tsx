@@ -22,13 +22,6 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleBackToHome = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs', params: { screen: 'Home' } }] as any,
-    });
-  };
-
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
@@ -73,15 +66,9 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
 
   return (
     <>
-      {/* Header avec flèche retour vers l'accueil */}
       <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackToHome}
-          >
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
+          <View style={styles.headerPlaceholder} />
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Connexion</Text>
           </View>

@@ -74,21 +74,39 @@ final class AuthController extends AbstractController
                 ], 400);
             }
 
-            // Validation des données requises (seuls email, password, firstname, lastname sont obligatoires)
+            // Champs requis : pseudo, firstname, lastname, email, password
             $requiredFields = [
-                'email',
-                'password',
-                'firstname',
-                'lastname',
+                'username' => 'Pseudo',
+                'email' => 'Email',
+                'password' => 'Mot de passe',
+                'firstname' => 'Prénom',
+                'lastname' => 'Nom',
             ];
 
-            foreach ($requiredFields as $field) {
-                if (!isset($data[$field]) || empty($data[$field])) {
+            foreach ($requiredFields as $field => $label) {
+                if (!isset($data[$field]) || trim((string) $data[$field]) === '') {
                     return $this->json([
                         'success' => false,
-                        'message' => sprintf('Le champ %s est requis', $field),
+                        'message' => sprintf('Le champ %s est requis', $label),
                     ], 400);
                 }
+            }
+
+            // Validation du pseudo (alphanumérique, tirets, underscores, 3-30 caractères)
+            $username = trim($data['username']);
+            if (!preg_match('/^[a-zA-Z0-9_-]{3,30}$/', $username)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le pseudo doit contenir entre 3 et 30 caractères (lettres, chiffres, tirets, underscores)',
+                ], 400);
+            }
+
+            $existingUsername = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+            if ($existingUsername) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Ce pseudo est déjà utilisé',
+                ], 400);
             }
 
             // Validation du format de l'email
@@ -107,21 +125,6 @@ final class AuthController extends AbstractController
                 ], 400);
             }
 
-            // Validation du format de la date si fournie
-            $birthDate = null;
-            if (isset($data['birthdate']) && !empty($data['birthdate'])) {
-                try {
-                    $birthDate = new \DateTime($data['birthdate']);
-                    $this->logger->info('Date convertie:', ['date' => $birthDate->format('Y-m-d')]);
-                } catch (\Exception $e) {
-                    $this->logger->error('Erreur conversion date:', ['error' => $e->getMessage()]);
-                    return $this->json([
-                        'success' => false,
-                        'message' => 'Format de date invalide. Utilisez le format YYYY-MM-DD',
-                    ], 400);
-                }
-            }
-
             $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $data['email']]);
             if ($existingUser) {
                 return $this->json([
@@ -131,15 +134,15 @@ final class AuthController extends AbstractController
             }
 
             $user = new User();
+            $user->setUsername($username);
             $user->setEmail($data['email']);
             $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
             $user->setPassword($hashedPassword);
             $user->setFirstname($data['firstname']);
             $user->setLastname($data['lastname']);
-            $user->setPhoneNumber(!empty($data['phone_number']) ? $data['phone_number'] : null);
-            $user->setCountry(!empty($data['country']) ? $data['country'] : null);
-            $user->setBirthDate($birthDate);
-            $user->setSubscriberNumber(!empty($data['subscriber_number']) ? $data['subscriber_number'] : null);
+            // Téléphone optionnel : format complet avec indicatif (ex: +33612345678)
+            $phone = isset($data['phone_number']) ? trim((string) $data['phone_number']) : null;
+            $user->setPhoneNumber($phone !== '' ? $phone : null);
             $verificationToken = bin2hex(random_bytes(32));
             error_log("Longueur du token généré: " . strlen($verificationToken));
             error_log("Token généré lors de l'inscription: " . $verificationToken);
@@ -261,12 +264,10 @@ final class AuthController extends AbstractController
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
                 'roles' => $user->getRoles(),
+                'username' => $user->getUsername(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
                 'phone_number' => $user->getPhoneNumber() ?? null,
-                'birth_date' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
-                'country' => $user->getCountry() ?? null,
-                'subscriber_number' => $user->getSubscriberNumber() ?? null,
             ]
         ]);
     }

@@ -25,9 +25,6 @@ class UserAnonymizerService
         $user->setEmail(sprintf('deleted_%d_@anonymized.local', $userId));
         $user->setPassword(password_hash(bin2hex(random_bytes(16)), \PASSWORD_BCRYPT));
         $user->setPhoneNumber(null);
-        $user->setBirthDate(null);
-        $user->setCountry(null);
-        $user->setSubscriberNumber(null);
         $user->setVerificationToken(null);
         $user->setIsVerified(false);
         $user->setIsDeleted(true);

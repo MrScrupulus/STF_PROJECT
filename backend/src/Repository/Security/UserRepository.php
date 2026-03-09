@@ -28,10 +28,10 @@ class UserRepository extends ServiceEntityRepository
     }
 
     /**
-     * Trouve un utilisateur par email ou numéro d'abonné pour l'authentification.
+     * Trouve un utilisateur par email ou pseudo pour l'authentification.
      * Ne retourne pas les comptes supprimés (anonymisés).
      */
-    public function findByEmailOrSubscriberNumber(string $identifier): ?User
+    public function findByEmailOrUsername(string $identifier): ?User
     {
         $qb = $this->createQueryBuilder('u')
             ->andWhere('u.isDeleted = :false')
@@ -39,7 +39,7 @@ class UserRepository extends ServiceEntityRepository
 
         $qb->andWhere($qb->expr()->orX(
             'u.email = :identifier',
-            'u.subscriber_number = :identifier'
+            'u.username = :identifier'
         ))->setParameter('identifier', $identifier);
 
         return $qb->getQuery()->getOneOrNullResult();

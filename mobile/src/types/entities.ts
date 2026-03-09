@@ -37,7 +37,5 @@ export interface User {
   firstname?: string;
   lastname?: string;
   phoneNumber?: string;
-  country?: string;
-  subscriberNumber?: string;
 }
 

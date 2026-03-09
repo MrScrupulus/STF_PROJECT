@@ -14,9 +14,6 @@ export default function EditAccountPage() {
     lastName: "",
     email: "",
     phone_number: "",
-    birth_date: "",
-    country: "",
-    subscriber_number: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,9 +37,6 @@ export default function EditAccountPage() {
             lastName: response.user.lastname || "",
             email: response.user.email || "",
             phone_number: response.user.phone_number || "",
-            birth_date: response.user.birth_date || "",
-            country: response.user.country || "",
-            subscriber_number: response.user.subscriber_number || "",
           });
         }
       } catch (error) {
@@ -176,42 +170,6 @@ export default function EditAccountPage() {
               value={formData.phone_number}
               onChange={(e) =>
                 setFormData({ ...formData, phone_number: e.target.value })
-              }
-              className={styles.edit__input}
-            />
-          </div>
-
-          <div className={styles.edit__group}>
-            <label className={styles.edit__label}>Date de naissance</label>
-            <input
-              type="date"
-              value={formData.birth_date}
-              onChange={(e) =>
-                setFormData({ ...formData, birth_date: e.target.value })
-              }
-              className={styles.edit__input}
-            />
-          </div>
-
-          <div className={styles.edit__group}>
-            <label className={styles.edit__label}>Pays</label>
-            <input
-              type="text"
-              value={formData.country}
-              onChange={(e) =>
-                setFormData({ ...formData, country: e.target.value })
-              }
-              className={styles.edit__input}
-            />
-          </div>
-
-          <div className={styles.edit__group}>
-            <label className={styles.edit__label}>Numéro de licence</label>
-            <input
-              type="text"
-              value={formData.subscriber_number}
-              onChange={(e) =>
-                setFormData({ ...formData, subscriber_number: e.target.value })
               }
               className={styles.edit__input}
             />

@@ -9,32 +9,39 @@ import Modal from "../../components/ui/Modal";
 import classNames from "classnames";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
 
-const PHONE_REGEX = /^[0-9]{10}$/;
-
 export default function RegisterPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState({
+    username: "",
     firstName: "",
     lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
     phone_number: "",
-    birth_date: "",
-    country: "",
-    subscriber_number: "",
   });
+  const [phoneCountryCode, setPhoneCountryCode] = useState("+33");
   const [showPassword, setShowPassword] = useState({
     password: false,
     confirm: false,
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [success, setSuccess] = useState(false);
-  const [message, setMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const COUNTRY_CODES = [
+    { code: "+33", label: "FR" },
+    { code: "+32", label: "BE" },
+    { code: "+41", label: "CH" },
+    { code: "+49", label: "DE" },
+    { code: "+39", label: "IT" },
+    { code: "+34", label: "ES" },
+    { code: "+44", label: "UK" },
+    { code: "+212", label: "MA" },
+    { code: "+213", label: "DZ" },
+    { code: "+216", label: "TN" },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -48,52 +55,9 @@ export default function RegisterPage() {
     }
   };
 
-  // Nettoyage du localStorage au montage du composant
   useEffect(() => {
     localStorage.removeItem("token");
   }, []);
-
-  const validateField = (name, value) => {
-    switch (name) {
-      case "phone_number":
-        return PHONE_REGEX.test(value)
-          ? ""
-          : "Le numéro doit contenir 10 chiffres";
-      case "email":
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Email invalide";
-      case "confirmPassword":
-        return value === formData.password
-          ? ""
-          : "Les mots de passe ne correspondent pas";
-      default:
-        return "";
-    }
-  };
-
-  const validatePassword = (password) => {
-    const minLength = password.length >= 8;
-    const hasLetter = /[a-zA-Z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    if (!password) {
-      setPasswordStatus({
-        isValid: false,
-        message:
-          "Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial",
-      });
-      return false;
-    }
-
-    const isValid = minLength && hasLetter && hasNumber && hasSpecial;
-    setPasswordStatus({
-      isValid,
-      message: isValid
-        ? "Mot de passe validé"
-        : "Minimum 8 caractères avec au moins 1 lettre, 1 chiffre et 1 caractère spécial",
-    });
-    return isValid;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,87 +71,34 @@ export default function RegisterPage() {
     }
 
     try {
-      await authService.register(formData);
+      const dataToSend = {
+        username: formData.username.trim(),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+      };
+      if (formData.phone_number.trim()) {
+        dataToSend.phone_number = phoneCountryCode + formData.phone_number.replace(/\D/g, "");
+      }
+      await authService.register(dataToSend);
       setShowSuccessModal(true);
-    } catch (error) {
+    } catch (err) {
       setError(
-        error.message || "Une erreur est survenue lors de l'inscription"
+        err.response?.data?.message ||
+          err.message ||
+          "Une erreur est survenue lors de l'inscription"
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Ajout de l'effet pour le scroll
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        window.scrollTo({
-          top: document.documentElement.scrollHeight,
-          behavior: "smooth",
-        });
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (name === "password") {
-      validatePassword(value);
-    }
-
-    const error = validateField(name, value);
-    setFieldErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
-
-    // Vérifier aussi confirmPassword si on modifie password
-    if (name === "password") {
-      const confirmError = validateField(
-        "confirmPassword",
-        formData.confirmPassword
-      );
-      setFieldErrors((prev) => ({
-        ...prev,
-        confirmPassword: confirmError,
-      }));
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-      phone_number: "",
-      birth_date: "",
-      country: "",
-      subscriber_number: "",
-    });
-    setError("");
-  };
-
   const togglePasswordVisibility = (field) => {
-    if (field === "password") {
-      setShowPassword({
-        ...showPassword,
-        password: !showPassword.password,
-      });
-    } else {
-      setShowPassword({
-        ...showPassword,
-        confirm: !showPassword.confirm,
-      });
-    }
+    setShowPassword((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
   };
 
   return (
@@ -205,7 +116,21 @@ export default function RegisterPage() {
         >
           <div className={styles.register__grid}>
             <div className={styles.register__group}>
-              <label className={styles.register__label}>Prénom</label>
+              <label className={styles.register__label}>Pseudo *</label>
+              <input
+                type="text"
+                value={formData.username}
+                onChange={(e) =>
+                  setFormData({ ...formData, username: e.target.value })
+                }
+                className={styles.register__input}
+                placeholder="3-30 caractères (lettres, chiffres, - _)"
+                required
+              />
+            </div>
+
+            <div className={styles.register__group}>
+              <label className={styles.register__label}>Prénom *</label>
               <input
                 type="text"
                 value={formData.firstName}
@@ -218,7 +143,7 @@ export default function RegisterPage() {
             </div>
 
             <div className={styles.register__group}>
-              <label className={styles.register__label}>Nom</label>
+              <label className={styles.register__label}>Nom *</label>
               <input
                 type="text"
                 value={formData.lastName}
@@ -233,7 +158,7 @@ export default function RegisterPage() {
             <div
               className={`${styles.register__group} ${styles["register__group--full"]}`}
             >
-              <label className={styles.register__label}>Email</label>
+              <label className={styles.register__label}>Email *</label>
               <input
                 type="email"
                 value={formData.email}
@@ -242,22 +167,13 @@ export default function RegisterPage() {
                 }
                 className={styles.register__input}
                 required
-                id="email"
-                aria-labelledby="email-label"
-                aria-required="true"
-                aria-invalid={fieldErrors.email ? "true" : "false"}
               />
-              {fieldErrors.email && (
-                <span role="alert" aria-live="polite" className={styles.error}>
-                  {fieldErrors.email}
-                </span>
-              )}
             </div>
 
             <div
               className={`${styles.register__group} ${styles["register__group--password"]}`}
             >
-              <label className={styles.register__label}>Mot de passe</label>
+              <label className={styles.register__label}>Mot de passe *</label>
               <div className={styles.register__password_container}>
                 <input
                   type={showPassword.password ? "text" : "password"}
@@ -280,7 +196,7 @@ export default function RegisterPage() {
 
             <div className={styles.register__group}>
               <label className={styles.register__label}>
-                Confirmer le mot de passe
+                Confirmer le mot de passe *
               </label>
               <div className={styles.register__password_container}>
                 <input
@@ -305,65 +221,34 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className={styles.register__group}>
-              <label className={styles.register__label}>Téléphone</label>
-              <input
-                type="tel"
-                value={formData.phone_number}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone_number: e.target.value })
-                }
-                className={styles.register__input}
-              />
-            </div>
-
-            <div className={styles.register__group}>
+            <div
+              className={`${styles.register__group} ${styles["register__group--full"]}`}
+            >
               <label className={styles.register__label}>
-                Date de naissance
+                Téléphone (optionnel)
               </label>
-              <input
-                type="date"
-                value={formData.birth_date}
-                onChange={(e) => {
-                  console.log("Date sélectionnée:", {
-                    rawValue: e.target.value,
-                    type: typeof e.target.value,
-                  });
-                  setFormData({ ...formData, birth_date: e.target.value });
-                }}
-                className={styles.register__input}
-                required
-              />
-            </div>
-
-            <div className={styles.register__group}>
-              <label className={styles.register__label}>Pays</label>
-              <input
-                type="text"
-                value={formData.country}
-                onChange={(e) =>
-                  setFormData({ ...formData, country: e.target.value })
-                }
-                className={styles.register__input}
-                required
-              />
-            </div>
-
-            <div className={styles.register__group}>
-              <label className={styles.register__label}>
-                Numéro d'adhérent
-              </label>
-              <input
-                type="text"
-                value={formData.subscriber_number}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    subscriber_number: e.target.value,
-                  })
-                }
-                className={styles.register__input}
-              />
+              <div className={styles.register__phone_row}>
+                <select
+                  value={phoneCountryCode}
+                  onChange={(e) => setPhoneCountryCode(e.target.value)}
+                  className={styles.register__country_select}
+                >
+                  {COUNTRY_CODES.map(({ code, label }) => (
+                    <option key={code} value={code}>
+                      {code} {label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  value={formData.phone_number}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone_number: e.target.value })
+                  }
+                  className={styles.register__input}
+                  placeholder="6 12 34 56 78"
+                />
+              </div>
             </div>
           </div>
 

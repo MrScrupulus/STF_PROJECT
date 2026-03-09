@@ -46,12 +46,6 @@ class UpdateController extends AbstractController
             if (isset($data['lastname'])) $user->setLastname($data['lastname']);
             if (isset($data['email'])) $user->setEmail($data['email']);
             if (isset($data['phone_number'])) $user->setPhoneNumber($data['phone_number']);
-            if (isset($data['birthdate'])) {
-                $birthdate = $data['birthdate'] ? new \DateTime($data['birthdate']) : null;
-                $user->setBirthDate($birthdate);
-            }
-            if (isset($data['country'])) $user->setCountry($data['country']);
-            if (isset($data['subscriber_number'])) $user->setSubscriberNumber($data['subscriber_number']);
 
             $this->entityManager->flush();
 
@@ -63,9 +57,6 @@ class UpdateController extends AbstractController
                     'lastname' => $user->getLastname(),
                     'email' => $user->getEmail(),
                     'phone_number' => $user->getPhoneNumber(),
-                    'birth_date' => $user->getBirthDate()?->format('Y-m-d'),
-                    'country' => $user->getCountry(),
-                    'subscriber_number' => $user->getSubscriberNumber()
                 ]
             ]);
         } catch (\Exception $e) {
@@ -105,10 +96,7 @@ class UpdateController extends AbstractController
                 'email' => $user->getEmail(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
-                'subscriberNumber' => $user->getSubscriberNumber(),
                 'phoneNumber' => $user->getPhoneNumber(),
-                'country' => $user->getCountry(),
-                'birthdate' => $user->getBirthDate()?->format('Y-m-d'),
                 'isVerified' => $user->isVerified(),
                 'roles' => $user->getRoles(),
             ]

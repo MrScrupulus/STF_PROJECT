@@ -9,8 +9,6 @@ class UpdateProfileRequest
     private ?string $email = null;
     private ?string $firstname = null;
     private ?string $lastname = null;
-    private ?string $subscriber_number = null;
-    private ?string $country = null;
     private ?string $phone_number = null;
 
     // Getters et Setters

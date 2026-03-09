@@ -29,13 +29,11 @@ class UserController extends AbstractController
         return $this->json([
             'user' => [
                 'id' => $user->getId(),
+                'username' => $user->getUsername(),
                 'email' => $user->getEmail(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
-                'subscriberNumber' => $user->getSubscriberNumber(),
                 'phoneNumber' => $user->getPhoneNumber(),
-                'country' => $user->getCountry(),
-                'birthdate' => $user->getBirthDate()?->format('Y-m-d'),
                 'isVerified' => $user->isVerified(),
                 'roles' => $user->getRoles(),
             ]

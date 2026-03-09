@@ -81,6 +81,12 @@ export default function ProfileScreen() {
         <View style={styles.content}>
 
         <View style={styles.infoSection}>
+          {user.username && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Pseudo:</Text>
+              <Text style={styles.infoValue}>{user.username}</Text>
+            </View>
+          )}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Nom:</Text>
             <Text style={styles.infoValue}>{user.lastname}</Text>
@@ -97,24 +103,6 @@ export default function ProfileScreen() {
             <Text style={styles.infoLabel}>Téléphone:</Text>
             <Text style={styles.infoValue}>
               {user.phone_number || 'Non renseigné'}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Date de naissance:</Text>
-            <Text style={styles.infoValue}>
-              {user.birth_date || 'Non renseigné'}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Pays:</Text>
-            <Text style={styles.infoValue}>
-              {user.country || 'Non renseigné'}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Numéro de licence:</Text>
-            <Text style={styles.infoValue}>
-              {user.subscriber_number || 'Non renseigné'}
             </Text>
           </View>
         </View>

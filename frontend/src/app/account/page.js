@@ -52,6 +52,11 @@ export default function AccountPage() {
           <h1 className={styles.account__title}>Mon Profil</h1>
           <div className={styles.account__content}>
             <div className={styles.account__info}>
+              {user.username && (
+                <p>
+                  <strong>Pseudo:</strong> {user.username}
+                </p>
+              )}
               <p>
                 <strong>Nom:</strong> {user.lastname}
               </p>
@@ -64,17 +69,6 @@ export default function AccountPage() {
               <p>
                 <strong>Téléphone:</strong>{" "}
                 {user.phone_number || "Non renseigné"}
-              </p>
-              <p>
-                <strong>Date de naissance:</strong>{" "}
-                {user.birth_date || "Non renseigné"}
-              </p>
-              <p>
-                <strong>Pays:</strong> {user.country || "Non renseigné"}
-              </p>
-              <p>
-                <strong>Numéro de licence:</strong>{" "}
-                {user.subscriber_number || "Non renseigné"}
               </p>
             </div>
             <div className={styles.account__actions}>

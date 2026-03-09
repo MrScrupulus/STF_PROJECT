@@ -28,15 +28,13 @@ class AdminController extends AbstractController
         $usersData = array_map(function ($user) {
             return [
                 'id' => $user->getId(),
+                'username' => $user->getUsername(),
                 'email' => $user->getEmail(),
                 'roles' => $user->getRoles(),
-                'subscriberNumber' => $user->getSubscriberNumber(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
-                'country' => $user->getCountry(),
                 'phoneNumber' => $user->getPhoneNumber(),
                 'isVerified' => $user->isVerified(),
-                'birthdate' => $user->getBirthDate() ? $user->getBirthDate()->format('Y-m-d') : null,
             ];
         }, $users);
 
@@ -68,9 +66,7 @@ class AdminController extends AbstractController
 
         if (isset($data['firstname'])) $user->setFirstname($data['firstname']);
         if (isset($data['lastname'])) $user->setLastname($data['lastname']);
-        if (isset($data['country'])) $user->setCountry($data['country']);
         if (isset($data['phoneNumber'])) $user->setPhoneNumber($data['phoneNumber']);
-        if (isset($data['subscriberNumber'])) $user->setSubscriberNumber($data['subscriberNumber']);
 
         $this->entityManager->flush();
 
@@ -78,12 +74,11 @@ class AdminController extends AbstractController
             'message' => 'Utilisateur mis à jour avec succès',
             'user' => [
                 'id' => $user->getId(),
+                'username' => $user->getUsername(),
                 'email' => $user->getEmail(),
                 'roles' => $user->getRoles(),
-                'subscriberNumber' => $user->getSubscriberNumber(),
                 'firstname' => $user->getFirstname(),
                 'lastname' => $user->getLastname(),
-                'country' => $user->getCountry(),
                 'phoneNumber' => $user->getPhoneNumber(),
                 'isVerified' => $user->isVerified(),
             ]

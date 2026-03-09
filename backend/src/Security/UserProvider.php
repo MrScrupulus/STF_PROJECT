@@ -14,7 +14,7 @@ class UserProvider implements UserProviderInterface
 
     public function loadUserByIdentifier(string $identifier): UserInterface
     {
-        $user = $this->userRepository->findByEmailOrSubscriberNumber($identifier);
+        $user = $this->userRepository->findByEmailOrUsername($identifier);
         if ($user === null) {
             throw new UserNotFoundException('Utilisateur introuvable ou compte supprimé.');
         }

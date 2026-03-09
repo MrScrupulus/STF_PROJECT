@@ -500,16 +500,8 @@ export default function Dashboard() {
       { label: "Prénom", value: user.firstname },
       { label: "Nom", value: user.lastname },
       { label: "Email", value: user.email },
-      { label: "N° Adhérent", value: user.subscriberNumber },
       { label: "Rôles", value: user.roles?.join(", ") },
       { label: "Téléphone", value: user.phoneNumber },
-      { label: "Pays", value: user.country },
-      {
-        label: "Date de naissance",
-        value: user.birthdate
-          ? new Date(user.birthdate).toLocaleDateString()
-          : "",
-      },
       { label: "Statut", value: user.isVerified ? "Vérifié" : "Non vérifié" },
     ];
 
