@@ -21,6 +21,8 @@ import { API_BASE_URL } from '../config/api';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
+import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
+import CatchesMapView from '../components/competition/CatchesMapView';
 
 export default function CompetitionDetailScreen({ route }: any) {
   const navigation = useNavigation();
@@ -34,6 +36,9 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [stats, setStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'species'>('info');
+  const [showAllRanking, setShowAllRanking] = useState(false);
+  const [showMoreStats, setShowMoreStats] = useState(false);
+  const [showTop3, setShowTop3] = useState(false);
 
   const { data: competitionResponse, isLoading } = useQuery({
     queryKey: ['competition', competitionId],
@@ -374,9 +379,20 @@ export default function CompetitionDetailScreen({ route }: any) {
   };
 
   const teamsToShow = competition.teams || [];
-  const sortedTeams = [...teamsToShow].sort((a: any, b: any) => 
+  const sortedTeams = [...teamsToShow].sort((a: any, b: any) =>
     (b.totalScore || 0) - (a.totalScore || 0)
   );
+  const userTeamIndex = currentUser
+    ? sortedTeams.findIndex((t: any) => t.members?.some((m: any) => m.id === currentUser.id))
+    : -1;
+  const displayedTeams = (() => {
+    if (showAllRanking) return sortedTeams.map((t: any, i: number) => ({ team: t, rank: i + 1 }));
+    const top5 = sortedTeams.slice(0, 5).map((t: any, i: number) => ({ team: t, rank: i + 1 }));
+    const userInTop5 = userTeamIndex >= 0 && userTeamIndex < 5;
+    if (userInTop5) return top5;
+    if (userTeamIndex >= 0) return [...top5, { team: sortedTeams[userTeamIndex], rank: userTeamIndex + 1 }];
+    return top5;
+  })();
 
   return (
     <>
@@ -778,21 +794,20 @@ export default function CompetitionDetailScreen({ route }: any) {
               </View>
             )}
 
-            {sortedTeams.map((team: any, index: number) => {
+            {displayedTeams.map(({ team, rank }: { team: any; rank: number }) => {
               const isUserTeam = currentUser && team.members?.some(
                 (member: any) => member.id === currentUser.id
               );
-              // Le score est visible si : classement public OU admin OU équipe de l'utilisateur
               const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
 
               return (
                 <TouchableOpacity
                   key={team.id}
-                  style={styles.teamRow}
+                  style={[styles.teamRow, isUserTeam && styles.teamRowUser]}
                   onPress={() => (navigation as any).navigate('TeamDetail', { id: team.id })}
                 >
                   {isEnded && competition.isRankingPublic && (
-                    <Text style={styles.teamRank}>#{index + 1}</Text>
+                    <Text style={styles.teamRank}>#{rank}</Text>
                   )}
                   <View style={styles.teamInfo}>
                     <Text style={styles.teamName}>{team.name}</Text>
@@ -811,6 +826,16 @@ export default function CompetitionDetailScreen({ route }: any) {
                 </TouchableOpacity>
               );
             })}
+            {sortedTeams.length > 5 && (
+              <TouchableOpacity
+                style={styles.showMoreRanking}
+                onPress={() => setShowAllRanking(!showAllRanking)}
+              >
+                <Text style={styles.showMoreRankingText}>
+                  {showAllRanking ? 'Afficher moins' : `Afficher plus (${sortedTeams.length} équipes)`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
           </View>
@@ -832,13 +857,51 @@ export default function CompetitionDetailScreen({ route }: any) {
                 {stats.speciesStats && stats.speciesStats.length > 0 && (
                   <View style={styles.speciesSection}>
                     <SpeciesPieChart speciesStats={stats.speciesStats} />
+
+                    {stats.catchesForMap && stats.catchesForMap.length > 0 && (
+                      <View style={styles.statsExpand}>
+                        <TouchableOpacity
+                          style={styles.showMoreStatsBtn}
+                          onPress={() => setShowMoreStats(!showMoreStats)}
+                        >
+                          <Text style={styles.showMoreStatsText}>
+                            {showMoreStats ? 'Masquer les statistiques avancées' : 'Afficher plus de statistiques'}
+                          </Text>
+                        </TouchableOpacity>
+                        {showMoreStats && (
+                          <View style={styles.statsExpanded}>
+                            <CatchesMapView
+                              catches={stats.catchesForMap}
+                              speciesStats={stats.speciesStats}
+                              height={280}
+                            />
+                            <CatchesTimelineChart
+                              catches={stats.catchesForMap}
+                              startDate={competition.startDate}
+                              endDate={competition.endDate}
+                              speciesStats={stats.speciesStats}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    )}
                   </View>
                 )}
 
                 {stats.top3BySpecies && Object.keys(stats.top3BySpecies).length > 0 && (
                   <View style={styles.top3Section}>
-                    <Text style={styles.subsectionTitle}>Top 3 par espèce</Text>
-                    {Object.entries(stats.top3BySpecies).map(([speciesId, top3]: [string, any]) => {
+                    <TouchableOpacity
+                      style={styles.showTop3Btn}
+                      onPress={() => setShowTop3(!showTop3)}
+                    >
+                      <Text style={styles.showTop3BtnText}>
+                        {showTop3 ? 'Masquer le top 3' : 'Afficher le top 3 par espèce'}
+                      </Text>
+                    </TouchableOpacity>
+                    {showTop3 && (
+                      <>
+                        <Text style={styles.subsectionTitle}>Top 3 par espèce</Text>
+                        {Object.entries(stats.top3BySpecies).map(([speciesId, top3]: [string, any]) => {
                       const speciesInfo = stats.speciesStats?.find(
                         (s: any) => s.id === parseInt(speciesId)
                       );
@@ -869,6 +932,8 @@ export default function CompetitionDetailScreen({ route }: any) {
                         </View>
                       );
                     })}
+                      </>
+                    )}
                   </View>
                 )}
               </>
@@ -1144,6 +1209,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
+  teamRowUser: {
+    backgroundColor: '#eff6ff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  showMoreRanking: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  showMoreRankingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
   teamRank: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1196,6 +1278,42 @@ const styles = StyleSheet.create({
   },
   speciesSection: {
     marginBottom: 16,
+  },
+  statsExpand: {
+    marginTop: 16,
+  },
+  showMoreStatsBtn: {
+    padding: 12,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  showMoreStatsText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1d4ed8',
+  },
+  statsExpanded: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  showTop3Btn: {
+    padding: 12,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+  },
+  showTop3BtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1d4ed8',
+    textAlign: 'center',
   },
   subsectionTitle: {
     fontSize: 18,

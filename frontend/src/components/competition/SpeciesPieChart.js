@@ -1,8 +1,7 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+import { SPECIES_COLORS } from '../../utils/speciesColors';
 
 export default function SpeciesPieChart({ speciesStats }) {
   if (!speciesStats || speciesStats.length === 0) {
@@ -66,7 +65,7 @@ export default function SpeciesPieChart({ speciesStats }) {
               dataKey="value"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-${index}`} fill={SPECIES_COLORS[index % SPECIES_COLORS.length]} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
@@ -99,7 +98,7 @@ export default function SpeciesPieChart({ speciesStats }) {
                   width: '20px',
                   height: '20px',
                   borderRadius: '50%',
-                  backgroundColor: COLORS[index % COLORS.length],
+                  backgroundColor: SPECIES_COLORS[index % SPECIES_COLORS.length],
                   marginRight: '12px',
                   flexShrink: 0,
                 }}

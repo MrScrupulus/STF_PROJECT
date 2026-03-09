@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import styles from '../../styles/components/competition/CatchesMap.module.scss';
+import { getSpeciesColor } from '../../utils/speciesColors';
 
 // Charger les composants Leaflet dynamiquement pour éviter les problèmes SSR
 const MapContainer = dynamic(
@@ -52,7 +53,7 @@ const MapCenter = dynamic(
   { ssr: false }
 );
 
-export default function CatchesMap({ catches, perimeters = [] }) {
+export default function CatchesMap({ catches, perimeters = [], speciesStats = [] }) {
   const [isClient, setIsClient] = useState(false);
   const [mapCenter, setMapCenter] = useState([50.6901, 3.1664]); // Roubaix par défaut
   const [mapZoom, setMapZoom] = useState(13);
@@ -187,31 +188,33 @@ export default function CatchesMap({ catches, perimeters = [] }) {
             );
           })}
           
-          {/* Afficher les marqueurs pour chaque prise */}
+          {/* Afficher les marqueurs pour chaque prise (couleur = espèce) */}
           {catchesWithLocation.map((catchItem) => {
             const lat = parseFloat(catchItem.latitude);
             const lng = parseFloat(catchItem.longitude);
-            
+            const speciesId = catchItem.species?.id;
+            const pinColor = getSpeciesColor(speciesId, speciesStats);
+
             // Valider les coordonnées
             if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
               return null;
             }
-            
-            // Créer une icône personnalisée
+
+            // Créer une icône personnalisée, petite pour voir toutes les prises (couleur = espèce)
             let icon = null;
             if (typeof window !== 'undefined') {
               const L = require('leaflet');
               icon = L.divIcon({
                 html: `<div style="
-                  background-color: #007AFF;
-                  width: 24px;
-                  height: 24px;
+                  background-color: ${pinColor};
+                  width: 14px;
+                  height: 14px;
                   border-radius: 50%;
-                  border: 2px solid white;
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                  border: 1.5px solid white;
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                 "></div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12],
+                iconSize: [14, 14],
+                iconAnchor: [7, 7],
                 className: 'custom-marker-icon',
               });
             }

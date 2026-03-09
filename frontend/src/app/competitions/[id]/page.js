@@ -11,6 +11,7 @@ import { speciesService } from "../../../services/speciesService";
 import ScheduledPausesManager from "../../../components/admin/ScheduledPausesManager";
 import SpeciesPieChart from "../../../components/competition/SpeciesPieChart";
 import CatchesMap from "../../../components/competition/CatchesMap";
+import CatchesTimelineChart from "../../../components/competition/CatchesTimelineChart";
 import styles from "../../../styles/pages/competitions.module.scss";
 import { toast } from "react-hot-toast";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
@@ -33,6 +34,9 @@ export default function CompetitionDetailPage() {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
+  const [showAllRanking, setShowAllRanking] = useState(false);
+  const [showMoreStats, setShowMoreStats] = useState(false);
+  const [showTop3, setShowTop3] = useState(false);
 
   const { data: competitionResponse, isLoading: competitionLoading, error: competitionError } = useQuery({
     queryKey: ["competition", id],
@@ -830,72 +834,94 @@ export default function CompetitionDetailPage() {
                 </thead>
                 <tbody>
                   {(() => {
-                    // Les équipes sont déjà filtrées et triées par le backend
-                    let teamsToShow = competition.teams || [];
-                    
-                    // Trier par score décroissant (au cas où le backend ne l'aurait pas fait)
-                    teamsToShow = [...teamsToShow].sort((a, b) => 
+                    const teamsToShow = [...(competition.teams || [])].sort((a, b) =>
                       (b.totalScore || 0) - (a.totalScore || 0)
                     );
-                    
-                    return teamsToShow.map((team, index) => {
-                      // Vérifier si cette équipe appartient à l'utilisateur connecté
-                      const isUserTeam = currentUser && team.members && team.members.some(member => member.id === currentUser.id);
-                      // Afficher le score si : classement public OU admin OU c'est l'équipe de l'utilisateur
-                      const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
-                      
-                      return (
-                        <tr 
-                          key={team.id} 
-                          className={styles.competitions__table_row}
-                          onClick={() => router.push(`/teams/${team.id}`)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {competition.isRankingPublic && (
-                            <td className={styles.competitions__table_rank}>
-                              <span className={styles.competitions__rank_badge}>
-                                #{index + 1}
-                              </span>
-                            </td>
-                          )}
-                          <td className={styles.competitions__table_name}>
-                            <strong>{team.name}</strong>
-                          </td>
-                          <td className={styles.competitions__table_number}>
-                            {team.registrationNumber || "-"}
-                          </td>
-                          <td className={styles.competitions__table_members}>
-                            {team.members && team.members.length > 0 ? (
-                              <div className={styles.competitions__members_list}>
-                                {team.members.map((member, idx) => (
-                                  <span key={member.id} className={styles.competitions__member_name}>
-                                    {member.firstname}
-                                    {idx < team.members.length - 1 && ", "}
+                    const userTeamIndex = currentUser
+                      ? teamsToShow.findIndex((t) => t.members?.some((m) => m.id === currentUser.id))
+                      : -1;
+
+                    let displayedEntries;
+                    if (showAllRanking) {
+                      displayedEntries = teamsToShow.map((team, i) => ({ team, rank: i + 1 }));
+                    } else {
+                      const top5 = teamsToShow.slice(0, 5).map((team, i) => ({ team, rank: i + 1 }));
+                      const userInTop5 = userTeamIndex >= 0 && userTeamIndex < 5;
+                      if (userInTop5) {
+                        displayedEntries = top5;
+                      } else if (userTeamIndex >= 0) {
+                        displayedEntries = [...top5, { team: teamsToShow[userTeamIndex], rank: userTeamIndex + 1 }];
+                      } else {
+                        displayedEntries = top5;
+                      }
+                    }
+
+                    return (
+                      <>
+                        {displayedEntries.map(({ team, rank }) => {
+                          const isUserTeam = currentUser && team.members?.some((m) => m.id === currentUser.id);
+                          const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
+                          return (
+                            <tr
+                              key={team.id}
+                              className={classNames(styles.competitions__table_row, isUserTeam && styles.competitions__table_row_user)}
+                              onClick={() => router.push(`/teams/${team.id}`)}
+                              style={{ cursor: "pointer" }}
+                            >
+                              {competition.isRankingPublic && (
+                                <td className={styles.competitions__table_rank}>
+                                  <span className={styles.competitions__rank_badge}>#{rank}</span>
+                                </td>
+                              )}
+                              <td className={styles.competitions__table_name}>
+                                <strong>{team.name}</strong>
+                              </td>
+                              <td className={styles.competitions__table_number}>
+                                {team.registrationNumber || "-"}
+                              </td>
+                              <td className={styles.competitions__table_members}>
+                                {team.members && team.members.length > 0 ? (
+                                  <div className={styles.competitions__members_list}>
+                                    {team.members.map((member, idx) => (
+                                      <span key={member.id} className={styles.competitions__member_name}>
+                                        {member.firstname}
+                                        {idx < team.members.length - 1 && ", "}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                              <td className={styles.competitions__table_score}>
+                                {showScore && team.totalScore !== null ? (
+                                  <span className={styles.competitions__score_value}>{team.totalScore || 0} pts</span>
+                                ) : (
+                                  <span className={styles.competitions__score_value} style={{ color: "#9ca3af", fontStyle: "italic" }}>
+                                    {isUserTeam ? "Calcul en cours..." : "-"}
                                   </span>
-                                ))}
-                              </div>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                          <td className={styles.competitions__table_score}>
-                            {showScore && team.totalScore !== null ? (
-                              <span className={styles.competitions__score_value}>
-                                {team.totalScore || 0} pts
-                              </span>
-                            ) : (
-                              <span className={styles.competitions__score_value} style={{ color: '#9ca3af', fontStyle: 'italic' }}>
-                                {isUserTeam ? "Calcul en cours..." : "-"}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    });
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    );
                   })()}
                 </tbody>
               </table>
             </div>
+            {competition.teams && competition.teams.length > 5 && (
+              <button
+                type="button"
+                className={styles.competitions__show_more_ranking}
+                onClick={() => setShowAllRanking(!showAllRanking)}
+              >
+                {showAllRanking
+                  ? "Afficher moins"
+                  : `Afficher plus (${competition.teams.length} équipes)`}
+              </button>
+            )}
           </div>
         )}
 
@@ -922,23 +948,54 @@ export default function CompetitionDetailPage() {
                     <div className={styles.competitions__chart_container}>
                       <SpeciesPieChart speciesStats={stats.speciesStats} />
                     </div>
+
+                    {/* Afficher plus de statistiques : carte + graphique chronologique */}
+                    {stats.catchesForMap && stats.catchesForMap.length > 0 && (
+                      <div className={styles.competitions__stats_expand}>
+                        <button
+                          type="button"
+                          className={styles.competitions__show_more_stats}
+                          onClick={() => setShowMoreStats(!showMoreStats)}
+                        >
+                          {showMoreStats ? "Masquer les statistiques avancées" : "Afficher plus de statistiques"}
+                        </button>
+                        {showMoreStats && (
+                          <div className={styles.competitions__stats_expanded}>
+                            <div className={styles.competitions__map_section}>
+                              <CatchesMap
+                                catches={stats.catchesForMap}
+                                perimeters={competition.perimeters || []}
+                                speciesStats={stats.speciesStats || []}
+                              />
+                            </div>
+                            <div className={styles.competitions__timeline_section}>
+                              <CatchesTimelineChart
+                                catches={stats.catchesForMap}
+                                startDate={competition.startDate}
+                                endDate={competition.endDate}
+                                speciesStats={stats.speciesStats || []}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Carte interactive des prises */}
-                {stats.catchesForMap && stats.catchesForMap.length > 0 && (
-                  <div className={styles.competitions__map_section}>
-                    <CatchesMap 
-                      catches={stats.catchesForMap} 
-                      perimeters={competition.perimeters || []}
-                    />
-                  </div>
-                )}
-
-                {/* Top 3 par espèce */}
+                {/* Top 3 par espèce - replié par défaut */}
                 {stats.top3BySpecies && Object.keys(stats.top3BySpecies).length > 0 && (
                   <div className={styles.competitions__top3_section}>
-                    <h3>Top 3 des plus grands poissons par espèce</h3>
+                    <button
+                      type="button"
+                      className={styles.competitions__show_top3_btn}
+                      onClick={() => setShowTop3(!showTop3)}
+                    >
+                      {showTop3 ? "Masquer le top 3" : "Afficher le top 3 par espèce"}
+                    </button>
+                    {showTop3 && (
+                      <>
+                        <h3>Top 3 des plus grands poissons par espèce</h3>
                     {Object.entries(stats.top3BySpecies).map(([speciesId, top3]) => {
                       const speciesInfo = stats.speciesStats?.find(s => s.id === parseInt(speciesId));
                       if (!speciesInfo || top3.length === 0) return null;
@@ -972,6 +1029,8 @@ export default function CompetitionDetailPage() {
                         </div>
                       );
                     })}
+                      </>
+                    )}
                   </div>
                 )}
               </>

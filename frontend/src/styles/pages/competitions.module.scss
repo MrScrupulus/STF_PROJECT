@@ -534,6 +534,33 @@
     font-size: 0.875rem;
   }
 
+  &__table_row_user {
+    background-color: #eff6ff !important;
+
+    &:hover {
+      background-color: #dbeafe !important;
+    }
+  }
+
+  &__show_more_ranking {
+    display: block;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #e5e7eb;
+    }
+  }
+
   &__score_value {
     color: #2563eb;
     font-size: 1.125rem;
@@ -704,9 +731,66 @@
     margin-top: 1rem;
   }
 
+  &__stats_expand {
+    margin-top: 1.5rem;
+  }
+
+  &__show_more_stats {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+
+    &:hover {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #60a5fa;
+    }
+  }
+
+  &__stats_expanded {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  &__timeline_section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+
   &__map_section {
     margin-top: 2rem;
     margin-bottom: 2rem;
+  }
+
+  &__show_top3_btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+
+    &:hover {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-color: #60a5fa;
+    }
   }
 
   &__species_section {

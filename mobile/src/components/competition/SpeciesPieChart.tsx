@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
+import { SPECIES_COLORS } from '../../utils/speciesColors';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -13,8 +14,6 @@ interface SpeciesStat {
 interface SpeciesPieChartProps {
   speciesStats: SpeciesStat[];
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
 
 export default function SpeciesPieChart({ speciesStats }: SpeciesPieChartProps) {
   if (!speciesStats || speciesStats.length === 0) {
@@ -29,7 +28,7 @@ export default function SpeciesPieChart({ speciesStats }: SpeciesPieChartProps) 
   const data = speciesStats.map((species, index) => ({
     name: species.name,
     population: species.count,
-    color: COLORS[index % COLORS.length],
+    color: SPECIES_COLORS[index % SPECIES_COLORS.length],
     legendFontColor: '#333',
     legendFontSize: 12,
   }));
@@ -69,7 +68,7 @@ export default function SpeciesPieChart({ speciesStats }: SpeciesPieChartProps) 
               <View
                 style={[
                   styles.legendColor,
-                  { backgroundColor: COLORS[index % COLORS.length] },
+                  { backgroundColor: SPECIES_COLORS[index % SPECIES_COLORS.length] },
                 ]}
               />
               <Text style={styles.legendText}>
