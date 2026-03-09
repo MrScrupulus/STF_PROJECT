@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use App\Service\DateTimeHelper;
 use App\Service\EmailService;
 use App\Service\CompetitionSnapshotService;
 use App\Service\NotificationService;
@@ -47,8 +48,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
@@ -150,8 +151,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'teamSize' => $competition->getTeamSize(),
@@ -202,8 +203,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'isPaused' => $competition->getIsPaused(),
@@ -334,8 +335,8 @@ class CompetitionController extends AbstractController
             
             return [
                 'id' => $pause->getId(),
-                'startDate' => $startDate->format('Y-m-d H:i:s'),
-                'endDate' => $endDate->format('Y-m-d H:i:s'),
+                'startDate' => $startDate->format('Y-m-d\TH:i:sP'),
+                'endDate' => $endDate->format('Y-m-d\TH:i:sP'),
                 'reason' => $pause->getReason(),
             ];
         }, $scheduledPauses);
@@ -408,8 +409,8 @@ class CompetitionController extends AbstractController
             'id' => $competition->getId(),
             'name' => $competition->getName(),
             'type' => $competition->getType(),
-            'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-            'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+            'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+            'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
             'description' => $competition->getDescription(),
             'teamSize' => $competition->getTeamSize(),
             'maxParticipants' => $competition->getMaxParticipants(),
@@ -480,11 +481,17 @@ class CompetitionController extends AbstractController
             if (isset($data['type'])) {
                 $competition->setType($data['type']);
             }
+            $timezoneParis = new \DateTimeZone('Europe/Paris');
+            $timezoneUtc = new \DateTimeZone('UTC');
             if (isset($data['startDate'])) {
-                $competition->setStartDate(new \DateTime($data['startDate']));
+                $dt = new \DateTime($data['startDate'], $timezoneParis);
+                $dt->setTimezone($timezoneUtc);
+                $competition->setStartDate($dt);
             }
             if (isset($data['endDate'])) {
-                $competition->setEndDate(new \DateTime($data['endDate']));
+                $dt = new \DateTime($data['endDate'], $timezoneParis);
+                $dt->setTimezone($timezoneUtc);
+                $competition->setEndDate($dt);
             }
             if (isset($data['description'])) {
                 $competition->setDescription($data['description']);
@@ -521,8 +528,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),
@@ -583,11 +590,17 @@ class CompetitionController extends AbstractController
 
             $data = json_decode($request->getContent(), true);
 
+            $timezoneParis = new \DateTimeZone('Europe/Paris');
+            $timezoneUtc = new \DateTimeZone('UTC');
             $competition = new Competition();
             $competition->setName($data['name']);
             $competition->setType($data['type']);
-            $competition->setStartDate(new \DateTime($data['startDate']));
-            $competition->setEndDate(new \DateTime($data['endDate']));
+            $startDt = new \DateTime($data['startDate'], $timezoneParis);
+            $startDt->setTimezone($timezoneUtc);
+            $competition->setStartDate($startDt);
+            $endDt = new \DateTime($data['endDate'], $timezoneParis);
+            $endDt->setTimezone($timezoneUtc);
+            $competition->setEndDate($endDt);
             $competition->setDescription($data['description'] ?? null);
             $competition->setTeamSize((int) $data['teamSize']);
             $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
@@ -681,8 +694,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => $competition->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $competition->getEndDate()->format('Y-m-d H:i:s'),
+                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),

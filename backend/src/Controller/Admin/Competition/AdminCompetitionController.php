@@ -3,6 +3,7 @@
 namespace App\Controller\Admin\Competition;
 
 use App\Entity\Competition\Competition;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,10 +22,16 @@ class AdminCompetitionController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        $timezoneParis = new \DateTimeZone('Europe/Paris');
+        $timezoneUtc = new \DateTimeZone('UTC');
         $competition = new Competition();
         $competition->setName($data['title']);
-        $competition->setStartDate(new \DateTime($data['startAt']));
-        $competition->setEndDate(new \DateTime($data['endAt']));
+        $startDt = new \DateTime($data['startAt'], $timezoneParis);
+        $startDt->setTimezone($timezoneUtc);
+        $competition->setStartDate($startDt);
+        $endDt = new \DateTime($data['endAt'], $timezoneParis);
+        $endDt->setTimezone($timezoneUtc);
+        $competition->setEndDate($endDt);
         $competition->setTeamSize((int)$data['teamSize']);
         $competition->setType($data['type']);
         if (!$data['hasNoLimit']) {
@@ -52,8 +59,8 @@ class AdminCompetitionController extends AbstractController
             return [
                 'id' => $competition->getId(),
                 'name' => $competition->getName(),
-                'startDate' => $competition->getStartDate()->format('Y-m-d H:i'),
-                'endDate' => $competition->getEndDate()->format('Y-m-d H:i'),
+                'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
+                'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
                 'teamSize' => $competition->getTeamSize(),
                 'type' => $competition->getType(),
                 'maxParticipants' => $competition->getMaxParticipants(),

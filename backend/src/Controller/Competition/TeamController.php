@@ -18,6 +18,7 @@ use App\Repository\Competition\CompetitionSpeciesRepository;
 use App\DTO\Competition\CreateTeamRequest;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use App\Service\DateTimeHelper;
 use App\Service\EmailService;
 use App\Service\NotificationService;
 
@@ -72,8 +73,8 @@ class TeamController extends AbstractController
                     'competition' => $team->getCompetition() ? [
                         'id' => $team->getCompetition()->getId(),
                         'name' => $team->getCompetition()->getName(),
-                        'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
-                        'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                        'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                     ] : null,
                     'isActive' => $team->getIsActive(),
                 ];
@@ -156,8 +157,8 @@ class TeamController extends AbstractController
                     'competition' => $team->getCompetition() ? [
                         'id' => $team->getCompetition()->getId(),
                         'name' => $team->getCompetition()->getName(),
-                        'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
-                        'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                        'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                     ] : null,
                     'catchesCount' => $team->getCatches()->count(),
                 ];
@@ -191,8 +192,8 @@ class TeamController extends AbstractController
                     'competition' => $catch->getCompetition() ? [
                         'id' => $catch->getCompetition()->getId(),
                         'name' => $catch->getCompetition()->getName(),
-                        'startDate' => $catch->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
-                        'endDate' => $catch->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                        'startDate' => DateTimeHelper::formatParis($catch->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParis($catch->getCompetition()->getEndDate()),
                     ] : null,
                 ];
             }, $paginatedCatches);
@@ -302,8 +303,8 @@ class TeamController extends AbstractController
                     'competition' => $team->getCompetition() ? [
                         'id' => $team->getCompetition()->getId(),
                         'name' => $team->getCompetition()->getName(),
-                        'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
-                        'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                        'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                     ] : null,
                 ];
             }, $teams);
@@ -723,8 +724,8 @@ class TeamController extends AbstractController
                     'id' => $team->getCompetition()->getId(),
                     'name' => $team->getCompetition()->getName(),
                     'teamSize' => $team->getCompetition()->getTeamSize(),
-                    'startDate' => $team->getCompetition()->getStartDate()->format('Y-m-d H:i:s'),
-                    'endDate' => $team->getCompetition()->getEndDate()->format('Y-m-d H:i:s'),
+                    'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                 ] : null,
                 'catches' => array_map(function ($catch) use ($competitionSpeciesMap) {
                     // Récupérer le coefficient de la compétition si disponible, sinon utiliser celui de l'espèce

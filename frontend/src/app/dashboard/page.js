@@ -21,6 +21,7 @@ import CatchesMap from "../../components/competition/CatchesMap";
 import { perimeterService } from "../../services/perimeterService";
 import { logger } from "../../utils/logger";
 import { resolvePhotoUri } from "../../utils/photoUrl";
+import { formatCompetitionDateTime } from "../../utils/dateUtils";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -691,11 +692,11 @@ export default function Dashboard() {
       { label: "Titre", value: competition.name },
       {
         label: "Date de début",
-        value: new Date(competition.startDate).toLocaleString(),
+        value: formatCompetitionDateTime(competition.startDate),
       },
       {
         label: "Date de fin",
-        value: new Date(competition.endDate).toLocaleString(),
+        value: formatCompetitionDateTime(competition.endDate),
       },
       { label: "Type", value: competition.type },
       {
@@ -1352,7 +1353,7 @@ export default function Dashboard() {
       case "email":
         return item.email || "";
       case "startDate":
-        return item.startDate ? new Date(item.startDate).toLocaleString() : "";
+        return item.startDate ? formatCompetitionDateTime(item.startDate) : "";
       case "coefficient":
         return item.coefficient || "0";
       case "status":

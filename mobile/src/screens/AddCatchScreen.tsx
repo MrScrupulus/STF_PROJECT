@@ -55,6 +55,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
         }
       } catch (error: any) {
         console.error('Erreur chargement utilisateur:', error);
+        console.error('Détail réponse:', error.response?.data);
         // Si erreur 401, l'utilisateur n'est plus authentifié
         // La navigation sera gérée automatiquement par App.tsx
         if (error.response?.status === 401) {

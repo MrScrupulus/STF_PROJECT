@@ -3,6 +3,28 @@
  */
 
 /**
+ * Extrait date et heure d'une chaîne API (ISO ou Y-m-d H:i:s) pour affichage sans conversion timezone
+ * Utilisé pour les compétitions dont les dates sont en Europe/Paris
+ */
+export function formatCompetitionDateTime(dateString) {
+  if (!dateString) return "Date inconnue";
+  const s = String(dateString).trim();
+  const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
+  if (isoMatch) {
+    const [, y, m, d, h, min] = isoMatch;
+    const date = new Date(y, m - 1, d, h, min);
+    return date.toLocaleString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  return "Date invalide";
+}
+
+/**
  * Formate une date en tenant compte du fuseau horaire
  * Le backend envoie les dates au format 'Y-m-d H:i:s' (probablement en UTC)
  * Cette fonction les convertit en heure locale

@@ -18,6 +18,7 @@ import { useAuth } from "../../../components/auth/ConditionalAuth";
 import Link from "next/link";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
+import { formatCompetitionDateTime } from "../../../utils/dateUtils";
 
 export default function CompetitionDetailPage() {
   const params = useParams();
@@ -453,13 +454,13 @@ export default function CompetitionDetailPage() {
           <div className={styles.competitions__date}>
             <strong>Date de début: </strong>
             {competition.startDate
-              ? new Date(competition.startDate).toLocaleDateString("fr-FR")
+              ? formatCompetitionDateTime(competition.startDate)
               : "Non définie"}
           </div>
           <div className={styles.competitions__date}>
             <strong>Date de fin: </strong>
             {competition.endDate
-              ? new Date(competition.endDate).toLocaleDateString("fr-FR")
+              ? formatCompetitionDateTime(competition.endDate)
               : "Non définie"}
           </div>
           {competition.description && (

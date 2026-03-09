@@ -16,7 +16,8 @@ import { teamService } from '../services/teamService';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
-import { formatDateTimeLocal, formatCompetitionDate, formatCompetitionDateRange } from '../utils/dateUtils';
+import { formatDateTimeLocal, formatCompetitionDate, formatCompetitionDateRange, parseApiDate } from '../utils/dateUtils';
+import { API_BASE_URL } from '../config/api';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
@@ -62,8 +63,13 @@ export default function CompetitionDetailScreen({ route }: any) {
           setCurrentUser(userResponse.user);
           setIsAdmin(userResponse.user.roles?.includes('ROLE_ADMIN') || false);
         }
-      } catch (error) {
-        console.error('Error fetching user:', error);
+      } catch (error: any) {
+        const res = error.response;
+        console.error('Error fetching user:', {
+          status: res?.status,
+          data: res?.data,
+          url: API_BASE_URL + '/api/auth/me',
+        });
       }
     };
     fetchUser();
@@ -286,8 +292,8 @@ export default function CompetitionDetailScreen({ route }: any) {
   
   const availableTeams = myTeams.filter((team: any) => {
     if (!team.competition) return true;
-    // Considérer l'équipe comme disponible si sa compétition est terminée
-    const teamCompetitionEndDate = new Date(team.competition.endDate);
+    const teamCompetitionEndDate = parseApiDate(team.competition.endDate);
+    if (!teamCompetitionEndDate) return false;
     return teamCompetitionEndDate < now;
   });
   
@@ -297,8 +303,9 @@ export default function CompetitionDetailScreen({ route }: any) {
     
     // Vérifier uniquement si l'équipe est inscrite à CETTE compétition spécifique
     if (team.competition.id === competition.id) {
-      const teamCompetitionEndDate = new Date(team.competition.endDate);
-      return teamCompetitionEndDate >= now; // En cours ou à venir
+      const teamCompetitionEndDate = parseApiDate(team.competition.endDate);
+      if (!teamCompetitionEndDate) return false;
+      return teamCompetitionEndDate >= now;
     }
     
     return false;
@@ -311,15 +318,17 @@ export default function CompetitionDetailScreen({ route }: any) {
     
     // Si l'équipe est inscrite à une autre compétition (pas celle-ci), vérifier qu'elle est active
     if (team.competition.id !== competition.id) {
-      const otherCompetitionEndDate = new Date(team.competition.endDate);
-      return otherCompetitionEndDate >= now; // En cours ou à venir
+      const otherCompetitionEndDate = parseApiDate(team.competition.endDate);
+      if (!otherCompetitionEndDate) return false;
+      return otherCompetitionEndDate >= now;
     }
     
     return false;
   });
   
   const hasAvailableTeams = availableTeams.length > 0;
-  const isEnded = (competition as any).isEnded || new Date(competition.endDate) < now;
+  const competitionEndDate = parseApiDate(competition.endDate);
+  const isEnded = (competition as any).isEnded || (competitionEndDate !== null && competitionEndDate < now);
   // Vérifier si c'est une compétition individuelle (teamSize === 1)
   const isIndividualCompetition = (competition as any)?.teamSize === 1;
   // On ne peut s'inscrire que si :
@@ -332,8 +341,8 @@ export default function CompetitionDetailScreen({ route }: any) {
   // Fonction pour déterminer le statut de la compétition
   const getCompetitionStatus = () => {
     const now = new Date();
-    const start = new Date(competition.startDate);
-    const end = new Date(competition.endDate);
+    const start = parseApiDate(competition.startDate) ?? now;
+    const end = parseApiDate(competition.endDate) ?? now;
     
     if (now < start) {
       return { text: 'À venir', style: styles.statusUpcoming, isEnded: false };

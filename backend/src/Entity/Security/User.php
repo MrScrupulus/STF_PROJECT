@@ -69,9 +69,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    /**
+     * Utilisé par Lexik JWT pour le payload. Retourne le pseudo ou l'email en fallback
+     * (pour les comptes créés avant l'ajout du champ username).
+     */
     public function getUsername(): ?string
     {
-        return $this->username;
+        return $this->username ?? $this->email;
     }
 
     public function setUsername(?string $username): static

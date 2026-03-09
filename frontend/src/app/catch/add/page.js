@@ -12,6 +12,7 @@ import styles from "../../../styles/pages/catch/add.module.scss";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
+import { formatCompetitionDateTime } from "../../../utils/dateUtils";
 
 export default function AddCatchPage() {
   const router = useRouter();
@@ -310,8 +311,8 @@ export default function AddCatchPage() {
                 <option value="">-- Sélectionner une compétition --</option>
                 {competitions.map((competition) => (
                   <option key={competition.id} value={competition.id}>
-                    {competition.name} ({new Date(competition.startDate).toLocaleDateString()} -{" "}
-                    {new Date(competition.endDate).toLocaleDateString()})
+                    {competition.name} ({formatCompetitionDateTime(competition.startDate)} -{" "}
+                    {formatCompetitionDateTime(competition.endDate)})
                   </option>
                 ))}
               </select>

@@ -31,8 +31,8 @@ class UserChecker implements UserCheckerInterface
             // Recharger l'utilisateur depuis la base de données pour avoir les données à jour
             // (au cas où is_verified a été modifié directement en base)
             $this->entityManager->refresh($user);
-        } catch (\Exception $e) {
-            // Si l'utilisateur n'est pas géré par Doctrine (peu probable), continuer avec l'utilisateur tel quel
+        } catch (\Throwable $e) {
+            // Si l'utilisateur n'est pas géré par Doctrine ou erreur de refresh, continuer tel quel
         }
 
         // Vérifier que l'email est vérifié après l'authentification réussie

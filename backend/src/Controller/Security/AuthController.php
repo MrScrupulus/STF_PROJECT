@@ -249,27 +249,43 @@ final class AuthController extends AbstractController
     #[Route('/me', name: 'auth_me', methods: ['GET', 'OPTIONS'])]
     public function getCurrentUser(): JsonResponse
     {
-        $user = $this->getUser();
+        try {
+            $user = $this->getUser();
 
-        if (!$user) {
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'User not found'
+                ], 404);
+            }
+
             return $this->json([
+                'success' => true,
+                'user' => [
+                    'id' => $user->getId(),
+                    'email' => $user->getEmail(),
+                    'roles' => $user->getRoles(),
+                    'username' => $user->getUsername(),
+                    'firstname' => $user->getFirstname(),
+                    'lastname' => $user->getLastname(),
+                    'phone_number' => $user->getPhoneNumber() ?? null,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('Erreur /api/auth/me', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            $response = [
                 'success' => false,
-                'message' => 'User not found'
-            ], 404);
+                'message' => 'Erreur serveur',
+            ];
+            if ($this->getParameter('kernel.environment') === 'dev') {
+                $response['debug'] = $e->getMessage();
+            }
+            return $this->json($response, 500);
         }
-
-        return $this->json([
-            'success' => true,
-            'user' => [
-                'id' => $user->getId(),
-                'email' => $user->getEmail(),
-                'roles' => $user->getRoles(),
-                'username' => $user->getUsername(),
-                'firstname' => $user->getFirstname(),
-                'lastname' => $user->getLastname(),
-                'phone_number' => $user->getPhoneNumber() ?? null,
-            ]
-        ]);
     }
 
     #[Route('/verify-email/{token}', name: 'verify_email', methods: ['POST'])]

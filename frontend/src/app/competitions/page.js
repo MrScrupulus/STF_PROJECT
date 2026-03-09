@@ -7,6 +7,7 @@ import { competitionsService } from "../../services/competitions";
 import styles from "../../styles/pages/competitions.module.scss";
 import layoutStyles from "../../styles/components/layout/layout.module.scss";
 import Link from "next/link";
+import { formatCompetitionDateTime } from "../../utils/dateUtils";
 
 const getCompetitionStatus = (startDate, endDate) => {
   const now = new Date();
@@ -290,14 +291,14 @@ function CompetitionsPageContent() {
                 {
                   className: styles.date_range__item,
                 },
-                `Début: ${new Date(competition.startDate).toLocaleDateString()}`
+                `Début: ${formatCompetitionDateTime(competition.startDate)}`
               ),
               createElement(
                 "span",
                 {
                   className: styles.date_range__item,
                 },
-                `Fin: ${new Date(competition.endDate).toLocaleDateString()}`
+                `Fin: ${formatCompetitionDateTime(competition.endDate)}`
               )
             ),
             createElement(

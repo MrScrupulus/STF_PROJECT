@@ -41,16 +41,15 @@ export default function EditCompetition() {
           return;
         }
 
-        // Convertir les dates au format datetime-local
+        // Extraire YYYY-MM-DDTHH:mm directement de la chaîne (évite les décalages timezone)
         const formatDateForInput = (dateString) => {
           if (!dateString) return "";
-          const date = new Date(dateString);
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          const day = String(date.getDate()).padStart(2, "0");
-          const hours = String(date.getHours()).padStart(2, "0");
-          const minutes = String(date.getMinutes()).padStart(2, "0");
-          return `${year}-${month}-${day}T${hours}:${minutes}`;
+          const s = String(dateString).trim();
+          const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})/);
+          if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T${isoMatch[4].padStart(2, "0")}:${isoMatch[5]}`;
+          const spaceMatch = s.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})/);
+          if (spaceMatch) return `${spaceMatch[1]}-${spaceMatch[2]}-${spaceMatch[3]}T${spaceMatch[4].padStart(2, "0")}:${spaceMatch[5]}`;
+          return "";
         };
 
         setFormData({
@@ -83,14 +82,27 @@ export default function EditCompetition() {
     setError("");
 
     try {
+      // Normaliser les dates pour le backend : YYYY-MM-DDTHH:mm:00
+      const toBackendDate = (val) => {
+        if (!val) return val;
+        const s = String(val).trim();
+        // Déjà au format avec secondes ?
+        if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/.test(s)) return s.includes("T") ? s : s.replace(" ", "T");
+        const m = s.match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
+        return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4].padStart(2, "0")}:${m[5]}:00` : val;
+      };
+
       const dataToSend = {
         ...formData,
+        startDate: toBackendDate(formData.startDate),
+        endDate: toBackendDate(formData.endDate),
         teamSize: parseInt(formData.teamSize),
         maxParticipants: formData.hasNoLimit ? null : parseInt(formData.maxParticipants),
       };
 
       await competitionsService.update(competitionId, dataToSend);
       router.push("/dashboard");
+      router.refresh(); // Forcer le rechargement des données
     } catch (error) {
       setError(error.message || "Une erreur est survenue lors de la mise à jour");
     } finally {

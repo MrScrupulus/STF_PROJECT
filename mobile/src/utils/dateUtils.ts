@@ -3,6 +3,41 @@
  */
 
 /**
+ * Parse une date au format backend de façon fiable (compatible Safari/iOS).
+ * Gère : ISO avec timezone (2025-01-25T11:59:00+01:00), ou Y-m-d H:i:s.
+ * Ne pas ajouter 'Z' : les dates compétition sont en Europe/Paris.
+ */
+export function parseApiDate(dateString: string | null | undefined): Date | null {
+  if (!dateString || typeof dateString !== 'string') return null;
+  try {
+    const s = dateString.trim();
+    const hasTz = /[+-]\d{2}:\d{2}$/.test(s) || s.endsWith('Z');
+    const toParse = hasTz ? s : s.replace(' ', 'T');
+    const date = new Date(toParse);
+    return isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extrait l'heure (HH:mm) depuis une chaîne de date API.
+ * Utilisé pour l'affichage car toLocaleTimeString(timeZone) est peu fiable sur React Native/Expo.
+ * Pour "2025-01-25T11:59:00+01:00" ou "2025-01-25 11:59:00" → "11:59"
+ */
+function extractTimeFromApiDate(dateString: string | null | undefined): string | null {
+  if (!dateString || typeof dateString !== 'string') return null;
+  const s = dateString.trim();
+  // ISO: 2025-01-25T11:59:00 ou 2025-01-25T11:59:00+01:00
+  const isoMatch = s.match(/T(\d{1,2}):(\d{2})(?::\d{2})?(?:[+-]\d{2}:\d{2}|Z)?/);
+  if (isoMatch) return `${isoMatch[1].padStart(2, '0')}:${isoMatch[2]}`;
+  // Format Y-m-d H:i:s
+  const spaceMatch = s.match(/\s(\d{1,2}):(\d{2})(?::\d{2})?/);
+  if (spaceMatch) return `${spaceMatch[1].padStart(2, '0')}:${spaceMatch[2]}`;
+  return null;
+}
+
+/**
  * Formate une date en tenant compte du fuseau horaire
  * Le backend envoie les dates au format 'Y-m-d H:i:s' (probablement en UTC)
  * Cette fonction les convertit en heure locale
@@ -173,8 +208,8 @@ export function formatRelativeTime(dateString: string | null | undefined): strin
 }
 
 /**
- * Formate une date de compétition (sans heure) en tenant compte du fuseau horaire
- * Le backend envoie les dates en UTC, on les convertit en heure locale
+ * Formate une date de compétition (sans heure)
+ * Le backend envoie les dates en ISO avec timezone Europe/Paris (ex: 2025-01-25T11:59:00+01:00)
  */
 export function formatCompetitionDate(dateString: string | null | undefined): string {
   if (!dateString) {
@@ -182,7 +217,8 @@ export function formatCompetitionDate(dateString: string | null | undefined): st
   }
 
   try {
-    const date = new Date(dateString + 'Z'); // Ajouter 'Z' pour indiquer UTC
+    const date = parseApiDate(dateString);
+    if (!date) return 'Date invalide';
     return date.toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',
@@ -196,23 +232,21 @@ export function formatCompetitionDate(dateString: string | null | undefined): st
 }
 
 /**
- * Formate une heure de compétition en tenant compte du fuseau horaire
- * Le backend envoie les dates en UTC, on les convertit en heure locale
+ * Formate une heure de compétition (ex: "11:59")
+ * Extrait directement de la chaîne pour éviter les soucis timezone sur React Native/Expo
  */
 export function formatCompetitionTime(dateString: string | null | undefined): string {
-  if (!dateString) {
-    return 'Heure inconnue';
-  }
-
+  const extracted = extractTimeFromApiDate(dateString);
+  if (extracted) return extracted;
+  const date = parseApiDate(dateString);
+  if (!date) return 'Heure inconnue';
   try {
-    const date = new Date(dateString + 'Z'); // Ajouter 'Z' pour indiquer UTC
     return date.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
       timeZone: 'Europe/Paris',
     });
-  } catch (error) {
-    console.error('Erreur lors du formatage de l\'heure:', error);
+  } catch {
     return 'Heure invalide';
   }
 }
@@ -227,8 +261,9 @@ export function formatCompetitionDateRange(startDate: string | null | undefined,
   }
 
   try {
-    const start = new Date(startDate + 'Z');
-    const end = new Date(endDate + 'Z');
+    const start = parseApiDate(startDate);
+    const end = parseApiDate(endDate);
+    if (!start || !end) return 'Dates invalides';
     
     // Utiliser Intl.DateTimeFormat pour obtenir les dates en Europe/Paris
     const formatter = new Intl.DateTimeFormat('fr-FR', {
@@ -251,10 +286,12 @@ export function formatCompetitionDateRange(startDate: string | null | undefined,
       const endTime = formatCompetitionTime(endDate);
       return `${dateStr} de ${startTime} à ${endTime}`;
     } else {
-      // Jours différents : afficher les deux dates complètes
+      // Jours différents : afficher les deux dates avec heures
       const startStr = formatCompetitionDate(startDate);
       const endStr = formatCompetitionDate(endDate);
-      return `${startStr} - ${endStr}`;
+      const startTime = formatCompetitionTime(startDate);
+      const endTime = formatCompetitionTime(endDate);
+      return `${startStr} à ${startTime} - ${endStr} à ${endTime}`;
     }
   } catch (error) {
     console.error('Erreur lors du formatage des dates:', error);

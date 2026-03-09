@@ -29,6 +29,11 @@ const getApiBaseUrl = () => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
+// Log l'URL utilisée au chargement (pour debug)
+if (__DEV__) {
+  console.log('[API] Base URL:', API_BASE_URL);
+}
+
 export const API_ENDPOINTS = {
   auth: {
     register: '/api/auth/register',

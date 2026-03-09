@@ -2,14 +2,19 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config/api';
 
-// Instance axios configurée
+// En-têtes de base (ngrok-skip-browser-warning évite la page d'avertissement ngrok)
+const baseHeaders: Record<string, string> = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+};
+if (API_BASE_URL.includes('ngrok')) {
+  baseHeaders['ngrok-skip-browser-warning'] = '1';
+}
+
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
+  headers: baseHeaders,
 });
 
 // Intercepteur pour ajouter le token à chaque requête
