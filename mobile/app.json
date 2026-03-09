@@ -30,13 +30,6 @@
     },
     "plugins": [
       [
-        "expo-media-library",
-        {
-          "photosPermission": "L'application enregistre la photo de votre prise dans votre galerie.",
-          "savePhotosPermission": "L'application enregistre la photo de votre prise dans votre galerie."
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "L'application a besoin d'accéder à vos photos pour enregistrer les prises de poissons."

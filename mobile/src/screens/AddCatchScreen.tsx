@@ -13,7 +13,6 @@ import {
   Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
 import * as Location from 'expo-location';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catchesService, CreateCatchData } from '../services/catchesService';
@@ -390,15 +389,6 @@ export default function AddCatchScreen({ navigation, route }: any) {
         setPhoto(base64Image);
         // Heure de la photo = fait foi pour la date officielle de la prise (pas le clic sur "Enregistrer")
         setPhotoCapturedAt(new Date());
-
-        try {
-          const { status } = await MediaLibrary.requestPermissionsAsync();
-          if (status === 'granted' && asset.uri) {
-            await MediaLibrary.saveToLibraryAsync(asset.uri);
-          }
-        } catch (_) {
-          // Ne pas bloquer si la sauvegarde en galerie échoue
-        }
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de prendre la photo');

@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { adminService } from '../services/adminService';
@@ -117,12 +116,6 @@ export default function AdminAddCatchScreen() {
         const asset = result.assets[0];
         const base64Image = `data:image/jpeg;base64,${asset.base64}`;
         setPhoto(base64Image);
-        try {
-          const { status } = await MediaLibrary.requestPermissionsAsync();
-          if (status === 'granted' && asset.uri) {
-            await MediaLibrary.saveToLibraryAsync(asset.uri);
-          }
-        } catch (_) {}
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de prendre la photo');
