@@ -79,14 +79,16 @@ export default function BottomNavBar() {
           <span className={styles.bottomNav__label}>Compétitions</span>
         </button>
 
-        {/* Bouton central pour ajouter une prise */}
-        <button
-          className={styles.bottomNav__addButton}
-          onClick={handleAddCatch}
-          aria-label="Ajouter une prise"
-        >
-          <span className={styles.bottomNav__addIcon}>📷</span>
-        </button>
+        {/* Bouton central pour ajouter une prise (admin uniquement) */}
+        {isAdmin && (
+          <button
+            className={styles.bottomNav__addButton}
+            onClick={handleAddCatch}
+            aria-label="Ajouter une prise"
+          >
+            <span className={styles.bottomNav__addIcon}>📷</span>
+          </button>
+        )}
 
         {/* Bouton Mon équipe ou Validation */}
         <button

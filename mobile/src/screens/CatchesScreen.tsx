@@ -12,6 +12,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { catchesService } from '../services/catchesService';
 import { formatDateTime } from '../utils/dateUtils';
+import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
 
 export default function CatchesScreen() {
@@ -66,10 +67,10 @@ export default function CatchesScreen() {
       {item.photoUrl && (
         <TouchableOpacity
           style={styles.cardPhoto}
-          onPress={() => setSelectedImage(item.photoUrl)}
+          onPress={() => setSelectedImage(resolvePhotoUri(item.photoUrl) ?? item.photoUrl)}
         >
           <Image
-            source={{ uri: item.photoUrl }}
+            source={{ uri: resolvePhotoUri(item.photoUrl) ?? '' }}
             style={styles.cardImage}
             resizeMode="cover"
           />

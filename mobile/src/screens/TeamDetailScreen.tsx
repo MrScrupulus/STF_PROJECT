@@ -17,6 +17,7 @@ import { teamService, Team } from '../services/teamService';
 import { adminService } from '../services/adminService';
 import { authService } from '../services/authService';
 import { formatDateTime } from '../utils/dateUtils';
+import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
 
 export default function TeamDetailScreen({ route }: any) {
@@ -650,10 +651,10 @@ function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress, isAdmin
       {catchItem.photoUrl && (
         <TouchableOpacity
           style={styles.catchPhoto}
-          onPress={() => onImagePress(catchItem.photoUrl)}
+          onPress={() => onImagePress(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
         >
           <Image
-            source={{ uri: catchItem.photoUrl }}
+            source={{ uri: resolvePhotoUri(catchItem.photoUrl) ?? '' }}
             style={styles.catchImage}
             resizeMode="cover"
           />

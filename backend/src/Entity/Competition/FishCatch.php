@@ -175,6 +175,12 @@ class FishCatch
         return $this->createdAt;
     }
 
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
     public function getPhotoUrl(): ?string
     {
         return $this->photoUrl;

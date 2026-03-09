@@ -4,14 +4,17 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { teamService } from "../../../services/teamService";
+import { authService } from "../../../services/authService";
 import styles from "../../../styles/pages/account/history.module.scss";
 import ProtectedRoute from "../../../components/auth/ProtectedRoute";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
+import { resolvePhotoUri } from "../../../utils/photoUrl";
 
 export default function HistoryPage() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [history, setHistory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,6 +24,18 @@ export default function HistoryPage() {
   const [catchesPages, setCatchesPages] = useState(1);
   const [allCatches, setAllCatches] = useState([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await authService.getCurrentUser();
+        if (res.success && res.user) {
+          setIsAdmin(res.user.roles?.includes("ROLE_ADMIN") || false);
+        }
+      } catch (_) {}
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -337,10 +352,10 @@ export default function HistoryPage() {
                       {catchItem.photoUrl && (
                         <div
                           className={styles.history__catch_photo}
-                          onClick={() => setSelectedImage(catchItem.photoUrl)}
+                          onClick={() => setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
                         >
                           <img
-                            src={catchItem.photoUrl}
+                            src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                             alt={`${catchItem.species.name} de ${catchItem.size}cm`}
                             className={styles.history__catch_image}
                           />
@@ -517,10 +532,10 @@ export default function HistoryPage() {
                     {catchItem.photoUrl && (
                       <div
                         className={styles.history__catch_photo}
-                        onClick={() => setSelectedImage(catchItem.photoUrl)}
+                        onClick={() => setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
                       >
                         <img
-                          src={catchItem.photoUrl}
+                          src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                           alt={`${catchItem.species.name} de ${catchItem.size}cm`}
                           className={styles.history__catch_image}
                         />
@@ -532,9 +547,11 @@ export default function HistoryPage() {
             ) : (
               <div className={styles.history__empty}>
                 <p>Aucune prise dans votre historique.</p>
-                <Link href="/catch/add" className={styles.history__create_link}>
-                  Ajouter une prise
-                </Link>
+                {isAdmin && (
+                  <Link href="/catch/add" className={styles.history__create_link}>
+                    Ajouter une prise
+                  </Link>
+                )}
               </div>
             )}
             {sortedCatches.length > 0 && catchesPage < catchesPages && (

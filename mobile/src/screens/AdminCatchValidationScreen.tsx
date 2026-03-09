@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { adminService, PendingCatch } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
+import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
 
 export default function AdminCatchValidationScreen() {
@@ -182,7 +183,7 @@ export default function AdminCatchValidationScreen() {
               <Text style={styles.label}>Photo</Text>
               <TouchableOpacity onPress={() => setShowImageModal(true)}>
                 <Image
-                  source={{ uri: catchData.photoUrl }}
+                  source={{ uri: resolvePhotoUri(catchData.photoUrl) ?? '' }}
                   style={styles.thumbnail}
                   resizeMode="cover"
                 />
@@ -278,7 +279,7 @@ export default function AdminCatchValidationScreen() {
           </TouchableOpacity>
           {catchData.photoUrl && (
             <Image
-              source={{ uri: catchData.photoUrl }}
+              source={{ uri: resolvePhotoUri(catchData.photoUrl) ?? '' }}
               style={styles.fullImage}
               resizeMode="contain"
             />

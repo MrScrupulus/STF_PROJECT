@@ -4,6 +4,8 @@ namespace App\Controller\Admin\FishCatch;
 
 use App\Entity\Competition\FishCatch;
 use App\Repository\Competition\FishCatchRepository;
+use App\Service\CatchPhotoStorageService;
+use App\Service\CompetitionSnapshotService;
 use App\Service\EmailService;
 use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +19,8 @@ class AdminFishCatchController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private CompetitionSnapshotService $snapshotService,
+        private CatchPhotoStorageService $photoStorage,
         private EmailService $emailService,
         private NotificationService $notificationService
     ) {
@@ -146,6 +150,12 @@ class AdminFishCatchController extends AbstractController
             
             $em->flush();
 
+            // Recréer les snapshots si la compétition est terminée
+            $competition = $catch->getCompetition();
+            if ($competition && $competition->getEndDate() < new \DateTime()) {
+                $this->snapshotService->createSnapshotsForCompetition($competition, true);
+            }
+
             // Envoyer un email de notification au pêcheur
             if ($catch->getCaughtBy()) {
                 try {
@@ -210,7 +220,9 @@ class AdminFishCatchController extends AbstractController
 
             // Mémoriser les informations nécessaires avant le clear()
             $wasValidated = $catch->isValidated();
-            $teamId = $catch->getTeam()->getId();
+            $team = $catch->getTeam();
+            $teamId = $team->getId();
+            $competitionId = $catch->getCompetition()?->getId();
             $catchId = $catch->getId();
             $caughtBy = $catch->getCaughtBy();
             $caughtById = $caughtBy ? $caughtBy->getId() : null;
@@ -236,6 +248,14 @@ class AdminFishCatchController extends AbstractController
                 // le score aurait été calculé incorrectement
                 $team->updateTotalScore();
                 $em->flush();
+            }
+
+            // Recréer les snapshots si la compétition est terminée
+            if ($competitionId) {
+                $competition = $em->getRepository(\App\Entity\Competition\Competition::class)->find($competitionId);
+                if ($competition && $competition->getEndDate() < new \DateTime()) {
+                    $this->snapshotService->createSnapshotsForCompetition($competition, true);
+                }
             }
 
             // Envoyer un email de notification au pêcheur
@@ -358,9 +378,11 @@ class AdminFishCatchController extends AbstractController
             $catch->setCompetition($competition); // Associer directement la compétition pour préserver l'historique
             $catch->setSpecies($species);
             $catch->setSize((float) $data['size']);
-            $catch->setPhotoUrl($data['photoUrl'] ?? null);
             $catch->setComment($data['comment'] ?? null);
             $catch->setIsValidated(true); // Les prises créées par admin sont automatiquement validées
+            if (!empty($data['photoUrl'])) {
+                $catch->setPhotoUrl($this->photoStorage->save($data['photoUrl']));
+            }
 
             // Gérer le membre qui a fait la prise
             if (isset($data['caughtById']) && !empty($data['caughtById'])) {
@@ -382,6 +404,11 @@ class AdminFishCatchController extends AbstractController
             $team->updateTotalScore();
             
             $em->flush();
+
+            // Recréer les snapshots si la compétition est terminée
+            if ($competition->getEndDate() < new \DateTime()) {
+                $this->snapshotService->createSnapshotsForCompetition($competition, true);
+            }
 
             return $this->json([
                 'success' => true,

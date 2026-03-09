@@ -962,6 +962,9 @@ class CompetitionController extends AbstractController
     public function getCompetitionStats(int $id, CompetitionRepository $competitionRepo, FishCatchRepository $catchRepo, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
     {
         try {
+            // Les prises avec photo base64 peuvent saturer la mémoire PHP (ex: 57 prises × 1.5 MB)
+            ini_set('memory_limit', '512M');
+
             // Charger la compétition avec ses CompetitionSpecies
             $competition = $competitionRepo->createQueryBuilder('c')
                 ->leftJoin('c.competitionSpecies', 'cs')

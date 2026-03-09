@@ -50,12 +50,40 @@ cd mobile
 npx expo start --tunnel
 ```
 
+**Tests terrains (4G, réseaux mobiles) — l'API doit être accessible depuis internet :**
+1. Lancer ngrok : `ngrok http 8001` (dans un terminal séparé, backend + DB tournants)
+2. Copier l’URL générée (ex. `https://xxxx.ngrok-free.app`)
+3. Mettre à jour dans `.env` et `mobile/.env` : `EXPO_PUBLIC_API_URL=https://xxxx.ngrok-free.app`
+4. Mettre à jour dans `backend/.env.local` : `APP_BACKEND_URL=https://xxxx.ngrok-free.app`
+5. Redémarrer le backend et relancer Expo. L’app sera utilisable sur 4G, la BDD reste locale.
+
 **Script fourni :**
 ```bash
 cd mobile
 ./start-expo.sh
 ```
 *(Adaptez `REACT_NATIVE_PACKAGER_HOSTNAME` dans le script à votre IP locale si besoin.)*
+
+---
+
+## Stockage des photos de prises
+
+Les photos sont enregistrées sur le disque (et non en base64).
+
+**Configuration** : dans `backend/.env` ou `.env.local` :
+```
+APP_UPLOADS_PATH=/home/mr_scrupulus/stock
+```
+
+- **Sans cette variable** : défaut = `backend/data/uploads` (dans le projet).
+- **En production** : chemin absolu sur le serveur, ex. `/home/mr_scrupulus/stock`.
+- **Docker** : monter le volume et définir le chemin, ex. :
+  ```yaml
+  volumes:
+    - /home/mr_scrupulus/stock:/var/www/uploads
+  environment:
+    - APP_UPLOADS_PATH=/var/www/uploads
+  ```
 
 ---
 
@@ -110,14 +138,15 @@ WHERE name = 'Nom de la compétition';
 
 Note l'`id` (ex. `16`) et remplace‑le dans les commandes suivantes.
 
-### 2. Supprimer les snapshots de classement (competition_team_snapshot)
+### 2. Supprimer les snapshots de classement (competition_team_snapshots)
 
 ```sql
-DELETE FROM competition_team_snapshot
+DELETE FROM competition_team_snapshots
 WHERE competition_id = 16;
 ```
 
-Au prochain chargement de la compétition terminée, les snapshots seront recréés proprement si besoin.
+Au prochain chargement de la compétition terminée, les snapshots seront recréés proprement si besoin.  
+Utile aussi après suppression d’une prise : le classement affichera le bon score.
 
 ### 3. Supprimer les prises de la compétition
 

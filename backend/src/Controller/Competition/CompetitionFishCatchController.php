@@ -6,6 +6,8 @@ use App\Entity\Competition\FishCatch;
 use App\Repository\Competition\FishCatchRepository;
 use App\Repository\Competition\TeamRepository;
 use App\Repository\Security\UserRepository;
+use App\Service\CatchPhotoStorageService;
+use App\Service\CompetitionSnapshotService;
 use App\Service\NotificationService;
 use App\Service\GeolocationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,7 +50,8 @@ class CompetitionFishCatchController extends AbstractController
         \App\Repository\Competition\CompetitionSpeciesRepository $competitionSpeciesRepository,
         UserRepository $userRepository,
         NotificationService $notificationService,
-        GeolocationService $geolocationService
+        GeolocationService $geolocationService,
+        CatchPhotoStorageService $photoStorage
     ): JsonResponse {
         try {
             $user = $this->getUser();
@@ -130,7 +133,26 @@ class CompetitionFishCatchController extends AbstractController
             $catch->setCompetition($competition); // Associer directement la compétition pour préserver l'historique
             $catch->setSpecies($species);
             $catch->setSize((float) $data['size']);
-            $catch->setPhotoUrl($data['photoUrl'] ?? null);
+            $photoUrl = $data['photoUrl'] ?? null;
+            if ($photoUrl) {
+                try {
+                    $storedPath = $photoStorage->save($photoUrl);
+                    $catch->setPhotoUrl($storedPath);
+                } catch (\Throwable $e) {
+                    error_log(sprintf('[CatchPhoto] Erreur stockage fichier (path=%s): %s', $photoStorage->getUploadsPath(), $e->getMessage()));
+                    // Fallback : stocker en base64 comme avant (rétrocompatibilité)
+                    $catch->setPhotoUrl($photoUrl);
+                }
+            }
+            // Utiliser caughtAt (heure de la photo) si fourni par le client, sinon createdAt = maintenant
+            if (!empty($data['caughtAt'])) {
+                try {
+                    $caughtAt = new \DateTimeImmutable($data['caughtAt']);
+                    $catch->setCreatedAt($caughtAt);
+                } catch (\Exception $e) {
+                    // Format invalide, garder la valeur par défaut du constructeur
+                }
+            }
             $catch->setComment($data['comment'] ?? null);
             $catch->setLatitude($latitude !== null ? (string) $latitude : null);
             $catch->setLongitude($longitude !== null ? (string) $longitude : null);
@@ -188,17 +210,14 @@ class CompetitionFishCatchController extends AbstractController
                     ],
                     'size' => $catch->getSize(),
                     'points' => $catch->calculatePoints(),
-                    'photoUrl' => $catch->getPhotoUrl(),
+                    'photoUrl' => $photoStorage->resolvePhotoUrl($catch->getPhotoUrl()),
                     'comment' => $catch->getComment(),
                     'isValidated' => $catch->isValidated(),
                     'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
                 ]
             ], 201);
         } catch (\Exception $e) {
-            $this->logger->error('Erreur lors de la création de la prise (compétition)', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            error_log(sprintf('[CompetitionFishCatch] Erreur création prise: %s', $e->getMessage()));
             return $this->json([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors de la création de la prise. Veuillez réessayer plus tard.'
@@ -207,39 +226,84 @@ class CompetitionFishCatchController extends AbstractController
     }
 
     #[Route('/api/competitions/{competitionId}/catches/{id}', name: 'competition_catch_update', methods: ['PUT'])]
-    public function update(int $competitionId, FishCatch $catch, Request $request, EntityManagerInterface $em): JsonResponse
-    {
+    public function update(
+        int $competitionId,
+        FishCatch $catch,
+        Request $request,
+        EntityManagerInterface $em,
+        CompetitionSnapshotService $snapshotService,
+        CatchPhotoStorageService $photoStorage
+    ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['size'])) {
             $catch->setSize((float) $data['size']);
         }
         if (isset($data['photoUrl'])) {
-            $catch->setPhotoUrl($data['photoUrl']);
+            try {
+                $storedPath = $photoStorage->save($data['photoUrl']);
+                $catch->setPhotoUrl($storedPath);
+            } catch (\Throwable $e) {
+                error_log(sprintf('[CatchPhoto] Erreur stockage fichier (update): %s', $e->getMessage()));
+                $catch->setPhotoUrl($data['photoUrl']);
+            }
         }
         if (isset($data['comment'])) {
             $catch->setComment($data['comment']);
         }
 
+        // Recalculer le score (la taille affecte les points)
+        $catch->getTeam()->updateTotalScore();
         $em->flush();
+
+        // Recréer les snapshots si compétition terminée
+        $competition = $catch->getCompetition();
+        if ($competition && $competition->getEndDate() < new \DateTime()) {
+            $snapshotService->createSnapshotsForCompetition($competition, true);
+        }
 
         return $this->json($catch);
     }
 
     #[Route('/api/competitions/{competitionId}/catches/{id}/validate', name: 'competition_catch_validate', methods: ['PATCH'])]
-    public function validate(int $competitionId, FishCatch $catch, EntityManagerInterface $em): JsonResponse
-    {
+    public function validate(
+        int $competitionId,
+        FishCatch $catch,
+        EntityManagerInterface $em,
+        CompetitionSnapshotService $snapshotService
+    ): JsonResponse {
         $catch->setIsValidated(true);
+        $catch->getTeam()->updateTotalScore();
         $em->flush();
+
+        // Recréer les snapshots si compétition terminée
+        $competition = $catch->getCompetition();
+        if ($competition && $competition->getEndDate() < new \DateTime()) {
+            $snapshotService->createSnapshotsForCompetition($competition, true);
+        }
 
         return $this->json($catch);
     }
 
     #[Route('/api/competitions/{competitionId}/catches/{id}', name: 'competition_catch_delete', methods: ['DELETE'])]
-    public function delete(int $competitionId, FishCatch $catch, EntityManagerInterface $em): JsonResponse
-    {
+    public function delete(
+        int $competitionId,
+        FishCatch $catch,
+        EntityManagerInterface $em,
+        CompetitionSnapshotService $snapshotService
+    ): JsonResponse {
+        $team = $catch->getTeam();
+        $competition = $catch->getCompetition();
+
+        // Retirer la prise de l'équipe (met à jour le score) puis supprimer
+        $team->removeCatch($catch);
         $em->remove($catch);
         $em->flush();
+
+        // Si la compétition est terminée, recréer les snapshots pour que le classement affiche le bon score
+        if ($competition && $competition->getEndDate() < new \DateTime()) {
+            $snapshotService->createSnapshotsForCompetition($competition, true);
+        }
 
         return $this->json(null, 204);
     }

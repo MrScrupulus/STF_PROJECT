@@ -1,5 +1,6 @@
 parameters:
   app.mailer_from_email: "streetfishingroubaix@gmail.com"
+  app.uploads_path.default: "%kernel.project_dir%/data/uploads"
   # URLs utilisées dans les emails (vérification, reset mot de passe). En dev avec téléphone réel, utiliser ngrok (voir .env / EMAIL_LINKS_README).
   app.frontend_url.default: "http://localhost:3000"
   app.backend_url.default: "http://localhost:8001"
@@ -23,6 +24,12 @@ services:
   App\Service\EmailService:
     arguments:
       $mailerFromEmail: "streetfishingroubaix@gmail.com"
+
+  App\Service\CatchPhotoStorageService:
+    arguments:
+      $uploadsPath: "%env(default:app.uploads_path.default:APP_UPLOADS_PATH)%"
+      $uploadsUrlPrefix: "/api/uploads"
+      $backendBaseUrl: "%app.backend_url%"
 
   # CORS Listener
   App\EventListener\CorsListener:

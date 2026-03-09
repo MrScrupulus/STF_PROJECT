@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import { formatDateTime } from '../utils/dateUtils';
+import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
 
 export default function HistoryScreen() {
@@ -345,10 +346,10 @@ function CatchesTab({ catches, onImagePress, onLoadMore, isLoadingMore }: any) {
           {catchItem.photoUrl && (
             <TouchableOpacity
               style={styles.catchPhoto}
-              onPress={() => onImagePress(catchItem.photoUrl)}
+              onPress={() => onImagePress(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
             >
               <Image
-                source={{ uri: catchItem.photoUrl }}
+                source={{ uri: resolvePhotoUri(catchItem.photoUrl) ?? '' }}
                 style={styles.catchImage}
                 resizeMode="cover"
               />

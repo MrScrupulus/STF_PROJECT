@@ -32,17 +32,22 @@ export default function AdminAddCatchScreen() {
   const [comment, setComment] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
 
-  // Charger les compétitions en cours uniquement
+  // Charger les compétitions (en cours + terminées, pour permettre l'ajout de prise en correction)
   const { data: competitions, isLoading: loadingCompetitions } = useQuery({
-    queryKey: ['admin-competitions-ongoing'],
+    queryKey: ['admin-competitions-all'],
     queryFn: async () => {
       const allCompetitions = await adminService.getCompetitions();
       const now = new Date();
-      return allCompetitions.filter((comp: any) => {
-        const start = new Date(comp.startDate);
-        const end = new Date(comp.endDate);
-        return now >= start && now <= end;
-      });
+      return allCompetitions
+        .map((comp: any) => ({
+          ...comp,
+          isEnded: new Date(comp.endDate) < now,
+        }))
+        .sort((a: any, b: any) => {
+          // En cours d'abord, puis terminées
+          if (a.isEnded !== b.isEnded) return a.isEnded ? 1 : -1;
+          return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
+        });
     },
   });
 
@@ -265,6 +270,7 @@ export default function AdminAddCatchScreen() {
                   ]}
                 >
                   {comp.name}
+                  {comp.isEnded ? ' (terminée)' : ''}
                 </Text>
               </TouchableOpacity>
             ))}

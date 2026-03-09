@@ -11,6 +11,11 @@ mkdir -p var/sessions
 # Corriger les permissions
 chmod -R 777 var/
 
+# Dossier uploads pour les photos de prises (monté ou créé)
+UPLOADS_DIR="${APP_UPLOADS_PATH:-/var/www/uploads}"
+mkdir -p "$UPLOADS_DIR/catches"
+chmod -R 777 "$UPLOADS_DIR" 2>/dev/null || true
+
 # Attendre que la base de données soit prête
 echo "En attente de la base de données..."
 while ! nc -z database 3306; do

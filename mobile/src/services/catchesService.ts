@@ -30,6 +30,8 @@ export interface CreateCatchData {
   caughtById?: number;
   latitude?: number;
   longitude?: number;
+  /** Heure de capture de la photo (ISO string) – fait foi pour la date/heure officielle de la prise */
+  caughtAt?: string;
 }
 
 export const catchesService = {

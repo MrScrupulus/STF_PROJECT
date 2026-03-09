@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,9 @@ export default function AddCatchScreen({ navigation, route }: any) {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationStatus, setLocationStatus] = useState<'updated' | 'in-zone' | 'out-of-zone' | null>(null);
+  /** Heure de capture de la photo (fait foi pour la date officielle de la prise) */
+  const [photoCapturedAt, setPhotoCapturedAt] = useState<Date | null>(null);
+  const cameraOpenAttempted = useRef(false);
 
   // Charger l'utilisateur connecté
   useEffect(() => {
@@ -367,7 +370,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
     },
   });
 
-  // Prendre une photo et capturer la position GPS
+  // Prendre une photo et capturer la position GPS (flux caméra d'abord)
   const takePhoto = async () => {
     try {
       // Capturer la position GPS avant de prendre la photo
@@ -384,6 +387,8 @@ export default function AddCatchScreen({ navigation, route }: any) {
         const asset = result.assets[0];
         const base64Image = `data:image/jpeg;base64,${asset.base64}`;
         setPhoto(base64Image);
+        // Heure de la photo = fait foi pour la date officielle de la prise (pas le clic sur "Enregistrer")
+        setPhotoCapturedAt(new Date());
 
         try {
           const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -398,6 +403,21 @@ export default function AddCatchScreen({ navigation, route }: any) {
       Alert.alert('Erreur', 'Impossible de prendre la photo');
     }
   };
+
+  // Ouvrir la caméra immédiatement à l'arrivée sur l'écran (flux caméra d'abord)
+  useEffect(() => {
+    if (
+      selectedCompetition &&
+      !photo &&
+      !cameraOpenAttempted.current &&
+      !loadingTeams &&
+      !loadingCompetitions
+    ) {
+      cameraOpenAttempted.current = true;
+      const timer = setTimeout(() => takePhoto(),50);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedCompetition?.id, photo, loadingTeams, loadingCompetitions]);
 
   // Soumettre le formulaire
   const handleSubmit = () => {
@@ -487,6 +507,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
       caughtById: selectedMember || undefined,
       latitude: location?.latitude,
       longitude: location?.longitude,
+      caughtAt: photoCapturedAt?.toISOString(),
     };
 
     createCatchMutation.mutate(catchData);
@@ -514,6 +535,25 @@ export default function AddCatchScreen({ navigation, route }: any) {
           <Text style={styles.errorSubtext}>
             Veuillez vous inscrire à une compétition avant d'ajouter une prise.
           </Text>
+        </ScrollView>
+      </>
+    );
+  }
+
+  // Flux caméra d'abord : si pas encore de photo, afficher l'étape photo
+  if (selectedCompetition && !photo) {
+    return (
+      <>
+        <Header title="Ajouter une prise" showBack={true} showMenu={true} />
+        <ScrollView style={styles.container} contentContainerStyle={[styles.content, styles.cameraStepContent]}>
+          <Text style={styles.subtitle}>Compétition: {selectedCompetition.name}</Text>
+          <Text style={styles.cameraStepHint}>
+            Prenez d'abord la photo de la prise. L'heure de la photo fera foi pour la date officielle.
+          </Text>
+          <TouchableOpacity style={styles.cameraStepButton} onPress={takePhoto}>
+            <Text style={styles.cameraStepButtonIcon}>📷</Text>
+            <Text style={styles.cameraStepButtonText}>Prendre la photo</Text>
+          </TouchableOpacity>
         </ScrollView>
       </>
     );
@@ -728,6 +768,33 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+  },
+  cameraStepContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  cameraStepHint: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  cameraStepButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cameraStepButtonIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  cameraStepButtonText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '600',
   },
   center: {
     flex: 1,

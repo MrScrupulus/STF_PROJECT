@@ -9,11 +9,13 @@ import Link from "next/link";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
+import { resolvePhotoUri } from "../../../utils/photoUrl";
 
 export default function TeamDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { isAuthenticated, currentUser: authUser, isLoading: authLoading } = useAuth();
+  const isAdmin = authUser?.roles?.includes("ROLE_ADMIN");
   const [team, setTeam] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -315,12 +317,14 @@ export default function TeamDetailPage() {
           {!team.catches || team.catches.length === 0 ? (
             <div className={styles.teams__empty_catches}>
               <p>Aucune prise enregistrée pour le moment.</p>
-              <Link
-                href="/catch/add"
-                className={styles.teams__add_catch_link}
-              >
-                Ajouter une prise
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/catch/add"
+                  className={styles.teams__add_catch_link}
+                >
+                  Ajouter une prise
+                </Link>
+              )}
             </div>
           ) : (
             <>
@@ -397,10 +401,10 @@ export default function TeamDetailPage() {
                         {catchItem.photoUrl && (
                           <div 
                             className={styles.teams__catch_photo}
-                            onClick={() => setSelectedImage(catchItem.photoUrl)}
+                            onClick={() => setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
                           >
                             <img
-                              src={catchItem.photoUrl}
+                              src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                               alt={`${catchItem.species.name} de ${catchItem.size}cm`}
                               className={styles.teams__catch_image}
                               style={{
@@ -502,10 +506,10 @@ export default function TeamDetailPage() {
                         {catchItem.photoUrl && (
                           <div 
                             className={styles.teams__catch_photo}
-                            onClick={() => setSelectedImage(catchItem.photoUrl)}
+                            onClick={() => setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
                           >
                             <img
-                              src={catchItem.photoUrl}
+                              src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                               alt={`${catchItem.species.name} de ${catchItem.size}cm`}
                               className={styles.teams__catch_image}
                               style={{
@@ -607,10 +611,10 @@ export default function TeamDetailPage() {
                         {catchItem.photoUrl && (
                           <div 
                             className={styles.teams__catch_photo}
-                            onClick={() => setSelectedImage(catchItem.photoUrl)}
+                            onClick={() => setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
                           >
                             <img
-                              src={catchItem.photoUrl}
+                              src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                               alt={`${catchItem.species.name} de ${catchItem.size}cm`}
                               className={styles.teams__catch_image}
                               style={{

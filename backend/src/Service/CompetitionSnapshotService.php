@@ -56,7 +56,7 @@ final class CompetitionSnapshotService
             $snapshot->setTeam($team);
             $snapshot->setTeamName($team->getName());
             $snapshot->setRegistrationNumber($team->getRegistrationNumber());
-            $snapshot->setTotalScore($team->getTotalScore() ?? 0);
+            $snapshot->setTotalScore($team->getScoreForCompetition($competition));
             
             // Stocker les membres dans un tableau JSON
             // Important : récupérer les membres depuis la collection qui a été chargée

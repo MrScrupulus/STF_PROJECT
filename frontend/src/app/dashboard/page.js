@@ -20,6 +20,7 @@ import SpeciesPieChart from "../../components/competition/SpeciesPieChart";
 import CatchesMap from "../../components/competition/CatchesMap";
 import { perimeterService } from "../../services/perimeterService";
 import { logger } from "../../utils/logger";
+import { resolvePhotoUri } from "../../utils/photoUrl";
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -1708,13 +1709,13 @@ export default function Dashboard() {
                           <div 
                             className={styles.dashboard__catch_photo}
                             onClick={() => {
-                              setSelectedImage(catchItem.photoUrl);
+                              setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl);
                               setShowImageModal(true);
                             }}
                             style={{ cursor: "pointer" }}
                           >
                             <img
-                              src={catchItem.photoUrl}
+                              src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                               alt={`${catchItem.species.name} de ${catchItem.size}cm`}
                               style={{
                                 maxWidth: "150px",
