@@ -20,7 +20,7 @@ interface HeaderProps {
   showProfile?: boolean;
 }
 
-export default function Header({ title, showBack = true, showMenu = true, showProfile = true }: HeaderProps) {
+export default function Header({ title, showBack = true, showMenu = true, showProfile = false }: HeaderProps) {
   const navigation = useNavigation();
   const route = useRoute();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -47,9 +47,10 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
     }
   }, [isAuthenticated]);
 
-  // Menu items selon l'état d'authentification
+  // Menu items selon l'état d'authentification (Profil en premier pour ergonomie)
   const menuItems = isAuthenticated
     ? [
+        { name: 'Profile', label: 'Mon compte', icon: '👤' },
         { name: 'Home', label: 'Accueil', icon: '🏠' },
         { name: 'Catches', label: 'Mes Prises', icon: '🎣' },
         { name: 'Species', label: 'Espèces', icon: '🐟' },
@@ -78,17 +79,17 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
     setMenuVisible(false);
     if (route.name !== screenName) {
       // Si on navigue vers Home, Competitions ou Teams, naviguer dans le Tab Navigator
-      if (screenName === 'Home' || screenName === 'Competitions' || screenName === 'Teams') {
+      if (screenName === 'Profile' || screenName === 'Home' || screenName === 'Competitions' || screenName === 'Teams') {
         // Obtenir le navigateur parent (Stack) et naviguer vers MainTabs avec l'écran spécifique
         const parent = navigation.getParent();
-        if (parent) {
+        if (parent && screenName !== 'Profile') {
           // Naviguer vers MainTabs, puis vers l'écran spécifique dans les tabs
           // @ts-ignore - nested navigation typing
           parent.navigate('MainTabs', {
             screen: screenName,
           });
         } else {
-          // Si on est déjà dans MainTabs, naviguer directement
+          // Profile et autres écrans : navigation normale
           navigation.navigate(screenName as never);
         }
       } else {
@@ -149,7 +150,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
           </Text>
         </View>
 
-        {/* Menu burger et profil à droite */}
+        {/* Menu burger à droite (ancienne position du profil) */}
         <View style={styles.rightButtons}>
           {showMenu && (
             <TouchableOpacity
@@ -166,7 +167,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
             >
               <Text style={styles.profileIcon}>👤</Text>
             </TouchableOpacity>
-          ) : (
+          ) : showMenu ? null : (
             <View style={styles.placeholder} />
           )}
         </View>
@@ -283,7 +284,9 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
   },
   menuIcon: {
     fontSize: 24,
@@ -293,6 +296,8 @@ const styles = StyleSheet.create({
   rightButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 40,
+    paddingRight: 16,
   },
   profileButton: {
     width: 40,

@@ -35,7 +35,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'species'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'species' | 'reglement'>('info');
   const [showAllRanking, setShowAllRanking] = useState(false);
   const [showMoreStats, setShowMoreStats] = useState(false);
   const [showTop3, setShowTop3] = useState(false);
@@ -333,7 +333,9 @@ export default function CompetitionDetailScreen({ route }: any) {
   
   const hasAvailableTeams = availableTeams.length > 0;
   const competitionEndDate = parseApiDate(competition.endDate);
+  const competitionStartDate = parseApiDate(competition.startDate);
   const isEnded = (competition as any).isEnded || (competitionEndDate !== null && competitionEndDate < now);
+  const hasNotStarted = competitionStartDate !== null && now < competitionStartDate;
   // Vérifier si c'est une compétition individuelle (teamSize === 1)
   const isIndividualCompetition = (competition as any)?.teamSize === 1;
   // On ne peut s'inscrire que si :
@@ -431,7 +433,7 @@ export default function CompetitionDetailScreen({ route }: any) {
             onPress={() => setActiveTab('info')}
           >
             <Text style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}>
-              Informations
+              Infos
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -442,10 +444,27 @@ export default function CompetitionDetailScreen({ route }: any) {
               Espèces
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'reglement' && styles.tabActive]}
+            onPress={() => setActiveTab('reglement')}
+          >
+            <Text style={[styles.tabText, activeTab === 'reglement' && styles.tabTextActive]}>
+              Règlement
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Contenu selon l'onglet actif */}
-        {activeTab === 'species' ? (
+        {activeTab === 'reglement' ? (
+          <View style={styles.speciesTabContent}>
+            <Text style={styles.sectionTitle}>Règlement</Text>
+            {(competition as any).reglement ? (
+              <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
+            ) : (
+              <Text style={styles.emptyText}>Aucun règlement défini pour cette compétition.</Text>
+            )}
+          </View>
+        ) : activeTab === 'species' ? (
           <View style={styles.speciesTabContent}>
             {loadingSpecies ? (
               <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 32 }} />
@@ -505,6 +524,14 @@ export default function CompetitionDetailScreen({ route }: any) {
         {/* Actions admin */}
         {isAdmin && (
           <View style={styles.adminActions}>
+            {hasNotStarted && (
+              <TouchableOpacity
+                style={[styles.adminButton, styles.editButton]}
+                onPress={() => (navigation as any).navigate('EditCompetition', { id: competition.id })}
+              >
+                <Text style={styles.adminButtonText}>✏️ Modifier la compétition</Text>
+              </TouchableOpacity>
+            )}
             {!isEnded && (
               <TouchableOpacity
                 style={[
@@ -838,11 +865,11 @@ export default function CompetitionDetailScreen({ route }: any) {
             )}
           </View>
         )}
-          </View>
+        </View>
         )}
 
-        {/* Statistiques */}
-        {competition.isRankingPublic && stats && (
+        {/* Statistiques - uniquement dans l'onglet Infos */}
+        {activeTab === 'info' && competition.isRankingPublic && stats && (
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Statistiques</Text>
             {loadingStats ? (
@@ -1407,6 +1434,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  editButton: {
+    backgroundColor: '#007AFF',
+  },
   pauseButton: {
     backgroundColor: '#FF9500',
   },
@@ -1537,6 +1567,12 @@ const styles = StyleSheet.create({
   speciesBasePoints: {
     fontSize: 14,
     color: '#666',
+  },
+  reglementText: {
+    fontSize: 15,
+    color: '#333',
+    lineHeight: 22,
+    marginTop: 8,
   },
   emptyText: {
     fontSize: 16,

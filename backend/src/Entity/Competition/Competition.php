@@ -40,6 +40,9 @@ class Competition
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $reglement = null;
+
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isRankingPublic = false;
 
@@ -182,6 +185,17 @@ class Competition
     public function setDescription(?string $description): self
     {
         $this->description = $description;
+        return $this;
+    }
+
+    public function getReglement(): ?string
+    {
+        return $this->reglement;
+    }
+
+    public function setReglement(?string $reglement): self
+    {
+        $this->reglement = $reglement;
         return $this;
     }
 

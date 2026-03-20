@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import { navigateToCompetitions } from '../navigation/rootNavigationRef';
 import { adminService } from '../services/adminService';
 import { competitionsService } from '../services/competitionsService';
 import { formatDateTime } from '../utils/dateUtils';
@@ -208,7 +209,7 @@ export default function AdminDashboardScreen() {
             <Text style={styles.sectionTitle}>Compétitions</Text>
             <TouchableOpacity
               style={styles.navigationButton}
-              onPress={() => (navigation as any).navigate('Competitions')}
+              onPress={navigateToCompetitions}
             >
               <Text style={styles.navigationButtonText}>Voir toutes les compétitions</Text>
             </TouchableOpacity>

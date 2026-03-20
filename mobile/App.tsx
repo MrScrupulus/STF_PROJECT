@@ -29,12 +29,14 @@ import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
 import InvitationsScreen from './src/screens/InvitationsScreen';
 import EditTeamScreen from './src/screens/EditTeamScreen';
 import CreateCompetitionScreen from './src/screens/CreateCompetitionScreen';
+import EditCompetitionScreen from './src/screens/EditCompetitionScreen';
 import NotificationPreferencesScreen from './src/screens/NotificationPreferencesScreen';
 import LegalNoticeScreen from './src/screens/LegalNoticeScreen';
 import NotificationInitializer from './src/components/NotificationInitializer';
 import GlobalBottomTabBar from './src/components/GlobalBottomTabBar';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainTabs from './src/navigation/MainTabs';
+import { rootNavigationRef } from './src/navigation/rootNavigationRef';
 
 const Stack = createNativeStackNavigator();
 
@@ -64,7 +66,6 @@ function getActiveRouteName(state: any): string | null {
 
 function AppNavigator() {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
-  const navigationRef = useRef<any>(null);
   const linkingRef = useRef<any>(null);
   const [currentRoute, setCurrentRoute] = useState<string | null>(null);
 
@@ -110,9 +111,8 @@ function AppNavigator() {
       console.log('Token extrait (verify-email):', token);
       
       // Naviguer vers l'écran de vérification avec le token
-      if (navigationRef.current) {
-        // @ts-ignore
-        navigationRef.current.navigate('VerifyEmail', { token });
+      if (rootNavigationRef.isReady()) {
+        rootNavigationRef.navigate('VerifyEmail' as never, { token } as never);
       }
     }
     
@@ -122,9 +122,8 @@ function AppNavigator() {
       console.log('Token extrait (reset-password):', token);
       
       // Naviguer vers l'écran de réinitialisation avec le token
-      if (navigationRef.current) {
-        // @ts-ignore
-        navigationRef.current.navigate('ResetPassword', { token });
+      if (rootNavigationRef.isReady()) {
+        rootNavigationRef.navigate('ResetPassword' as never, { token } as never);
       }
     }
   };
@@ -135,15 +134,15 @@ function AppNavigator() {
 
   return (
     <NavigationContainer 
-      ref={navigationRef}
+      ref={rootNavigationRef}
       linking={linking}
       onReady={() => {
-        linkingRef.current = navigationRef.current;
-        const state = navigationRef.current?.getRootState?.();
+        linkingRef.current = rootNavigationRef;
+        const state = rootNavigationRef.getRootState?.();
         if (state) setCurrentRoute(getActiveRouteName(state));
       }}
       onStateChange={() => {
-        const state = navigationRef.current?.getRootState?.();
+        const state = rootNavigationRef.getRootState?.();
         if (state) setCurrentRoute(getActiveRouteName(state));
       }}
     >
@@ -192,13 +191,14 @@ function AppNavigator() {
             <Stack.Screen name="Invitations" component={InvitationsScreen} />
             <Stack.Screen name="EditTeam" component={EditTeamScreen} />
             <Stack.Screen name="CreateCompetition" component={CreateCompetitionScreen} />
+            <Stack.Screen name="EditCompetition" component={EditCompetitionScreen} />
             <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
             <Stack.Screen name="LegalNotice" component={LegalNoticeScreen} />
           </>
         )}
       </Stack.Navigator>
       {/* Barre de navigation globale visible sur toutes les pages sauf Login et Register */}
-      <GlobalBottomTabBar navigationRef={navigationRef} currentRoute={currentRoute} />
+      <GlobalBottomTabBar navigationRef={rootNavigationRef} currentRoute={currentRoute} />
     </NavigationContainer>
   );
 }

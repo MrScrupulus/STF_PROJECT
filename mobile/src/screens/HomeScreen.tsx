@@ -37,7 +37,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <Header title="Street Fishing" showBack={false} showMenu={true} showProfile={true} />
+      <Header title="Street Fishing" showBack={false} showMenu={true} />
       <ScrollView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.headerSection}>

@@ -124,7 +124,7 @@ export default function TeamsScreen() {
 
   return (
     <>
-      <Header title="Mon équipe" showBack={false} showMenu={true} showProfile={true} />
+      <Header title="Mon équipe" showBack={false} showMenu={true}  />
       <View style={styles.container}>
         <FlatList
         data={teams}

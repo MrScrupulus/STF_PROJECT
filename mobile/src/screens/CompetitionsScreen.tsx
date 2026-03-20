@@ -126,7 +126,7 @@ export default function CompetitionsScreen() {
 
   return (
     <>
-      <Header title="Compétitions" showBack={false} showMenu={true} showProfile={true} />
+      <Header title="Compétitions" showBack={false} showMenu={true}  />
       <View style={styles.container}>
         <View style={styles.filtersWrapper}>
           <ScrollView

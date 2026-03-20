@@ -200,7 +200,7 @@ function OverviewTab({ stats, teams, navigation, setActiveTab }: any) {
           style={styles.statCard}
           onPress={() => {
             // Naviguer vers la page des compétitions avec un filtre pour les compétitions auxquelles l'utilisateur a participé
-            navigation.navigate('Competitions' as never, { filter: 'participated' } as never);
+            navigation.navigate('MainTabs' as never, { screen: 'Competitions', params: { filter: 'participated' } } as never);
           }}
           activeOpacity={0.7}
         >

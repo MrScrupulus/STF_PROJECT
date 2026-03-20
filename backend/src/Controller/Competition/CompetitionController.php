@@ -412,6 +412,7 @@ class CompetitionController extends AbstractController
             'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
             'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
             'description' => $competition->getDescription(),
+            'reglement' => $competition->getReglement(),
             'teamSize' => $competition->getTeamSize(),
             'maxParticipants' => $competition->getMaxParticipants(),
             'hasNoLimit' => $competition->getHasNoLimit(),
@@ -495,6 +496,9 @@ class CompetitionController extends AbstractController
             }
             if (isset($data['description'])) {
                 $competition->setDescription($data['description']);
+            }
+            if (array_key_exists('reglement', $data)) {
+                $competition->setReglement($data['reglement']);
             }
             if (isset($data['teamSize'])) {
                 $competition->setTeamSize((int) $data['teamSize']);
@@ -602,6 +606,7 @@ class CompetitionController extends AbstractController
             $endDt->setTimezone($timezoneUtc);
             $competition->setEndDate($endDt);
             $competition->setDescription($data['description'] ?? null);
+            $competition->setReglement($data['reglement'] ?? null);
             $competition->setTeamSize((int) $data['teamSize']);
             $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
             $competition->setIsRankingPublic($data['isRankingPublic'] ?? false);

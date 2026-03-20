@@ -39,6 +39,7 @@ export default function CreateCompetitionScreen() {
     maxParticipants: '',
     hasNoLimit: false,
     description: '',
+    reglement: '',
     isRankingPublic: false,
     isBonusEnabled: false,
   });
@@ -272,6 +273,7 @@ export default function CreateCompetitionScreen() {
       type: formData.type,
       hasNoLimit: formData.hasNoLimit,
       description: formData.description.trim() || null,
+      reglement: formData.reglement.trim() || null,
       isRankingPublic: formData.isRankingPublic,
       isBonusEnabled: formData.isBonusEnabled,
     };
@@ -537,6 +539,20 @@ export default function CreateCompetitionScreen() {
               placeholder="Description de la compétition..."
               multiline
               numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Règlement */}
+          <View style={styles.section}>
+            <Text style={styles.label}>Règlement</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={formData.reglement}
+              onChangeText={(text) => setFormData({ ...formData, reglement: text })}
+              placeholder="Règlement de la compétition (visible dans l'onglet Règlement)..."
+              multiline
+              numberOfLines={6}
               textAlignVertical="top"
             />
           </View>

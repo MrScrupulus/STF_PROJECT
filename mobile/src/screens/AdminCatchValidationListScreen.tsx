@@ -101,7 +101,7 @@ export default function AdminCatchValidationListScreen() {
   if (loadingCatches && catchesPage === 1) {
     return (
       <>
-        <Header title="Validation de prises" showBack={false} showMenu={true} showProfile={true} />
+        <Header title="Validation de prises" showBack={false} showMenu={true}  />
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
@@ -113,7 +113,7 @@ export default function AdminCatchValidationListScreen() {
 
   return (
     <>
-      <Header title="Validation de prises" showBack={false} showMenu={true} showProfile={true} />
+      <Header title="Validation de prises" showBack={false} showMenu={true}  />
       <View style={styles.container}>
         {pendingCount === 0 ? (
           <View style={styles.emptyContainer}>
