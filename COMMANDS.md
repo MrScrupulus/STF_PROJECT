@@ -4,6 +4,20 @@ Racine du projet : `STF_Project/`
 
 ---
 
+## Première configuration (Docker)
+
+Copier le fichier des secrets et renseigner les valeurs :
+
+```bash
+cp .env.example .env
+# Éditer .env avec vos identifiants (DB, mail, etc.)
+```
+
+Voir `CONFIG_ENV.md` pour le guide complet des fichiers .env.  
+Voir `SECURITY_SETUP.md` pour la procédure de sécurisation avant publication.
+
+---
+
 ## Tout lancer (Docker)
 
 ```bash

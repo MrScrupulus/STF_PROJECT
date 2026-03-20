@@ -10,14 +10,11 @@ vendor/
 /frontend/.vercel/
 /frontend/dist/
 
-# Environment files
-.env
-.env.local
-mobile/.env
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Environment files (secrets) - tout sauf .env.example (template)
+.env*
+!.env.example
+backend/.env*
+!backend/.env.example
 
 # Cache and logs
 /backend/var/
@@ -51,6 +48,11 @@ yarn-error.log*
 # Database
 *.sqlite
 *.sqlite3
+mysql-data/
+
+# Certificats SSL (clés privées)
+frontend/certificates/*.pem
+frontend/certificates/*.key
 
 # Temporary files
 *.swp
