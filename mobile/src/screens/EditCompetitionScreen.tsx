@@ -56,6 +56,7 @@ export default function EditCompetitionScreen() {
     hasNoLimit: false,
     maxParticipants: '',
     isRankingPublic: false,
+    maxFishCounted: '', // vide = tous, sinon nombre saisi
   });
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -103,6 +104,9 @@ export default function EditCompetitionScreen() {
         hasNoLimit: (competition as any).hasNoLimit ?? false,
         maxParticipants: (competition as any).hasNoLimit ? '' : String(competition.maxParticipants ?? ''),
         isRankingPublic: (competition as any).isRankingPublic ?? false,
+        maxFishCounted: (competition as any).hasOwnProperty('maxFishCounted') && (competition as any).maxFishCounted != null
+          ? String((competition as any).maxFishCounted)
+          : '',
       });
     }
   }, [competition]);
@@ -227,6 +231,12 @@ export default function EditCompetitionScreen() {
       reglement: formData.reglement.trim() || null,
       hasNoLimit: formData.hasNoLimit,
       isRankingPublic: formData.isRankingPublic,
+      maxFishCounted: (() => {
+        const v = formData.maxFishCounted.trim();
+        if (!v || v === '0') return null;
+        const n = parseInt(v, 10);
+        return isNaN(n) || n < 1 ? null : n;
+      })(),
     };
     if (!formData.hasNoLimit) {
       data.maxParticipants = parseInt(formData.maxParticipants);
@@ -394,6 +404,19 @@ export default function EditCompetitionScreen() {
             </View>
           )}
 
+          {/* Poissons comptabilisés */}
+          <View style={styles.section}>
+            <Text style={styles.label}>Poissons comptabilisés pour le score</Text>
+            <Text style={styles.helpText}>Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises.</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.maxFishCounted}
+              onChangeText={(t) => setFormData({ ...formData, maxFishCounted: t.replace(/[^0-9]/g, '') })}
+              placeholder="Ex: 5, 10, 20 (vide = toutes)"
+              keyboardType="number-pad"
+            />
+          </View>
+
           <View style={styles.section}>
             <Text style={styles.label}>Description</Text>
             <TextInput
@@ -528,6 +551,11 @@ const styles = StyleSheet.create({
   dateText: { fontSize: 16 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   helpText: { fontSize: 12, color: '#666', marginBottom: 8 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 8, marginTop: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#ddd' },
+  chipActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
+  chipText: { fontSize: 14, color: '#333', fontWeight: '500' },
+  chipTextActive: { color: '#fff' },
   perimeterList: { marginBottom: 12 },
   perimeterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   perimeterName: { fontSize: 14 },

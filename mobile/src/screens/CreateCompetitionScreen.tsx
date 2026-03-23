@@ -42,6 +42,7 @@ export default function CreateCompetitionScreen() {
     reglement: '',
     isRankingPublic: false,
     isBonusEnabled: false,
+    maxFishCounted: '', // vide = tous, sinon nombre saisi
   });
 
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -276,6 +277,12 @@ export default function CreateCompetitionScreen() {
       reglement: formData.reglement.trim() || null,
       isRankingPublic: formData.isRankingPublic,
       isBonusEnabled: formData.isBonusEnabled,
+      maxFishCounted: (() => {
+        const v = formData.maxFishCounted.trim();
+        if (!v || v === '0') return null;
+        const n = parseInt(v, 10);
+        return isNaN(n) || n < 1 ? 5 : n;
+      })(),
     };
 
     if (!formData.hasNoLimit) {
@@ -474,6 +481,19 @@ export default function CreateCompetitionScreen() {
               value={formData.teamSize}
               onChangeText={(text) => setFormData({ ...formData, teamSize: text })}
               placeholder="2"
+              keyboardType="number-pad"
+            />
+          </View>
+
+          {/* Nombre de poissons comptabilisés */}
+          <View style={styles.section}>
+            <Text style={styles.label}>Poissons comptabilisés pour le score</Text>
+            <Text style={styles.hint}>Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises.</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.maxFishCounted}
+              onChangeText={(text) => setFormData({ ...formData, maxFishCounted: text.replace(/[^0-9]/g, '') })}
+              placeholder="Ex: 5, 10, 20 (vide = toutes)"
               keyboardType="number-pad"
             />
           </View>

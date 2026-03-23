@@ -420,6 +420,7 @@ class CompetitionController extends AbstractController
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
             'isBonusEnabled' => $competition->getIsBonusEnabled(),
+            'maxFishCounted' => $competition->getMaxFishCounted(),
             'isRegistered' => $isRegistered,
             'scheduledPauses' => $scheduledPausesData,
             'perimeters' => $perimetersData,
@@ -522,6 +523,10 @@ class CompetitionController extends AbstractController
             if (isset($data['isPaused'])) {
                 $competition->setIsPaused((bool) $data['isPaused']);
             }
+            if (array_key_exists('maxFishCounted', $data)) {
+                $v = $data['maxFishCounted'];
+                $competition->setMaxFishCounted(($v === null || $v === '' || $v === 'all') ? null : (int) $v);
+            }
 
             $entityManager->flush();
 
@@ -540,6 +545,7 @@ class CompetitionController extends AbstractController
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'isPaused' => $competition->getIsPaused(),
+                    'maxFishCounted' => $competition->getMaxFishCounted(),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -611,6 +617,12 @@ class CompetitionController extends AbstractController
             $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
             $competition->setIsRankingPublic($data['isRankingPublic'] ?? false);
             $competition->setIsBonusEnabled($data['isBonusEnabled'] ?? false);
+            if (array_key_exists('maxFishCounted', $data)) {
+                $v = $data['maxFishCounted'];
+                $competition->setMaxFishCounted(($v === null || $v === '' || $v === 'all') ? null : (int) $v);
+            } else {
+                $competition->setMaxFishCounted(5);
+            }
 
             if (!$data['hasNoLimit'] && isset($data['maxParticipants'])) {
                 $competition->setMaxParticipants((int) $data['maxParticipants']);
@@ -706,6 +718,7 @@ class CompetitionController extends AbstractController
                     'hasNoLimit' => $competition->getHasNoLimit(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
+                    'maxFishCounted' => $competition->getMaxFishCounted(),
                 ]
             ], 201);
         } catch (\Exception $e) {

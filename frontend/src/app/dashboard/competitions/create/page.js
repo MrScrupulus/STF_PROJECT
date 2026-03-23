@@ -21,6 +21,8 @@ export default function CreateCompetition() {
     description: "",
     isRankingPublic: false,
     isBonusEnabled: false,
+    reglement: "",
+    maxFishCounted: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -103,8 +105,13 @@ export default function CreateCompetition() {
 
     try {
       console.log("Sending data:", formData);
+      const v = String(formData.maxFishCounted || "").trim();
+      const maxFishCounted = !v || v === "0" ? null : (parseInt(v, 10) >= 1 ? parseInt(v, 10) : 5);
+
       const competitionData = {
         ...formData,
+        maxFishCounted,
+        reglement: formData.reglement?.trim() || null,
         scheduledPauses: scheduledPauses.length > 0 ? scheduledPauses : undefined,
         species: competitionSpecies.length > 0 ? competitionSpecies : undefined,
       };
@@ -192,6 +199,25 @@ export default function CreateCompetition() {
           </div>
 
           <div className={styles["competition-create__group"]}>
+            <label className={styles["competition-create__label"]}>
+              Poissons comptabilisés pour le score
+            </label>
+            <input
+              type="number"
+              value={formData.maxFishCounted}
+              onChange={(e) =>
+                setFormData({ ...formData, maxFishCounted: e.target.value.replace(/[^0-9]/g, "") })
+              }
+              className={styles["competition-create__input"]}
+              min="0"
+              placeholder="Ex: 5, 10, 20 (vide ou 0 = toutes les prises)"
+            />
+            <p className={styles["competition-create__help_text"]}>
+              Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 pour compter toutes les prises validées.
+            </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
             <label className={styles["competition-create__label"]}>Type</label>
             <select
               value={formData.type}
@@ -241,6 +267,25 @@ export default function CreateCompetition() {
               />
             </div>
           )}
+
+          <div className={styles["competition-create__group"]}>
+            <label className={styles["competition-create__label"]}>
+              Poissons comptabilisés pour le score
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.maxFishCounted}
+              onChange={(e) =>
+                setFormData({ ...formData, maxFishCounted: e.target.value.replace(/[^0-9]/g, "") })
+              }
+              className={styles["competition-create__input"]}
+              placeholder="Ex: 5, 10, 20 (vide ou 0 = toutes les prises)"
+            />
+            <p className={styles["competition-create__help_text"]}>
+              Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises validées comptent.
+            </p>
+          </div>
 
           <div className={styles["competition-create__group"]}>
             <label className={styles["competition-create__label"]}>

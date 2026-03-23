@@ -143,7 +143,7 @@ class Team
             }
         }
 
-        return $this->calculateScoreFromCatches($competitionCatches);
+        return $this->calculateScoreFromCatches($competitionCatches, $competition->getMaxFishCounted());
     }
 
     /**
@@ -159,7 +159,7 @@ class Team
             }
         }
 
-        $score = $this->calculateScoreFromCatches($competitionCatches);
+        $score = $this->calculateScoreFromCatches($competitionCatches, $competition->getMaxFishCounted());
         $this->totalScore = $score;
     }
 
@@ -168,14 +168,15 @@ class Team
      */
     private function updateTotalScoreWithCatches(array $catches): void
     {
-        $score = $this->calculateScoreFromCatches($catches);
+        $score = $this->calculateScoreFromCatches($catches, 5);
         $this->totalScore = $score;
     }
 
     /**
      * Calcule le score à partir d'une liste de prises
+     * @param ?int $maxFishCounted null = tous les poissons, entier = limite (ex: 5, 10, 15)
      */
-    private function calculateScoreFromCatches(array $catches): int
+    private function calculateScoreFromCatches(array $catches, ?int $maxFishCounted = 5): int
     {
         // Récupérer toutes les prises validées
         $validatedCatches = [];
@@ -216,20 +217,32 @@ class Team
             return $b['points'] <=> $a['points'];
         });
 
-        // Prendre les 5 meilleures prises
-        $top5 = array_slice($catchScores, 0, 5);
-        
-        // Score de base = somme des 5 meilleures prises
+        // Nombre de poissons à compter : null = tous, sinon top N
+        $limit = $maxFishCounted ?? count($catchScores);
+        $topCatches = array_slice($catchScores, 0, $limit > 0 ? $limit : count($catchScores));
+
+        // Recalculer uniqueSpecies à partir des prises comptabilisées
+        $uniqueSpeciesInTop = [];
+        $hasGobiInTop = false;
+        foreach ($topCatches as $item) {
+            $speciesId = $item['catch']->getSpecies()->getId();
+            $uniqueSpeciesInTop[$speciesId] = true;
+            if ($item['catch']->getSpecies()->getCoefficient() == 0) {
+                $hasGobiInTop = true;
+            }
+        }
+
+        // Score de base = somme des prises comptabilisées
         $baseScore = 0;
-        foreach ($top5 as $item) {
+        foreach ($topCatches as $item) {
             $baseScore += $item['points'];
         }
 
-        // Calculer le bonus selon le nombre d'espèces différentes
-        $uniqueSpeciesCount = count($uniqueSpecies);
+        // Calculer le bonus selon le nombre d'espèces différentes dans les prises comptabilisées
+        $uniqueSpeciesCount = count($uniqueSpeciesInTop);
         
         // Cas spécial : si gobi est la seule espèce, pas de bonus
-        if ($uniqueSpeciesCount === 1 && $hasGobi) {
+        if ($uniqueSpeciesCount === 1 && $hasGobiInTop) {
             $bonus = 0;
         } else {
             // Bonus : 0 pour 1 espèce, 50 pour 2, 100 pour 3, 150 pour 4, 200 pour 5

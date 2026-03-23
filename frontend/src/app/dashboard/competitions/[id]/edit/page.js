@@ -20,6 +20,7 @@ export default function EditCompetition() {
     maxParticipants: "",
     hasNoLimit: false,
     description: "",
+    maxFishCounted: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +63,9 @@ export default function EditCompetition() {
           hasNoLimit: compData.hasNoLimit || false,
           description: compData.description || "",
           isRankingPublic: compData.isRankingPublic || false,
+          maxFishCounted: compData.hasOwnProperty("maxFishCounted") && compData.maxFishCounted != null
+            ? String(compData.maxFishCounted)
+            : "",
         });
       } catch (error) {
         console.error("Error fetching competition:", error);
@@ -92,12 +96,16 @@ export default function EditCompetition() {
         return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4].padStart(2, "0")}:${m[5]}:00` : val;
       };
 
+      const v = String(formData.maxFishCounted || "").trim();
+      const maxFishCounted = !v || v === "0" ? null : (parseInt(v, 10) >= 1 ? parseInt(v, 10) : null);
+
       const dataToSend = {
         ...formData,
         startDate: toBackendDate(formData.startDate),
         endDate: toBackendDate(formData.endDate),
         teamSize: parseInt(formData.teamSize),
         maxParticipants: formData.hasNoLimit ? null : parseInt(formData.maxParticipants),
+        maxFishCounted,
       };
 
       await competitionsService.update(competitionId, dataToSend);
@@ -244,6 +252,25 @@ export default function EditCompetition() {
               />
             </div>
           )}
+
+          <div className={styles["competition-create__group"]}>
+            <label className={styles["competition-create__label"]}>
+              Poissons comptabilisés pour le score
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.maxFishCounted}
+              onChange={(e) =>
+                setFormData({ ...formData, maxFishCounted: e.target.value.replace(/[^0-9]/g, "") })
+              }
+              className={styles["competition-create__input"]}
+              placeholder="Ex: 5, 10, 20 (vide ou 0 = toutes les prises)"
+            />
+            <p className={styles["competition-create__help_text"]}>
+              Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises validées comptent.
+            </p>
+          </div>
 
           <div className={styles["competition-create__group"]}>
             <label className={styles["competition-create__label"]}>

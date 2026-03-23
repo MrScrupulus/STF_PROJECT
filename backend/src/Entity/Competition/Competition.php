@@ -52,6 +52,13 @@ class Competition
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isBonusEnabled = false;
 
+    /**
+     * Nombre de poissons comptabilisés pour le score (null = tous).
+     * Ex : 5, 9, 10, 15, ou null pour tout compter.
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $maxFishCounted = null;
+
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
@@ -229,6 +236,20 @@ class Competition
     public function setIsBonusEnabled(bool $isBonusEnabled): self
     {
         $this->isBonusEnabled = $isBonusEnabled;
+        return $this;
+    }
+
+    /**
+     * Nombre de poissons comptabilisés pour le score (null = tous).
+     */
+    public function getMaxFishCounted(): ?int
+    {
+        return $this->maxFishCounted;
+    }
+
+    public function setMaxFishCounted(?int $maxFishCounted): self
+    {
+        $this->maxFishCounted = $maxFishCounted;
         return $this;
     }
 
