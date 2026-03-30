@@ -236,9 +236,11 @@ export default function TeamDetailScreen({ route }: any) {
         .sort((a: any, b: any) => b.points - a.points)
     : [];
   
-  const top5Catches = validCatches.slice(0, 5);
-  const otherCatches = validCatches.slice(5);
-  const baseScore = top5Catches.reduce((sum: number, catchItem: any) => sum + catchItem.points, 0);
+  const maxFishCounted = team?.competition?.maxFishCounted ?? 5;
+  const topN = maxFishCounted && maxFishCounted > 0 ? maxFishCounted : validCatches.length;
+  const topCatches = validCatches.slice(0, topN);
+  const otherCatches = validCatches.slice(topN);
+  const baseScore = team?.baseScore != null ? team.baseScore : topCatches.reduce((sum: number, catchItem: any) => sum + catchItem.points, 0);
 
   const maxTeamSize = team.competition?.teamSize || 2;
   const canInvite = team.members && team.members.length < maxTeamSize;
@@ -272,15 +274,35 @@ export default function TeamDetailScreen({ route }: any) {
             <View style={styles.scoreCard}>
               <Text style={styles.scoreLabel}>Score Base</Text>
               <Text style={styles.scoreValue}>{baseScore}</Text>
-              <Text style={styles.scoreDescription}>Top 5 meilleures prises</Text>
-            </View>
-            <View style={styles.scoreCard}>
-              <Text style={styles.scoreLabel}>Bonus Espèces</Text>
-              <Text style={styles.scoreValue}>{team.bonus ?? 0}</Text>
               <Text style={styles.scoreDescription}>
-                {(team.bonus ?? 0) > 0 ? `${Math.floor((team.bonus ?? 0) / 50) + 1} espèces différentes` : 'Aucun bonus'}
+                {topN > 0 ? `Top ${topN} meilleures prises` : 'Meilleures prises'}
               </Text>
             </View>
+            {((team as any).newSpeciesBonus > 0 || (team as any).quotaBonus > 0 || ((team.bonus ?? 0) > 0 && !(team as any).newSpeciesBonus && !(team as any).quotaBonus)) && (
+              <>
+                {(team as any).newSpeciesBonus > 0 && (
+                  <View style={styles.scoreCard}>
+                    <Text style={styles.scoreLabel}>Bonus espèce</Text>
+                    <Text style={styles.scoreValue}>{(team as any).newSpeciesBonus}</Text>
+                    <Text style={styles.scoreDescription}>Nouvelles espèces différentes</Text>
+                  </View>
+                )}
+                {(team as any).quotaBonus > 0 && (
+                  <View style={styles.scoreCard}>
+                    <Text style={styles.scoreLabel}>Bonus quota</Text>
+                    <Text style={styles.scoreValue}>{(team as any).quotaBonus}</Text>
+                    <Text style={styles.scoreDescription}>Quota(s) atteint(s)</Text>
+                  </View>
+                )}
+                {((team.bonus ?? 0) > 0 && !(team as any).newSpeciesBonus && !(team as any).quotaBonus) && (
+                  <View style={styles.scoreCard}>
+                    <Text style={styles.scoreLabel}>Bonus</Text>
+                    <Text style={styles.scoreValue}>{team.bonus ?? 0}</Text>
+                    <Text style={styles.scoreDescription}>Bonus accordé</Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
         )}
 
@@ -454,11 +476,11 @@ export default function TeamDetailScreen({ route }: any) {
             </View>
           ) : (
             <>
-              {/* Top 5 */}
-              {top5Catches.length > 0 && (
+              {/* Top N prises */}
+              {topCatches.length > 0 && (
                 <View style={styles.top5Section}>
-                  <Text style={styles.top5Title}>🏆 Top 5 prises comptabilisées</Text>
-                  {top5Catches.map((catchItem: any, index: number) => (
+                  <Text style={styles.top5Title}>🏆 Top {topN || topCatches.length} prises comptabilisées</Text>
+                  {topCatches.map((catchItem: any, index: number) => (
                     <CatchCard
                       key={catchItem.id}
                       catchItem={catchItem}

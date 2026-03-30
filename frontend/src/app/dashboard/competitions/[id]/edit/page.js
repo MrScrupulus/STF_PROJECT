@@ -4,7 +4,12 @@ import { competitionsService } from "../../../../../services/competitions";
 import { useRouter, useParams } from "next/navigation";
 import ProtectedRoute from "../../../../../components/auth/ProtectedRoute";
 import PerimeterManager from "../../../../../components/admin/PerimeterManager";
+import { COMPETITION_HELP } from "../../../../../constants/competitionHelpTexts";
 import styles from "../../../../../styles/pages/dashboard/competition-create.module.scss";
+
+const HelpIcon = ({ text }) => (
+  <span className={styles["competition-create__help_icon"]} title={text} role="img" aria-label="Aide">?</span>
+);
 
 export default function EditCompetition() {
   const router = useRouter();
@@ -20,11 +25,18 @@ export default function EditCompetition() {
     maxParticipants: "",
     hasNoLimit: false,
     description: "",
+    reglement: "",
     maxFishCounted: "",
+    newSpeciesBonusEnabled: false,
+    newSpeciesBonusPoints: "",
+    quotaBonusEnabled: false,
+    quotaBonusPoints: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [reglementImageUrls, setReglementImageUrls] = useState([]);
+  const [reglementImageUploading, setReglementImageUploading] = useState(false);
 
   useEffect(() => {
     const fetchCompetition = async () => {
@@ -62,11 +74,21 @@ export default function EditCompetition() {
           maxParticipants: compData.maxParticipants?.toString() || "",
           hasNoLimit: compData.hasNoLimit || false,
           description: compData.description || "",
+          reglement: compData.reglement || "",
           isRankingPublic: compData.isRankingPublic || false,
           maxFishCounted: compData.hasOwnProperty("maxFishCounted") && compData.maxFishCounted != null
             ? String(compData.maxFishCounted)
             : "",
+          newSpeciesBonusEnabled: compData.newSpeciesBonusEnabled || false,
+          newSpeciesBonusPoints: compData.hasOwnProperty("newSpeciesBonusPoints") && compData.newSpeciesBonusPoints != null
+            ? String(compData.newSpeciesBonusPoints)
+            : "",
+          quotaBonusEnabled: compData.quotaBonusEnabled || false,
+          quotaBonusPoints: compData.hasOwnProperty("quotaBonusPoints") && compData.quotaBonusPoints != null
+            ? String(compData.quotaBonusPoints)
+            : "",
         });
+        setReglementImageUrls(Array.isArray(compData.reglementImageUrls) ? compData.reglementImageUrls : (compData.reglementImageUrl ? [compData.reglementImageUrl] : []));
       } catch (error) {
         console.error("Error fetching competition:", error);
         setError("Erreur lors du chargement de la compétition");
@@ -99,6 +121,11 @@ export default function EditCompetition() {
       const v = String(formData.maxFishCounted || "").trim();
       const maxFishCounted = !v || v === "0" ? null : (parseInt(v, 10) >= 1 ? parseInt(v, 10) : null);
 
+      const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
+        ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
+      const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
+        ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
+
       const dataToSend = {
         ...formData,
         startDate: toBackendDate(formData.startDate),
@@ -106,6 +133,11 @@ export default function EditCompetition() {
         teamSize: parseInt(formData.teamSize),
         maxParticipants: formData.hasNoLimit ? null : parseInt(formData.maxParticipants),
         maxFishCounted,
+        reglement: formData.reglement?.trim() || null,
+        newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
+        newSpeciesBonusPoints: newSpeciesBonusPointsVal,
+        quotaBonusEnabled: formData.quotaBonusEnabled,
+        quotaBonusPoints: quotaBonusPointsVal,
       };
 
       await competitionsService.update(competitionId, dataToSend);
@@ -203,7 +235,10 @@ export default function EditCompetition() {
           </div>
 
           <div className={styles["competition-create__group"]}>
-            <label className={styles["competition-create__label"]}>Type</label>
+            <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+              Type
+              <HelpIcon text={COMPETITION_HELP.type} />
+            </label>
             <select
               value={formData.type}
               onChange={(e) =>
@@ -229,17 +264,19 @@ export default function EditCompetition() {
               />
               <label
                 htmlFor="hasNoLimit"
-                className={styles["competition-create__label"]}
+                className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
                 Pas de limite de participants
+                <HelpIcon text={COMPETITION_HELP.hasNoLimit} />
               </label>
             </div>
           </div>
 
           {!formData.hasNoLimit && (
             <div className={styles["competition-create__group"]}>
-              <label className={styles["competition-create__label"]}>
+              <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
                 Nombre maximum de participants
+                <HelpIcon text={COMPETITION_HELP.maxParticipants} />
               </label>
               <input
                 type="number"
@@ -254,8 +291,9 @@ export default function EditCompetition() {
           )}
 
           <div className={styles["competition-create__group"]}>
-            <label className={styles["competition-create__label"]}>
+            <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
               Poissons comptabilisés pour le score
+              <HelpIcon text={COMPETITION_HELP.maxFishCounted} />
             </label>
             <input
               type="number"
@@ -288,6 +326,80 @@ export default function EditCompetition() {
           </div>
 
           <div className={styles["competition-create__group"]}>
+            <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+              Règlement
+              <HelpIcon text={COMPETITION_HELP.reglement} />
+            </label>
+            <textarea
+              value={formData.reglement}
+              onChange={(e) =>
+                setFormData({ ...formData, reglement: e.target.value })
+              }
+              className={`${styles["competition-create__input"]} ${styles["competition-create__description"]}`}
+              rows="6"
+              placeholder="Règlement de la compétition (règles, modalités, barèmes...)"
+            />
+            <p className={styles["competition-create__help_text"]}>
+              Texte du règlement visible dans l&apos;onglet Règlement.
+            </p>
+            <div className={styles["competition-create__group"]} style={{ marginTop: "1rem" }}>
+              <label className={styles["competition-create__label"]}>Images du règlement (optionnel)</label>
+              <p className={styles["competition-create__help_text"]}>
+                Importer des images (jpg, png, webp) pour afficher un règlement pré-rédigé (ex. scans multi-pages).
+              </p>
+              {reglementImageUrls.length > 0 && (
+                <div style={{ marginBottom: "0.75rem", display: "flex", flexWrap: "wrap", gap: "1rem" }}>
+                  {reglementImageUrls.map((url, idx) => (
+                    <div key={idx} style={{ position: "relative" }}>
+                      <img
+                        src={url}
+                        alt={`Règlement ${idx + 1}`}
+                        style={{ maxWidth: 200, maxHeight: 150, border: "1px solid #ccc", borderRadius: 4 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await competitionsService.deleteReglementImage(competitionId, idx);
+                            setReglementImageUrls(res.reglementImageUrls || []);
+                          } catch (err) {
+                            setError(err.message || "Erreur suppression image");
+                          }
+                        }}
+                        className={styles["competition-create__button"]}
+                        style={{ marginTop: "0.25rem", fontSize: "0.8rem" }}
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setReglementImageUploading(true);
+                  setError("");
+                  try {
+                    const res = await competitionsService.uploadReglementImage(competitionId, file);
+                    setReglementImageUrls(res.reglementImageUrls || []);
+                  } catch (err) {
+                    setError(err.message || "Erreur lors de l&apos;upload");
+                  } finally {
+                    setReglementImageUploading(false);
+                    e.target.value = "";
+                  }
+                }}
+                disabled={reglementImageUploading}
+              />
+              {reglementImageUploading && <span style={{ marginLeft: 8 }}>Upload en cours...</span>}
+            </div>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
             <div className={styles["competition-create__checkbox-wrapper"]}>
               <input
                 type="checkbox"
@@ -299,15 +411,88 @@ export default function EditCompetition() {
               />
               <label
                 htmlFor="isRankingPublic"
-                className={styles["competition-create__label"]}
+                className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
                 Rendre le classement public (visible par tous les utilisateurs)
+                <HelpIcon text={COMPETITION_HELP.isRankingPublic} />
               </label>
             </div>
             <p className={styles["competition-create__help_text"]}>
               Si coché, le classement sera visible par tous les utilisateurs une fois la compétition terminée.
-              Sinon, seul l'administrateur pourra voir le classement complet.
+              Sinon, seul l&apos;administrateur pourra voir le classement complet.
             </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
+                checked={formData.newSpeciesBonusEnabled}
+                onChange={(e) =>
+                  setFormData({ ...formData, newSpeciesBonusEnabled: e.target.checked })
+                }
+                id="newSpeciesBonusEnabled"
+              />
+              <label htmlFor="newSpeciesBonusEnabled" className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                Bonus par nouvelle espèce
+                <HelpIcon text={COMPETITION_HELP.newSpeciesBonus} />
+              </label>
+            </div>
+            {formData.newSpeciesBonusEnabled && (
+              <div className={styles["competition-create__group"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
+                <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                  Valeur du bonus (pts)
+                  <HelpIcon text={COMPETITION_HELP.newSpeciesBonusPoints} />
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.newSpeciesBonusPoints}
+                  onChange={(e) =>
+                    setFormData({ ...formData, newSpeciesBonusPoints: e.target.value.replace(/[^0-9]/g, "") })
+                  }
+                  className={styles["competition-create__input"]}
+                  placeholder="Ex: 50"
+                  style={{ maxWidth: "120px" }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
+                checked={formData.quotaBonusEnabled}
+                onChange={(e) =>
+                  setFormData({ ...formData, quotaBonusEnabled: e.target.checked })
+                }
+                id="quotaBonusEnabled"
+              />
+              <label htmlFor="quotaBonusEnabled" className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                Bonus quota atteint
+                <HelpIcon text={COMPETITION_HELP.quotaBonus} />
+              </label>
+            </div>
+            {formData.quotaBonusEnabled && (
+              <div className={styles["competition-create__group"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
+                <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                  Valeur du bonus (pts)
+                  <HelpIcon text={COMPETITION_HELP.quotaBonusPoints} />
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.quotaBonusPoints}
+                  onChange={(e) =>
+                    setFormData({ ...formData, quotaBonusPoints: e.target.value.replace(/[^0-9]/g, "") })
+                  }
+                  className={styles["competition-create__input"]}
+                  placeholder="Ex: 500"
+                  style={{ maxWidth: "120px" }}
+                />
+              </div>
+            )}
           </div>
 
           <div className={styles["competition-create__actions"]}>

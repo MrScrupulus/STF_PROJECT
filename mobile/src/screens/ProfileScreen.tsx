@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
@@ -22,12 +23,13 @@ export default function ProfileScreen() {
   const { setIsAuthenticated } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  const { data: userResponse, isLoading } = useQuery({
+  const { data: userResponse, isLoading, isError, error } = useQuery({
     queryKey: ['current-user'],
     queryFn: async () => {
       const response = await authService.getCurrentUser();
       return response;
     },
+    retry: false,
   });
 
   const user = userResponse?.user;
@@ -62,6 +64,16 @@ export default function ProfileScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  const errStatus = isError && error instanceof AxiosError ? error.response?.status : undefined;
+  if (isError && (errStatus === 401 || errStatus === 403)) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.sessionHint}>Session expirée, redirection…</Text>
       </View>
     );
   }
@@ -301,6 +313,11 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ff3b30',
     fontSize: 16,
+  },
+  sessionHint: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
   },
   modalOverlay: {
     flex: 1,

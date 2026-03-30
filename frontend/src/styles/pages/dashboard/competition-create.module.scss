@@ -41,6 +41,27 @@
     margin-bottom: 0.5rem;
   }
 
+  &__label_with_help {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  &__help_icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: help;
+    flex-shrink: 0;
+  }
+
   &__input {
     width: 100%;
     padding: 0.75rem;
@@ -183,6 +204,7 @@
 
   &__species_select,
   &__species_coefficient,
+  &__species_quota,
   &__species_base_points {
     display: flex;
     flex-direction: column;

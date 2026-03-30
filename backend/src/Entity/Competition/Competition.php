@@ -43,6 +43,13 @@ class Competition
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $reglement = null;
 
+    /**
+     * Chemins relatifs des images du règlement (ex: ["reglements/xxx.jpg", ...]).
+     * Tableau JSON stocké en BDD.
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $reglementImagePaths = null;
+
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isRankingPublic = false;
 
@@ -51,6 +58,30 @@ class Competition
 
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isBonusEnabled = false;
+
+    /**
+     * Bonus par nouvelle espèce : activé (checkbox)
+     */
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $newSpeciesBonusEnabled = false;
+
+    /**
+     * Bonus par nouvelle espèce : valeur en points (si activé)
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $newSpeciesBonusPoints = null;
+
+    /**
+     * Bonus quota atteint : activé (checkbox)
+     */
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $quotaBonusEnabled = false;
+
+    /**
+     * Bonus quota atteint : valeur en points (si activé)
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $quotaBonusPoints = null;
 
     /**
      * Nombre de poissons comptabilisés pour le score (null = tous).
@@ -206,6 +237,49 @@ class Competition
         return $this;
     }
 
+    /**
+     * @return string[]|null Tableau de chemins relatifs
+     */
+    public function getReglementImagePaths(): ?array
+    {
+        return $this->reglementImagePaths;
+    }
+
+    /**
+     * @param string[]|null $reglementImagePaths
+     */
+    public function setReglementImagePaths(?array $reglementImagePaths): self
+    {
+        $this->reglementImagePaths = $reglementImagePaths;
+        return $this;
+    }
+
+    public function addReglementImagePath(string $path): self
+    {
+        $paths = $this->reglementImagePaths ?? [];
+        $paths[] = $path;
+        $this->reglementImagePaths = $paths;
+        return $this;
+    }
+
+    public function removeReglementImagePath(string $path): self
+    {
+        $paths = $this->reglementImagePaths ?? [];
+        $paths = array_values(array_filter($paths, fn($p) => $p !== $path));
+        $this->reglementImagePaths = empty($paths) ? null : $paths;
+        return $this;
+    }
+
+    public function removeReglementImagePathByIndex(int $index): self
+    {
+        $paths = $this->reglementImagePaths ?? [];
+        if (isset($paths[$index])) {
+            array_splice($paths, $index, 1);
+            $this->reglementImagePaths = empty($paths) ? null : array_values($paths);
+        }
+        return $this;
+    }
+
     public function getIsRankingPublic(): bool
     {
         return $this->isRankingPublic;
@@ -236,6 +310,50 @@ class Competition
     public function setIsBonusEnabled(bool $isBonusEnabled): self
     {
         $this->isBonusEnabled = $isBonusEnabled;
+        return $this;
+    }
+
+    public function getNewSpeciesBonusEnabled(): bool
+    {
+        return $this->newSpeciesBonusEnabled;
+    }
+
+    public function setNewSpeciesBonusEnabled(bool $newSpeciesBonusEnabled): self
+    {
+        $this->newSpeciesBonusEnabled = $newSpeciesBonusEnabled;
+        return $this;
+    }
+
+    public function getNewSpeciesBonusPoints(): ?int
+    {
+        return $this->newSpeciesBonusPoints;
+    }
+
+    public function setNewSpeciesBonusPoints(?int $newSpeciesBonusPoints): self
+    {
+        $this->newSpeciesBonusPoints = $newSpeciesBonusPoints;
+        return $this;
+    }
+
+    public function getQuotaBonusEnabled(): bool
+    {
+        return $this->quotaBonusEnabled;
+    }
+
+    public function setQuotaBonusEnabled(bool $quotaBonusEnabled): self
+    {
+        $this->quotaBonusEnabled = $quotaBonusEnabled;
+        return $this;
+    }
+
+    public function getQuotaBonusPoints(): ?int
+    {
+        return $this->quotaBonusPoints;
+    }
+
+    public function setQuotaBonusPoints(?int $quotaBonusPoints): self
+    {
+        $this->quotaBonusPoints = $quotaBonusPoints;
         return $this;
     }
 

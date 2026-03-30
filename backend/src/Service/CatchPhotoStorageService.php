@@ -32,31 +32,35 @@ final class CatchPhotoStorageService
      * Sauvegarde une photo de prise et retourne le chemin relatif à stocker en BDD.
      *
      * @param UploadedFile|string $source UploadedFile ou contenu base64 (data:image/...;base64,...)
-     * @return string Chemin relatif (ex: catches/2026/01/uuid.jpg) pour photo_url
+     * @return string Chemin relatif (ex: catches/2026/01/42/uuid.jpg) pour photo_url
      */
-    public function save($source): string
+    public function save($source, int $competitionId): string
     {
+        if ($competitionId < 1) {
+            throw new \InvalidArgumentException('competitionId must be a positive integer');
+        }
+
         if ($source instanceof UploadedFile) {
-            return $this->saveUploadedFile($source);
+            return $this->saveUploadedFile($source, $competitionId);
         }
 
         if (\is_string($source) && preg_match('#^data:image/(\w+);base64,([\s\S]+)$#', trim($source), $m)) {
-            return $this->saveBase64($m[1], $m[2]);
+            return $this->saveBase64($m[1], $m[2], $competitionId);
         }
 
         throw new \InvalidArgumentException('Source must be UploadedFile or base64 data URL');
     }
 
-    private function saveUploadedFile(UploadedFile $file): string
+    private function saveUploadedFile(UploadedFile $file, int $competitionId): string
     {
         $extension = $file->guessExtension() ?: 'jpg';
         if (!\in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp'], true)) {
             $extension = 'jpg';
         }
-        return $this->writeFile($file->getPathname(), $extension);
+        return $this->writeFile($file->getPathname(), $extension, $competitionId);
     }
 
-    private function saveBase64(string $format, string $base64Data): string
+    private function saveBase64(string $format, string $base64Data, int $competitionId): string
     {
         $extension = match (strtolower($format)) {
             'jpeg', 'jpg' => 'jpg',
@@ -71,16 +75,21 @@ final class CatchPhotoStorageService
         $tmpFile = tempnam(sys_get_temp_dir(), 'catch_');
         file_put_contents($tmpFile, $binary);
         try {
-            return $this->writeFile($tmpFile, $extension);
+            return $this->writeFile($tmpFile, $extension, $competitionId);
         } finally {
             @unlink($tmpFile);
         }
     }
 
-    private function writeFile(string $sourcePath, string $extension): string
+    private function writeFile(string $sourcePath, string $extension, int $competitionId): string
     {
         $now = new \DateTimeImmutable();
-        $subDir = sprintf('catches/%d/%02d', $now->format('Y'), (int) $now->format('m'));
+        $subDir = sprintf(
+            'catches/%d/%02d/%d',
+            $now->format('Y'),
+            (int) $now->format('m'),
+            $competitionId
+        );
         $fullDir = rtrim($this->uploadsPath, '/') . '/' . $subDir;
 
         if (!is_dir($fullDir) && !mkdir($fullDir, 0755, true)) {

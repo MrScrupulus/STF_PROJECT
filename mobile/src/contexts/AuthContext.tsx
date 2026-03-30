@@ -15,8 +15,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const authenticated = await authService.isAuthenticated();
-      setIsAuthenticated(authenticated);
+      const hasToken = await authService.isAuthenticated();
+      if (!hasToken) {
+        setIsAuthenticated(false);
+        return;
+      }
+      // Vérifier que le JWT est encore valide (évite « connecté » avec token expiré)
+      try {
+        await authService.getMe();
+        setIsAuthenticated(true);
+      } catch {
+        setIsAuthenticated(false);
+      }
     } catch (error) {
       setIsAuthenticated(false);
     } finally {

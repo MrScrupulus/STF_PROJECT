@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
 import ScheduledPausesForm from "../../../../components/admin/ScheduledPausesForm";
 import PerimeterManager from "../../../../components/admin/PerimeterManager";
+import { COMPETITION_HELP } from "../../../../constants/competitionHelpTexts";
 import styles from "../../../../styles/pages/dashboard/competition-create.module.scss";
+
+const HelpIcon = ({ text }) => (
+  <span className={styles["competition-create__help_icon"]} title={text} role="img" aria-label="Aide">?</span>
+);
 
 export default function CreateCompetition() {
   const router = useRouter();
@@ -21,6 +26,10 @@ export default function CreateCompetition() {
     description: "",
     isRankingPublic: false,
     isBonusEnabled: false,
+    newSpeciesBonusEnabled: false,
+    newSpeciesBonusPoints: "",
+    quotaBonusEnabled: false,
+    quotaBonusPoints: "",
     reglement: "",
     maxFishCounted: "",
   });
@@ -56,6 +65,7 @@ export default function CreateCompetition() {
         speciesId: firstSpecies.id,
         coefficient: firstSpecies.coefficient || 1.0,
         basePoints: formData.isBonusEnabled ? (firstSpecies.basePoints || 50) : null,
+        quota: "",
       },
     ]);
   };
@@ -67,11 +77,6 @@ export default function CreateCompetition() {
   const handleSpeciesChange = (index, field, value) => {
     const updated = [...competitionSpecies];
     updated[index] = { ...updated[index], [field]: value };
-    // Si le bonus est activé globalement et qu'on change une espèce, mettre à jour basePoints si nécessaire
-    if (field === 'speciesId' && formData.isBonusEnabled && !updated[index].basePoints) {
-      const species = availableSpecies.find((s) => s.id === value);
-      updated[index].basePoints = species?.basePoints || 50;
-    }
     setCompetitionSpecies(updated);
   };
 
@@ -108,12 +113,25 @@ export default function CreateCompetition() {
       const v = String(formData.maxFishCounted || "").trim();
       const maxFishCounted = !v || v === "0" ? null : (parseInt(v, 10) >= 1 ? parseInt(v, 10) : 5);
 
+      const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
+        ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
+      const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
+        ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
+
       const competitionData = {
         ...formData,
         maxFishCounted,
+        isBonusEnabled: formData.newSpeciesBonusEnabled,
+        newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
+        newSpeciesBonusPoints: newSpeciesBonusPointsVal,
+        quotaBonusEnabled: formData.quotaBonusEnabled,
+        quotaBonusPoints: quotaBonusPointsVal,
         reglement: formData.reglement?.trim() || null,
         scheduledPauses: scheduledPauses.length > 0 ? scheduledPauses : undefined,
-        species: competitionSpecies.length > 0 ? competitionSpecies : undefined,
+        species: competitionSpecies.length > 0 ? competitionSpecies.map(cs => ({
+          ...cs,
+          quota: cs.quota && String(cs.quota).trim() ? parseInt(String(cs.quota).trim(), 10) : null,
+        })) : undefined,
       };
       await competitionsService.create(competitionData);
       router.push("/dashboard");
@@ -199,8 +217,9 @@ export default function CreateCompetition() {
           </div>
 
           <div className={styles["competition-create__group"]}>
-            <label className={styles["competition-create__label"]}>
+            <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
               Poissons comptabilisés pour le score
+              <HelpIcon text={COMPETITION_HELP.maxFishCounted} />
             </label>
             <input
               type="number"
@@ -218,7 +237,10 @@ export default function CreateCompetition() {
           </div>
 
           <div className={styles["competition-create__group"]}>
-            <label className={styles["competition-create__label"]}>Type</label>
+            <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+              Type
+              <HelpIcon text={COMPETITION_HELP.type} />
+            </label>
             <select
               value={formData.type}
               onChange={(e) =>
@@ -244,17 +266,19 @@ export default function CreateCompetition() {
               />
               <label
                 htmlFor="hasNoLimit"
-                className={styles["competition-create__label"]}
+                className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
                 Pas de limite de participants
+                <HelpIcon text={COMPETITION_HELP.hasNoLimit} />
               </label>
             </div>
           </div>
 
           {!formData.hasNoLimit && (
             <div className={styles["competition-create__group"]}>
-              <label className={styles["competition-create__label"]}>
+              <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
                 Nombre maximum de participants
+                <HelpIcon text={COMPETITION_HELP.maxParticipants} />
               </label>
               <input
                 type="number"
@@ -267,25 +291,6 @@ export default function CreateCompetition() {
               />
             </div>
           )}
-
-          <div className={styles["competition-create__group"]}>
-            <label className={styles["competition-create__label"]}>
-              Poissons comptabilisés pour le score
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={formData.maxFishCounted}
-              onChange={(e) =>
-                setFormData({ ...formData, maxFishCounted: e.target.value.replace(/[^0-9]/g, "") })
-              }
-              className={styles["competition-create__input"]}
-              placeholder="Ex: 5, 10, 20 (vide ou 0 = toutes les prises)"
-            />
-            <p className={styles["competition-create__help_text"]}>
-              Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises validées comptent.
-            </p>
-          </div>
 
           <div className={styles["competition-create__group"]}>
             <label className={styles["competition-create__label"]}>
@@ -303,6 +308,25 @@ export default function CreateCompetition() {
           </div>
 
           <div className={styles["competition-create__group"]}>
+            <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+              Règlement
+              <HelpIcon text={COMPETITION_HELP.reglement} />
+            </label>
+            <textarea
+              value={formData.reglement}
+              onChange={(e) =>
+                setFormData({ ...formData, reglement: e.target.value })
+              }
+              className={`${styles["competition-create__input"]} ${styles["competition-create__description"]}`}
+              rows="6"
+              placeholder="Règlement de la compétition (règles, modalités, barèmes...)"
+            />
+            <p className={styles["competition-create__help_text"]}>
+              Texte du règlement visible dans l&apos;onglet Règlement. Vous pourrez importer des images depuis la page de modification.
+            </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
             <div className={styles["competition-create__checkbox-wrapper"]}>
               <input
                 type="checkbox"
@@ -314,9 +338,10 @@ export default function CreateCompetition() {
               />
               <label
                 htmlFor="isRankingPublic"
-                className={styles["competition-create__label"]}
+                className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
                 Rendre le classement public (visible par tous les utilisateurs)
+                <HelpIcon text={COMPETITION_HELP.isRankingPublic} />
               </label>
             </div>
             <p className={styles["competition-create__help_text"]}>
@@ -329,36 +354,77 @@ export default function CreateCompetition() {
             <div className={styles["competition-create__checkbox-wrapper"]}>
               <input
                 type="checkbox"
-                checked={formData.isBonusEnabled}
-                onChange={(e) => {
-                  const isEnabled = e.target.checked;
-                  setFormData({ ...formData, isBonusEnabled: isEnabled });
-                  // Si on active le bonus, ajouter basePoints aux espèces existantes
-                  if (isEnabled) {
-                    setCompetitionSpecies(competitionSpecies.map(cs => ({
-                      ...cs,
-                      basePoints: cs.basePoints || 50
-                    })));
-                  } else {
-                    // Si on désactive, retirer basePoints
-                    setCompetitionSpecies(competitionSpecies.map(cs => ({
-                      ...cs,
-                      basePoints: null
-                    })));
-                  }
-                }}
-                id="isBonusEnabled"
+                checked={formData.newSpeciesBonusEnabled}
+                onChange={(e) =>
+                  setFormData({ ...formData, newSpeciesBonusEnabled: e.target.checked })
+                }
+                id="newSpeciesBonusEnabled"
               />
-              <label
-                htmlFor="isBonusEnabled"
-                className={styles["competition-create__label"]}
-              >
-                Activer la règle du bonus (points supplémentaires selon le nombre d'espèces différentes)
+              <label htmlFor="newSpeciesBonusEnabled" className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                Bonus par nouvelle espèce
+                <HelpIcon text={COMPETITION_HELP.newSpeciesBonus} />
               </label>
             </div>
+            {formData.newSpeciesBonusEnabled && (
+              <div className={styles["competition-create__group"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
+                <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                  Valeur du bonus (pts par espèce supplémentaire)
+                  <HelpIcon text={COMPETITION_HELP.newSpeciesBonusPoints} />
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.newSpeciesBonusPoints}
+                  onChange={(e) =>
+                    setFormData({ ...formData, newSpeciesBonusPoints: e.target.value.replace(/[^0-9]/g, "") })
+                  }
+                  className={styles["competition-create__input"]}
+                  placeholder="Ex: 50"
+                  style={{ maxWidth: "120px" }}
+                />
+              </div>
+            )}
             <p className={styles["competition-create__help_text"]}>
-              Si activé, les équipes gagneront des points bonus selon le nombre d'espèces différentes pêchées.
-              Vous pourrez définir les points bonus pour chaque espèce ci-dessous.
+              Points bonus pour chaque espèce différente pêchée (au-delà de la première).
+            </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
+                checked={formData.quotaBonusEnabled}
+                onChange={(e) =>
+                  setFormData({ ...formData, quotaBonusEnabled: e.target.checked })
+                }
+                id="quotaBonusEnabled"
+              />
+              <label htmlFor="quotaBonusEnabled" className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                Bonus quota atteint
+                <HelpIcon text={COMPETITION_HELP.quotaBonus} />
+              </label>
+            </div>
+            {formData.quotaBonusEnabled && (
+              <div className={styles["competition-create__group"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
+                <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
+                  Valeur du bonus (pts par quota rempli)
+                  <HelpIcon text={COMPETITION_HELP.quotaBonusPoints} />
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.quotaBonusPoints}
+                  onChange={(e) =>
+                    setFormData({ ...formData, quotaBonusPoints: e.target.value.replace(/[^0-9]/g, "") })
+                  }
+                  className={styles["competition-create__input"]}
+                  placeholder="Ex: 500"
+                  style={{ maxWidth: "120px" }}
+                />
+              </div>
+            )}
+            <p className={styles["competition-create__help_text"]}>
+              Points bonus quand le quota d&apos;une espèce est atteint (définir les quotas par espèce ci-dessous).
             </p>
           </div>
 
@@ -378,8 +444,7 @@ export default function CreateCompetition() {
               </button>
             </div>
             <p className={styles["competition-create__help_text"]}>
-              Définissez les espèces disponibles pour cette compétition avec leurs coefficients.
-              {formData.isBonusEnabled && " Vous pouvez également définir les points bonus pour chaque espèce si le bonus est activé."}
+              Définissez les espèces disponibles pour cette compétition avec leurs coefficients et éventuellement un quota.
             </p>
 
             {competitionSpecies.length > 0 && (
@@ -406,7 +471,9 @@ export default function CreateCompetition() {
                       </div>
 
                       <div className={styles["competition-create__species_coefficient"]}>
-                        <label>Coefficient</label>
+                        <label className={styles["competition-create__label_with_help"]}>
+                          Coefficient <HelpIcon text={COMPETITION_HELP.speciesCoefficient} />
+                        </label>
                         <input
                           type="text"
                           inputMode="decimal"
@@ -449,33 +516,21 @@ export default function CreateCompetition() {
                         />
                       </div>
 
-                      {formData.isBonusEnabled && (
-                        <div className={styles["competition-create__species_base_points"]}>
-                          <label>Points bonus</label>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            min="0"
-                            value={compSpecies.basePoints ?? ""}
-                            onChange={(e) => {
-                              const value = parseNumber(e.target.value);
-                              handleSpeciesChange(
-                                index,
-                                "basePoints",
-                                value !== null ? Math.floor(value) : null
-                              );
-                            }}
-                            onBlur={(e) => {
-                              const value = parseNumber(e.target.value);
-                              if (value === null || value < 0) {
-                                handleSpeciesChange(index, "basePoints", 50);
-                              }
-                            }}
-                            className={styles["competition-create__input"]}
-                            placeholder="50"
-                          />
-                        </div>
-                      )}
+                      <div className={styles["competition-create__species_quota"]}>
+                        <label className={styles["competition-create__label_with_help"]}>
+                          Quota (opt.) <HelpIcon text={COMPETITION_HELP.speciesQuota} />
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={compSpecies.quota ?? ""}
+                          onChange={(e) =>
+                            handleSpeciesChange(index, "quota", e.target.value.replace(/[^0-9]/g, ""))
+                          }
+                          className={styles["competition-create__input"]}
+                          placeholder="Illimité"
+                        />
+                      </div>
 
                       <button
                         type="button"

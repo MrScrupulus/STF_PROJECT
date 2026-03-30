@@ -16,9 +16,12 @@ class UploadController extends AbstractController
     }
 
     /**
-     * Sert les photos de prises stockées sur le disque.
+     * Sert les fichiers uploadés :
+     * - catches/ : photos de prises
+     * - reglements/ : images du règlement
+     * - stock/ : rétrocompatibilité (anciens chemins stock/catches, stock/reglements)
      */
-    #[Route('/{path}', name: 'upload_serve', requirements: ['path' => 'catches/.+'], methods: ['GET'])]
+    #[Route('/{path}', name: 'upload_serve', requirements: ['path' => '(catches|reglements|stock)/.+' ], methods: ['GET'])]
     public function serve(string $path): Response
     {
         if (str_contains($path, '..')) {

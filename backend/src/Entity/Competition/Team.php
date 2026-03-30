@@ -143,7 +143,7 @@ class Team
             }
         }
 
-        return $this->calculateScoreFromCatches($competitionCatches, $competition->getMaxFishCounted());
+        return $this->calculateScoreFromCatches($competitionCatches, $competition);
     }
 
     /**
@@ -159,7 +159,7 @@ class Team
             }
         }
 
-        $score = $this->calculateScoreFromCatches($competitionCatches, $competition->getMaxFishCounted());
+        $score = $this->calculateScoreFromCatches($competitionCatches, $competition);
         $this->totalScore = $score;
     }
 
@@ -168,95 +168,162 @@ class Team
      */
     private function updateTotalScoreWithCatches(array $catches): void
     {
-        $score = $this->calculateScoreFromCatches($catches, 5);
+        $score = $this->calculateScoreFromCatches($catches, null);
         $this->totalScore = $score;
     }
 
     /**
-     * Calcule le score à partir d'une liste de prises
-     * @param ?int $maxFishCounted null = tous les poissons, entier = limite (ex: 5, 10, 15)
+     * Retourne le détail du score (baseScore, newSpeciesBonus, quotaBonus) pour l'affichage.
+     * @return array{baseScore: int, newSpeciesBonus: int, quotaBonus: int, bonus: int}
      */
-    private function calculateScoreFromCatches(array $catches, ?int $maxFishCounted = 5): int
+    public function getScoreBreakdownForCompetition(?Competition $competition): array
     {
-        // Récupérer toutes les prises validées
-        $validatedCatches = [];
-        $uniqueSpecies = [];
-        $hasGobi = false;
+        $result = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0];
+        if (!$competition) {
+            return $result;
+        }
+        $competitionCatches = [];
+        foreach ($this->catches as $catch) {
+            if ($catch->getCompetition() && $catch->getCompetition()->getId() === $competition->getId() && $catch->isValidated()) {
+                $competitionCatches[] = $catch;
+            }
+        }
+        if (empty($competitionCatches)) {
+            return $result;
+        }
+        $breakdown = $this->computeScoreBreakdown($competitionCatches, $competition);
+        $result['baseScore'] = $breakdown['baseScore'];
+        $result['newSpeciesBonus'] = $breakdown['newSpeciesBonus'];
+        $result['quotaBonus'] = $breakdown['quotaBonus'];
+        $result['bonus'] = $breakdown['newSpeciesBonus'] + $breakdown['quotaBonus'];
+        return $result;
+    }
 
-        foreach ($catches as $catch) {
-            if ($catch->isValidated()) {
-                $validatedCatches[] = $catch;
-                
-                $speciesId = $catch->getSpecies()->getId();
-                $uniqueSpecies[$speciesId] = true;
-                
-                // Vérifier si c'est un gobi (coefficient 0)
-                if ($catch->getSpecies()->getCoefficient() == 0) {
-                    $hasGobi = true;
+    /**
+     * @return array{baseScore: int, newSpeciesBonus: int, quotaBonus: int}
+     */
+    private function computeScoreBreakdown(array $validatedCatches, Competition $competition): array
+    {
+        $baseScore = 0;
+        $newSpeciesBonus = 0;
+        $quotaBonus = 0;
+
+        $catchScores = [];
+        foreach ($validatedCatches as $catch) {
+            $catchScores[] = [
+                'catch' => $catch,
+                'points' => $catch->calculatePoints(),
+                'speciesId' => $catch->getSpecies()->getId(),
+            ];
+        }
+        usort($catchScores, fn($a, $b) => $b['points'] <=> $a['points']);
+
+        $quotaBySpecies = [];
+        foreach ($competition->getCompetitionSpecies() as $cs) {
+            if ($cs->getQuota() !== null && $cs->getSpecies()) {
+                $quotaBySpecies[$cs->getSpecies()->getId()] = $cs->getQuota();
+            }
+        }
+        $hasQuotas = !empty($quotaBySpecies);
+        $limit = $competition->getMaxFishCounted() ?? count($catchScores);
+        if ($limit <= 0) {
+            $limit = count($catchScores);
+        }
+
+        $selected = [];
+        $countBySpecies = [];
+        foreach ($catchScores as $item) {
+            if (count($selected) >= $limit) {
+                break;
+            }
+            $sid = $item['speciesId'];
+            $current = $countBySpecies[$sid] ?? 0;
+            $quota = $quotaBySpecies[$sid] ?? null;
+            if ($quota !== null && $current >= $quota) {
+                continue;
+            }
+            $selected[] = $item;
+            $countBySpecies[$sid] = $current + 1;
+        }
+
+        foreach ($selected as $item) {
+            $baseScore += $item['points'];
+        }
+
+        if ($competition->getNewSpeciesBonusEnabled() && ($pts = $competition->getNewSpeciesBonusPoints()) !== null && $pts > 0) {
+            $uniqueInSelected = array_unique(array_column($selected, 'speciesId'));
+            $nSpecies = count($uniqueInSelected);
+            $hasGobiOnly = $nSpecies === 1 && count($selected) > 0
+                && $selected[0]['catch']->getSpecies()->getCoefficient() == 0;
+            if (!$hasGobiOnly && $nSpecies >= 2) {
+                $newSpeciesBonus = $pts * ($nSpecies - 1);
+            }
+        }
+
+        if ($competition->getQuotaBonusEnabled() && ($pts = $competition->getQuotaBonusPoints()) !== null && $pts > 0 && $hasQuotas) {
+            $validatedCountBySpecies = [];
+            foreach ($validatedCatches as $c) {
+                $sid = $c->getSpecies()->getId();
+                $validatedCountBySpecies[$sid] = ($validatedCountBySpecies[$sid] ?? 0) + 1;
+            }
+            foreach ($quotaBySpecies as $sid => $quota) {
+                if (($validatedCountBySpecies[$sid] ?? 0) >= $quota) {
+                    $quotaBonus += $pts;
                 }
             }
         }
 
-        // Si aucune prise validée, score = 0
+        return ['baseScore' => $baseScore, 'newSpeciesBonus' => $newSpeciesBonus, 'quotaBonus' => $quotaBonus];
+    }
+
+    /**
+     * Calcule le score à partir d'une liste de prises
+     * @param ?Competition $competition null = mode legacy (maxFishCounted=5, ancienne formule bonus)
+     */
+    private function calculateScoreFromCatches(array $catches, ?Competition $competition = null): int
+    {
+        $validatedCatches = [];
+        foreach ($catches as $catch) {
+            if ($catch->isValidated()) {
+                $validatedCatches[] = $catch;
+            }
+        }
+
         if (empty($validatedCatches)) {
             $this->hasBonus = false;
             return 0;
         }
 
-        // Calculer le score de chaque prise
+        if ($competition) {
+            $breakdown = $this->computeScoreBreakdown($validatedCatches, $competition);
+            $bonus = $breakdown['newSpeciesBonus'] + $breakdown['quotaBonus'];
+            $this->hasBonus = ($bonus > 0);
+            return $breakdown['baseScore'] + $bonus;
+        }
+
+        // Mode legacy (sans compétition) : bonus basé sur toutes les espèces validées
         $catchScores = [];
         foreach ($validatedCatches as $catch) {
             $catchScores[] = [
                 'catch' => $catch,
-                'points' => $catch->calculatePoints()
+                'points' => $catch->calculatePoints(),
+                'speciesId' => $catch->getSpecies()->getId(),
             ];
         }
-
-        // Trier par points décroissants
-        usort($catchScores, function($a, $b) {
-            return $b['points'] <=> $a['points'];
-        });
-
-        // Nombre de poissons à compter : null = tous, sinon top N
-        $limit = $maxFishCounted ?? count($catchScores);
-        $topCatches = array_slice($catchScores, 0, $limit > 0 ? $limit : count($catchScores));
-
-        // Recalculer uniqueSpecies à partir des prises comptabilisées
-        $uniqueSpeciesInTop = [];
-        $hasGobiInTop = false;
-        foreach ($topCatches as $item) {
-            $speciesId = $item['catch']->getSpecies()->getId();
-            $uniqueSpeciesInTop[$speciesId] = true;
-            if ($item['catch']->getSpecies()->getCoefficient() == 0) {
-                $hasGobiInTop = true;
+        usort($catchScores, fn($a, $b) => $b['points'] <=> $a['points']);
+        $limit = 5;
+        $selected = array_slice($catchScores, 0, $limit);
+        $baseScore = array_sum(array_column($selected, 'points'));
+        $bonus = 0;
+        $uniqueSpeciesAll = array_unique(array_column($catchScores, 'speciesId'));
+        $singleSpeciesCoeff = count($catchScores) > 0 ? $catchScores[0]['catch']->getSpecies()->getCoefficient() : null;
+        $hasGobiOnly = count($uniqueSpeciesAll) === 1 && $singleSpeciesCoeff == 0;
+        if (!$hasGobiOnly && count($uniqueSpeciesAll) >= 2) {
+            $bonus = (count($uniqueSpeciesAll) - 1) * 50;
+            if ($bonus > 200) {
+                $bonus = 200;
             }
         }
-
-        // Score de base = somme des prises comptabilisées
-        $baseScore = 0;
-        foreach ($topCatches as $item) {
-            $baseScore += $item['points'];
-        }
-
-        // Calculer le bonus selon le nombre d'espèces différentes dans les prises comptabilisées
-        $uniqueSpeciesCount = count($uniqueSpeciesInTop);
-        
-        // Cas spécial : si gobi est la seule espèce, pas de bonus
-        if ($uniqueSpeciesCount === 1 && $hasGobiInTop) {
-            $bonus = 0;
-        } else {
-            // Bonus : 0 pour 1 espèce, 50 pour 2, 100 pour 3, 150 pour 4, 200 pour 5
-            $bonus = 0;
-            if ($uniqueSpeciesCount >= 2) {
-                $bonus = ($uniqueSpeciesCount - 1) * 50;
-                // Maximum 200 points de bonus
-                if ($bonus > 200) {
-                    $bonus = 200;
-                }
-            }
-        }
-
-        // Score total = score de base + bonus
         $this->hasBonus = ($bonus > 0);
         return $baseScore + $bonus;
     }

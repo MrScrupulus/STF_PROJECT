@@ -38,6 +38,14 @@ class CompetitionSpecies
     #[Groups(['competition:read'])]
     private ?int $basePoints = null;
 
+    /**
+     * Quota pour cette espèce (null = illimité).
+     * Ex : 8 perches max comptabilisées dans le top N.
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['competition:read'])]
+    private ?int $quota = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -95,6 +103,17 @@ class CompetitionSpecies
     public function setBasePoints(?int $basePoints): static
     {
         $this->basePoints = $basePoints;
+        return $this;
+    }
+
+    public function getQuota(): ?int
+    {
+        return $this->quota;
+    }
+
+    public function setQuota(?int $quota): static
+    {
+        $this->quota = $quota;
         return $this;
     }
 }

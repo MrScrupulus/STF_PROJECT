@@ -19,11 +19,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
+import HelpButton from '../components/HelpButton';
+import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
 
 interface CompetitionSpecies {
   speciesId: number;
   coefficient: string | number;
   basePoints?: number | null;
+  quota?: string | number | null;
 }
 
 export default function CreateCompetitionScreen() {
@@ -42,6 +45,10 @@ export default function CreateCompetitionScreen() {
     reglement: '',
     isRankingPublic: false,
     isBonusEnabled: false,
+    newSpeciesBonusEnabled: false,
+    newSpeciesBonusPoints: '',
+    quotaBonusEnabled: false,
+    quotaBonusPoints: '',
     maxFishCounted: '', // vide = tous, sinon nombre saisi
   });
 
@@ -88,7 +95,8 @@ export default function CreateCompetitionScreen() {
       {
         speciesId: firstSpecies.id,
         coefficient: firstSpecies.coefficient || 1.0,
-        basePoints: formData.isBonusEnabled ? 50 : null,
+        basePoints: null,
+        quota: '',
       },
     ]);
   };
@@ -100,11 +108,6 @@ export default function CreateCompetitionScreen() {
   const handleSpeciesChange = (index: number, field: string, value: any) => {
     const updated = [...competitionSpecies];
     updated[index] = { ...updated[index], [field]: value };
-    
-    // Si on change l'espèce et que le bonus est activé, mettre à jour basePoints si nécessaire
-    if (field === 'speciesId' && formData.isBonusEnabled && !updated[index].basePoints) {
-      updated[index].basePoints = 50;
-    }
     setCompetitionSpecies(updated);
   };
 
@@ -265,6 +268,11 @@ export default function CreateCompetitionScreen() {
       return;
     }
 
+    const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
+      ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
+    const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
+      ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
+
     // Préparer les données
     const competitionData: any = {
       name: formData.name.trim(),
@@ -276,7 +284,11 @@ export default function CreateCompetitionScreen() {
       description: formData.description.trim() || null,
       reglement: formData.reglement.trim() || null,
       isRankingPublic: formData.isRankingPublic,
-      isBonusEnabled: formData.isBonusEnabled,
+      isBonusEnabled: formData.newSpeciesBonusEnabled,
+      newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
+      newSpeciesBonusPoints: newSpeciesBonusPointsVal,
+      quotaBonusEnabled: formData.quotaBonusEnabled,
+      quotaBonusPoints: quotaBonusPointsVal,
       maxFishCounted: (() => {
         const v = formData.maxFishCounted.trim();
         if (!v || v === '0') return null;
@@ -301,8 +313,12 @@ export default function CreateCompetitionScreen() {
         coefficient: coefficient,
       };
 
-      if (formData.isBonusEnabled && cs.basePoints) {
-        speciesData.basePoints = cs.basePoints;
+      const quotaVal = cs.quota != null && String(cs.quota).trim() !== '';
+      if (quotaVal) {
+        const q = parseInt(String(cs.quota).trim(), 10);
+        speciesData.quota = !isNaN(q) && q >= 1 ? q : null;
+      } else {
+        speciesData.quota = null;
       }
 
       return speciesData;
@@ -487,8 +503,11 @@ export default function CreateCompetitionScreen() {
 
           {/* Nombre de poissons comptabilisés */}
           <View style={styles.section}>
-            <Text style={styles.label}>Poissons comptabilisés pour le score</Text>
-            <Text style={styles.hint}>Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises.</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Poissons comptabilisés pour le score</Text>
+              <HelpButton text={COMPETITION_HELP.maxFishCounted} />
+            </View>
+            <Text style={styles.helpText}>Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises.</Text>
             <TextInput
               style={styles.input}
               value={formData.maxFishCounted}
@@ -500,7 +519,10 @@ export default function CreateCompetitionScreen() {
 
           {/* Type */}
           <View style={styles.section}>
-            <Text style={styles.label}>Type</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Type</Text>
+              <HelpButton text={COMPETITION_HELP.type} />
+            </View>
             <View style={styles.typeButtons}>
               {['street', 'boat', 'float'].map((type) => (
                 <TouchableOpacity
@@ -527,7 +549,10 @@ export default function CreateCompetitionScreen() {
           {/* Pas de limite */}
           <View style={styles.section}>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Pas de limite de participants</Text>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Pas de limite de participants</Text>
+                <HelpButton text={COMPETITION_HELP.hasNoLimit} />
+              </View>
               <Switch
                 value={formData.hasNoLimit}
                 onValueChange={(value) => setFormData({ ...formData, hasNoLimit: value })}
@@ -538,7 +563,10 @@ export default function CreateCompetitionScreen() {
           {/* Max participants */}
           {!formData.hasNoLimit && (
             <View style={styles.section}>
-              <Text style={styles.label}>Nombre maximum de participants *</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Nombre maximum de participants *</Text>
+                <HelpButton text={COMPETITION_HELP.maxParticipants} />
+              </View>
               <TextInput
                 style={styles.input}
                 value={formData.maxParticipants}
@@ -565,7 +593,10 @@ export default function CreateCompetitionScreen() {
 
           {/* Règlement */}
           <View style={styles.section}>
-            <Text style={styles.label}>Règlement</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Règlement</Text>
+              <HelpButton text={COMPETITION_HELP.reglement} />
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.reglement}
@@ -580,7 +611,10 @@ export default function CreateCompetitionScreen() {
           {/* Classement public */}
           <View style={styles.section}>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Rendre le classement public</Text>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Rendre le classement public</Text>
+                <HelpButton text={COMPETITION_HELP.isRankingPublic} />
+              </View>
               <Switch
                 value={formData.isRankingPublic}
                 onValueChange={(value) => setFormData({ ...formData, isRankingPublic: value })}
@@ -591,35 +625,75 @@ export default function CreateCompetitionScreen() {
             </Text>
           </View>
 
-          {/* Bonus activé */}
+          {/* Bonus nouvelle espèce */}
           <View style={styles.section}>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Activer la règle du bonus</Text>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Bonus par nouvelle espèce</Text>
+                <HelpButton text={COMPETITION_HELP.newSpeciesBonus} />
+              </View>
               <Switch
-                value={formData.isBonusEnabled}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, isBonusEnabled: value });
-                  // Mettre à jour basePoints des espèces
-                  if (value) {
-                    setCompetitionSpecies(
-                      competitionSpecies.map((cs) => ({
-                        ...cs,
-                        basePoints: cs.basePoints || 50,
-                      }))
-                    );
-                  } else {
-                    setCompetitionSpecies(
-                      competitionSpecies.map((cs) => ({
-                        ...cs,
-                        basePoints: null,
-                      }))
-                    );
-                  }
-                }}
+                value={formData.newSpeciesBonusEnabled}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, newSpeciesBonusEnabled: value })
+                }
               />
             </View>
+            {formData.newSpeciesBonusEnabled && (
+              <View style={[styles.section, { marginTop: 8 }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Valeur du bonus (pts)</Text>
+                  <HelpButton text={COMPETITION_HELP.newSpeciesBonusPoints} />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={formData.newSpeciesBonusPoints}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, newSpeciesBonusPoints: text.replace(/[^0-9]/g, '') })
+                  }
+                  placeholder="Ex: 50"
+                  keyboardType="number-pad"
+                />
+              </View>
+            )}
             <Text style={styles.helpText}>
-              Si activé, les équipes gagneront des points bonus selon le nombre d'espèces différentes pêchées.
+              Points bonus pour chaque espèce différente pêchée (au-delà de la première).
+            </Text>
+          </View>
+
+          {/* Bonus quota */}
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Bonus quota atteint</Text>
+                <HelpButton text={COMPETITION_HELP.quotaBonus} />
+              </View>
+              <Switch
+                value={formData.quotaBonusEnabled}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, quotaBonusEnabled: value })
+                }
+              />
+            </View>
+            {formData.quotaBonusEnabled && (
+              <View style={[styles.section, { marginTop: 8 }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Valeur du bonus (pts)</Text>
+                  <HelpButton text={COMPETITION_HELP.quotaBonusPoints} />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={formData.quotaBonusPoints}
+                  onChangeText={(text) =>
+                    setFormData({ ...formData, quotaBonusPoints: text.replace(/[^0-9]/g, '') })
+                  }
+                  placeholder="Ex: 500"
+                  keyboardType="number-pad"
+                />
+              </View>
+            )}
+            <Text style={styles.helpText}>
+              Points bonus quand le quota d&apos;une espèce est atteint (définir les quotas par espèce ci-dessous).
             </Text>
           </View>
 
@@ -660,7 +734,10 @@ export default function CreateCompetitionScreen() {
                     </View>
 
                     <View style={styles.speciesCoefficient}>
-                      <Text style={styles.speciesLabel}>Coefficient</Text>
+                      <View style={[styles.labelRow, { marginBottom: 4 }]}>
+                        <Text style={styles.speciesLabel}>Coefficient</Text>
+                        <HelpButton text={COMPETITION_HELP.speciesCoefficient} />
+                      </View>
                       <TextInput
                         style={styles.speciesInput}
                         value={String(compSpecies.coefficient)}
@@ -687,21 +764,21 @@ export default function CreateCompetitionScreen() {
                       />
                     </View>
 
-                    {formData.isBonusEnabled && (
-                      <View style={styles.speciesBonus}>
-                        <Text style={styles.speciesLabel}>Points bonus</Text>
-                        <TextInput
-                          style={styles.speciesInput}
-                          value={compSpecies.basePoints ? String(compSpecies.basePoints) : ''}
-                          onChangeText={(text) => {
-                            const value = parseInt(text);
-                            handleSpeciesChange(index, 'basePoints', isNaN(value) ? null : value);
-                          }}
-                          keyboardType="number-pad"
-                          placeholder="50"
-                        />
+                    <View style={styles.speciesCoefficient}>
+                      <View style={[styles.labelRow, { marginBottom: 4 }]}>
+                        <Text style={styles.speciesLabel}>Quota (opt.)</Text>
+                        <HelpButton text={COMPETITION_HELP.speciesQuota} />
                       </View>
-                    )}
+                      <TextInput
+                        style={styles.speciesInput}
+                        value={compSpecies.quota != null ? String(compSpecies.quota) : ''}
+                        onChangeText={(text) =>
+                          handleSpeciesChange(index, 'quota', text.replace(/[^0-9]/g, ''))
+                        }
+                        keyboardType="number-pad"
+                        placeholder="Illimité"
+                      />
+                    </View>
 
                     <TouchableOpacity
                       style={styles.removeSpeciesButton}
@@ -820,6 +897,13 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  labelRowInSwitch: { flex: 1 },
   helpText: {
     fontSize: 12,
     color: '#666',

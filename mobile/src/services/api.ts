@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config/api';
+import { triggerAuthSessionExpired } from '../utils/authSessionEvents';
 
 // En-têtes de base (ngrok-skip-browser-warning évite la page d'avertissement ngrok)
 const baseHeaders: Record<string, string> = {
@@ -31,15 +32,23 @@ apiClient.interceptors.request.use(
   }
 );
 
+function isAuthAttempt401(error: AxiosError): boolean {
+  const url = error.config?.url ?? '';
+  // 401 attendu : mauvais identifiants, pas une session expirée
+  if (url.includes('/auth/login') || url.includes('/auth/register')) {
+    return true;
+  }
+  return false;
+}
+
 // Intercepteur pour gérer les erreurs
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expiré ou invalide
+    if (error.response?.status === 401 && !isAuthAttempt401(error)) {
       await SecureStore.deleteItemAsync('jwtToken');
       await SecureStore.deleteItemAsync('refreshToken');
-      // Rediriger vers login (sera géré par le contexte d'auth)
+      triggerAuthSessionExpired();
     }
     return Promise.reject(error);
   }

@@ -14,7 +14,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:migrate-base64-photos-to-files',
-    description: 'Migre les photos stockées en base64 (data:image/...) vers des fichiers dans stock/catches pour alléger la BDD',
+    description: 'Migre les photos stockées en base64 (data:image/...) vers des fichiers catches/AAAA/MM/competitionId/ pour alléger la BDD',
 )]
 class MigrateBase64PhotosToFilesCommand extends Command
 {
@@ -68,8 +68,15 @@ class MigrateBase64PhotosToFilesCommand extends Command
                 continue;
             }
 
+            $competition = $catch->getCompetition();
+            if (!$competition) {
+                $io->warning(sprintf('Prise #%d : aucune compétition associée, migration ignorée.', $catch->getId()));
+                $this->entityManager->clear();
+                continue;
+            }
+
             try {
-                $storedPath = $this->photoStorage->save($photoUrl);
+                $storedPath = $this->photoStorage->save($photoUrl, $competition->getId());
                 if (!$dryRun) {
                     $catch->setPhotoUrl($storedPath);
                     $this->entityManager->flush();
@@ -89,7 +96,7 @@ class MigrateBase64PhotosToFilesCommand extends Command
         if ($dryRun) {
             $io->success(sprintf('Dry-run : %d migration(s) simulée(s), %d erreur(s).', $migrated, $errors));
         } else {
-            $io->success(sprintf('%d photo(s) migrée(s) vers stock/catches, %d erreur(s).', $migrated, $errors));
+            $io->success(sprintf('%d photo(s) migrée(s) vers catches/, %d erreur(s).', $migrated, $errors));
         }
 
         return $errors > 0 ? Command::FAILURE : Command::SUCCESS;

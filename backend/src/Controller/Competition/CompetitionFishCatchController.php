@@ -3,6 +3,7 @@
 namespace App\Controller\Competition;
 
 use App\Entity\Competition\FishCatch;
+use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\FishCatchRepository;
 use App\Repository\Competition\TeamRepository;
 use App\Repository\Security\UserRepository;
@@ -19,18 +20,76 @@ use Symfony\Component\Routing\Annotation\Route;
 class CompetitionFishCatchController extends AbstractController
 {
     #[Route('/api/competitions/{competitionId}/catches', name: 'competition_catch_list', methods: ['GET'])]
-    public function list(int $competitionId, FishCatchRepository $repository): JsonResponse
+    public function list(int $competitionId, FishCatchRepository $repository, CompetitionRepository $competitionRepository): JsonResponse
     {
-        // Récupérer les prises pour cette compétition
-        // Utiliser la relation directe avec competition pour préserver l'historique
+        $competition = $competitionRepository->find($competitionId);
+        if (!$competition) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Compétition non trouvée',
+            ], 404);
+        }
+
+        $competitionSpeciesMap = [];
+        foreach ($competition->getCompetitionSpecies() as $compSpecies) {
+            $speciesEntity = $compSpecies->getSpecies();
+            if ($speciesEntity) {
+                $competitionSpeciesMap[$speciesEntity->getId()] = $compSpecies;
+            }
+        }
+
         $catches = $repository->createQueryBuilder('c')
             ->join('c.team', 't')
+            ->addSelect('t')
+            ->join('c.species', 's')
+            ->addSelect('s')
+            ->leftJoin('c.caughtBy', 'u')
+            ->addSelect('u')
             ->where('c.competition = :competitionId')
             ->setParameter('competitionId', $competitionId)
             ->getQuery()
             ->getResult();
 
-        return $this->json($catches);
+        $data = array_map(function (FishCatch $catch) use ($competitionSpeciesMap) {
+            $speciesId = $catch->getSpecies()->getId();
+            $coefficient = $catch->getSpecies()->getCoefficient();
+            if (isset($competitionSpeciesMap[$speciesId])) {
+                $coefficient = $competitionSpeciesMap[$speciesId]->getCoefficient();
+            }
+
+            return [
+                'id' => $catch->getId(),
+                'species' => [
+                    'id' => $speciesId,
+                    'name' => $catch->getSpecies()->getName(),
+                    'coefficient' => $coefficient,
+                ],
+                'size' => $catch->getSize(),
+                'points' => $catch->calculatePoints(),
+                'photoUrl' => $catch->getPhotoUrl(),
+                'comment' => $catch->getComment(),
+                'isValidated' => $catch->isValidated(),
+                'rejectionReason' => $catch->getRejectionReason(),
+                'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                'latitude' => $catch->getLatitude(),
+                'longitude' => $catch->getLongitude(),
+                'team' => [
+                    'id' => $catch->getTeam()->getId(),
+                    'name' => $catch->getTeam()->getName(),
+                ],
+                'caughtBy' => $catch->getCaughtBy() ? [
+                    'id' => $catch->getCaughtBy()->getId(),
+                    'firstname' => $catch->getCaughtBy()->getFirstname(),
+                    'lastname' => $catch->getCaughtBy()->getLastname(),
+                ] : null,
+                'competition' => $catch->getCompetition() ? [
+                    'id' => $catch->getCompetition()->getId(),
+                    'name' => $catch->getCompetition()->getName(),
+                ] : null,
+            ];
+        }, $catches);
+
+        return $this->json($data);
     }
 
     #[Route('/api/competitions/{competitionId}/catches/{id}', name: 'competition_catch_show', methods: ['GET'])]
@@ -136,7 +195,7 @@ class CompetitionFishCatchController extends AbstractController
             $photoUrl = $data['photoUrl'] ?? null;
             if ($photoUrl) {
                 try {
-                    $storedPath = $photoStorage->save($photoUrl);
+                    $storedPath = $photoStorage->save($photoUrl, $competitionId);
                     $catch->setPhotoUrl($storedPath);
                 } catch (\Throwable $e) {
                     error_log(sprintf('[CatchPhoto] Erreur stockage fichier (path=%s): %s', $photoStorage->getUploadsPath(), $e->getMessage()));
@@ -241,7 +300,8 @@ class CompetitionFishCatchController extends AbstractController
         }
         if (isset($data['photoUrl'])) {
             try {
-                $storedPath = $photoStorage->save($data['photoUrl']);
+                $photoCompetitionId = $catch->getCompetition()?->getId() ?? $competitionId;
+                $storedPath = $photoStorage->save($data['photoUrl'], $photoCompetitionId);
                 $catch->setPhotoUrl($storedPath);
             } catch (\Throwable $e) {
                 error_log(sprintf('[CatchPhoto] Erreur stockage fichier (update): %s', $e->getMessage()));

@@ -102,4 +102,21 @@ export const adminService = {
     const response = await apiClient.post('/api/admin/competitions', data);
     return response.data;
   },
+
+  uploadReglementImage: async (competitionId: number, uri: string, type: string = 'image/jpeg'): Promise<any> => {
+    const formData = new FormData();
+    const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+    formData.append('image', {
+      uri,
+      name: `reglement.${ext}`,
+      type: type || 'image/jpeg',
+    } as any);
+    const response = await apiClient.post(`/api/admin/competitions/${competitionId}/reglement-image`, formData);
+    return response.data;
+  },
+
+  deleteReglementImage: async (competitionId: number, index: number): Promise<any> => {
+    const response = await apiClient.delete(`/api/admin/competitions/${competitionId}/reglement-image/${index}`);
+    return response.data;
+  },
 };

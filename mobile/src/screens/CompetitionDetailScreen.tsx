@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Image,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -23,6 +24,7 @@ import PerimeterMapView from '../components/PerimeterMapView';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
 import CatchesMapView from '../components/competition/CatchesMapView';
+import ImageView from 'react-native-image-viewing';
 
 export default function CompetitionDetailScreen({ route }: any) {
   const navigation = useNavigation();
@@ -39,6 +41,8 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [showAllRanking, setShowAllRanking] = useState(false);
   const [showMoreStats, setShowMoreStats] = useState(false);
   const [showTop3, setShowTop3] = useState(false);
+  const [reglementImageViewerVisible, setReglementImageViewerVisible] = useState(false);
+  const [reglementImageViewerIndex, setReglementImageViewerIndex] = useState(0);
 
   const { data: competitionResponse, isLoading } = useQuery({
     queryKey: ['competition', competitionId],
@@ -458,11 +462,46 @@ export default function CompetitionDetailScreen({ route }: any) {
         {activeTab === 'reglement' ? (
           <View style={styles.speciesTabContent}>
             <Text style={styles.sectionTitle}>Règlement</Text>
-            {(competition as any).reglement ? (
-              <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
-            ) : (
-              <Text style={styles.emptyText}>Aucun règlement défini pour cette compétition.</Text>
-            )}
+            {(() => {
+              const imageUrls = ((competition as any).reglementImageUrls?.length > 0)
+                ? (competition as any).reglementImageUrls
+                : (competition as any).reglementImageUrl
+                  ? [(competition as any).reglementImageUrl]
+                  : [];
+              const imageSources = imageUrls.map((url: string) => ({ uri: url }));
+              return imageUrls.length > 0 ? (
+                <>
+                  {imageUrls.map((url: string, idx: number) => (
+                    <TouchableOpacity
+                      key={idx}
+                      activeOpacity={0.9}
+                      onPress={() => {
+                        setReglementImageViewerIndex(idx);
+                        setReglementImageViewerVisible(true);
+                      }}
+                    >
+                      <Image
+                        source={{ uri: url }}
+                        style={{ width: '100%', height: 300, resizeMode: 'contain', marginBottom: 16 }}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  <ImageView
+                    images={imageSources}
+                    imageIndex={reglementImageViewerIndex}
+                    visible={reglementImageViewerVisible}
+                    onRequestClose={() => setReglementImageViewerVisible(false)}
+                  />
+                  {(competition as any).reglement ? (
+                    <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
+                  ) : null}
+                </>
+              ) : (competition as any).reglement ? (
+                <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
+              ) : (
+                <Text style={styles.emptyText}>Aucun règlement défini pour cette compétition.</Text>
+              );
+            })()}
           </View>
         ) : activeTab === 'species' ? (
           <View style={styles.speciesTabContent}>
@@ -1516,7 +1555,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#007AFF',
   },
   tabText: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#666',
     fontWeight: '500',
   },

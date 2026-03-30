@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { setAuthSessionExpiredHandler } from './src/utils/authSessionEvents';
 
 // Screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -62,6 +64,21 @@ function getActiveRouteName(state: any): string | null {
     }
   }
   return route.name;
+}
+
+function SessionExpiredBridge() {
+  const { setIsAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setAuthSessionExpiredHandler(() => {
+      queryClient.clear();
+      setIsAuthenticated(false);
+    });
+    return () => setAuthSessionExpiredHandler(null);
+  }, [queryClient, setIsAuthenticated]);
+
+  return null;
 }
 
 function AppNavigator() {
@@ -208,6 +225,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AuthProvider>
+          <SessionExpiredBridge />
           <AppNavigator />
         </AuthProvider>
       </SafeAreaProvider>

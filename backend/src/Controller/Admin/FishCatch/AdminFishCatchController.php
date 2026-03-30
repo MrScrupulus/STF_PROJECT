@@ -381,7 +381,7 @@ class AdminFishCatchController extends AbstractController
             $catch->setComment($data['comment'] ?? null);
             $catch->setIsValidated(true); // Les prises créées par admin sont automatiquement validées
             if (!empty($data['photoUrl'])) {
-                $catch->setPhotoUrl($this->photoStorage->save($data['photoUrl']));
+                $catch->setPhotoUrl($this->photoStorage->save($data['photoUrl'], $competition->getId()));
             }
 
             // Gérer le membre qui a fait la prise

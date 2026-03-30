@@ -22,6 +22,7 @@ use App\Repository\Competition\CompetitionPerimeterRepository;
 use App\Repository\Species\SpeciesRepository;
 use App\Entity\Competition\CompetitionSpecies;
 use App\Repository\Competition\CompetitionSpeciesRepository;
+use App\Service\ReglementImageStorageService;
 use Psr\Log\LoggerInterface;
 
 #[Route('/api')]
@@ -29,6 +30,7 @@ class CompetitionController extends AbstractController
 {
     public function __construct(
         private readonly LoggerInterface $logger,
+        private readonly ReglementImageStorageService $reglementStorage,
     ) {
     }
     #[Route('/admin/competitions', name: 'app_admin_competitions_list', methods: ['GET'])]
@@ -361,6 +363,7 @@ class CompetitionController extends AbstractController
                 'coefficient' => $compSpecies->getCoefficient(),
                 'isBonusEnabled' => $compSpecies->isBonusEnabled(),
                 'basePoints' => $compSpecies->getBasePoints(),
+                'quota' => $compSpecies->getQuota(),
             ];
         }, $competitionSpecies->toArray());
         
@@ -413,6 +416,11 @@ class CompetitionController extends AbstractController
             'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
             'description' => $competition->getDescription(),
             'reglement' => $competition->getReglement(),
+            'reglementImagePaths' => $competition->getReglementImagePaths(),
+            'reglementImageUrls' => array_map(
+                fn($p) => $this->reglementStorage->getPublicUrl($p),
+                $competition->getReglementImagePaths() ?? []
+            ),
             'teamSize' => $competition->getTeamSize(),
             'maxParticipants' => $competition->getMaxParticipants(),
             'hasNoLimit' => $competition->getHasNoLimit(),
@@ -420,6 +428,10 @@ class CompetitionController extends AbstractController
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
             'isBonusEnabled' => $competition->getIsBonusEnabled(),
+            'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
+            'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
+            'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
+            'quotaBonusPoints' => $competition->getQuotaBonusPoints(),
             'maxFishCounted' => $competition->getMaxFishCounted(),
             'isRegistered' => $isRegistered,
             'scheduledPauses' => $scheduledPausesData,
@@ -527,6 +539,24 @@ class CompetitionController extends AbstractController
                 $v = $data['maxFishCounted'];
                 $competition->setMaxFishCounted(($v === null || $v === '' || $v === 'all') ? null : (int) $v);
             }
+            if (array_key_exists('newSpeciesBonusEnabled', $data)) {
+                $competition->setNewSpeciesBonusEnabled((bool) $data['newSpeciesBonusEnabled']);
+            }
+            if (array_key_exists('newSpeciesBonusPoints', $data)) {
+                $v = $data['newSpeciesBonusPoints'];
+                $competition->setNewSpeciesBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
+            }
+            if (array_key_exists('quotaBonusEnabled', $data)) {
+                $competition->setQuotaBonusEnabled((bool) $data['quotaBonusEnabled']);
+            }
+            if (array_key_exists('quotaBonusPoints', $data)) {
+                $v = $data['quotaBonusPoints'];
+                $competition->setQuotaBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
+            }
+            if (array_key_exists('reglementImagePaths', $data)) {
+                $paths = \is_array($data['reglementImagePaths']) ? $data['reglementImagePaths'] : [];
+                $competition->setReglementImagePaths(empty($paths) ? null : array_values($paths));
+            }
 
             $entityManager->flush();
 
@@ -546,6 +576,10 @@ class CompetitionController extends AbstractController
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'isPaused' => $competition->getIsPaused(),
                     'maxFishCounted' => $competition->getMaxFishCounted(),
+                    'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
+                    'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
+                    'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
+                    'quotaBonusPoints' => $competition->getQuotaBonusPoints(),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -558,6 +592,91 @@ class CompetitionController extends AbstractController
                 'error' => 'Une erreur est survenue lors de la mise à jour',
                 'message' => 'Une erreur est survenue lors de la mise à jour de la compétition. Veuillez réessayer plus tard.'
             ], 500);
+        }
+    }
+
+    #[Route('/admin/competitions/{id}/reglement-image', name: 'app_admin_competition_upload_reglement', methods: ['POST'])]
+    public function uploadReglementImage(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $repository->find($id);
+            if (!$competition) {
+                return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
+            }
+
+            $file = $request->files->get('image') ?? $request->files->get('file');
+            if (!$file || !$file->isValid()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Fichier image requis (image ou file). Formats : jpg, png, webp.',
+                ], 400);
+            }
+
+            $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
+            if (!\in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Format non supporté. Utilisez jpg, png ou webp.',
+                ], 400);
+            }
+
+            $newPath = $this->reglementStorage->save($file);
+            $competition->addReglementImagePath($newPath);
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'reglementImagePath' => $newPath,
+                'reglementImageUrl' => $this->reglementStorage->getPublicUrl($newPath),
+                'reglementImagePaths' => $competition->getReglementImagePaths(),
+                'reglementImageUrls' => array_map(
+                    fn($p) => $this->reglementStorage->getPublicUrl($p),
+                    $competition->getReglementImagePaths() ?? []
+                ),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur upload règlement', ['error' => $e->getMessage()]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload de l\'image.',
+            ], 500);
+        }
+    }
+
+    #[Route('/admin/competitions/{id}/reglement-image/{index}', name: 'app_admin_competition_delete_reglement_image', methods: ['DELETE'])]
+    public function deleteReglementImage(int $id, int $index, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $repository->find($id);
+            if (!$competition) {
+                return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
+            }
+
+            $paths = $competition->getReglementImagePaths() ?? [];
+            if (!isset($paths[$index])) {
+                return $this->json(['success' => false, 'message' => 'Image non trouvée'], 404);
+            }
+
+            $pathToDelete = $paths[$index];
+            $competition->removeReglementImagePathByIndex($index);
+            $entityManager->flush();
+            $this->reglementStorage->delete($pathToDelete);
+
+            return $this->json([
+                'success' => true,
+                'reglementImagePaths' => $competition->getReglementImagePaths(),
+                'reglementImageUrls' => array_map(
+                    fn($p) => $this->reglementStorage->getPublicUrl($p),
+                    $competition->getReglementImagePaths() ?? []
+                ),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur suppression image règlement', ['error' => $e->getMessage()]);
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression.'], 500);
         }
     }
 
@@ -617,6 +736,16 @@ class CompetitionController extends AbstractController
             $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
             $competition->setIsRankingPublic($data['isRankingPublic'] ?? false);
             $competition->setIsBonusEnabled($data['isBonusEnabled'] ?? false);
+            $competition->setNewSpeciesBonusEnabled($data['newSpeciesBonusEnabled'] ?? false);
+            if (array_key_exists('newSpeciesBonusPoints', $data)) {
+                $v = $data['newSpeciesBonusPoints'];
+                $competition->setNewSpeciesBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
+            }
+            $competition->setQuotaBonusEnabled($data['quotaBonusEnabled'] ?? false);
+            if (array_key_exists('quotaBonusPoints', $data)) {
+                $v = $data['quotaBonusPoints'];
+                $competition->setQuotaBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
+            }
             if (array_key_exists('maxFishCounted', $data)) {
                 $v = $data['maxFishCounted'];
                 $competition->setMaxFishCounted(($v === null || $v === '' || $v === 'all') ? null : (int) $v);
@@ -654,6 +783,11 @@ class CompetitionController extends AbstractController
                             $competitionSpecies->setBasePoints((int) $speciesData['basePoints']);
                         } else {
                             $competitionSpecies->setBasePoints(null);
+                        }
+                        if (array_key_exists('quota', $speciesData) && $speciesData['quota'] !== null && $speciesData['quota'] !== '') {
+                            $competitionSpecies->setQuota(max(1, (int) $speciesData['quota']));
+                        } else {
+                            $competitionSpecies->setQuota(null);
                         }
 
                         $entityManager->persist($competitionSpecies);
@@ -719,6 +853,10 @@ class CompetitionController extends AbstractController
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'maxFishCounted' => $competition->getMaxFishCounted(),
+                    'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
+                    'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
+                    'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
+                    'quotaBonusPoints' => $competition->getQuotaBonusPoints(),
                 ]
             ], 201);
         } catch (\Exception $e) {

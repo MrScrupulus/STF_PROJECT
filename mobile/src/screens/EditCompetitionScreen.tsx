@@ -12,7 +12,9 @@ import {
   Platform,
   Switch,
   Modal,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import MapView, { Polygon } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +25,8 @@ import { competitionsService } from '../services/competitionsService';
 import { perimeterService } from '../services/perimeterService';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
+import HelpButton from '../components/HelpButton';
+import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
 
 const formatDateTime = (date: Date): string => {
   const year = date.getFullYear();
@@ -56,6 +60,10 @@ export default function EditCompetitionScreen() {
     hasNoLimit: false,
     maxParticipants: '',
     isRankingPublic: false,
+    newSpeciesBonusEnabled: false,
+    newSpeciesBonusPoints: '',
+    quotaBonusEnabled: false,
+    quotaBonusPoints: '',
     maxFishCounted: '', // vide = tous, sinon nombre saisi
   });
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -65,6 +73,8 @@ export default function EditCompetitionScreen() {
   const [showEndDateOnly, setShowEndDateOnly] = useState(false);
   const [showEndTimeOnly, setShowEndTimeOnly] = useState(false);
   const [error, setError] = useState('');
+  const [reglementImageUrls, setReglementImageUrls] = useState<string[]>([]);
+  const [reglementImageUploading, setReglementImageUploading] = useState(false);
   const [showZoneModal, setShowZoneModal] = useState(false);
   const [zonePoints, setZonePoints] = useState<{ latitude: number; longitude: number }[]>([]);
   const [mapRegion, setMapRegion] = useState({
@@ -104,10 +114,20 @@ export default function EditCompetitionScreen() {
         hasNoLimit: (competition as any).hasNoLimit ?? false,
         maxParticipants: (competition as any).hasNoLimit ? '' : String(competition.maxParticipants ?? ''),
         isRankingPublic: (competition as any).isRankingPublic ?? false,
+        newSpeciesBonusEnabled: (competition as any).newSpeciesBonusEnabled ?? false,
+        newSpeciesBonusPoints: (competition as any).hasOwnProperty('newSpeciesBonusPoints') && (competition as any).newSpeciesBonusPoints != null
+          ? String((competition as any).newSpeciesBonusPoints)
+          : '',
+        quotaBonusEnabled: (competition as any).quotaBonusEnabled ?? false,
+        quotaBonusPoints: (competition as any).hasOwnProperty('quotaBonusPoints') && (competition as any).quotaBonusPoints != null
+          ? String((competition as any).quotaBonusPoints)
+          : '',
         maxFishCounted: (competition as any).hasOwnProperty('maxFishCounted') && (competition as any).maxFishCounted != null
           ? String((competition as any).maxFishCounted)
           : '',
       });
+      const urls = (competition as any).reglementImageUrls;
+      setReglementImageUrls(Array.isArray(urls) ? urls : ((competition as any).reglementImageUrl ? [(competition as any).reglementImageUrl] : []));
     }
   }, [competition]);
 
@@ -222,6 +242,11 @@ export default function EditCompetitionScreen() {
       return;
     }
 
+    const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
+      ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
+    const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
+      ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
+
     const data: any = {
       name: formData.name.trim(),
       startDate: formatDateTime(formData.startDate),
@@ -231,6 +256,10 @@ export default function EditCompetitionScreen() {
       reglement: formData.reglement.trim() || null,
       hasNoLimit: formData.hasNoLimit,
       isRankingPublic: formData.isRankingPublic,
+      newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
+      newSpeciesBonusPoints: newSpeciesBonusPointsVal,
+      quotaBonusEnabled: formData.quotaBonusEnabled,
+      quotaBonusPoints: quotaBonusPointsVal,
       maxFishCounted: (() => {
         const v = formData.maxFishCounted.trim();
         if (!v || v === '0') return null;
@@ -387,14 +416,20 @@ export default function EditCompetitionScreen() {
 
           <View style={styles.section}>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Pas de limite de participants</Text>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Pas de limite de participants</Text>
+                <HelpButton text={COMPETITION_HELP.hasNoLimit} />
+              </View>
               <Switch value={formData.hasNoLimit} onValueChange={(v) => setFormData({ ...formData, hasNoLimit: v })} />
             </View>
           </View>
 
           {!formData.hasNoLimit && (
             <View style={styles.section}>
-              <Text style={styles.label}>Nombre max de participants *</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Nombre max de participants *</Text>
+                <HelpButton text={COMPETITION_HELP.maxParticipants} />
+              </View>
               <TextInput
                 style={styles.input}
                 value={formData.maxParticipants}
@@ -406,7 +441,10 @@ export default function EditCompetitionScreen() {
 
           {/* Poissons comptabilisés */}
           <View style={styles.section}>
-            <Text style={styles.label}>Poissons comptabilisés pour le score</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Poissons comptabilisés pour le score</Text>
+              <HelpButton text={COMPETITION_HELP.maxFishCounted} />
+            </View>
             <Text style={styles.helpText}>Nombre des meilleures prises (par points) comptabilisées. Laisser vide ou 0 = toutes les prises.</Text>
             <TextInput
               style={styles.input}
@@ -430,7 +468,10 @@ export default function EditCompetitionScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Règlement</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Règlement</Text>
+              <HelpButton text={COMPETITION_HELP.reglement} />
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.reglement}
@@ -439,13 +480,134 @@ export default function EditCompetitionScreen() {
               multiline
               numberOfLines={5}
             />
+            <Text style={styles.helpText}>Images du règlement (optionnel) :</Text>
+            {reglementImageUrls.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 }}>
+                {reglementImageUrls.map((url, idx) => (
+                  <View key={idx} style={{ width: '47%' }}>
+                    <Image source={{ uri: url }} style={{ width: '100%', height: 150, resizeMode: 'contain', borderWidth: 1, borderColor: '#ccc', borderRadius: 4 }} />
+                    <TouchableOpacity
+                      style={[styles.deleteButton, { marginTop: 4 }]}
+                      onPress={async () => {
+                        try {
+                          const res = await adminService.deleteReglementImage(competitionId, idx);
+                          setReglementImageUrls(res.reglementImageUrls || []);
+                          queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+                        } catch (err: any) {
+                          Alert.alert('Erreur', err.response?.data?.message || 'Erreur suppression image');
+                        }
+                      }}
+                    >
+                      <Text style={styles.deleteButtonText}>Supprimer</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.addZoneButton}
+              onPress={async () => {
+                try {
+                  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (status !== 'granted') {
+                    Alert.alert('Permission requise', 'Autorisez l\'accès à la galerie pour importer une image.');
+                    return;
+                  }
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: false,
+                    quality: 0.9,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    setReglementImageUploading(true);
+                    const res = await adminService.uploadReglementImage(
+                      competitionId,
+                      result.assets[0].uri,
+                      result.assets[0].mimeType || 'image/jpeg'
+                    );
+                    setReglementImageUrls(res.reglementImageUrls || []);
+                    queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+                  }
+                } catch (err: any) {
+                  Alert.alert('Erreur', err.response?.data?.message || 'Erreur lors de l\'upload');
+                } finally {
+                  setReglementImageUploading(false);
+                }
+              }}
+              disabled={reglementImageUploading}
+            >
+              <Text style={styles.addZoneButtonText}>
+                {reglementImageUploading ? 'Upload en cours...' : '+ Ajouter une image (jpg, png)'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Classement public</Text>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Classement public</Text>
+                <HelpButton text={COMPETITION_HELP.isRankingPublic} />
+              </View>
               <Switch value={formData.isRankingPublic} onValueChange={(v) => setFormData({ ...formData, isRankingPublic: v })} />
             </View>
+          </View>
+
+          {/* Bonus nouvelle espèce */}
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Bonus par nouvelle espèce</Text>
+                <HelpButton text={COMPETITION_HELP.newSpeciesBonus} />
+              </View>
+              <Switch
+                value={formData.newSpeciesBonusEnabled}
+                onValueChange={(v) => setFormData({ ...formData, newSpeciesBonusEnabled: v })}
+              />
+            </View>
+            {formData.newSpeciesBonusEnabled && (
+              <View style={[styles.section, { marginTop: 8 }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Valeur du bonus (pts)</Text>
+                  <HelpButton text={COMPETITION_HELP.newSpeciesBonusPoints} />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={formData.newSpeciesBonusPoints}
+                  onChangeText={(t) => setFormData({ ...formData, newSpeciesBonusPoints: t.replace(/[^0-9]/g, '') })}
+                  placeholder="Ex: 50"
+                  keyboardType="number-pad"
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Bonus quota */}
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Bonus quota atteint</Text>
+                <HelpButton text={COMPETITION_HELP.quotaBonus} />
+              </View>
+              <Switch
+                value={formData.quotaBonusEnabled}
+                onValueChange={(v) => setFormData({ ...formData, quotaBonusEnabled: v })}
+              />
+            </View>
+            {formData.quotaBonusEnabled && (
+              <View style={[styles.section, { marginTop: 8 }]}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Valeur du bonus (pts)</Text>
+                  <HelpButton text={COMPETITION_HELP.quotaBonusPoints} />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={formData.quotaBonusPoints}
+                  onChangeText={(t) => setFormData({ ...formData, quotaBonusPoints: t.replace(/[^0-9]/g, '') })}
+                  placeholder="Ex: 500"
+                  keyboardType="number-pad"
+                />
+              </View>
+            )}
           </View>
 
           {/* Zones autorisées */}
@@ -545,6 +707,8 @@ const styles = StyleSheet.create({
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' },
+  labelRowInSwitch: { flex: 1 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   dateButton: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, backgroundColor: '#fff' },

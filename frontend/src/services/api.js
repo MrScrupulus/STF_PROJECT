@@ -228,6 +228,28 @@ export const api = {
       throw error;
     }
   },
+  uploadFile: async (endpoint, formData) => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Accept: "application/json" };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+      const response = await fetch(API_URL + endpoint, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.message || `Error ${response.status}`);
+      }
+      return responseData;
+    } catch (error) {
+      console.error("API error:", error);
+      throw error;
+    }
+  },
   patch: async (endpoint, data = null) => {
     try {
       const token = localStorage.getItem("token");

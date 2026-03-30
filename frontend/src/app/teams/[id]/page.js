@@ -78,12 +78,11 @@ export default function TeamDetailPage() {
         .sort((a, b) => b.points - a.points)
     : [];
 
-  // Calculer le top 5 des prises (celles qui comptent pour le score)
-  const top5Catches = validCatches.slice(0, 5);
-  const baseScore = top5Catches.reduce((sum, catchItem) => sum + catchItem.points, 0);
-  
-  // Séparer les top 5 des autres prises
-  const otherCatches = validCatches.slice(5);
+  const maxFishCounted = team?.competition?.maxFishCounted ?? 5;
+  const topN = maxFishCounted && maxFishCounted > 0 ? maxFishCounted : validCatches.length;
+  const topCatches = validCatches.slice(0, topN);
+  const baseScore = team?.baseScore != null ? team.baseScore : topCatches.reduce((sum, catchItem) => sum + catchItem.points, 0);
+  const otherCatches = validCatches.slice(topN);
 
   if (isLoading) {
     return (
@@ -183,16 +182,40 @@ export default function TeamDetailPage() {
               <div className={styles.teams__score_label}>Score Base</div>
               <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{baseScore}</div>
               <div className={styles.teams__score_description}>
-                Top 5 meilleures prises
+                {topN > 0 ? `Top ${topN} meilleures prises` : 'Meilleures prises'}
               </div>
             </div>
-            <div className={styles.teams__score_card}>
-              <div className={styles.teams__score_label}>Bonus Espèces</div>
-              <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{team.bonus || 0}</div>
-              <div className={styles.teams__score_description}>
-                {team.bonus > 0 ? `${Math.floor((team.bonus || 0) / 50) + 1} espèces différentes` : 'Aucun bonus'}
-              </div>
-            </div>
+            {(team.newSpeciesBonus > 0 || team.quotaBonus > 0 || (team.bonus > 0 && !team.newSpeciesBonus && !team.quotaBonus)) && (
+              <>
+                {team.newSpeciesBonus > 0 && (
+                  <div className={styles.teams__score_card}>
+                    <div className={styles.teams__score_label}>Bonus espèce</div>
+                    <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{team.newSpeciesBonus}</div>
+                    <div className={styles.teams__score_description}>
+                      Nouvelles espèces différentes
+                    </div>
+                  </div>
+                )}
+                {team.quotaBonus > 0 && (
+                  <div className={styles.teams__score_card}>
+                    <div className={styles.teams__score_label}>Bonus quota</div>
+                    <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{team.quotaBonus}</div>
+                    <div className={styles.teams__score_description}>
+                      Quota(s) atteint(s)
+                    </div>
+                  </div>
+                )}
+                {team.bonus > 0 && !team.newSpeciesBonus && !team.quotaBonus && (
+                  <div className={styles.teams__score_card}>
+                    <div className={styles.teams__score_label}>Bonus</div>
+                    <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{team.bonus}</div>
+                    <div className={styles.teams__score_description}>
+                      {team.bonus > 0 ? 'Bonus accordé' : 'Aucun bonus'}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
@@ -328,14 +351,14 @@ export default function TeamDetailPage() {
             </div>
           ) : (
             <>
-              {/* Top 5 prises (celles qui comptent pour le score) */}
-              {top5Catches.length > 0 && (
+              {/* Top N prises (celles qui comptent pour le score) */}
+              {topCatches.length > 0 && (
                 <div className={styles.teams__top5_section}>
                   <h3 className={styles.teams__top5_title}>
-                    🏆 Top 5 prises comptabilisées pour le score
+                    🏆 Top {topN || topCatches.length} prises comptabilisées pour le score
                   </h3>
                   <div className={styles.teams__catches_grid}>
-                    {top5Catches.map((catchItem, index) => (
+                    {topCatches.map((catchItem, index) => (
                       <div
                         key={catchItem.id}
                         className={`${styles.teams__catch_card} ${styles["teams__catch_card--top5"]}`}

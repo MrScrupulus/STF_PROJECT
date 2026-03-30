@@ -665,43 +665,24 @@ class TeamController extends AbstractController
             }
         }
 
-        // Calculer le bonus de l'équipe avec les prises filtrées
-        $validatedCatches = [];
-        $uniqueSpecies = [];
-        $hasGobi = false;
-        foreach ($competitionCatches as $catch) {
-            if ($catch->isValidated()) {
-                $validatedCatches[] = $catch;
-                $speciesId = $catch->getSpecies()->getId();
-                $uniqueSpecies[$speciesId] = true;
-                
-                // Vérifier si c'est un gobi (coefficient 0)
-                if ($catch->getSpecies()->getCoefficient() == 0) {
-                    $hasGobi = true;
-                }
-            }
-        }
-        
-        $uniqueSpeciesCount = count($uniqueSpecies);
-        $bonus = 0;
-        
-        // Cas spécial : si gobi est la seule espèce, pas de bonus
-        if ($uniqueSpeciesCount === 1 && $hasGobi) {
-            $bonus = 0;
-        } else {
-            if ($uniqueSpeciesCount >= 2) {
-                $bonus = ($uniqueSpeciesCount - 1) * 50;
-                if ($bonus > 200) {
-                    $bonus = 200;
-                }
-            }
-        }
-
-        // Utiliser le score filtré par compétition
-        $teamScore = $team->getCompetition() 
+        // Utiliser le détail du score (respecte newSpeciesBonusEnabled, quotaBonusEnabled)
+        $teamScore = $team->getCompetition()
             ? $team->getScoreForCompetition($team->getCompetition())
             : $team->getTotalScore();
-        
+
+        $scoreBreakdown = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0];
+        if ($team->getCompetition()) {
+            $scoreBreakdown = $team->getScoreBreakdownForCompetition($team->getCompetition());
+        } else {
+            // Fallback legacy : bonus = totalScore - baseScore des top 5
+            $validatedCatches = array_filter($competitionCatches, fn($c) => $c->isValidated());
+            $sorted = $validatedCatches;
+            usort($sorted, fn($a, $b) => $b->calculatePoints() <=> $a->calculatePoints());
+            $top5 = array_slice($sorted, 0, 5);
+            $scoreBreakdown['baseScore'] = array_sum(array_map(fn($c) => $c->calculatePoints(), $top5));
+            $scoreBreakdown['bonus'] = max(0, $teamScore - $scoreBreakdown['baseScore']);
+        }
+
         // Transformer manuellement les données pour éviter les références circulaires
         return $this->json([
             'success' => true,
@@ -710,7 +691,10 @@ class TeamController extends AbstractController
                 'name' => $team->getName(),
                 'totalScore' => $teamScore,
                 'hasBonus' => $team->getHasBonus(),
-                'bonus' => $bonus,
+                'bonus' => $scoreBreakdown['bonus'],
+                'newSpeciesBonus' => $scoreBreakdown['newSpeciesBonus'],
+                'quotaBonus' => $scoreBreakdown['quotaBonus'],
+                'baseScore' => $scoreBreakdown['baseScore'],
                 'registrationNumber' => $team->getRegistrationNumber(),
                 'members' => array_map(function ($member) {
                     return [
@@ -724,6 +708,7 @@ class TeamController extends AbstractController
                     'id' => $team->getCompetition()->getId(),
                     'name' => $team->getCompetition()->getName(),
                     'teamSize' => $team->getCompetition()->getTeamSize(),
+                    'maxFishCounted' => $team->getCompetition()->getMaxFishCounted(),
                     'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
                     'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                 ] : null,
