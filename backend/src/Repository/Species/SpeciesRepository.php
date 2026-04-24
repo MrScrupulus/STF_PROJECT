@@ -32,4 +32,22 @@ class SpeciesRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Évite les doublons « brochet » / « Brochet » / espaces superflus.
+     */
+    public function findOneByNormalizedName(string $name): ?Species
+    {
+        $norm = mb_strtolower(trim($name));
+        if ($norm === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('s')
+            ->where('LOWER(TRIM(s.name)) = :norm')
+            ->setParameter('norm', $norm)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

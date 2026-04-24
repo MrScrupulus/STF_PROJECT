@@ -123,4 +123,17 @@ class TeamRepository extends ServiceEntityRepository
     {
         return $this->findTeamsByMember($user, false);
     }
+
+    public function findPersonalJournalTeam(User $user): ?Team
+    {
+        return $this->createQueryBuilder('t')
+            ->innerJoin('t.members', 'm')
+            ->where('m = :user')
+            ->andWhere('t.isPersonalJournal = :pj')
+            ->setParameter('user', $user)
+            ->setParameter('pj', true)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

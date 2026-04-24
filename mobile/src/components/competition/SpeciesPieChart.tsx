@@ -13,9 +13,11 @@ interface SpeciesStat {
 
 interface SpeciesPieChartProps {
   speciesStats: SpeciesStat[];
+  /** Par défaut : titre du graphique. Mettre false pour n’afficher que le camembert (ex. sous un titre de section parent). */
+  showTitle?: boolean;
 }
 
-export default function SpeciesPieChart({ speciesStats }: SpeciesPieChartProps) {
+export default function SpeciesPieChart({ speciesStats, showTitle = true }: SpeciesPieChartProps) {
   if (!speciesStats || speciesStats.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -49,7 +51,9 @@ export default function SpeciesPieChart({ speciesStats }: SpeciesPieChartProps) 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Répartition des espèces capturées</Text>
+      {showTitle ? (
+        <Text style={styles.title}>Répartition des espèces capturées</Text>
+      ) : null}
       <PieChart
         data={data}
         width={screenWidth - 60}

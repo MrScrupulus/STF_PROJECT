@@ -119,4 +119,15 @@ export const adminService = {
     const response = await apiClient.delete(`/api/admin/competitions/${competitionId}/reglement-image/${index}`);
     return response.data;
   },
+
+  /** Création admin ; si une espèce du même nom existe (casse / espaces), le backend renvoie reused + l’existant. */
+  createSpecies: async (data: {
+    name: string;
+    coefficient: number;
+    isBonus?: boolean;
+    basePoints?: number;
+  }): Promise<{ message?: string; reused?: boolean; species: { id: number; name: string; coefficient: number; basePoints?: number } }> => {
+    const response = await apiClient.post('/api/admin/species', data);
+    return response.data;
+  },
 };

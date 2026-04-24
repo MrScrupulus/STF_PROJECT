@@ -40,7 +40,11 @@ export const competitionsService = {
 
   getStats: (id) => api.get(`/api/admin/competitions/${id}/stats`),
   getPublicStats: (id) => api.get(`/api/competitions/${id}/stats`), // Endpoint public pour les statistiques
-  
+  /** Stats perso (JWT) : prises validées dont l'utilisateur est l'auteur */
+  getMyStats: (id) => api.get(`/api/competitions/${id}/me/stats`),
+  getMyTeamStats: (id) => api.get(`/api/competitions/${id}/me/team/stats`),
+  getMyGlobalStats: () => api.get(`/api/me/stats`),
+
   unregisterFromCompetition: async (competitionId) => {
     const response = await api.post(`/api/competitions/${competitionId}/teams/unregister`);
     return response;

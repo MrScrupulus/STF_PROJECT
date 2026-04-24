@@ -53,6 +53,11 @@ class Team
     #[Groups(['team:read'])]
     private bool $isActive = true;
 
+    /** Équipe technique une par utilisateur pour les prises hors compétition (journal). */
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[Groups(['team:read'])]
+    private bool $isPersonalJournal = false;
+
     #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamInvitation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $invitations;
 
@@ -64,6 +69,7 @@ class Team
         $this->totalScore = 0;
         $this->hasBonus = false;
         $this->isActive = true;
+        $this->isPersonalJournal = false;
     }
 
     public function getId(): ?int
@@ -388,6 +394,18 @@ class Team
     public function setIsActive(bool $isActive): self
     {
         $this->isActive = $isActive;
+        return $this;
+    }
+
+    public function isPersonalJournal(): bool
+    {
+        return $this->isPersonalJournal;
+    }
+
+    public function setPersonalJournal(bool $isPersonalJournal): self
+    {
+        $this->isPersonalJournal = $isPersonalJournal;
+
         return $this;
     }
 

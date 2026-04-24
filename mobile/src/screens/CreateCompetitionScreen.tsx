@@ -20,6 +20,7 @@ import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
 import HelpButton from '../components/HelpButton';
+import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
 
 interface CompetitionSpecies {
@@ -62,6 +63,7 @@ export default function CreateCompetitionScreen() {
   const [competitionSpecies, setCompetitionSpecies] = useState<CompetitionSpecies[]>([]);
   const [error, setError] = useState('');
   const [showSpeciesModal, setShowSpeciesModal] = useState(false);
+  const [showCreateSpeciesModal, setShowCreateSpeciesModal] = useState(false);
   const [selectedSpeciesIndex, setSelectedSpeciesIndex] = useState<number | null>(null);
 
   const { data: availableSpecies, isLoading: loadingSpecies } = useQuery({
@@ -701,13 +703,21 @@ export default function CreateCompetitionScreen() {
           <View style={styles.section}>
             <View style={styles.speciesHeader}>
               <Text style={styles.label}>Espèces de la compétition *</Text>
-              <TouchableOpacity
-                style={styles.addSpeciesButton}
-                onPress={handleAddSpecies}
-                disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
-              >
-                <Text style={styles.addSpeciesButtonText}>+ Ajouter</Text>
-              </TouchableOpacity>
+              <View style={styles.speciesHeaderButtons}>
+                <TouchableOpacity
+                  style={styles.newSpeciesButton}
+                  onPress={() => setShowCreateSpeciesModal(true)}
+                >
+                  <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.addSpeciesButton}
+                  onPress={handleAddSpecies}
+                  disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
+                >
+                  <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <Text style={styles.helpText}>
               Définissez les espèces disponibles avec leurs coefficients.
@@ -807,6 +817,22 @@ export default function CreateCompetitionScreen() {
         </ScrollView>
 
         {/* Modal de sélection d'espèce */}
+        <CreateSpeciesModal
+          visible={showCreateSpeciesModal}
+          onClose={() => setShowCreateSpeciesModal(false)}
+          onSpeciesReady={(payload) => {
+            setCompetitionSpecies((prev) => [
+              ...prev,
+              {
+                speciesId: payload.speciesId,
+                coefficient: payload.competitionCoefficient,
+                basePoints: null,
+                quota: '',
+              },
+            ]);
+          }}
+        />
+
         <Modal
           visible={showSpeciesModal}
           transparent={true}
@@ -987,6 +1013,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  speciesHeaderButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  newSpeciesButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  newSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   addSpeciesButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 12,

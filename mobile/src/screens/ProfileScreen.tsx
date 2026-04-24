@@ -134,7 +134,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('History' as never)}
+            onPress={() =>
+              // @ts-ignore
+              navigation.navigate('History', { initialTab: 'stats' })
+            }
           >
             <Text style={styles.actionButtonText}>Voir mon historique</Text>
           </TouchableOpacity>

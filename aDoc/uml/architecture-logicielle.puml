@@ -1,0 +1,51 @@
+@startuml architecture-logicielle
+' Vue déploiement / couches — STF (schéma logique)
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Clients" {
+  [Application mobile\nExpo / React Native] as Mobile
+  [Dashboard web\nNext.js] as Web
+}
+
+package "API" {
+  [Symfony\nREST + JWT] as Symfony
+  package "Contrôleurs (exemples)" {
+    [Compétitions / Équipes / Prises] as C1
+    [Auth / Profil] as C2
+    [Uploads] as C3
+  }
+  package "Services" {
+    [Photos prises\nstockage disque] as S1
+    [Géolocalisation\nvalidation zones] as S2
+    [Notifications / Snapshots] as S3
+  }
+}
+
+database "MariaDB" as DB
+storage "Fichiers\n(uploads : prises,\nrèglements…)" as FS
+
+Mobile --> Symfony : HTTPS / JSON
+Web --> Symfony : HTTPS / JSON
+
+Symfony --> C1
+Symfony --> C2
+Symfony --> C3
+C1 --> S1
+C1 --> S2
+C1 --> S3
+
+Symfony --> DB : Doctrine ORM
+S1 --> FS
+C3 --> FS
+
+note bottom of Mobile
+  React Query, navigation par écrans
+end note
+
+note bottom of Web
+  Leaflet (cartes), React Query
+end note
+
+@enduml

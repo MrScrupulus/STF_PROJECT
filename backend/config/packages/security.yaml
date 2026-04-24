@@ -49,6 +49,8 @@ security:
     - { path: ^/auth/verify-email, roles: PUBLIC_ACCESS }
     - { path: ^/redirect, roles: PUBLIC_ACCESS }
     - { path: ^/api/uploads, roles: PUBLIC_ACCESS }
+    - { path: ^/api/me/, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/competitions/\d+/me/, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/competitions, roles: PUBLIC_ACCESS }
     - { path: ^/api/competitions/\d+/stats, roles: PUBLIC_ACCESS }
     - { path: ^/api/teams/\d+, roles: PUBLIC_ACCESS }

@@ -20,4 +20,19 @@ export const speciesService = {
     const response = await apiClient.get(API_ENDPOINTS.species.detail(id));
     return response.data;
   },
+
+  /** Création par un utilisateur connecté (référentiel global, dédup côté serveur). */
+  create: async (data: {
+    name: string;
+    coefficient: number;
+    isBonus?: boolean;
+    basePoints?: number;
+  }): Promise<{
+    message?: string;
+    reused?: boolean;
+    species: { id: number; name: string; coefficient: number; basePoints?: number };
+  }> => {
+    const response = await apiClient.post(API_ENDPOINTS.species.list, data);
+    return response.data;
+  },
 };

@@ -3,6 +3,8 @@
 namespace App\Repository\Competition;
 
 use App\Entity\Competition\FishCatch;
+use App\Entity\Security\User;
+use App\Entity\Competition\Team;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -37,5 +39,85 @@ class FishCatchRepository extends ServiceEntityRepository
             [\PDO::PARAM_STR]
         );
         return array_column($result->fetchAllAssociative(), 'id');
+    }
+
+    /**
+     * Prises validées pour une compétition, attribuées à l'utilisateur (caughtBy).
+     * Ordre chronologique croissant (pour courbes et cumuls).
+     *
+     * @return FishCatch[]
+     */
+    public function findValidatedByCaughtByUserAndCompetition(User $user, int $competitionId): array
+    {
+        return $this->createQueryBuilder('c')
+            ->join('c.team', 't')
+            ->addSelect('t')
+            ->join('c.species', 's')
+            ->addSelect('s')
+            ->join('c.competition', 'comp')
+            ->addSelect('comp')
+            ->where('comp.id = :competitionId')
+            ->andWhere('c.caughtBy = :user')
+            ->andWhere('c.isValidated = :validated')
+            ->setParameter('competitionId', $competitionId)
+            ->setParameter('user', $user)
+            ->setParameter('validated', true)
+            ->orderBy('c.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Prises validées pour une compétition et une équipe (tous les membres).
+     *
+     * @return FishCatch[]
+     */
+    public function findValidatedByTeamAndCompetition(Team $team, int $competitionId): array
+    {
+        return $this->createQueryBuilder('c')
+            ->join('c.team', 't')
+            ->addSelect('t')
+            ->join('c.species', 's')
+            ->addSelect('s')
+            ->join('c.competition', 'comp')
+            ->addSelect('comp')
+            ->leftJoin('c.caughtBy', 'u')
+            ->addSelect('u')
+            ->where('t.id = :teamId')
+            ->andWhere('comp.id = :competitionId')
+            ->andWhere('c.isValidated = :validated')
+            ->setParameter('teamId', $team->getId())
+            ->setParameter('competitionId', $competitionId)
+            ->setParameter('validated', true)
+            ->orderBy('c.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Toutes les prises validées dont l'utilisateur est l'auteur (toutes compétitions confondues).
+     * Ordre chronologique croissant.
+     *
+     * @return FishCatch[]
+     */
+    public function findValidatedByCaughtByUserGlobally(User $user): array
+    {
+        return $this->createQueryBuilder('c')
+            ->join('c.team', 't')
+            ->addSelect('t')
+            ->join('c.species', 's')
+            ->addSelect('s')
+            ->join('c.competition', 'comp')
+            ->addSelect('comp')
+            ->leftJoin('c.caughtBy', 'u')
+            ->addSelect('u')
+            ->where('c.caughtBy = :user')
+            ->andWhere('c.isValidated = :validated')
+            ->andWhere('c.competition IS NOT NULL')
+            ->setParameter('user', $user)
+            ->setParameter('validated', true)
+            ->orderBy('c.createdAt', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 }

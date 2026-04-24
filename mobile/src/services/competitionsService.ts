@@ -78,6 +78,24 @@ export const competitionsService = {
     const response = await apiClient.get(API_ENDPOINTS.competitions.statsPublic(id));
     return response.data;
   },
+
+  /** Statistiques individuelles officielles (prises validées, caughtBy = utilisateur connecté). */
+  getMyStats: async (id: number): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.competitions.myStats(id));
+    return response.data;
+  },
+
+  /** Statistiques d'équipe (votre équipe sur cette compétition, prises validées). */
+  getMyTeamStats: async (id: number): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.competitions.myTeamStats(id));
+    return response.data;
+  },
+
+  /** Statistiques globales personnelles (toutes compétitions, prises validées). */
+  getMyGlobalStats: async (): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.me.stats);
+    return response.data;
+  },
   getAdminStats: async (id: number): Promise<any> => {
     const response = await apiClient.get(API_ENDPOINTS.competitions.stats(id));
     return response.data;

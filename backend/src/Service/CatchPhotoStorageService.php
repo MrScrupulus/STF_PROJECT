@@ -40,27 +40,43 @@ final class CatchPhotoStorageService
             throw new \InvalidArgumentException('competitionId must be a positive integer');
         }
 
+        return $this->saveInternal($source, (string) $competitionId);
+    }
+
+    /**
+     * Photos des prises hors compétition (dossier catches/…/journal/…).
+     */
+    public function saveJournalCatchPhoto($source): string
+    {
+        return $this->saveInternal($source, 'journal');
+    }
+
+    /**
+     * @param UploadedFile|string $source
+     */
+    private function saveInternal($source, string $folderSegment): string
+    {
         if ($source instanceof UploadedFile) {
-            return $this->saveUploadedFile($source, $competitionId);
+            return $this->saveUploadedFile($source, $folderSegment);
         }
 
         if (\is_string($source) && preg_match('#^data:image/(\w+);base64,([\s\S]+)$#', trim($source), $m)) {
-            return $this->saveBase64($m[1], $m[2], $competitionId);
+            return $this->saveBase64($m[1], $m[2], $folderSegment);
         }
 
         throw new \InvalidArgumentException('Source must be UploadedFile or base64 data URL');
     }
 
-    private function saveUploadedFile(UploadedFile $file, int $competitionId): string
+    private function saveUploadedFile(UploadedFile $file, string $folderSegment): string
     {
         $extension = $file->guessExtension() ?: 'jpg';
         if (!\in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp'], true)) {
             $extension = 'jpg';
         }
-        return $this->writeFile($file->getPathname(), $extension, $competitionId);
+        return $this->writeFile($file->getPathname(), $extension, $folderSegment);
     }
 
-    private function saveBase64(string $format, string $base64Data, int $competitionId): string
+    private function saveBase64(string $format, string $base64Data, string $folderSegment): string
     {
         $extension = match (strtolower($format)) {
             'jpeg', 'jpg' => 'jpg',
@@ -75,20 +91,20 @@ final class CatchPhotoStorageService
         $tmpFile = tempnam(sys_get_temp_dir(), 'catch_');
         file_put_contents($tmpFile, $binary);
         try {
-            return $this->writeFile($tmpFile, $extension, $competitionId);
+            return $this->writeFile($tmpFile, $extension, $folderSegment);
         } finally {
             @unlink($tmpFile);
         }
     }
 
-    private function writeFile(string $sourcePath, string $extension, int $competitionId): string
+    private function writeFile(string $sourcePath, string $extension, string $folderSegment): string
     {
         $now = new \DateTimeImmutable();
         $subDir = sprintf(
-            'catches/%d/%02d/%d',
+            'catches/%d/%02d/%s',
             $now->format('Y'),
             (int) $now->format('m'),
-            $competitionId
+            $folderSegment
         );
         $fullDir = rtrim($this->uploadsPath, '/') . '/' . $subDir;
 

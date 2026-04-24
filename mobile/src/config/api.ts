@@ -35,6 +35,10 @@ if (__DEV__) {
 }
 
 export const API_ENDPOINTS = {
+  me: {
+    stats: '/api/me/stats',
+    journalCatches: '/api/me/journal/catches',
+  },
   auth: {
     register: '/api/auth/register',
     login: '/api/auth/login',
@@ -75,6 +79,9 @@ export const API_ENDPOINTS = {
     end: (id: number) => `/api/competitions/${id}/end`,
     stats: (id: number) => `/api/admin/competitions/${id}/stats`,
     statsPublic: (id: number) => `/api/competitions/${id}/stats`,
+    /** Stats perso (authentifié) : prises validées dont l'utilisateur est l'auteur */
+    myStats: (id: number) => `/api/competitions/${id}/me/stats`,
+    myTeamStats: (id: number) => `/api/competitions/${id}/me/team/stats`,
     registerTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/register`,
     unregisterTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/unregister`,
   },

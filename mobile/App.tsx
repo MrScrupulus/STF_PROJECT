@@ -21,7 +21,6 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import TeamDetailScreen from './src/screens/TeamDetailScreen';
 import CreateTeamScreen from './src/screens/CreateTeamScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
-import SpeciesScreen from './src/screens/SpeciesScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import AdminAddCatchScreen from './src/screens/AdminAddCatchScreen';
 import AdminCatchValidationScreen from './src/screens/AdminCatchValidationScreen';
@@ -198,7 +197,6 @@ function AppNavigator() {
             <Stack.Screen name="TeamDetail" component={TeamDetailScreen} />
             <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
             <Stack.Screen name="History" component={HistoryScreen} />
-            <Stack.Screen name="Species" component={SpeciesScreen} />
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
             <Stack.Screen name="AdminAddCatch" component={AdminAddCatchScreen} />
             <Stack.Screen name="AdminCatchValidation" component={AdminCatchValidationScreen} />

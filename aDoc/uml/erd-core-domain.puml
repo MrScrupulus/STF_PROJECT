@@ -1,0 +1,97 @@
+@startuml erd-core-domain
+' Schéma logique — cœur métier STF (pêche / compétitions)
+' Tables Doctrine : noms approximatifs ; ajuster si migration diverge.
+
+skinparam linetype ortho
+
+entity "competitions" as competitions {
+  * **id** : int <<PK>>
+  --
+  name : varchar
+  start_date : datetime
+  end_date : datetime
+  team_size : int
+  is_ranking_public : bool
+  ..
+  _autres champs : description, règlement, bonus, etc._
+}
+
+entity "teams" as teams {
+  * **id** : int <<PK>>
+  --
+  * competition_id : int <<FK>>
+  name : varchar
+  total_score : int
+  registration_number : int
+  is_active : bool
+}
+
+entity "competition_team_members" as ctm {
+  * **team_id** : int <<FK>>
+  * **user_id** : int <<FK>>
+}
+
+entity "users" as users {
+  * **id** : int <<PK>>
+  --
+  email : varchar
+  ..
+  _roles, mot de passe hashé, etc._
+}
+
+entity "fish_catch" as fish_catch {
+  * **id** : int <<PK>>
+  --
+  * team_id : int <<FK>>
+  competition_id : int <<FK>> "historique"
+  * species_id : int <<FK>>
+  caught_by_id : int <<FK>> "nullable"
+  size : float
+  is_validated : bool
+  created_at : datetime
+  photo_url : text
+  latitude : decimal
+  longitude : decimal
+}
+
+entity "species" as species {
+  * **id** : int <<PK>>
+  --
+  name : varchar
+  coefficient : float
+}
+
+entity "competition_species" as competition_species {
+  * **id** : int <<PK>>
+  --
+  * competition_id : int <<FK>>
+  * species_id : int <<FK>>
+  coefficient : float
+  is_bonus_enabled : bool
+  base_points : int
+  ..
+  _quota, etc._
+}
+
+entity "competition_perimeters" as competition_perimeters {
+  * **id** : int <<PK>>
+  --
+  * competition_id : int <<FK>>
+  coordinates : json
+  name : varchar
+}
+
+competitions ||--o{ teams : "1..*"
+competitions ||--o{ competition_species
+competitions ||--o{ competition_perimeters
+competitions ||--o{ fish_catch : "historique"
+
+teams ||--o{ fish_catch
+teams }o--o{ users : "membres via\ncompetition_team_members"
+
+species ||--o{ competition_species
+species ||--o{ fish_catch
+
+users ||--o{ fish_catch : "caughtBy"
+
+@enduml

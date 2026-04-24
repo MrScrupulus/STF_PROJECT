@@ -52,9 +52,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
     ? [
         { name: 'Profile', label: 'Mon compte', icon: '👤' },
         { name: 'Home', label: 'Accueil', icon: '🏠' },
-        { name: 'Catches', label: 'Mes Prises', icon: '🎣' },
-        { name: 'Species', label: 'Espèces', icon: '🐟' },
-        { name: 'History', label: 'Historique', icon: '📜' },
+        { name: 'History', label: 'Historique & prises', icon: '📜' },
         { name: 'Notifications', label: 'Notifications', icon: '🔔' },
         { name: 'Invitations', label: 'Mes Invitations', icon: '✉️' },
         ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: '⚙️' }] : []),
@@ -93,8 +91,12 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
           navigation.navigate(screenName as never);
         }
       } else {
-        // Pour les autres écrans, navigation normale dans le Stack
-        navigation.navigate(screenName as never);
+        if (screenName === 'History') {
+          // @ts-ignore
+          navigation.navigate('History', { initialTab: 'catches' });
+        } else {
+          navigation.navigate(screenName as never);
+        }
       }
     }
   };

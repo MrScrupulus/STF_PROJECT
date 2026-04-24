@@ -58,6 +58,26 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryFn: () => teamService.getMyTeams(),
   });
 
+  const personalStatsQueryEnabled =
+    !!competitionId &&
+    !!competition?.isRegistered &&
+    !!currentUser?.id &&
+    activeTab === 'info';
+
+  const { data: myStatsData, isLoading: loadingMyStats, isError: myStatsError } = useQuery({
+    queryKey: ['competition-my-stats', competitionId],
+    queryFn: () => competitionsService.getMyStats(competitionId),
+    enabled: personalStatsQueryEnabled,
+    retry: false,
+  });
+
+  const { data: myTeamStatsData, isLoading: loadingMyTeamStats, isError: myTeamStatsError } = useQuery({
+    queryKey: ['competition-my-team-stats', competitionId],
+    queryFn: () => competitionsService.getMyTeamStats(competitionId),
+    enabled: personalStatsQueryEnabled,
+    retry: false,
+  });
+
   // Utiliser les espèces de la compétition si disponibles
   const speciesData = competition?.species && competition.species.length > 0
     ? competition.species
@@ -138,6 +158,8 @@ export default function CompetitionDetailScreen({ route }: any) {
 
       // Invalider les requêtes pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition-my-stats', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition-my-team-stats', competitionId] });
       
       // Recharger les stats seulement si on n'est pas déjà en train de charger
       if (!isLoadingRef.current) {
@@ -174,6 +196,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['competition-my-stats', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition-my-team-stats', competitionId] });
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la désinscription. Veuillez réessayer.';
@@ -189,6 +213,8 @@ export default function CompetitionDetailScreen({ route }: any) {
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['competition-my-stats', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition-my-team-stats', competitionId] });
       Alert.alert('Succès', 'Équipe inscrite à la compétition avec succès.');
       setShowRegisterForm(false);
       setSelectedTeamId(null);
@@ -461,7 +487,84 @@ export default function CompetitionDetailScreen({ route }: any) {
         {/* Contenu selon l'onglet actif */}
         {activeTab === 'reglement' ? (
           <View style={styles.speciesTabContent}>
-            <Text style={styles.sectionTitle}>Règlement</Text>
+            <Text style={styles.sectionTitle}>Règles et barème</Text>
+            <Text style={styles.rulesIntro}>
+              Paramètres définis par l&apos;organisateur (système de score et options de la compétition).
+            </Text>
+            <View style={styles.rulesCard}>
+              <View style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>Équipes</Text>
+                <Text style={styles.ruleValue}>
+                  {(competition as any).teamSize ?? '—'} membre(s) par équipe
+                </Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>Participants</Text>
+                <Text style={styles.ruleValue}>
+                  {(competition as any).hasNoLimit
+                    ? 'Pas de limite d’équipes / inscriptions'
+                    : `Maximum ${(competition as any).maxParticipants ?? '—'} participants (équipes)`}
+                </Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>Prises comptées au score</Text>
+                <Text style={styles.ruleValue}>
+                  {(competition as any).maxFishCounted != null &&
+                  (competition as any).maxFishCounted !== ''
+                    ? `Les ${(competition as any).maxFishCounted} meilleures prises (par points) par équipe`
+                    : 'Toutes les prises validées (classement par points selon barème espèces)'}
+                </Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>Bonus « nouvelle espèce »</Text>
+                <Text style={styles.ruleValue}>
+                  {(competition as any).newSpeciesBonusEnabled
+                    ? `Oui — +${(competition as any).newSpeciesBonusPoints ?? '—'} pts par nouvelle espèce dans la manche`
+                    : 'Non'}
+                </Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>Bonus quota atteint</Text>
+                <Text style={styles.ruleValue}>
+                  {(competition as any).quotaBonusEnabled
+                    ? `Oui — +${(competition as any).quotaBonusPoints ?? '—'} pts lorsqu’un quota d’espèce est atteint`
+                    : 'Non'}
+                </Text>
+              </View>
+              {(competition as any).isBonusEnabled ? (
+                <View style={styles.ruleRow}>
+                  <Text style={styles.ruleLabel}>Points bonus par espèce</Text>
+                  <Text style={styles.ruleValue}>
+                    Activé — certaines espèces ont des points de base bonus (voir le détail ci-dessous).
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {speciesData && speciesData.length > 0 ? (
+              <>
+                <Text style={[styles.sectionTitle, styles.rulesSubTitle]}>Barème des espèces</Text>
+                <View style={styles.rulesCard}>
+                  {speciesData.map((s: any) => (
+                    <View key={s.id} style={styles.ruleSpeciesBlock}>
+                      <Text style={styles.ruleSpeciesName}>{s.name}</Text>
+                      <Text style={styles.ruleSpeciesDetail}>
+                        Coefficient ×{s.coefficient}
+                        {s.quota != null && s.quota !== '' ? ` · Quota : ${s.quota} prise(s) max comptées` : ''}
+                        {s.basePoints != null && Number(s.basePoints) > 0
+                          ? ` · Bonus espèce : +${s.basePoints} pts`
+                          : ''}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : null}
+
+            <Text style={[styles.sectionTitle, styles.rulesSubTitle]}>Règlement complémentaire</Text>
+            <Text style={styles.rulesIntro}>
+              Texte libre et éventuelles images ajoutés par l&apos;organisateur.
+            </Text>
             {(() => {
               const imageUrls = ((competition as any).reglementImageUrls?.length > 0)
                 ? (competition as any).reglementImageUrls
@@ -499,7 +602,9 @@ export default function CompetitionDetailScreen({ route }: any) {
               ) : (competition as any).reglement ? (
                 <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
               ) : (
-                <Text style={styles.emptyText}>Aucun règlement défini pour cette compétition.</Text>
+                <Text style={styles.emptyText}>
+                  Aucun texte ni image complémentaire — les règles officielles figurent ci-dessus.
+                </Text>
               );
             })()}
           </View>
@@ -563,7 +668,8 @@ export default function CompetitionDetailScreen({ route }: any) {
         {/* Actions admin */}
         {isAdmin && (
           <View style={styles.adminActions}>
-            {hasNotStarted && (
+            {/* Tant que la manche n'est pas terminée : accès édition (y compris zones), pas seulement avant le coup d'envoi */}
+            {!isEnded && (
               <TouchableOpacity
                 style={[styles.adminButton, styles.editButton]}
                 onPress={() => (navigation as any).navigate('EditCompetition', { id: competition.id })}
@@ -905,6 +1011,140 @@ export default function CompetitionDetailScreen({ route }: any) {
           </View>
         )}
         </View>
+        )}
+
+        {/* Mes statistiques (prises validées) — inscrits, onglet Infos */}
+        {activeTab === 'info' && competition.isRegistered && currentUser && (
+          <View style={styles.myStatsSection}>
+            <Text style={styles.sectionTitle}>Mes statistiques</Text>
+            <Text style={styles.myStatsHint}>
+              Prises validées officiellement (comptent pour le classement).
+            </Text>
+
+            {(loadingMyStats || loadingMyTeamStats) && (
+              <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 12 }} />
+            )}
+
+            {(myStatsError || myTeamStatsError) && !loadingMyStats && !loadingMyTeamStats && (
+              <Text style={styles.myStatsErrorText}>
+                Impossible de charger vos statistiques personnelles. Réessayez plus tard.
+              </Text>
+            )}
+
+            {!loadingMyStats && !myStatsError && myStatsData?.success && myStatsData.stats && (
+              <View style={styles.myStatsBlock}>
+                <Text style={styles.myStatsSubsectionTitle}>Moi</Text>
+                <View style={styles.myStatsKpis}>
+                  <View style={styles.myStatsKpi}>
+                    <Text style={styles.myStatsKpiLabel}>Points</Text>
+                    <Text style={styles.myStatsKpiValue}>{myStatsData.stats.totalPoints ?? 0}</Text>
+                  </View>
+                  <View style={styles.myStatsKpi}>
+                    <Text style={styles.myStatsKpiLabel}>Prises</Text>
+                    <Text style={styles.myStatsKpiValue}>{myStatsData.stats.totalCatches ?? 0}</Text>
+                  </View>
+                </View>
+                {myStatsData.stats.catchesForMap && myStatsData.stats.catchesForMap.length > 0 && (
+                  <View style={styles.myStatsViz}>
+                    <CatchesMapView
+                      catches={myStatsData.stats.catchesForMap}
+                      speciesStats={myStatsData.stats.speciesStats}
+                      height={240}
+                    />
+                    <CatchesTimelineChart
+                      catches={myStatsData.stats.catchesForMap}
+                      startDate={competition.startDate}
+                      endDate={competition.endDate}
+                      speciesStats={myStatsData.stats.speciesStats}
+                    />
+                  </View>
+                )}
+                {myStatsData.stats.timeline && myStatsData.stats.timeline.length > 0 && (
+                  <>
+                    <Text style={styles.myStatsTimelineTitle}>Chronologie (récent en premier)</Text>
+                    {[...myStatsData.stats.timeline].reverse().slice(0, 25).map((row: any) => (
+                      <View key={row.id} style={styles.myStatsTimelineRow}>
+                        <Text style={styles.myStatsTimelineDate}>{row.createdAt}</Text>
+                        <Text style={styles.myStatsTimelineBody}>
+                          {row.species?.name ?? '?'} — {row.size} cm — {row.points} pts
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+
+            {!loadingMyTeamStats && !myTeamStatsError && myTeamStatsData?.success && myTeamStatsData.stats && (
+              <View style={[styles.myStatsBlock, styles.myStatsBlockTeam]}>
+                <Text style={styles.myStatsSubsectionTitle}>Mon équipe ({myTeamStatsData.team?.name ?? '—'})</Text>
+                <View style={styles.myStatsKpis}>
+                  <View style={styles.myStatsKpi}>
+                    <Text style={styles.myStatsKpiLabel}>Points</Text>
+                    <Text style={styles.myStatsKpiValue}>{myTeamStatsData.stats.totalPoints ?? 0}</Text>
+                  </View>
+                  <View style={styles.myStatsKpi}>
+                    <Text style={styles.myStatsKpiLabel}>Prises</Text>
+                    <Text style={styles.myStatsKpiValue}>{myTeamStatsData.stats.totalCatches ?? 0}</Text>
+                  </View>
+                </View>
+                {myTeamStatsData.stats.catchesForMap && myTeamStatsData.stats.catchesForMap.length > 0 && (
+                  <View style={styles.myStatsViz}>
+                    <CatchesMapView
+                      catches={myTeamStatsData.stats.catchesForMap.map((c: any) => ({
+                        ...c,
+                        team: myTeamStatsData.team?.name
+                          ? { name: myTeamStatsData.team.name }
+                          : undefined,
+                      }))}
+                      speciesStats={myTeamStatsData.stats.speciesStats}
+                      height={240}
+                    />
+                    <CatchesTimelineChart
+                      catches={myTeamStatsData.stats.catchesForMap.map((c: any) => ({
+                        ...c,
+                        team: myTeamStatsData.team?.name
+                          ? { name: myTeamStatsData.team.name }
+                          : undefined,
+                      }))}
+                      startDate={competition.startDate}
+                      endDate={competition.endDate}
+                      speciesStats={myTeamStatsData.stats.speciesStats}
+                    />
+                  </View>
+                )}
+                {myTeamStatsData.stats.byMember && myTeamStatsData.stats.byMember.length > 0 && (
+                  <View style={styles.byMemberRow}>
+                    <Text style={styles.byMemberTitle}>Par membre</Text>
+                    {myTeamStatsData.stats.byMember.map((m: any, idx: number) => (
+                      <Text key={m.userId ?? `n-${idx}`} style={styles.byMemberLine}>
+                        {(m.firstname ?? '') + ' ' + (m.lastname ?? '')}
+                        {m.userId == null ? ' (non attribué)' : ''}
+                        {' — '}
+                        {m.catchCount} prise(s), {m.points} pts
+                      </Text>
+                    ))}
+                  </View>
+                )}
+                {myTeamStatsData.stats.timeline && myTeamStatsData.stats.timeline.length > 0 && (
+                  <>
+                    <Text style={styles.myStatsTimelineTitle}>Prises de l&apos;équipe (récent en premier)</Text>
+                    {[...myTeamStatsData.stats.timeline].reverse().slice(0, 25).map((row: any) => (
+                      <View key={row.id} style={styles.myStatsTimelineRow}>
+                        <Text style={styles.myStatsTimelineDate}>{row.createdAt}</Text>
+                        <Text style={styles.myStatsTimelineBody}>
+                          {row.species?.name ?? '?'} — {row.size} cm — {row.points} pts
+                          {row.caughtBy
+                            ? ` — ${row.caughtBy.firstname} ${row.caughtBy.lastname}`
+                            : ''}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+          </View>
         )}
 
         {/* Statistiques - uniquement dans l'onglet Infos */}
@@ -1613,10 +1853,152 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginTop: 8,
   },
+  rulesIntro: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  rulesSubTitle: {
+    marginTop: 20,
+  },
+  rulesCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 4,
+  },
+  ruleRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  ruleLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  ruleValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    lineHeight: 20,
+  },
+  ruleSpeciesBlock: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  ruleSpeciesName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  ruleSpeciesDetail: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
   emptyText: {
     fontSize: 16,
     color: '#999',
     textAlign: 'center',
     marginTop: 32,
+  },
+  myStatsSection: {
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  myStatsHint: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 12,
+  },
+  myStatsErrorText: {
+    fontSize: 14,
+    color: '#b91c1c',
+    marginVertical: 8,
+  },
+  myStatsBlock: {
+    marginBottom: 16,
+  },
+  myStatsBlockTeam: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  myStatsSubsectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 10,
+  },
+  myStatsKpis: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  myStatsKpi: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  myStatsKpiLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  myStatsKpiValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  myStatsTimelineTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  myStatsTimelineRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  myStatsTimelineDate: {
+    fontSize: 11,
+    color: '#9ca3af',
+    marginBottom: 2,
+  },
+  myStatsTimelineBody: {
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  byMemberRow: {
+    marginBottom: 12,
+  },
+  byMemberTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4b5563',
+    marginBottom: 6,
+  },
+  byMemberLine: {
+    fontSize: 13,
+    color: '#374151',
+    marginBottom: 4,
+  },
+  myStatsViz: {
+    marginTop: 8,
+    marginBottom: 8,
   },
 });

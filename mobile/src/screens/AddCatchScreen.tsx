@@ -22,6 +22,7 @@ import { competitionsService } from '../services/competitionsService';
 import { authService } from '../services/authService';
 import { isDatePast } from '../utils/dateUtils';
 import Header from '../components/Header';
+import CreateSpeciesModal from '../components/CreateSpeciesModal';
 
 export default function AddCatchScreen({ navigation, route }: any) {
   const queryClient = useQueryClient();
@@ -41,6 +42,8 @@ export default function AddCatchScreen({ navigation, route }: any) {
   /** Heure de capture de la photo (fait foi pour la date officielle de la prise) */
   const [photoCapturedAt, setPhotoCapturedAt] = useState<Date | null>(null);
   const cameraOpenAttempted = useRef(false);
+  const [bootstrapDone, setBootstrapDone] = useState(false);
+  const [showCreateSpeciesModal, setShowCreateSpeciesModal] = useState(false);
 
   // Charger l'utilisateur connecté
   useEffect(() => {
@@ -85,16 +88,29 @@ export default function AddCatchScreen({ navigation, route }: any) {
     },
   });
 
-  // Utiliser les espèces de la compétition si disponibles
-  // Les espèces peuvent être dans competition.species (depuis getOne) ou dans selectedCompetition.species
-  const species = selectedCompetition?.species && Array.isArray(selectedCompetition.species) && selectedCompetition.species.length > 0
-    ? selectedCompetition.species
-    : [];
-  const loadingSpecies = false; // Les espèces sont déjà dans les données de la compétition
+  const journalMode = bootstrapDone && !selectedCompetition;
 
-  // Trouver l'équipe inscrite à une compétition en cours et charger les détails complets
+  const { data: allSpeciesCatalog = [], isLoading: loadingAllSpecies } = useQuery({
+    queryKey: ['species'],
+    queryFn: () => speciesService.getAll(),
+    enabled: journalMode,
+  });
+
+  const species =
+    selectedCompetition?.species && Array.isArray(selectedCompetition.species) && selectedCompetition.species.length > 0
+      ? selectedCompetition.species
+      : allSpeciesCatalog;
+  const loadingSpecies = journalMode && loadingAllSpecies;
+
+  // Équipe inscrite à une compétition en cours → contexte compétition ; sinon journal personnel (hors compétition)
   useEffect(() => {
-    if (teamsData?.teams && competitions) {
+    if (!teamsData?.teams || competitions === undefined) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
       const registeredTeam = teamsData.teams.find(
         (team: any) =>
           team.competition &&
@@ -102,42 +118,55 @@ export default function AddCatchScreen({ navigation, route }: any) {
       );
 
       if (registeredTeam && registeredTeam.competition) {
-        setSelectedTeam(registeredTeam);
-        const competition = competitions.find(
-          (c: any) => c.id === registeredTeam.competition?.id
-        );
+        const competition = competitions.find((c: any) => c.id === registeredTeam.competition?.id);
         if (competition) {
-          // Charger les détails complets de la compétition pour avoir les périmètres et les espèces
-          competitionsService.getOne(competition.id).then((fullCompetition: any) => {
-            // S'assurer que fullCompetition a la structure attendue
+          setSelectedTeam(registeredTeam);
+          try {
+            const fullCompetition: any = await competitionsService.getOne(competition.id);
+            if (cancelled) {
+              return;
+            }
             if (fullCompetition && fullCompetition.success !== false) {
-              // Si la réponse contient success: true, extraire les données
-              const competitionData = fullCompetition.success === true 
-                ? { ...fullCompetition, success: undefined } 
-                : fullCompetition;
+              const competitionData =
+                fullCompetition.success === true ? { ...fullCompetition, success: undefined } : fullCompetition;
               setSelectedCompetition(competitionData);
             } else {
-              // En cas d'erreur, utiliser la compétition de base
               setSelectedCompetition(competition);
             }
-          }).catch((error) => {
+            if (currentUser && registeredTeam.members) {
+              const defaultMember = registeredTeam.members.find((m: any) => m.id === currentUser.id);
+              if (defaultMember) {
+                setSelectedMember(defaultMember.id);
+              }
+            }
+          } catch (error) {
             console.error('Erreur lors du chargement des détails de la compétition:', error);
-            // En cas d'erreur, utiliser la compétition de base
-            setSelectedCompetition(competition);
-          });
-          
-          // Sélectionner automatiquement le membre connecté par défaut
-          if (currentUser && registeredTeam.members) {
-            const defaultMember = registeredTeam.members.find(
-              (m: any) => m.id === currentUser.id
-            );
-            if (defaultMember) {
-              setSelectedMember(defaultMember.id);
+            if (!cancelled) {
+              setSelectedCompetition(competition);
             }
           }
+        } else {
+          if (!cancelled) {
+            setSelectedCompetition(null);
+            setSelectedTeam(null);
+          }
+        }
+      } else {
+        if (!cancelled) {
+          setSelectedCompetition(null);
+          setSelectedTeam(null);
         }
       }
-    }
+
+      if (!cancelled) {
+        setBootstrapDone(true);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
   }, [teamsData, competitions, currentUser]);
 
   // Vérifier la zone quand la compétition ou la localisation change
@@ -315,59 +344,61 @@ export default function AddCatchScreen({ navigation, route }: any) {
     setLocationStatus(isInZone ? 'in-zone' : 'out-of-zone');
   };
 
-  // Mutation pour créer une prise
+  const reportCatchError = (error: any) => {
+    console.error('Erreur lors de la création de la prise:', error);
+    let errorMessage = 'Erreur lors de l\'enregistrement de la prise.';
+    if (error.response) {
+      if (error.response.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      }
+      if (error.response.status) {
+        errorMessage += ` (Code: ${error.response.status})`;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    Alert.alert('Erreur', errorMessage);
+  };
+
   const createCatchMutation = useMutation({
-    mutationFn: (data: CreateCatchData) =>
-      catchesService.create(selectedCompetition.id, data),
+    mutationFn: (data: CreateCatchData) => catchesService.create(selectedCompetition.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['catches'] });
       queryClient.invalidateQueries({ queryKey: ['competition', selectedCompetition.id] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       queryClient.invalidateQueries({ queryKey: ['team'] });
-      // Invalider toutes les requêtes liées aux compétitions pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition'] });
+      queryClient.invalidateQueries({ queryKey: ['my-history-base'] });
+      queryClient.invalidateQueries({ queryKey: ['my-history-catches'] });
       Alert.alert('Succès', 'Prise enregistrée avec succès.', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     },
-    onError: (error: any) => {
-      console.error('Erreur lors de la création de la prise:', error);
-      console.error('Détails complets de l\'erreur:', {
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        message: error.message,
-        stack: error.stack,
-      });
-      
-      let errorMessage = 'Erreur lors de l\'enregistrement de la prise.';
-      
-      if (error.response) {
-        // Erreur HTTP avec réponse
-        if (error.response.data) {
-          if (typeof error.response.data === 'string') {
-            errorMessage = error.response.data;
-          } else if (error.response.data.message) {
-            errorMessage = error.response.data.message;
-          } else if (error.response.data.error) {
-            errorMessage = error.response.data.error;
-          }
-        }
-        
-        // Ajouter le code d'erreur si disponible
-        if (error.response.status) {
-          errorMessage += ` (Code: ${error.response.status})`;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Erreur', errorMessage);
+    onError: reportCatchError,
+  });
+
+  const createJournalMutation = useMutation({
+    mutationFn: (data: CreateCatchData) => catchesService.createJournal(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['catches'] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+      queryClient.invalidateQueries({ queryKey: ['my-history-base'] });
+      queryClient.invalidateQueries({ queryKey: ['my-history-catches'] });
+      queryClient.invalidateQueries({ queryKey: ['me-global-stats'] });
+      Alert.alert(
+        'Succès',
+        'Prise enregistrée dans votre journal (hors compétition). Aucune validation organisateur n’est nécessaire.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     },
+    onError: reportCatchError,
   });
 
   // Prendre une photo et capturer la position GPS (flux caméra d'abord)
@@ -397,18 +428,13 @@ export default function AddCatchScreen({ navigation, route }: any) {
 
   // Ouvrir la caméra immédiatement à l'arrivée sur l'écran (flux caméra d'abord)
   useEffect(() => {
-    if (
-      selectedCompetition &&
-      !photo &&
-      !cameraOpenAttempted.current &&
-      !loadingTeams &&
-      !loadingCompetitions
-    ) {
+    const ready = bootstrapDone && (selectedCompetition || journalMode);
+    if (ready && !photo && !cameraOpenAttempted.current && !loadingTeams && !loadingCompetitions) {
       cameraOpenAttempted.current = true;
-      const timer = setTimeout(() => takePhoto(),50);
+      const timer = setTimeout(() => takePhoto(), 50);
       return () => clearTimeout(timer);
     }
-  }, [selectedCompetition?.id, photo, loadingTeams, loadingCompetitions]);
+  }, [bootstrapDone, journalMode, selectedCompetition?.id, photo, loadingTeams, loadingCompetitions]);
 
   // Soumettre le formulaire
   const handleSubmit = () => {
@@ -427,8 +453,22 @@ export default function AddCatchScreen({ navigation, route }: any) {
       return;
     }
 
+    if (journalMode) {
+      const catchData: CreateCatchData = {
+        speciesId: selectedSpecies,
+        size: parseFloat(size),
+        photoUrl: photo,
+        comment: comment && comment.trim() ? comment.trim() : undefined,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        caughtAt: photoCapturedAt?.toISOString(),
+      };
+      createJournalMutation.mutate(catchData);
+      return;
+    }
+
     if (!selectedCompetition) {
-      Alert.alert('Erreur', 'Vous n\'êtes inscrit à aucune compétition en cours');
+      Alert.alert('Erreur', 'Contexte compétition indisponible');
       return;
     }
 
@@ -504,7 +544,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
     createCatchMutation.mutate(catchData);
   };
 
-  if (loadingTeams || loadingCompetitions) {
+  if (!bootstrapDone || loadingTeams || loadingCompetitions || (journalMode && loadingAllSpecies)) {
     return (
       <>
         <Header title="Ajouter une prise" showBack={true} showMenu={true} />
@@ -515,31 +555,20 @@ export default function AddCatchScreen({ navigation, route }: any) {
     );
   }
 
-  if (!selectedCompetition) {
-    return (
-      <>
-        <Header title="Ajouter une prise" showBack={true} showMenu={true} />
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <Text style={styles.errorText}>
-            Vous n'êtes inscrit à aucune compétition en cours.
-          </Text>
-          <Text style={styles.errorSubtext}>
-            Veuillez vous inscrire à une compétition avant d'ajouter une prise.
-          </Text>
-        </ScrollView>
-      </>
-    );
-  }
-
-  // Flux caméra d'abord : si pas encore de photo, afficher l'étape photo
-  if (selectedCompetition && !photo) {
+  if (bootstrapDone && (selectedCompetition || journalMode) && !photo) {
     return (
       <>
         <Header title="Ajouter une prise" showBack={true} showMenu={true} />
         <ScrollView style={styles.container} contentContainerStyle={[styles.content, styles.cameraStepContent]}>
-          <Text style={styles.subtitle}>Compétition: {selectedCompetition.name}</Text>
+          <Text style={styles.subtitle}>
+            {journalMode
+              ? 'Journal personnel (hors compétition)'
+              : `Compétition : ${selectedCompetition.name}`}
+          </Text>
           <Text style={styles.cameraStepHint}>
-            Prenez d'abord la photo de la prise. L'heure de la photo fera foi pour la date officielle.
+            {journalMode
+              ? 'Prenez la photo de la prise. Elle est enregistrée tout de suite dans votre historique, sans validation organisateur.'
+              : "Prenez d'abord la photo de la prise. L'heure de la photo fera foi pour la date officielle."}
           </Text>
           <TouchableOpacity style={styles.cameraStepButton} onPress={takePhoto}>
             <Text style={styles.cameraStepButtonIcon}>📷</Text>
@@ -554,12 +583,18 @@ export default function AddCatchScreen({ navigation, route }: any) {
     <>
       <Header title="Ajouter une prise" showBack={true} showMenu={true} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.subtitle}>Compétition: {selectedCompetition.name}</Text>
+      <Text style={styles.subtitle}>
+        {journalMode
+          ? 'Journal personnel — prise hors compétition'
+          : `Compétition : ${selectedCompetition?.name ?? ''}`}
+      </Text>
 
       {/* Sélection de l'espèce */}
       <View style={styles.section}>
         <Text style={styles.label}>Espèce *</Text>
-        {species && species.length > 0 ? (
+        {loadingSpecies ? (
+          <ActivityIndicator color="#007AFF" />
+        ) : species && species.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {(Array.isArray(species) ? species : []).map((spec: any) => (
               <TouchableOpacity
@@ -583,8 +618,13 @@ export default function AddCatchScreen({ navigation, route }: any) {
           </ScrollView>
         ) : (
           <Text style={styles.errorText}>
-            Aucune espèce configurée pour cette compétition
+            {journalMode ? 'Aucune espèce dans le référentiel — créez-en une ci-dessous.' : 'Aucune espèce configurée pour cette compétition'}
           </Text>
+        )}
+        {journalMode && (
+          <TouchableOpacity style={styles.createSpeciesLink} onPress={() => setShowCreateSpeciesModal(true)}>
+            <Text style={styles.createSpeciesLinkText}>+ Créer / retrouver une espèce</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -601,7 +641,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
       </View>
 
       {/* Sélection du membre (si équipe avec plusieurs membres) */}
-      {selectedTeam?.members && selectedTeam.members.length > 1 && (
+      {!journalMode && selectedTeam?.members && selectedTeam.members.length > 1 && (
         <View style={styles.section}>
           <Text style={styles.label}>Membre qui a fait la prise</Text>
           {selectedTeam.members.map((member: any) => (
@@ -650,9 +690,10 @@ export default function AddCatchScreen({ navigation, route }: any) {
       <View style={styles.section}>
         <Text style={styles.label}>
           Position GPS
-          {selectedCompetition.perimeters && selectedCompetition.perimeters.length > 0 && (
+          {!journalMode && selectedCompetition?.perimeters && selectedCompetition.perimeters.length > 0 && (
             <Text style={styles.required}> *</Text>
           )}
+          {journalMode && <Text style={styles.optionalHint}> (optionnel)</Text>}
         </Text>
         {location ? (
           <View style={styles.locationContainer}>
@@ -710,10 +751,13 @@ export default function AddCatchScreen({ navigation, route }: any) {
                 </Text>
               )}
             </TouchableOpacity>
-            {selectedCompetition.perimeters && selectedCompetition.perimeters.length > 0 && (
+            {!journalMode && selectedCompetition?.perimeters && selectedCompetition.perimeters.length > 0 && (
               <Text style={styles.locationHint}>
                 ⚠️ La position GPS est requise pour cette compétition afin de valider que la prise est effectuée dans la zone autorisée.
               </Text>
+            )}
+            {journalMode && (
+              <Text style={styles.locationHint}>Utile pour votre carte personnelle dans l’historique.</Text>
             )}
           </View>
         )}
@@ -736,18 +780,27 @@ export default function AddCatchScreen({ navigation, route }: any) {
       <TouchableOpacity
         style={[
           styles.submitButton,
-          createCatchMutation.isPending && styles.submitButtonDisabled,
+          (createCatchMutation.isPending || createJournalMutation.isPending) && styles.submitButtonDisabled,
         ]}
         onPress={handleSubmit}
-        disabled={createCatchMutation.isPending}
+        disabled={createCatchMutation.isPending || createJournalMutation.isPending}
       >
-        {createCatchMutation.isPending ? (
+        {createCatchMutation.isPending || createJournalMutation.isPending ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.submitButtonText}>Enregistrer la prise</Text>
         )}
       </TouchableOpacity>
       </ScrollView>
+      <CreateSpeciesModal
+        visible={showCreateSpeciesModal}
+        onClose={() => setShowCreateSpeciesModal(false)}
+        variant="journal"
+        onSpeciesReady={(payload) => {
+          setSelectedSpecies(payload.speciesId);
+          queryClient.invalidateQueries({ queryKey: ['species'] });
+        }}
+      />
     </>
   );
 }
@@ -922,6 +975,20 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 8,
+  },
+  createSpeciesLink: {
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  createSpeciesLinkText: {
+    color: '#007AFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  optionalHint: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '400',
   },
   required: {
     color: '#ff3b30',

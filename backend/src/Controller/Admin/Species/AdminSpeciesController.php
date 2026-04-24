@@ -3,6 +3,7 @@
 namespace App\Controller\Admin\Species;
 
 use App\Entity\Species\Species;
+use App\Repository\Species\SpeciesRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -13,8 +14,10 @@ use Symfony\Component\Routing\Annotation\Route;
 class AdminSpeciesController extends AbstractController
 {
     public function __construct(
-        private EntityManagerInterface $entityManager
-    ) {}
+        private EntityManagerInterface $entityManager,
+        private SpeciesRepository $speciesRepository,
+    ) {
+    }
 
     #[Route('', name: 'admin_species_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
@@ -22,14 +25,29 @@ class AdminSpeciesController extends AbstractController
         try {
             $data = json_decode($request->getContent(), true);
 
-            if (!isset($data['name']) || empty($data['name'])) {
+            if (!isset($data['name']) || '' === trim((string) $data['name'])) {
                 return $this->json([
                     'message' => 'Le nom de l\'espèce est requis'
                 ], 400);
             }
 
+            $nameTrimmed = trim((string) $data['name']);
+            $existing = $this->speciesRepository->findOneByNormalizedName($nameTrimmed);
+            if (null !== $existing) {
+                return $this->json([
+                    'message' => 'Une espèce avec ce nom existe déjà ; l\'exemplaire du référentiel est renvoyé.',
+                    'reused' => true,
+                    'species' => [
+                        'id' => $existing->getId(),
+                        'name' => $existing->getName(),
+                        'coefficient' => $existing->getCoefficient(),
+                        'basePoints' => $existing->getBasePoints(),
+                    ],
+                ]);
+            }
+
             $species = new Species();
-            $species->setName($data['name']);
+            $species->setName($nameTrimmed);
 
             // Déterminer si c'est une espèce bonus (par le nom ou par un champ isBonus)
             $isBonus = isset($data['isBonus']) ? $data['isBonus'] : (strtolower($data['name']) === 'espèce bonus');
@@ -47,10 +65,7 @@ class AdminSpeciesController extends AbstractController
                     ], 400);
                 }
                 $species->setCoefficient((float) $data['coefficient']);
-                // basePoints par défaut pour les espèces normales
-                if (isset($data['basePoints'])) {
-                    $species->setBasePoints((int) $data['basePoints']);
-                }
+                $species->setBasePoints(isset($data['basePoints']) ? (int) $data['basePoints'] : 0);
             }
 
             $this->entityManager->persist($species);
@@ -58,6 +73,7 @@ class AdminSpeciesController extends AbstractController
 
             return $this->json([
                 'message' => 'Espèce créée avec succès',
+                'reused' => false,
                 'species' => [
                     'id' => $species->getId(),
                     'name' => $species->getName(),

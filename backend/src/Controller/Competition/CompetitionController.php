@@ -557,6 +557,57 @@ class CompetitionController extends AbstractController
                 $paths = \is_array($data['reglementImagePaths']) ? $data['reglementImagePaths'] : [];
                 $competition->setReglementImagePaths(empty($paths) ? null : array_values($paths));
             }
+            if (array_key_exists('isBonusEnabled', $data)) {
+                $competition->setIsBonusEnabled((bool) $data['isBonusEnabled']);
+            }
+
+            if (array_key_exists('species', $data) && \is_array($data['species'])) {
+                $validSpeciesRows = [];
+                foreach ($data['species'] as $speciesPayload) {
+                    if (!isset($speciesPayload['speciesId'], $speciesPayload['coefficient'])) {
+                        continue;
+                    }
+                    $validSpeciesRows[] = $speciesPayload;
+                }
+                if (\count($validSpeciesRows) < 1) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Au moins une espèce valide (identifiant et coefficient) est requise.',
+                    ], 400);
+                }
+
+                foreach ($competition->getCompetitionSpecies()->toArray() as $existingCs) {
+                    $entityManager->remove($existingCs);
+                }
+
+                $speciesRepository = $entityManager->getRepository(\App\Entity\Species\Species::class);
+                foreach ($validSpeciesRows as $speciesData) {
+                    $species = $speciesRepository->find($speciesData['speciesId']);
+                    if (!$species) {
+                        return $this->json([
+                            'success' => false,
+                            'message' => 'Espèce introuvable (id '.$speciesData['speciesId'].').',
+                        ], 400);
+                    }
+
+                    $competitionSpecies = new CompetitionSpecies();
+                    $competitionSpecies->setCompetition($competition);
+                    $competitionSpecies->setSpecies($species);
+                    $competitionSpecies->setCoefficient((float) $speciesData['coefficient']);
+                    if ($competition->getIsBonusEnabled() && isset($speciesData['basePoints'])) {
+                        $competitionSpecies->setBasePoints((int) $speciesData['basePoints']);
+                    } else {
+                        $competitionSpecies->setBasePoints(null);
+                    }
+                    if (array_key_exists('quota', $speciesData) && $speciesData['quota'] !== null && $speciesData['quota'] !== '') {
+                        $competitionSpecies->setQuota(max(1, (int) $speciesData['quota']));
+                    } else {
+                        $competitionSpecies->setQuota(null);
+                    }
+
+                    $entityManager->persist($competitionSpecies);
+                }
+            }
 
             $entityManager->flush();
 

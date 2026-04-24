@@ -77,6 +77,7 @@ class TeamController extends AbstractController
                         'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                     ] : null,
                     'isActive' => $team->getIsActive(),
+                    'isPersonalJournal' => $team->isPersonalJournal(),
                 ];
             }, array_values($teams));
 
@@ -161,6 +162,7 @@ class TeamController extends AbstractController
                         'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
                     ] : null,
                     'catchesCount' => $team->getCatches()->count(),
+                    'isPersonalJournal' => $team->isPersonalJournal(),
                 ];
             }, $allTeams);
 

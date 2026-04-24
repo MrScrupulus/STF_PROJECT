@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Polygon } from 'react-native-maps';
+import MapView, { Polygon, Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -23,10 +23,59 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { adminService } from '../services/adminService';
 import { competitionsService } from '../services/competitionsService';
 import { perimeterService } from '../services/perimeterService';
+import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
 import HelpButton from '../components/HelpButton';
+import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
+
+type PerimeterNameEditorProps = {
+  competitionId: number;
+  perimeterId: number;
+  initialName: string | null | undefined;
+  onSaved: () => void;
+};
+
+function PerimeterNameEditor({ competitionId, perimeterId, initialName, onSaved }: PerimeterNameEditorProps) {
+  const [value, setValue] = useState(() => (initialName ?? '').trim());
+  useEffect(() => {
+    setValue((initialName ?? '').trim());
+  }, [perimeterId, initialName]);
+
+  const persist = async () => {
+    const trimmed = value.trim();
+    const next = trimmed.length > 0 ? trimmed : '';
+    const prev = (initialName ?? '').trim();
+    if (next === prev) return;
+    try {
+      await perimeterService.update(competitionId, perimeterId, { name: next || undefined });
+      onSaved();
+    } catch (e: any) {
+      Alert.alert('Erreur', e.response?.data?.message || 'Impossible d\'enregistrer le nom.');
+    }
+  };
+
+  return (
+    <TextInput
+      style={styles.perimeterNameInput}
+      value={value}
+      onChangeText={setValue}
+      onEndEditing={persist}
+      onSubmitEditing={persist}
+      placeholder="Nom de la zone (optionnel)"
+      placeholderTextColor="#999"
+      returnKeyType="done"
+    />
+  );
+}
+
+interface CompetitionSpeciesRow {
+  speciesId: number;
+  coefficient: string | number;
+  basePoints?: number | null;
+  quota?: string | number | null;
+}
 
 const formatDateTime = (date: Date): string => {
   const year = date.getFullYear();
@@ -77,6 +126,11 @@ export default function EditCompetitionScreen() {
   const [reglementImageUploading, setReglementImageUploading] = useState(false);
   const [showZoneModal, setShowZoneModal] = useState(false);
   const [zonePoints, setZonePoints] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [newZoneName, setNewZoneName] = useState('');
+  const [competitionSpecies, setCompetitionSpecies] = useState<CompetitionSpeciesRow[]>([]);
+  const [showSpeciesModal, setShowSpeciesModal] = useState(false);
+  const [showCreateSpeciesModal, setShowCreateSpeciesModal] = useState(false);
+  const [selectedSpeciesIndex, setSelectedSpeciesIndex] = useState<number | null>(null);
   const [mapRegion, setMapRegion] = useState({
     latitude: 50.6927,
     longitude: 3.1742,
@@ -96,9 +150,20 @@ export default function EditCompetitionScreen() {
     enabled: !!competitionId,
   });
 
-  const competition = (competitionData as any)?.success !== undefined
-    ? ((competitionData as any).success ? { ...(competitionData as any), success: undefined } : null)
-    : competitionData;
+  const { data: availableSpecies, isLoading: loadingSpecies } = useQuery({
+    queryKey: ['species'],
+    queryFn: () => speciesService.getAll(),
+  });
+
+  /** Référence stable tant que competitionData ne change pas (évite boucle useEffect → setState). */
+  const competition = useMemo(() => {
+    if (competitionData == null) return null;
+    const d = competitionData as any;
+    if (d.success !== undefined) {
+      return d.success ? { ...d, success: undefined } : null;
+    }
+    return d;
+  }, [competitionData]);
 
   const perimeters = perimetersData?.perimeters || competition?.perimeters || [];
 
@@ -131,6 +196,51 @@ export default function EditCompetitionScreen() {
     }
   }, [competition]);
 
+  useEffect(() => {
+    if (!competition) return;
+    const raw = (competition as any).species;
+    if (!Array.isArray(raw) || raw.length === 0) {
+      setCompetitionSpecies([]);
+      return;
+    }
+    setCompetitionSpecies(
+      raw.map((s: any) => ({
+        speciesId: s.id,
+        coefficient: String(s.coefficient ?? 1),
+        basePoints: s.basePoints ?? null,
+        quota: s.quota != null && s.quota !== '' ? String(s.quota) : '',
+      }))
+    );
+  }, [competition]);
+
+  const normalizeNumber = (value: string) => value.replace(',', '.');
+  const parseNumber = (value: string): number | null => {
+    if (!value || value === '') return null;
+    const parsed = parseFloat(normalizeNumber(value));
+    return isNaN(parsed) ? null : parsed;
+  };
+
+  const handleAddSpecies = () => {
+    if (!availableSpecies || availableSpecies.length === 0) return;
+    const first = availableSpecies[0];
+    setCompetitionSpecies((prev) => [
+      ...prev,
+      { speciesId: first.id, coefficient: first.coefficient || 1.0, basePoints: null, quota: '' },
+    ]);
+  };
+
+  const handleRemoveSpecies = (index: number) => {
+    setCompetitionSpecies((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSpeciesChange = (index: number, field: string, value: any) => {
+    setCompetitionSpecies((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
   const updateMutation = useMutation({
     mutationFn: (data: any) => adminService.updateCompetition(competitionId, data),
     onSuccess: () => {
@@ -148,13 +258,15 @@ export default function EditCompetitionScreen() {
   });
 
   const createPerimeterMutation = useMutation({
-    mutationFn: (coordinates: number[][]) => perimeterService.create(competitionId, { coordinates }),
+    mutationFn: (payload: { coordinates: number[][]; name?: string }) =>
+      perimeterService.create(competitionId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['perimeters', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       refetchPerimeters();
       setShowZoneModal(false);
       setZonePoints([]);
+      setNewZoneName('');
       Alert.alert('Succès', 'Zone ajoutée.');
     },
     onError: (error: any) => {
@@ -242,10 +354,33 @@ export default function EditCompetitionScreen() {
       return;
     }
 
+    if (competitionSpecies.length === 0) {
+      setError('Au moins une espèce doit être configurée');
+      return;
+    }
+
     const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
       ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
     const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
       ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
+
+    const speciesPayload: any[] = [];
+    for (const cs of competitionSpecies) {
+      const coefficient = parseNumber(String(cs.coefficient));
+      if (coefficient === null || coefficient < 0) {
+        setError('Coefficient invalide pour une espèce');
+        return;
+      }
+      const row: any = { speciesId: cs.speciesId, coefficient };
+      const quotaVal = cs.quota != null && String(cs.quota).trim() !== '';
+      if (quotaVal) {
+        const q = parseInt(String(cs.quota).trim(), 10);
+        row.quota = !isNaN(q) && q >= 1 ? q : null;
+      } else {
+        row.quota = null;
+      }
+      speciesPayload.push(row);
+    }
 
     const data: any = {
       name: formData.name.trim(),
@@ -256,6 +391,7 @@ export default function EditCompetitionScreen() {
       reglement: formData.reglement.trim() || null,
       hasNoLimit: formData.hasNoLimit,
       isRankingPublic: formData.isRankingPublic,
+      isBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusPoints: newSpeciesBonusPointsVal,
       quotaBonusEnabled: formData.quotaBonusEnabled,
@@ -266,6 +402,7 @@ export default function EditCompetitionScreen() {
         const n = parseInt(v, 10);
         return isNaN(n) || n < 1 ? null : n;
       })(),
+      species: speciesPayload,
     };
     if (!formData.hasNoLimit) {
       data.maxParticipants = parseInt(formData.maxParticipants);
@@ -288,12 +425,17 @@ export default function EditCompetitionScreen() {
       });
     } catch (_) {}
     setZonePoints([]);
+    setNewZoneName('');
     setShowZoneModal(true);
   };
 
   const handleMapPress = (e: any) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
-    setZonePoints([...zonePoints, { latitude, longitude }]);
+    setZonePoints((prev) => [...prev, { latitude, longitude }]);
+  };
+
+  const undoLastVertex = () => {
+    setZonePoints((prev) => (prev.length > 0 ? prev.slice(0, -1) : prev));
   };
 
   const saveZone = () => {
@@ -302,7 +444,11 @@ export default function EditCompetitionScreen() {
       return;
     }
     const coordinates = zonePoints.map((p) => [p.latitude, p.longitude]);
-    createPerimeterMutation.mutate(coordinates);
+    const trimmed = newZoneName.trim();
+    createPerimeterMutation.mutate({
+      coordinates,
+      ...(trimmed ? { name: trimmed } : {}),
+    });
   };
 
   const handleDeletePerimeter = (perimeterId: number) => {
@@ -610,6 +756,97 @@ export default function EditCompetitionScreen() {
             )}
           </View>
 
+          {/* Espèces */}
+          <View style={styles.section}>
+            <View style={styles.speciesHeader}>
+              <Text style={styles.label}>Espèces de la compétition *</Text>
+              <View style={styles.speciesHeaderButtons}>
+                <TouchableOpacity
+                  style={styles.newSpeciesButton}
+                  onPress={() => setShowCreateSpeciesModal(true)}
+                >
+                  <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.addSpeciesButton}
+                  onPress={handleAddSpecies}
+                  disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
+                >
+                  <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Text style={styles.helpText}>Coefficients et quotas par espèce (identique à la création).</Text>
+            {competitionSpecies.map((compSpecies, index) => {
+              const species = availableSpecies?.find((s) => s.id === compSpecies.speciesId);
+              return (
+                <View key={`${compSpecies.speciesId}-${index}`} style={styles.speciesItem}>
+                  <View style={styles.speciesRow}>
+                    <View style={styles.speciesSelect}>
+                      <Text style={styles.speciesLabel}>Espèce</Text>
+                      <TouchableOpacity
+                        style={styles.speciesSelectButton}
+                        onPress={() => {
+                          setSelectedSpeciesIndex(index);
+                          setShowSpeciesModal(true);
+                        }}
+                      >
+                        <Text style={styles.speciesSelectButtonText}>
+                          {species?.name || 'Sélectionner une espèce'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.speciesCoefficient}>
+                      <View style={[styles.labelRow, { marginBottom: 4 }]}>
+                        <Text style={styles.speciesLabel}>Coefficient</Text>
+                        <HelpButton text={COMPETITION_HELP.speciesCoefficient} />
+                      </View>
+                      <TextInput
+                        style={styles.speciesInput}
+                        value={String(compSpecies.coefficient)}
+                        onChangeText={(text) => {
+                          const normalized = normalizeNumber(text);
+                          const decimalPattern = /^-?\d*\.?\d*$/;
+                          if (text === '' || text === '.' || text === ',') {
+                            handleSpeciesChange(index, 'coefficient', text);
+                          } else if (decimalPattern.test(normalized)) {
+                            handleSpeciesChange(index, 'coefficient', text);
+                          }
+                        }}
+                        onBlur={() => {
+                          const value = parseNumber(String(compSpecies.coefficient));
+                          if (value === null || value < 0) {
+                            handleSpeciesChange(index, 'coefficient', 1.0);
+                          } else {
+                            handleSpeciesChange(index, 'coefficient', value);
+                          }
+                        }}
+                        keyboardType="decimal-pad"
+                        placeholder="1.0"
+                      />
+                    </View>
+                    <View style={styles.speciesCoefficient}>
+                      <View style={[styles.labelRow, { marginBottom: 4 }]}>
+                        <Text style={styles.speciesLabel}>Quota (opt.)</Text>
+                        <HelpButton text={COMPETITION_HELP.speciesQuota} />
+                      </View>
+                      <TextInput
+                        style={styles.speciesInput}
+                        value={compSpecies.quota != null ? String(compSpecies.quota) : ''}
+                        onChangeText={(text) => handleSpeciesChange(index, 'quota', text.replace(/[^0-9]/g, ''))}
+                        keyboardType="number-pad"
+                        placeholder="Illimité"
+                      />
+                    </View>
+                    <TouchableOpacity style={styles.removeSpeciesButton} onPress={() => handleRemoveSpecies(index)}>
+                      <Text style={styles.removeSpeciesButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
           {/* Zones autorisées */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Zones autorisées</Text>
@@ -621,7 +858,17 @@ export default function EditCompetitionScreen() {
                 <PerimeterMapView perimeters={perimeters} height={200} />
                 {perimeters.map((p: any) => (
                   <View key={p.id} style={styles.perimeterRow}>
-                    <Text style={styles.perimeterName}>Zone {p.id}</Text>
+                    <View style={styles.perimeterRowMain}>
+                      <PerimeterNameEditor
+                        competitionId={competitionId}
+                        perimeterId={p.id}
+                        initialName={p.name}
+                        onSaved={() => {
+                          refetchPerimeters();
+                          queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+                        }}
+                      />
+                    </View>
                     <TouchableOpacity
                       style={styles.deleteButton}
                       onPress={() => handleDeletePerimeter(p.id)}
@@ -647,26 +894,141 @@ export default function EditCompetitionScreen() {
           </TouchableOpacity>
         </ScrollView>
 
+        <CreateSpeciesModal
+          visible={showCreateSpeciesModal}
+          onClose={() => setShowCreateSpeciesModal(false)}
+          onSpeciesReady={(payload) => {
+            setCompetitionSpecies((prev) => [
+              ...prev,
+              {
+                speciesId: payload.speciesId,
+                coefficient: payload.competitionCoefficient,
+                basePoints: null,
+                quota: '',
+              },
+            ]);
+          }}
+        />
+
+        <Modal
+          visible={showSpeciesModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowSpeciesModal(false)}
+        >
+          <View style={styles.speciesModalOverlay}>
+            <View style={styles.speciesModalContent}>
+              <View style={styles.speciesModalHeader}>
+                <Text style={styles.speciesModalTitle}>Sélectionner une espèce</Text>
+                <TouchableOpacity
+                  onPress={() => setShowSpeciesModal(false)}
+                  style={styles.speciesModalCloseButton}
+                >
+                  <Text style={styles.speciesModalCloseButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.speciesModalList}>
+                {availableSpecies?.map((s) => {
+                  const current =
+                    selectedSpeciesIndex !== null ? competitionSpecies[selectedSpeciesIndex] : null;
+                  const isSelected = current?.speciesId === s.id;
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.speciesModalOption, isSelected && styles.speciesModalOptionActive]}
+                      onPress={() => {
+                        if (selectedSpeciesIndex !== null) {
+                          handleSpeciesChange(selectedSpeciesIndex, 'speciesId', s.id);
+                        }
+                        setShowSpeciesModal(false);
+                        setSelectedSpeciesIndex(null);
+                      }}
+                    >
+                      <Text
+                        style={[styles.speciesModalOptionText, isSelected && styles.speciesModalOptionTextActive]}
+                      >
+                        {s.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         {/* Modal dessin zone */}
         <Modal visible={showZoneModal} animationType="slide">
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Dessiner une zone</Text>
-              <TouchableOpacity onPress={() => { setShowZoneModal(false); setZonePoints([]); }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowZoneModal(false);
+                  setZonePoints([]);
+                  setNewZoneName('');
+                }}
+              >
                 <Text style={styles.modalCloseText}>✕ Fermer</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalHelp}>Appuyez sur la carte pour ajouter les sommets du polygone (au moins 3 points).</Text>
+            <Text style={styles.modalHelp}>
+              Les zones déjà enregistrées sont en bleu (bien visibles). La zone en cours se superpose en bleu plus clair,
+              avec les pastilles numérotées. Appuyez sur la carte pour placer les sommets (au moins 3 points).
+            </Text>
+            <View style={styles.modalField}>
+              <Text style={styles.modalFieldLabel}>Nom de la zone (optionnel)</Text>
+              <TextInput
+                style={styles.modalNameInput}
+                value={newZoneName}
+                onChangeText={setNewZoneName}
+                placeholder="Ex. : Quai nord, Zone A…"
+                placeholderTextColor="#999"
+              />
+            </View>
             <View style={styles.mapContainer}>
               <MapView
                 style={styles.map}
-                region={mapRegion}
+                initialRegion={mapRegion}
                 onPress={handleMapPress}
               >
+                {perimeters
+                  .filter((p: any) => Array.isArray(p.coordinates) && p.coordinates.length >= 3)
+                  .map((p: any) => (
+                    <Polygon
+                      key={`existing-zone-${p.id}`}
+                      coordinates={p.coordinates.map((c: number[]) => ({
+                        latitude: c[0],
+                        longitude: c[1],
+                      }))}
+                      fillColor="rgba(0, 86, 214, 0.42)"
+                      strokeColor="#004AAD"
+                      strokeWidth={3}
+                    />
+                  ))}
+                {zonePoints.map((p, index) => (
+                  <Marker
+                    key={`zone-pt-${index}-${p.latitude.toFixed(6)}-${p.longitude.toFixed(6)}`}
+                    coordinate={p}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    tracksViewChanges={zonePoints.length <= 20}
+                  >
+                    <View style={styles.zoneVertexMarker} pointerEvents="none">
+                      <Text style={styles.zoneVertexMarkerText}>{index + 1}</Text>
+                    </View>
+                  </Marker>
+                ))}
+                {zonePoints.length === 2 && (
+                  <Polyline
+                    coordinates={zonePoints}
+                    strokeColor="#00B4FF"
+                    strokeWidth={3}
+                  />
+                )}
                 {zonePoints.length >= 3 && (
                   <Polygon
                     coordinates={[...zonePoints, zonePoints[0]]}
-                    fillColor="rgba(0, 122, 255, 0.3)"
+                    fillColor="rgba(0, 180, 255, 0.35)"
                     strokeColor="#007AFF"
                     strokeWidth={2}
                   />
@@ -674,8 +1036,22 @@ export default function EditCompetitionScreen() {
               </MapView>
             </View>
             <Text style={styles.pointsCount}>{zonePoints.length} point(s) — minimum 3</Text>
+            <TouchableOpacity
+              style={[styles.undoVertexButton, zonePoints.length === 0 && styles.undoVertexButtonDisabled]}
+              onPress={undoLastVertex}
+              disabled={zonePoints.length === 0}
+            >
+              <Text style={styles.undoVertexButtonText}>↩ Annuler le dernier point</Text>
+            </TouchableOpacity>
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelZoneButton} onPress={() => { setShowZoneModal(false); setZonePoints([]); }}>
+              <TouchableOpacity
+                style={styles.cancelZoneButton}
+                onPress={() => {
+                  setShowZoneModal(false);
+                  setZonePoints([]);
+                  setNewZoneName('');
+                }}
+              >
                 <Text style={styles.cancelZoneButtonText}>Annuler</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -721,8 +1097,23 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 14, color: '#333', fontWeight: '500' },
   chipTextActive: { color: '#fff' },
   perimeterList: { marginBottom: 12 },
-  perimeterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  perimeterName: { fontSize: 14 },
+  perimeterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 8,
+  },
+  perimeterRowMain: { flex: 1, minWidth: 0 },
+  perimeterNameInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    backgroundColor: '#fff',
+  },
   deleteButton: { padding: 8 },
   deleteButtonText: { color: '#c00', fontSize: 14 },
   addZoneButton: { borderWidth: 2, borderColor: '#007AFF', borderRadius: 8, padding: 16, alignItems: 'center' },
@@ -735,13 +1126,146 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '600' },
   modalCloseText: { color: '#007AFF', fontSize: 16 },
   modalHelp: { fontSize: 14, color: '#666', marginBottom: 12 },
+  modalField: { marginBottom: 12 },
+  modalFieldLabel: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
+  modalNameInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
   mapContainer: { height: 400, borderRadius: 8, overflow: 'hidden', marginBottom: 12 },
   map: { flex: 1, width: '100%', height: '100%' },
-  pointsCount: { fontSize: 14, color: '#666', marginBottom: 12 },
+  zoneVertexMarker: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#007AFF',
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  zoneVertexMarkerText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  pointsCount: { fontSize: 14, color: '#666', marginBottom: 8 },
+  undoVertexButton: {
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#f0f7ff',
+  },
+  undoVertexButtonDisabled: { opacity: 0.45, borderColor: '#ccc', backgroundColor: '#f5f5f5' },
+  undoVertexButtonText: { color: '#007AFF', fontSize: 15, fontWeight: '600' },
   modalActions: { flexDirection: 'row', gap: 12 },
   cancelZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#eee', borderRadius: 8 },
   cancelZoneButtonText: { fontSize: 16 },
   saveZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#007AFF', borderRadius: 8 },
   saveZoneButtonDisabled: { opacity: 0.5 },
   saveZoneButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  speciesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  speciesHeaderButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  newSpeciesButton: {
+    backgroundColor: '#34C759',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  newSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  addSpeciesButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  addSpeciesButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  speciesItem: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  speciesRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
+  speciesSelect: { flex: 2 },
+  speciesSelectButton: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 8,
+    minHeight: 40,
+    justifyContent: 'center',
+  },
+  speciesSelectButtonText: { fontSize: 14, color: '#333' },
+  speciesCoefficient: { flex: 1 },
+  speciesLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
+  speciesInput: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 14,
+    color: '#333',
+  },
+  removeSpeciesButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeSpeciesButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  speciesModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  speciesModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  speciesModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  speciesModalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  speciesModalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  speciesModalCloseButtonText: { fontSize: 18, color: '#666', fontWeight: 'bold' },
+  speciesModalList: { maxHeight: 400 },
+  speciesModalOption: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  speciesModalOptionActive: { backgroundColor: '#f0f8ff' },
+  speciesModalOptionText: { fontSize: 16, color: '#333' },
+  speciesModalOptionTextActive: { color: '#007AFF', fontWeight: '600' },
 });

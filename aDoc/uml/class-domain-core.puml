@@ -1,0 +1,87 @@
+@startuml class-domain-core
+' Vue classes métier simplifiée (Doctrine) — STF
+
+skinparam classAttributeIconSize 0
+
+class Competition {
+  id
+  name
+  startDate
+  endDate
+  teamSize
+  isRankingPublic
+  --
+  getCompetitionSpecies()
+}
+
+class Team {
+  id
+  name
+  totalScore
+  registrationNumber
+  isActive
+}
+
+class FishCatch {
+  id
+  size
+  isValidated
+  createdAt
+  photoUrl
+  latitude
+  longitude
+  --
+  calculatePoints()
+}
+
+class CompetitionSpecies {
+  id
+  coefficient
+  isBonusEnabled
+  basePoints
+}
+
+class CompetitionPerimeter {
+  id
+  coordinates : JSON
+  name
+}
+
+class Species {
+  id
+  name
+  coefficient
+}
+
+class User {
+  id
+  email
+}
+
+Competition "1" o-- "*" Team : teams
+Competition "1" o-- "*" CompetitionSpecies
+Competition "1" o-- "*" CompetitionPerimeter
+Competition "1" o-- "*" FishCatch : competition\n(historique)
+
+Team "*" o-- "*" User : members\n(competition_team_members)
+Team "1" *-- "*" FishCatch : catches
+
+Species "1" *-- "*" CompetitionSpecies
+Species "1" *-- "*" FishCatch
+
+CompetitionSpecies "*" --> "1" Competition
+CompetitionSpecies "*" --> "1" Species
+
+CompetitionPerimeter "*" --> "1" Competition
+
+FishCatch "*" --> "1" Team
+FishCatch "*" --> "0..1" Competition
+FishCatch "*" --> "1" Species
+FishCatch "*" --> "0..1" User : caughtBy
+
+note right of FishCatch
+  La relation directe FishCatch → Competition
+  préserve l'historique si l'équipe change.
+end note
+
+@enduml

@@ -53,6 +53,12 @@ export const catchesService = {
     return response.data;
   },
 
+  /** Prise hors compétition (journal) : validée tout de suite, pas de file admin. */
+  createJournal: async (data: CreateCatchData): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.me.journalCatches, data);
+    return response.data;
+  },
+
   create: async (competitionId: number, data: CreateCatchData): Promise<FishCatch> => {
     try {
       const response = await apiClient.post(`/api/competitions/${competitionId}/catches`, data);
