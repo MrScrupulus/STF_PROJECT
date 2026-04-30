@@ -21,6 +21,7 @@ import { teamService } from '../services/teamService';
 import { competitionsService } from '../services/competitionsService';
 import { authService } from '../services/authService';
 import { isDatePast } from '../utils/dateUtils';
+import { savePhotoToGallery } from '../utils/savePhotoToGallery';
 import Header from '../components/Header';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
 
@@ -420,6 +421,8 @@ export default function AddCatchScreen({ navigation, route }: any) {
         setPhoto(base64Image);
         // Heure de la photo = fait foi pour la date officielle de la prise (pas le clic sur "Enregistrer")
         setPhotoCapturedAt(new Date());
+
+        await savePhotoToGallery(asset.uri);
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de prendre la photo');

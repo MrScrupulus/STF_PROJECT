@@ -18,6 +18,7 @@ import { adminService } from '../services/adminService';
 import { competitionsService } from '../services/competitionsService';
 import { speciesService } from '../services/speciesService';
 import { teamService } from '../services/teamService';
+import { savePhotoToGallery } from '../utils/savePhotoToGallery';
 import Header from '../components/Header';
 
 export default function AdminAddCatchScreen() {
@@ -79,7 +80,6 @@ export default function AdminAddCatchScreen() {
       if (Platform.OS !== 'web') {
         const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
         if (cameraStatus.status !== 'granted') {
-          // Permission refusée, mais on peut quand même utiliser la galerie
           console.log('Permission caméra refusée');
         }
       }
@@ -116,6 +116,7 @@ export default function AdminAddCatchScreen() {
         const asset = result.assets[0];
         const base64Image = `data:image/jpeg;base64,${asset.base64}`;
         setPhoto(base64Image);
+        await savePhotoToGallery(asset.uri);
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de prendre la photo');

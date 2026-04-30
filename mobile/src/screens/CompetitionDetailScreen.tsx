@@ -318,7 +318,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     );
   }
 
-  const myTeams = myTeamsData?.teams || [];
+  const myTeams = (myTeamsData?.teams || []).filter((team: any) => !team.isPersonalJournal);
   
   // Date actuelle pour les comparaisons
   const now = new Date();

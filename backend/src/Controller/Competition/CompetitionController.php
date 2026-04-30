@@ -983,6 +983,13 @@ class CompetitionController extends AbstractController
                 ], 404);
             }
 
+            if ($team->isPersonalJournal()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le journal personnel ne peut pas être inscrit à une compétition'
+                ], 400);
+            }
+
             // Vérifier que l'utilisateur est membre de l'équipe
             if (!$team->getMembers()->contains($user)) {
                 return $this->json([

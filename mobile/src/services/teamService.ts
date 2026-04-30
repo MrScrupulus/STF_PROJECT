@@ -24,6 +24,7 @@ export interface Team {
   registrationNumber?: number;
   catches?: any[];
   isActive?: boolean;
+  isPersonalJournal?: boolean;
 }
 
 export const teamService = {
