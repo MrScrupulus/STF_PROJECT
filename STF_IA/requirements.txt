@@ -1,0 +1,11 @@
+# Environnement conseillé : Python 3.10+
+# Création venv : python3 -m venv .venv && source .venv/bin/activate
+#
+# Dépendances ML (décommenter / ajuster selon CPU ou CUDA sur le serveur) :
+# torch
+# torchvision
+# pytorch-metric-learning
+# faiss-cpu
+# numpy
+# Pillow
+# pandas

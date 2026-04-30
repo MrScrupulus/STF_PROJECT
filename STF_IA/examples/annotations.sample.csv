@@ -1,0 +1,3 @@
+image_id,image_path,fish_id,side,split
+ex_001,images/ex_pike01_left.jpg,pike_demo_01,left,train
+ex_002,images/ex_pike01_right.jpg,pike_demo_01,right,train

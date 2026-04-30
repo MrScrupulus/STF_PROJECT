@@ -10,8 +10,11 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
-# Données et modèles (souvent très lourds — à adapter si tu veux versionner du petit jeu de test)
-data/
+# Données lourdes — la structure data/raw, data/processed est versionnée via .gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
 datasets/
 checkpoints/
 *.pt
