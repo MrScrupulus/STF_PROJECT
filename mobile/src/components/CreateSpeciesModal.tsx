@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
@@ -18,8 +19,10 @@ import { speciesService } from '../services/speciesService';
 export type SpeciesReadyPayload = {
   speciesId: number;
   name: string;
-  /** Coefficient à utiliser sur la ligne « compétition » (saisie utilisateur). */
+  /** Coefficient à utiliser sur la ligne « compétition » (saisie utilisateur ou 1 pour une espèce bonus). */
   competitionCoefficient: number;
+  /** Points catalogue (bonus espèce) : à reporter sur la ligne compétition si l’organisateur utilise les bonus espèce. */
+  catalogBasePoints: number | null;
 };
 
 type Props = {
@@ -40,12 +43,16 @@ export default function CreateSpeciesModal({
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [coefficient, setCoefficient] = useState('1');
+  const [isBonus, setIsBonus] = useState(false);
+  const [basePoints, setBasePoints] = useState('50');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     setName('');
     setCoefficient('1');
+    setIsBonus(false);
+    setBasePoints('50');
   }, [visible]);
 
   const JOURNAL_DEFAULT_COEFFICIENT = 1;
@@ -56,13 +63,21 @@ export default function CreateSpeciesModal({
       Alert.alert('Erreur', 'Le nom est requis.');
       return;
     }
-    const coefParsed =
-      variant === 'journal'
-        ? JOURNAL_DEFAULT_COEFFICIENT
-        : parseFloat(coefficient.replace(',', '.'));
-    if (variant !== 'journal' && (Number.isNaN(coefParsed) || coefParsed <= 0)) {
-      Alert.alert('Erreur', 'Indiquez un coefficient strictement positif.');
-      return;
+    let coefParsed = JOURNAL_DEFAULT_COEFFICIENT;
+    let basePointsParsed = 50;
+
+    if (variant !== 'journal') {
+      if (isBonus) {
+        const rawBp = parseInt(String(basePoints).trim().replace(/[^0-9]/g, ''), 10);
+        basePointsParsed = Number.isFinite(rawBp) && rawBp >= 1 ? rawBp : 50;
+        coefParsed = 1;
+      } else {
+        coefParsed = parseFloat(coefficient.replace(',', '.'));
+        if (Number.isNaN(coefParsed) || coefParsed <= 0) {
+          Alert.alert('Erreur', 'Indiquez un coefficient strictement positif.');
+          return;
+        }
+      }
     }
 
     setLoading(true);
@@ -70,16 +85,29 @@ export default function CreateSpeciesModal({
       const res =
         variant === 'journal'
           ? await speciesService.create({ name: n, coefficient: coefParsed })
-          : await adminService.createSpecies({ name: n, coefficient: coefParsed });
+          : isBonus
+            ? await adminService.createSpecies({ name: n, isBonus: true, basePoints: basePointsParsed })
+            : await adminService.createSpecies({ name: n, isBonus: false, coefficient: coefParsed });
       const sp = res.species;
       if (!sp?.id) {
         throw new Error('Réponse serveur invalide');
       }
       await queryClient.invalidateQueries({ queryKey: ['species'] });
+      const rowCoef =
+        variant === 'journal'
+          ? JOURNAL_DEFAULT_COEFFICIENT
+          : typeof sp.coefficient === 'number'
+            ? sp.coefficient
+            : coefParsed;
+      const bpFromCatalog =
+        sp.basePoints != null && Number(sp.basePoints) > 0 ? Number(sp.basePoints) : null;
+      const catalogBasePoints = variant === 'journal' ? null : bpFromCatalog;
+
       onSpeciesReady({
         speciesId: sp.id,
         name: sp.name,
-        competitionCoefficient: coefParsed,
+        competitionCoefficient: rowCoef,
+        catalogBasePoints,
       });
       onClose();
       if (res.reused) {
@@ -123,18 +151,43 @@ export default function CreateSpeciesModal({
           />
           {variant !== 'journal' && (
             <>
-              <Text style={styles.label}>Coefficient catalogue *</Text>
-              <TextInput
-                style={styles.input}
-                value={coefficient}
-                onChangeText={(t) => setCoefficient(t.replace(/[^0-9.,]/g, ''))}
-                placeholder="1.0"
-                keyboardType="decimal-pad"
-              />
-              <Text style={styles.helpCoef}>
-                Utilisé dans le référentiel si l’espèce est vraiment nouvelle ; pour la compétition, la ligne ajoutée
-                reprend ce coefficient (modifiable ensuite).
+              <View style={styles.switchRow}>
+                <Text style={styles.label}>Espèce bonus</Text>
+                <Switch value={isBonus} onValueChange={setIsBonus} />
+              </View>
+              <Text style={[styles.helpCoef, { marginTop: 0, marginBottom: 12 }]}>
+                Comme sur le tableau de bord web : espèce bonus = points fixes par prise ; sinon coefficient × taille
+                (cm).
               </Text>
+              {!isBonus ? (
+                <>
+                  <Text style={styles.label}>Coefficient catalogue *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={coefficient}
+                    onChangeText={(t) => setCoefficient(t.replace(/[^0-9.,]/g, ''))}
+                    placeholder="1.0"
+                    keyboardType="decimal-pad"
+                  />
+                  <Text style={styles.helpCoef}>
+                    Référentiel et valeur par défaut sur la ligne compétition (modifiable après ajout).
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.label}>Points bonus *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={basePoints}
+                    onChangeText={(t) => setBasePoints(t.replace(/[^0-9]/g, ''))}
+                    placeholder="50"
+                    keyboardType="number-pad"
+                  />
+                  <Text style={styles.helpCoef}>
+                    Points attribués par prise pour cette espèce bonus (équivalent web « Points bonus »).
+                  </Text>
+                </>
+              )}
             </>
           )}
           <View style={styles.actions}>
@@ -156,6 +209,13 @@ export default function CreateSpeciesModal({
 }
 
 const styles = StyleSheet.create({
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 12,
+  },
   overlay: { flex: 1, justifyContent: 'center', padding: 20 },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

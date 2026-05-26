@@ -73,8 +73,8 @@ class TeamController extends AbstractController
                     'competition' => $team->getCompetition() ? [
                         'id' => $team->getCompetition()->getId(),
                         'name' => $team->getCompetition()->getName(),
-                        'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
-                        'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
+                        'startDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getEndDate()),
                     ] : null,
                     'isActive' => $team->getIsActive(),
                     'isPersonalJournal' => $team->isPersonalJournal(),
@@ -158,8 +158,8 @@ class TeamController extends AbstractController
                     'competition' => $team->getCompetition() ? [
                         'id' => $team->getCompetition()->getId(),
                         'name' => $team->getCompetition()->getName(),
-                        'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
-                        'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
+                        'startDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getEndDate()),
                     ] : null,
                     'catchesCount' => $team->getCatches()->count(),
                     'isPersonalJournal' => $team->isPersonalJournal(),
@@ -180,7 +180,7 @@ class TeamController extends AbstractController
                     'photoUrl' => $catch->getPhotoUrl(),
                     'comment' => $catch->getComment(),
                     'isValidated' => $catch->isValidated(),
-                    'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
                     'caughtBy' => $catch->getCaughtBy() ? [
                         'id' => $catch->getCaughtBy()->getId(),
                         'firstname' => $catch->getCaughtBy()->getFirstname(),
@@ -194,8 +194,8 @@ class TeamController extends AbstractController
                     'competition' => $catch->getCompetition() ? [
                         'id' => $catch->getCompetition()->getId(),
                         'name' => $catch->getCompetition()->getName(),
-                        'startDate' => DateTimeHelper::formatParis($catch->getCompetition()->getStartDate()),
-                        'endDate' => DateTimeHelper::formatParis($catch->getCompetition()->getEndDate()),
+                        'startDate' => DateTimeHelper::formatParisOrNull($catch->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParisOrNull($catch->getCompetition()->getEndDate()),
                     ] : null,
                 ];
             }, $paginatedCatches);
@@ -305,8 +305,8 @@ class TeamController extends AbstractController
                     'competition' => $team->getCompetition() ? [
                         'id' => $team->getCompetition()->getId(),
                         'name' => $team->getCompetition()->getName(),
-                        'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
-                        'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
+                        'startDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getStartDate()),
+                        'endDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getEndDate()),
                     ] : null,
                 ];
             }, $teams);
@@ -355,14 +355,7 @@ class TeamController extends AbstractController
                 ], 401);
             }
 
-            // Vérifier si l'utilisateur connecté a déjà une équipe active
-            $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($user, true);
-            if (count($existingTeam) > 0) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Vous êtes déjà membre d\'une équipe active'
-                ], 400);
-            }
+            // Plus de blocage « une seule équipe » : le journal perso coexiste avec une ou plusieurs équipes de compétition (solo, duo…).
 
             // Création de l'équipe
             $team = new Team();
@@ -387,18 +380,6 @@ class TeamController extends AbstractController
                         'success' => false,
                         'message' => 'Aucun utilisateur trouvé avec cet email'
                     ], 404);
-                }
-
-                // Vérifier si le second participant a déjà une équipe active
-                $existingTeam2 = $this->entityManager->getRepository(Team::class)->findTeamsByMember($participant2, true);
-                if (count($existingTeam2) > 0) {
-                    // Supprimer l'équipe créée si le participant a déjà une équipe
-                    $this->entityManager->remove($team);
-                    $this->entityManager->flush();
-                    return $this->json([
-                        'success' => false,
-                        'message' => 'Le second participant est déjà membre d\'une équipe active'
-                    ], 400);
                 }
 
                 if ($participant2 === $user) {
@@ -564,15 +545,6 @@ class TeamController extends AbstractController
                 ], 400);
             }
 
-            // Vérifier que l'utilisateur invité n'est pas déjà dans une équipe active
-            $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($invitedUser, true);
-            if (count($existingTeam) > 0) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Cet utilisateur est déjà membre d\'une équipe active'
-                ], 400);
-            }
-
             // Vérifier qu'il n'y a pas déjà une invitation en attente
             $invitationRepo = $this->entityManager->getRepository(TeamInvitation::class);
             $existingInvitation = $invitationRepo->findInvitation($team, $invitedUser);
@@ -647,11 +619,15 @@ class TeamController extends AbstractController
     #[Route('/{id}', name: 'competition_team_show', methods: ['GET'])]
     public function show(Team $team, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
     {
-        // Filtrer les prises par compétition si l'équipe a une compétition
+        // Filtrer les prises par compétition si l'équipe a une compétition.
+        // Inclure aussi les prises sans compétition persistée sur la ligne (historique / données héritées),
+        // sinon les clients (ex. pénalités admin) peuvent voir une liste vide avec des points pourtant comptabilisés.
         $competitionCatches = [];
         if ($team->getCompetition()) {
+            $competitionId = $team->getCompetition()->getId();
             foreach ($team->getCatches() as $catch) {
-                if ($catch->getCompetition() && $catch->getCompetition()->getId() === $team->getCompetition()->getId()) {
+                $catchComp = $catch->getCompetition();
+                if ($catchComp === null || $catchComp->getId() === $competitionId) {
                     $competitionCatches[] = $catch;
                 }
             }
@@ -663,7 +639,11 @@ class TeamController extends AbstractController
         $competitionSpeciesMap = [];
         if ($team->getCompetition()) {
             foreach ($team->getCompetition()->getCompetitionSpecies() as $compSpecies) {
-                $competitionSpeciesMap[$compSpecies->getSpecies()->getId()] = $compSpecies;
+                $sp = $compSpecies->getSpecies();
+                if ($sp === null) {
+                    continue;
+                }
+                $competitionSpeciesMap[$sp->getId()] = $compSpecies;
             }
         }
 
@@ -672,7 +652,7 @@ class TeamController extends AbstractController
             ? $team->getScoreForCompetition($team->getCompetition())
             : $team->getTotalScore();
 
-        $scoreBreakdown = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0];
+        $scoreBreakdown = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0, 'penaltyPoints' => $team->getTotalPenaltyPoints()];
         if ($team->getCompetition()) {
             $scoreBreakdown = $team->getScoreBreakdownForCompetition($team->getCompetition());
         } else {
@@ -697,6 +677,7 @@ class TeamController extends AbstractController
                 'newSpeciesBonus' => $scoreBreakdown['newSpeciesBonus'],
                 'quotaBonus' => $scoreBreakdown['quotaBonus'],
                 'baseScore' => $scoreBreakdown['baseScore'],
+                'penaltyPoints' => $scoreBreakdown['penaltyPoints'] ?? 0,
                 'registrationNumber' => $team->getRegistrationNumber(),
                 'members' => array_map(function ($member) {
                     return [
@@ -711,13 +692,20 @@ class TeamController extends AbstractController
                     'name' => $team->getCompetition()->getName(),
                     'teamSize' => $team->getCompetition()->getTeamSize(),
                     'maxFishCounted' => $team->getCompetition()->getMaxFishCounted(),
-                    'startDate' => DateTimeHelper::formatParis($team->getCompetition()->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParis($team->getCompetition()->getEndDate()),
+                    'startDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getEndDate()),
                 ] : null,
-                'catches' => array_map(function ($catch) use ($competitionSpeciesMap) {
+                'scoringPresentation' => $team->getCompetition()
+                    ? $team->getScoringPresentationForCompetition($team->getCompetition())
+                    : null,
+                'catches' => array_values(array_filter(array_map(function ($catch) use ($competitionSpeciesMap) {
+                    $species = $catch->getSpecies();
+                    if ($species === null) {
+                        return null;
+                    }
                     // Récupérer le coefficient de la compétition si disponible, sinon utiliser celui de l'espèce
-                    $speciesId = $catch->getSpecies()->getId();
-                    $coefficient = $catch->getSpecies()->getCoefficient();
+                    $speciesId = $species->getId();
+                    $coefficient = $species->getCoefficient();
                     if (isset($competitionSpeciesMap[$speciesId])) {
                         $coefficient = $competitionSpeciesMap[$speciesId]->getCoefficient();
                     }
@@ -726,7 +714,7 @@ class TeamController extends AbstractController
                         'id' => $catch->getId(),
                         'species' => [
                             'id' => $speciesId,
-                            'name' => $catch->getSpecies()->getName(),
+                            'name' => $species->getName(),
                             'coefficient' => $coefficient,
                         ],
                         'size' => $catch->getSize(),
@@ -735,7 +723,7 @@ class TeamController extends AbstractController
                         'comment' => $catch->getComment(),
                         'isValidated' => $catch->isValidated(),
                         'rejectionReason' => $catch->getRejectionReason(),
-                        'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                        'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
                         'caughtBy' => $catch->getCaughtBy() ? [
                             'id' => $catch->getCaughtBy()->getId(),
                             'firstname' => $catch->getCaughtBy()->getFirstname(),
@@ -746,7 +734,7 @@ class TeamController extends AbstractController
                             'name' => $catch->getCompetition()->getName(),
                         ] : null,
                     ];
-                }, $competitionCatches),
+                }, $competitionCatches), static fn ($row) => $row !== null)),
             ]
         ]);
     }
@@ -808,19 +796,6 @@ class TeamController extends AbstractController
                             'success' => false,
                             'message' => "Membre avec l'ID {$memberId} non trouvé"
                         ], 404);
-                    }
-
-                    // Vérifier que le membre n'est pas déjà dans une autre équipe active
-                    if ($member->getId() !== $user->getId()) {
-                        $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($member, true);
-                        foreach ($existingTeam as $existing) {
-                            if ($existing->getId() !== $team->getId()) {
-                                return $this->json([
-                                    'success' => false,
-                                    'message' => "L'utilisateur {$member->getEmail()} est déjà membre d'une autre équipe active"
-                                ], 400);
-                            }
-                        }
                     }
 
                     $newMembers[] = $member;
@@ -1216,15 +1191,6 @@ class TeamController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => "L'équipe est déjà complète ({$maxTeamSize} membre(s) maximum)"
-                ], 400);
-            }
-
-            // Vérifier que l'utilisateur n'est pas déjà dans une équipe active
-            $existingTeam = $this->entityManager->getRepository(Team::class)->findTeamsByMember($user, true);
-            if (count($existingTeam) > 0) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Vous êtes déjà membre d\'une équipe active'
                 ], 400);
             }
 

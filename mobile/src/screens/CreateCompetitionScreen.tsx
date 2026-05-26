@@ -21,13 +21,17 @@ import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
 import HelpButton from '../components/HelpButton';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
+import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
+
+type PauseDraft = { key: string } & ScheduledPauseFormValues;
 
 interface CompetitionSpecies {
   speciesId: number;
   coefficient: string | number;
   basePoints?: number | null;
   quota?: string | number | null;
+  quotaBonusPoints?: string | number | null;
 }
 
 export default function CreateCompetitionScreen() {
@@ -49,7 +53,6 @@ export default function CreateCompetitionScreen() {
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: '',
     quotaBonusEnabled: false,
-    quotaBonusPoints: '',
     maxFishCounted: '', // vide = tous, sinon nombre saisi
   });
 
@@ -65,6 +68,10 @@ export default function CreateCompetitionScreen() {
   const [showSpeciesModal, setShowSpeciesModal] = useState(false);
   const [showCreateSpeciesModal, setShowCreateSpeciesModal] = useState(false);
   const [selectedSpeciesIndex, setSelectedSpeciesIndex] = useState<number | null>(null);
+  const [scheduledPausesDraft, setScheduledPausesDraft] = useState<PauseDraft[]>([]);
+  const [pauseModalVisible, setPauseModalVisible] = useState(false);
+  const [pauseModalInitial, setPauseModalInitial] = useState<ScheduledPauseFormValues | null>(null);
+  const [pauseEditingKey, setPauseEditingKey] = useState<string | null>(null);
 
   const { data: availableSpecies, isLoading: loadingSpecies } = useQuery({
     queryKey: ['species'],
@@ -99,6 +106,7 @@ export default function CreateCompetitionScreen() {
         coefficient: firstSpecies.coefficient || 1.0,
         basePoints: null,
         quota: '',
+        quotaBonusPoints: '',
       },
     ]);
   };
@@ -270,10 +278,32 @@ export default function CreateCompetitionScreen() {
       return;
     }
 
+    for (const p of scheduledPausesDraft) {
+      if (p.endDate <= p.startDate) {
+        setError('Chaque pause programmée doit se terminer après son début.');
+        return;
+      }
+      if (p.startDate < formData.startDate || p.endDate > formData.endDate) {
+        setError('Les pauses programmées doivent être entièrement comprises entre le début et la fin de la compétition.');
+        return;
+      }
+    }
+
+    if (formData.quotaBonusEnabled) {
+      for (const cs of competitionSpecies) {
+        const quotaVal = cs.quota != null && String(cs.quota).trim() !== '';
+        if (!quotaVal) continue;
+        const qbpStr = cs.quotaBonusPoints != null ? String(cs.quotaBonusPoints).trim() : '';
+        const qb = parseInt(qbpStr, 10);
+        if (!qbpStr || isNaN(qb) || qb < 1) {
+          setError('Avec le bonus quota activé, chaque espèce avec un quota doit avoir un bonus (points) d’au moins 1.');
+          return;
+        }
+      }
+    }
+
     const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
       ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
-    const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
-      ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
 
     // Préparer les données
     const competitionData: any = {
@@ -290,7 +320,6 @@ export default function CreateCompetitionScreen() {
       newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusPoints: newSpeciesBonusPointsVal,
       quotaBonusEnabled: formData.quotaBonusEnabled,
-      quotaBonusPoints: quotaBonusPointsVal,
       maxFishCounted: (() => {
         const v = formData.maxFishCounted.trim();
         if (!v || v === '0') return null;
@@ -322,13 +351,68 @@ export default function CreateCompetitionScreen() {
       } else {
         speciesData.quota = null;
       }
+      if (formData.quotaBonusEnabled && quotaVal) {
+        const qb = parseInt(String(cs.quotaBonusPoints ?? '').trim(), 10);
+        speciesData.quotaBonusPoints = !isNaN(qb) && qb >= 1 ? qb : 1;
+      }
+
+      if (
+        formData.newSpeciesBonusEnabled &&
+        cs.basePoints != null &&
+        String(cs.basePoints).trim() !== ''
+      ) {
+        const bp = parseInt(String(cs.basePoints).trim(), 10);
+        if (!isNaN(bp) && bp >= 1) {
+          speciesData.basePoints = bp;
+        }
+      }
 
       return speciesData;
     });
 
     competitionData.species = speciesConfig;
 
+    if (scheduledPausesDraft.length > 0) {
+      competitionData.scheduledPauses = scheduledPausesDraft.map((p) => ({
+        startDate: formatDateTime(p.startDate),
+        endDate: formatDateTime(p.endDate),
+        ...(p.reason.trim() ? { reason: p.reason.trim() } : {}),
+      }));
+    }
+
     createMutation.mutate(competitionData);
+  };
+
+  const openAddPauseModal = () => {
+    setPauseEditingKey(null);
+    setPauseModalInitial(null);
+    setPauseModalVisible(true);
+  };
+
+  const openEditPauseModal = (draft: PauseDraft) => {
+    setPauseEditingKey(draft.key);
+    setPauseModalInitial({
+      startDate: draft.startDate,
+      endDate: draft.endDate,
+      reason: draft.reason,
+    });
+    setPauseModalVisible(true);
+  };
+
+  const handlePauseFormSave = (v: ScheduledPauseFormValues) => {
+    if (pauseEditingKey) {
+      setScheduledPausesDraft((prev) =>
+        prev.map((p) => (p.key === pauseEditingKey ? { ...p, ...v } : p))
+      );
+    } else {
+      const key = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      setScheduledPausesDraft((prev) => [...prev, { key, ...v }]);
+    }
+    setPauseModalVisible(false);
+  };
+
+  const removePauseDraft = (key: string) => {
+    setScheduledPausesDraft((prev) => prev.filter((p) => p.key !== key));
   };
 
   return (
@@ -678,25 +762,10 @@ export default function CreateCompetitionScreen() {
               />
             </View>
             {formData.quotaBonusEnabled && (
-              <View style={[styles.section, { marginTop: 8 }]}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Valeur du bonus (pts)</Text>
-                  <HelpButton text={COMPETITION_HELP.quotaBonusPoints} />
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={formData.quotaBonusPoints}
-                  onChangeText={(text) =>
-                    setFormData({ ...formData, quotaBonusPoints: text.replace(/[^0-9]/g, '') })
-                  }
-                  placeholder="Ex: 500"
-                  keyboardType="number-pad"
-                />
-              </View>
+              <Text style={[styles.helpText, { marginTop: 8 }]}>
+                Pour chaque espèce à laquelle vous donnez un quota, renseignez aussi le montant du bonus lorsque ce quota est atteint (ex. 500 pts).
+              </Text>
             )}
-            <Text style={styles.helpText}>
-              Points bonus quand le quota d&apos;une espèce est atteint (définir les quotas par espèce ci-dessous).
-            </Text>
           </View>
 
           {/* Espèces */}
@@ -720,7 +789,7 @@ export default function CreateCompetitionScreen() {
               </View>
             </View>
             <Text style={styles.helpText}>
-              Définissez les espèces disponibles avec leurs coefficients.
+              Définissez les espèces avec leurs coefficients et quotas. Si le bonus quota est activé, indiquez aussi le bonus sur chaque ligne qui a un quota.
             </Text>
 
             {competitionSpecies.map((compSpecies, index) => {
@@ -797,9 +866,79 @@ export default function CreateCompetitionScreen() {
                       <Text style={styles.removeSpeciesButtonText}>✕</Text>
                     </TouchableOpacity>
                   </View>
+                  {formData.quotaBonusEnabled ? (
+                    <View style={{ marginTop: 10 }}>
+                      <View style={[styles.labelRow, { marginBottom: 4 }]}>
+                        <Text style={styles.speciesLabel}>Bonus si quota atteint (pts)</Text>
+                        <HelpButton text={COMPETITION_HELP.speciesQuotaBonusPoints} />
+                      </View>
+                      <TextInput
+                        style={styles.speciesInputWide}
+                        value={compSpecies.quotaBonusPoints != null ? String(compSpecies.quotaBonusPoints) : ''}
+                        onChangeText={(text) =>
+                          handleSpeciesChange(index, 'quotaBonusPoints', text.replace(/[^0-9]/g, ''))
+                        }
+                        keyboardType="number-pad"
+                        editable={Boolean(compSpecies.quota != null && String(compSpecies.quota).trim() !== '')}
+                        placeholder={
+                          compSpecies.quota != null && String(compSpecies.quota).trim() !== ''
+                            ? 'Ex: 500'
+                            : 'Renseignez d’abord un quota'
+                        }
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+                  ) : null}
                 </View>
               );
             })}
+          </View>
+
+          {/* Pauses programmées (optionnel) */}
+          <View style={styles.section}>
+            <View style={styles.speciesHeader}>
+              <Text style={styles.label}>Pauses programmées</Text>
+              <TouchableOpacity style={styles.addSpeciesButton} onPress={openAddPauseModal}>
+                <Text style={styles.addSpeciesButtonText}>+ Pause</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.helpText}>
+              Périodes pendant lesquelles la compétition sera en pause automatique (ex. relâché). Optionnel.
+            </Text>
+            {scheduledPausesDraft.map((p) => (
+              <View key={p.key} style={styles.pauseDraftRow}>
+                <TouchableOpacity
+                  style={styles.pauseDraftMain}
+                  onPress={() => openEditPauseModal(p)}
+                >
+                  <Text style={styles.pauseDraftDates}>
+                    {p.startDate.toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    →{' '}
+                    {p.endDate.toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                  {p.reason.trim() ? (
+                    <Text style={styles.pauseDraftReason} numberOfLines={2}>
+                      {p.reason.trim()}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.removeSpeciesButton} onPress={() => removePauseDraft(p.key)}>
+                  <Text style={styles.removeSpeciesButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
 
           {/* Bouton submit */}
@@ -816,6 +955,16 @@ export default function CreateCompetitionScreen() {
           </TouchableOpacity>
         </ScrollView>
 
+        <ScheduledPauseFormModal
+          visible={pauseModalVisible}
+          competitionStart={formData.startDate}
+          competitionEnd={formData.endDate}
+          initial={pauseModalInitial}
+          title={pauseEditingKey ? 'Modifier la pause' : 'Nouvelle pause'}
+          onClose={() => setPauseModalVisible(false)}
+          onSave={handlePauseFormSave}
+        />
+
         {/* Modal de sélection d'espèce */}
         <CreateSpeciesModal
           visible={showCreateSpeciesModal}
@@ -826,8 +975,12 @@ export default function CreateCompetitionScreen() {
               {
                 speciesId: payload.speciesId,
                 coefficient: payload.competitionCoefficient,
-                basePoints: null,
+                basePoints:
+                  payload.catalogBasePoints != null && payload.catalogBasePoints > 0
+                    ? payload.catalogBasePoints
+                    : null,
                 quota: '',
+                quotaBonusPoints: '',
               },
             ]);
           }}
@@ -1137,6 +1290,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
   },
+  speciesInputWide: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 14,
+    color: '#333',
+    width: '100%',
+  },
   removeSpeciesButton: {
     width: 32,
     height: 32,
@@ -1149,6 +1312,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  pauseDraftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  pauseDraftMain: {
+    flex: 1,
+  },
+  pauseDraftDates: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  pauseDraftReason: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 4,
   },
   submitButton: {
     backgroundColor: '#007AFF',

@@ -74,9 +74,8 @@ final class AuthController extends AbstractController
                 ], 400);
             }
 
-            // Champs requis : pseudo, firstname, lastname, email, password
+            // Champs requis : firstname, lastname, email, password (pseudo et téléphone optionnels)
             $requiredFields = [
-                'username' => 'Pseudo',
                 'email' => 'Email',
                 'password' => 'Mot de passe',
                 'firstname' => 'Prénom',
@@ -92,21 +91,27 @@ final class AuthController extends AbstractController
                 }
             }
 
-            // Validation du pseudo (alphanumérique, tirets, underscores, 3-30 caractères)
-            $username = trim($data['username']);
-            if (!preg_match('/^[a-zA-Z0-9_-]{3,30}$/', $username)) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Le pseudo doit contenir entre 3 et 30 caractères (lettres, chiffres, tirets, underscores)',
-                ], 400);
-            }
+            // Pseudo optionnel : si fourni → validation + unicité ; sinon généré (prénom + initiale nom, puis suffixe si doublon)
+            $usernameInput = isset($data['username']) ? trim((string) $data['username']) : '';
+            $username = null;
+            if ($usernameInput !== '') {
+                if (!preg_match('/^[a-zA-Z0-9_-]{3,30}$/', $usernameInput)) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Le pseudo doit contenir entre 3 et 30 caractères (lettres, chiffres, tirets, underscores)',
+                    ], 400);
+                }
 
-            $existingUsername = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
-            if ($existingUsername) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Ce pseudo est déjà utilisé',
-                ], 400);
+                $existingUsername = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $usernameInput]);
+                if ($existingUsername) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Ce pseudo est déjà utilisé',
+                    ], 400);
+                }
+                $username = $usernameInput;
+            } else {
+                $username = $this->allocateDefaultUsername((string) $data['firstname'], (string) $data['lastname']);
             }
 
             // Validation du format de l'email
@@ -358,5 +363,94 @@ final class AuthController extends AbstractController
                 'message' => 'Une erreur est survenue'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Ex. Marie Dupont → Marie_D ; en collision → Marie_D_2 … (≤ 30 car., même format que les pseudos saisis).
+     */
+    private function allocateDefaultUsername(string $firstname, string $lastname): string
+    {
+        $firstnameSlug = self::firstnameSlugForDefaultUsername($firstname);
+        $initial = self::lastnameInitialAscii($lastname);
+
+        if ($firstnameSlug === '') {
+            $firstnameSlug = 'User';
+        }
+
+        $maxFirstLen = max(1, 30 - 1 - strlen($initial));
+        $firstnamePart = substr($firstnameSlug, 0, $maxFirstLen);
+        $base = $firstnamePart . '_' . $initial;
+
+        if (strlen($base) < 3) {
+            $base = substr('User_' . $initial, 0, 30);
+        }
+
+        $repository = $this->entityManager->getRepository(User::class);
+
+        $candidate = substr($base, 0, 30);
+        $n = 2;
+        while ($repository->findOneBy(['username' => $candidate]) !== null) {
+            $suffix = '_' . $n;
+            $prefixLen = max(1, 30 - strlen($suffix));
+            $truncatedPrefix = rtrim(substr($base, 0, $prefixLen), '_');
+            if ($truncatedPrefix === '') {
+                $truncatedPrefix = 'U';
+            }
+            $candidate = substr($truncatedPrefix . $suffix, 0, 30);
+            ++$n;
+            if ($n > 10_000) {
+                return $this->randomFallbackUsername($repository);
+            }
+        }
+
+        return $candidate;
+    }
+
+    private function randomFallbackUsername(UserRepository $repository): string
+    {
+        do {
+            $candidate = strtolower(substr('user_' . bin2hex(random_bytes(4)), 0, 30));
+        } while ($repository->findOneBy(['username' => $candidate]) !== null);
+
+        return $candidate;
+    }
+
+    private static function lastnameInitialAscii(string $lastname): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', trim($lastname));
+        if ($ascii === false || trim((string) $ascii) === '') {
+            return 'X';
+        }
+        $ascii = trim((string) $ascii);
+        if ($ascii === '' || !preg_match('/[a-z]/i', $ascii, $m)) {
+            return 'X';
+        }
+
+        return strtoupper($m[0][0]);
+    }
+
+    /** Prénom : segments en casse titre (Jean Pierre → JeanPierre, Jean-Claude → JeanClaude). */
+    private static function firstnameSlugForDefaultUsername(string $firstname): string
+    {
+        $trim = trim($firstname);
+        if ($trim === '') {
+            return '';
+        }
+
+        $slug = '';
+        foreach (preg_split('/\s+/u', $trim) ?: [] as $word) {
+            foreach (explode('-', $word) as $segment) {
+                $asciiSeg = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $segment);
+                if ($asciiSeg === false) {
+                    $asciiSeg = $segment;
+                }
+                $lettersOnly = strtolower(preg_replace('/[^a-z]/i', '', $asciiSeg) ?? '');
+                if ($lettersOnly !== '') {
+                    $slug .= ucfirst($lettersOnly);
+                }
+            }
+        }
+
+        return $slug;
     }
 }

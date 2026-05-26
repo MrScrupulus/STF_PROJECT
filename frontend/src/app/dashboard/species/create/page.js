@@ -91,9 +91,9 @@ export default function CreateSpecies() {
 
           {!formData.isBonus ? (
             <div className={styles["species-create__group"]}>
-              <label className={styles["species-create__label"]}>
-                Coefficient
-              </label>
+            <label className={styles["species-create__label"]}>
+              Coefficient catalogue
+            </label>
               <input
                 type="number"
                 step="0.1"
@@ -106,7 +106,8 @@ export default function CreateSpecies() {
                 required
               />
               <p className={styles["species-create__hint"]}>
-                Ce coefficient sera multiplié par la taille du poisson
+                Référentiel : multipliera la taille (cm). Valeur initiale utilisable aussi sur une ligne « compétition »
+                (modifiable là-bas si besoin).
               </p>
             </div>
           ) : (

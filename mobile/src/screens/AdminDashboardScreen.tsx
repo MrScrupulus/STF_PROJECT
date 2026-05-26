@@ -225,6 +225,12 @@ export default function AdminDashboardScreen() {
             >
               <Text style={styles.navigationButtonText}>➕ Ajouter une prise (Admin)</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.navigationButton, styles.adminButton, styles.penaltyNavButton]}
+              onPress={() => (navigation as any).navigate('AdminPenalty')}
+            >
+              <Text style={styles.navigationButtonText}>⚖️ Pénalités</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -371,5 +377,8 @@ const styles = StyleSheet.create({
   adminButton: {
     backgroundColor: '#FF9500',
     marginTop: 12,
+  },
+  penaltyNavButton: {
+    backgroundColor: '#d97706',
   },
 });

@@ -29,8 +29,9 @@ import ImageView from 'react-native-image-viewing';
 export default function CompetitionDetailScreen({ route }: any) {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
-  const { id } = route.params;
-  const competitionId = typeof id === 'string' ? parseInt(id, 10) : id;
+  const { id } = route.params ?? {};
+  const competitionId =
+    typeof id === 'string' ? parseInt(id, 10) : typeof id === 'number' ? id : NaN;
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showRegisterForm, setShowRegisterForm] = useState(false);
@@ -44,9 +45,10 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [reglementImageViewerVisible, setReglementImageViewerVisible] = useState(false);
   const [reglementImageViewerIndex, setReglementImageViewerIndex] = useState(0);
 
-  const { data: competitionResponse, isLoading } = useQuery({
+  const { data: competitionResponse, isLoading, isError, error } = useQuery({
     queryKey: ['competition', competitionId],
     queryFn: () => competitionsService.getOne(competitionId),
+    enabled: Number.isFinite(competitionId) && competitionId > 0,
   });
 
   const competition = (competitionResponse as any)?.success !== undefined
@@ -266,16 +268,13 @@ export default function CompetitionDetailScreen({ route }: any) {
 
   // Mutation pour publier/masquer le classement
   const rankingMutation = useMutation({
-    mutationFn: (isPublic: boolean) => adminService.updateCompetition(competitionId, {
-      ...competition,
-      isRankingPublic: isPublic,
-    }),
-    onSuccess: () => {
+    mutationFn: (isPublic: boolean) =>
+      adminService.updateCompetition(competitionId, { isRankingPublic: isPublic }),
+    onSuccess: (_data, isPublic) => {
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
-      const comp = competition as any;
       Alert.alert(
         'Succès',
-        comp?.isRankingPublic
+        isPublic
           ? 'Le classement est maintenant public et visible par tous'
           : 'Le classement est maintenant privé et visible uniquement par les administrateurs'
       );
@@ -302,10 +301,38 @@ export default function CompetitionDetailScreen({ route }: any) {
     );
   };
 
+  if (!Number.isFinite(competitionId) || competitionId <= 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Identifiant de compétition invalide</Text>
+      </View>
+    );
+  }
+
   if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (isError) {
+    const status = (error as any)?.response?.status;
+    const msg =
+      (error as any)?.response?.data?.message ||
+      (error as any)?.message;
+    const hint =
+      status === 404
+        ? 'Compétition non trouvée'
+        : status === 401
+          ? 'Session expirée : reconnectez-vous.'
+          : status === 403
+            ? (msg ?? 'Accès refusé')
+            : msg ?? 'Impossible de charger cette compétition';
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{hint}</Text>
       </View>
     );
   }
@@ -527,7 +554,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 <Text style={styles.ruleLabel}>Bonus quota atteint</Text>
                 <Text style={styles.ruleValue}>
                   {(competition as any).quotaBonusEnabled
-                    ? `Oui — +${(competition as any).quotaBonusPoints ?? '—'} pts lorsqu’un quota d’espèce est atteint`
+                    ? 'Oui — montant défini pour chaque espèce dotée d’un quota'
                     : 'Non'}
                 </Text>
               </View>
@@ -551,6 +578,13 @@ export default function CompetitionDetailScreen({ route }: any) {
                       <Text style={styles.ruleSpeciesDetail}>
                         Coefficient ×{s.coefficient}
                         {s.quota != null && s.quota !== '' ? ` · Quota : ${s.quota} prise(s) max comptées` : ''}
+                        {(competition as any).quotaBonusEnabled &&
+                        s.quota != null &&
+                        s.quota !== '' &&
+                        s.quotaBonusPoints != null &&
+                        s.quotaBonusPoints !== ''
+                          ? ` · Bonus si quota atteint : +${s.quotaBonusPoints} pts`
+                          : ''}
                         {s.basePoints != null && Number(s.basePoints) > 0
                           ? ` · Bonus espèce : +${s.basePoints} pts`
                           : ''}

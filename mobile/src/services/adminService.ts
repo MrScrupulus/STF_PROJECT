@@ -44,13 +44,43 @@ export const adminService = {
     return response.data;
   },
 
+  deleteTeamPenalty: async (teamId: number, penaltyId: number): Promise<any> => {
+    const response = await apiClient.delete(`/admin/teams/${teamId}/penalties/${penaltyId}`);
+    return response.data;
+  },
+
+  createTeamPenalty: async (
+    teamId: number,
+    payload: { points: number; reason?: string; fishCatchId?: number }
+  ): Promise<any> => {
+    const response = await apiClient.post(`/admin/teams/${teamId}/penalties`, payload);
+    return response.data;
+  },
+
+  getTeamPenalties: async (teamId: number): Promise<any> => {
+    const response = await apiClient.get(`/admin/teams/${teamId}/penalties`);
+    return response.data;
+  },
+
+  /** Prises valides pour rattacher une pénalité (admin, hors journal perso). */
+  getTeamPenaltyEligibleCatches: async (teamId: number): Promise<any> => {
+    const response = await apiClient.get(`/admin/teams/${teamId}/penalty-eligible-catches`);
+    return response.data;
+  },
+
+  /** Met à jour la taille (cm) ; recalcule points et scores côté serveur */
+  updateCatchSize: async (catchId: number, size: number): Promise<any> => {
+    const response = await apiClient.patch(`/api/admin/catches/${catchId}`, { size });
+    return response.data;
+  },
+
   getUsers: async (): Promise<any[]> => {
     const response = await apiClient.get('/api/admin/users');
     return response.data?.users || response.data || [];
   },
 
   getTeams: async (): Promise<any[]> => {
-    const response = await apiClient.get('/api/admin/teams');
+    const response = await apiClient.get('/admin/teams');
     return response.data?.teams || response.data || [];
   },
 

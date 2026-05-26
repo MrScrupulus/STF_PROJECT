@@ -7,7 +7,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
 
 export interface RegisterData {
-  username: string;
+  /** Optionnel : si absent ou vide, le backend enregistre sans pseudo (repli sur l’email côté affichage). */
+  username?: string;
   email: string;
   password: string;
   firstName: string;
@@ -22,7 +23,8 @@ export interface LoginCredentials {
 
 export const authService = {
   async register(userData: RegisterData) {
-    if (!USERNAME_REGEX.test(userData.username)) {
+    const usernameTrimmed = userData.username?.trim() ?? '';
+    if (usernameTrimmed !== '' && !USERNAME_REGEX.test(usernameTrimmed)) {
       throw new Error("Le pseudo doit contenir entre 3 et 30 caractères (lettres, chiffres, tirets, underscores)");
     }
     if (!EMAIL_REGEX.test(userData.email)) {
@@ -35,12 +37,14 @@ export const authService = {
     }
 
     const formattedData: Record<string, string> = {
-      username: userData.username.trim(),
       email: userData.email,
       password: userData.password,
       firstname: userData.firstName,
       lastname: userData.lastName,
     };
+    if (usernameTrimmed !== '') {
+      formattedData.username = usernameTrimmed;
+    }
     if (userData.phoneNumber && userData.phoneNumber.trim() !== '') {
       formattedData.phone_number = userData.phoneNumber.trim();
     }

@@ -30,7 +30,6 @@ export default function EditCompetition() {
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: "",
     quotaBonusEnabled: false,
-    quotaBonusPoints: "",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -84,9 +83,6 @@ export default function EditCompetition() {
             ? String(compData.newSpeciesBonusPoints)
             : "",
           quotaBonusEnabled: compData.quotaBonusEnabled || false,
-          quotaBonusPoints: compData.hasOwnProperty("quotaBonusPoints") && compData.quotaBonusPoints != null
-            ? String(compData.quotaBonusPoints)
-            : "",
         });
         setReglementImageUrls(Array.isArray(compData.reglementImageUrls) ? compData.reglementImageUrls : (compData.reglementImageUrl ? [compData.reglementImageUrl] : []));
       } catch (error) {
@@ -123,8 +119,6 @@ export default function EditCompetition() {
 
       const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
         ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
-      const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
-        ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
 
       const dataToSend = {
         ...formData,
@@ -137,7 +131,6 @@ export default function EditCompetition() {
         newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
         newSpeciesBonusPoints: newSpeciesBonusPointsVal,
         quotaBonusEnabled: formData.quotaBonusEnabled,
-        quotaBonusPoints: quotaBonusPointsVal,
       };
 
       await competitionsService.update(competitionId, dataToSend);
@@ -474,25 +467,11 @@ export default function EditCompetition() {
                 <HelpIcon text={COMPETITION_HELP.quotaBonus} />
               </label>
             </div>
-            {formData.quotaBonusEnabled && (
-              <div className={styles["competition-create__group"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
-                <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
-                  Valeur du bonus (pts)
-                  <HelpIcon text={COMPETITION_HELP.quotaBonusPoints} />
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.quotaBonusPoints}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quotaBonusPoints: e.target.value.replace(/[^0-9]/g, "") })
-                  }
-                  className={styles["competition-create__input"]}
-                  placeholder="Ex: 500"
-                  style={{ maxWidth: "120px" }}
-                />
-              </div>
-            )}
+            {formData.quotaBonusEnabled ? (
+              <p className={styles["competition-create__help_text"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
+                Les montants de bonus se configurent espèce par espèce (avec le quota correspondant). Utilisez l’application mobile pour modifier la liste des espèces si besoin.
+              </p>
+            ) : null}
           </div>
 
           <div className={styles["competition-create__actions"]}>

@@ -18,37 +18,67 @@ import { adminService } from '../services/adminService';
 import { authService } from '../services/authService';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
+import {
+  fishSizeKeyboardType,
+  parseFishSizeCm,
+  sanitizeFishSizeInput,
+} from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
+
+function getTeamLoadErrorMessage(err: unknown): string {
+  if (err != null && typeof err === 'object' && 'response' in err) {
+    const data = (err as { response?: { data?: { message?: string } } }).response?.data;
+    if (typeof data?.message === 'string' && data.message.trim() !== '') {
+      return data.message;
+    }
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return 'Erreur lors du chargement';
+}
 
 export default function TeamDetailScreen({ route }: any) {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { id, highlightCatchId } = route.params || {};
+  const teamIdNum =
+    id == null || id === ''
+      ? NaN
+      : typeof id === 'number'
+        ? id
+        : parseInt(String(id), 10);
+  const teamIdValid = Number.isFinite(teamIdNum) && teamIdNum > 0;
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedCatchForReject, setSelectedCatchForReject] = useState<any>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showEditSizeModal, setShowEditSizeModal] = useState(false);
+  const [selectedCatchForSizeEdit, setSelectedCatchForSizeEdit] = useState<any>(null);
+  const [editSizeValue, setEditSizeValue] = useState('');
 
   const { data: teamData, isLoading, error } = useQuery({
-    queryKey: ['team', id],
-    queryFn: () => teamService.getOne(id),
+    queryKey: ['team', teamIdNum],
+    queryFn: () => teamService.getOne(teamIdNum),
+    enabled: teamIdValid,
   });
 
   // Récupérer les invitations en attente pour cette équipe
   const { data: invitationsData } = useQuery({
-    queryKey: ['team-invitations', id],
-    queryFn: () => teamService.getTeamInvitations(id),
-    enabled: !!teamData?.team,
+    queryKey: ['team-invitations', teamIdNum],
+    queryFn: () => teamService.getTeamInvitations(teamIdNum),
+    enabled: teamIdValid && !!teamData?.team,
   });
 
   const inviteMutation = useMutation({
-    mutationFn: (email: string) => teamService.inviteMember(id, email),
+    mutationFn: (email: string) => teamService.inviteMember(teamIdNum, email),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team', id] });
-      queryClient.invalidateQueries({ queryKey: ['team-invitations', id] });
+      queryClient.invalidateQueries({ queryKey: ['team', teamIdNum] });
+      queryClient.invalidateQueries({ queryKey: ['team-invitations', teamIdNum] });
       Alert.alert('Succès', 'Invitation envoyée avec succès.');
       setInviteEmail('');
       setShowInviteForm(false);
@@ -60,10 +90,10 @@ export default function TeamDetailScreen({ route }: any) {
   });
 
   const leaveTeamMutation = useMutation({
-    mutationFn: () => teamService.leaveTeam(id),
+    mutationFn: () => teamService.leaveTeam(teamIdNum),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['team', teamIdNum] });
       Alert.alert('Succès', 'Vous avez quitté l\'équipe avec succès.', [
         {
           text: 'OK',
@@ -77,25 +107,72 @@ export default function TeamDetailScreen({ route }: any) {
     },
   });
 
-  // Vérifier si l'utilisateur est admin
+  // Vérifier rôle admin + id utilisateur (pour distinguer vue « organisateur » vs membre)
   useEffect(() => {
     const checkAdmin = async () => {
       try {
         const response = await authService.getCurrentUser();
         const user = response.user || response;
         setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
+        const rawId = user.id;
+        if (rawId == null || rawId === '') {
+          setCurrentUserId(null);
+        } else {
+          const n = typeof rawId === 'number' ? rawId : parseInt(String(rawId), 10);
+          setCurrentUserId(Number.isFinite(n) ? n : null);
+        }
       } catch (error) {
         setIsAdmin(false);
+        setCurrentUserId(null);
       }
     };
     checkAdmin();
   }, []);
 
+  const updateCatchSizeMutation = useMutation({
+    mutationFn: ({ catchId, size }: { catchId: number; size: number }) =>
+      adminService.updateCatchSize(catchId, size),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team', teamIdNum] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
+      Alert.alert('Succès', 'Taille mise à jour.');
+      setShowEditSizeModal(false);
+      setSelectedCatchForSizeEdit(null);
+      setEditSizeValue('');
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message ||
+        'Une erreur est survenue lors de la mise à jour de la taille.';
+      Alert.alert('Erreur', message);
+    },
+  });
+
+  const handleOpenEditSize = (catchItem: any) => {
+    const s = catchItem?.size;
+    setSelectedCatchForSizeEdit(catchItem);
+    setEditSizeValue(s != null ? String(s) : '');
+    setShowEditSizeModal(true);
+  };
+
+  const handleConfirmEditSize = () => {
+    const n = parseFishSizeCm(editSizeValue.trim());
+    if (!Number.isFinite(n) || n <= 0) {
+      Alert.alert('Erreur', 'Entrez une taille valide (ex. 32 ou 25,5).');
+      return;
+    }
+    if (!selectedCatchForSizeEdit) return;
+    updateCatchSizeMutation.mutate({
+      catchId: selectedCatchForSizeEdit.id,
+      size: n,
+    });
+  };
+
   // Mutation pour valider une prise
   const validateCatchMutation = useMutation({
     mutationFn: (catchId: number) => adminService.validateCatch(catchId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['team', teamIdNum] });
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
       Alert.alert('Succès', 'Prise validée avec succès.');
     },
@@ -110,7 +187,7 @@ export default function TeamDetailScreen({ route }: any) {
     mutationFn: ({ catchId, reason }: { catchId: number; reason: string }) =>
       adminService.rejectCatch(catchId, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['team', teamIdNum] });
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
       Alert.alert('Succès', 'Prise rejetée avec succès.');
       setShowRejectModal(false);
@@ -201,6 +278,25 @@ export default function TeamDetailScreen({ route }: any) {
   };
 
   const team = teamData?.team;
+  /** Actions « membre » (quitter / inviter / modifier) — pas pour simple visite ex. admin classement */
+  const isMemberOfTeam =
+    currentUserId != null &&
+    Array.isArray(team?.members) &&
+    team.members.some((m: any) => Number(m?.id) === Number(currentUserId));
+
+  if (!teamIdValid) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Équipe invalide</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>Retour</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -213,7 +309,7 @@ export default function TeamDetailScreen({ route }: any) {
   if (error || !team) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Erreur lors du chargement</Text>
+        <Text style={styles.errorText}>{getTeamLoadErrorMessage(error)}</Text>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -235,12 +331,64 @@ export default function TeamDetailScreen({ route }: any) {
         .filter((catchItem: any) => !catchItem.rejectionReason)
         .sort((a: any, b: any) => b.points - a.points)
     : [];
-  
-  const maxFishCounted = team?.competition?.maxFishCounted ?? 5;
-  const topN = maxFishCounted && maxFishCounted > 0 ? maxFishCounted : validCatches.length;
-  const topCatches = validCatches.slice(0, topN);
-  const otherCatches = validCatches.slice(topN);
-  const baseScore = team?.baseScore != null ? team.baseScore : topCatches.reduce((sum: number, catchItem: any) => sum + catchItem.points, 0);
+
+  const pres = team.competition ? team.scoringPresentation : undefined;
+
+  const catchById: Record<number, any> = {};
+  for (const c of validCatches) {
+    catchById[c.id] = c;
+  }
+
+  const rawMfc = team.competition?.maxFishCounted;
+  const topNLegacy =
+    rawMfc != null && rawMfc !== '' && Number(rawMfc) > 0
+      ? Number(rawMfc)
+      : validCatches.length;
+
+  let topCatches: any[] = [];
+  let otherCatches: any[] = [];
+  let countedSectionTitle = '';
+  let baseScoreDescription = '';
+
+  if (pres != null && Array.isArray(pres.countedCatchIds)) {
+    const countedSet = new Set(pres.countedCatchIds);
+    topCatches = pres.countedCatchIds.map((id) => catchById[id]).filter(Boolean);
+    otherCatches = validCatches
+      .filter((c: any) => !countedSet.has(c.id))
+      .sort((a: any, b: any) => b.points - a.points);
+
+    if (pres.hasPerSpeciesQuota && pres.bySpecies.length > 0) {
+      countedSectionTitle = `🏆 Prises comptabilisées (quotas · jusqu'à ${pres.sumQuotaSlots})`;
+      const capGlobal =
+        pres.maxFishCounted != null && pres.maxFishCounted > 0
+          ? ` · plafond global ${pres.maxFishCounted}`
+          : '';
+      baseScoreDescription = `Meilleures prises par espèce (jusqu'à ${pres.sumQuotaSlots} prise(s) selon quotas${capGlobal})`;
+    } else {
+      const n = pres.countedCatchIds.length;
+      countedSectionTitle =
+        pres.maxFishCounted != null && pres.maxFishCounted > 0
+          ? `🏆 Prises comptabilisées (${n} / max ${pres.maxFishCounted})`
+          : `🏆 ${n} prise(s) comptabilisée(s)`;
+      baseScoreDescription =
+        pres.maxFishCounted != null && pres.maxFishCounted > 0
+          ? `Top ${pres.maxFishCounted} meilleures prises (plafond global)`
+          : 'Toutes les prises validées comptent dans le score de base';
+    }
+  } else {
+    topCatches = validCatches.slice(0, topNLegacy);
+    otherCatches = validCatches.slice(topNLegacy);
+    countedSectionTitle = `🏆 Top ${topNLegacy || topCatches.length} prises comptabilisées`;
+    baseScoreDescription =
+      topNLegacy > 0 && topNLegacy < validCatches.length
+        ? `Top ${topNLegacy} meilleures prises`
+        : 'Meilleures prises (toutes comptabilisées)';
+  }
+
+  const baseScore =
+    team?.baseScore != null
+      ? team.baseScore
+      : topCatches.reduce((sum: number, catchItem: any) => sum + catchItem.points, 0);
 
   const maxTeamSize = team.competition?.teamSize || 2;
   const canInvite = team.members && team.members.length < maxTeamSize;
@@ -274,9 +422,7 @@ export default function TeamDetailScreen({ route }: any) {
             <View style={styles.scoreCard}>
               <Text style={styles.scoreLabel}>Score Base</Text>
               <Text style={styles.scoreValue}>{baseScore}</Text>
-              <Text style={styles.scoreDescription}>
-                {topN > 0 ? `Top ${topN} meilleures prises` : 'Meilleures prises'}
-              </Text>
+              <Text style={styles.scoreDescription}>{baseScoreDescription}</Text>
             </View>
             {((team as any).newSpeciesBonus > 0 || (team as any).quotaBonus > 0 || ((team.bonus ?? 0) > 0 && !(team as any).newSpeciesBonus && !(team as any).quotaBonus)) && (
               <>
@@ -318,7 +464,7 @@ export default function TeamDetailScreen({ route }: any) {
                 return competitionEndDate >= now;
               })();
               
-              if (!isInActiveCompetition) {
+              if (isMemberOfTeam && !isInActiveCompetition) {
                 return (
                   <TouchableOpacity
                     style={styles.editButton}
@@ -347,8 +493,8 @@ export default function TeamDetailScreen({ route }: any) {
             </View>
           ))}
 
-          {/* Formulaire d'invitation */}
-          {canInvite && (
+          {/* Formulaire d'invitation (membres de l'équipe uniquement) */}
+          {isMemberOfTeam && canInvite && (
             <View style={styles.inviteSection}>
               {!showInviteForm ? (
                 <TouchableOpacity
@@ -404,8 +550,8 @@ export default function TeamDetailScreen({ route }: any) {
             </View>
           )}
 
-          {/* Invitations en attente */}
-          {invitationsData?.invitations && invitationsData.invitations.length > 0 && (
+          {/* Invitations en attente (visibles uniquement aux membres) */}
+          {isMemberOfTeam && invitationsData?.invitations && invitationsData.invitations.length > 0 && (
             <View style={styles.pendingInvitationsSection}>
               <Text style={styles.sectionTitle}>Invitations en attente</Text>
               {invitationsData.invitations.map((invitation: any) => (
@@ -426,8 +572,8 @@ export default function TeamDetailScreen({ route }: any) {
             </View>
           )}
 
-          {/* Bouton quitter l'équipe */}
-          {(() => {
+          {/* Bouton quitter l'équipe (membres uniquement) */}
+          {isMemberOfTeam && (() => {
             // Vérifier si l'équipe est inscrite dans une compétition active
             const canLeave = !team || !team.competition || !(team.competition as any).endDate || (() => {
               const now = new Date();
@@ -479,20 +625,70 @@ export default function TeamDetailScreen({ route }: any) {
               {/* Top N prises */}
               {topCatches.length > 0 && (
                 <View style={styles.top5Section}>
-                  <Text style={styles.top5Title}>🏆 Top {topN || topCatches.length} prises comptabilisées</Text>
-                  {topCatches.map((catchItem: any, index: number) => (
-                    <CatchCard
-                      key={catchItem.id}
-                      catchItem={catchItem}
-                      index={index}
-                      isTop5={true}
-                      onImagePress={(uri: string) => setSelectedImage(uri)}
-                      isAdmin={isAdmin}
-                      onValidate={handleValidateCatch}
-                      onReject={handleRejectCatch}
-                      isHighlighted={highlightCatchId === catchItem.id}
-                    />
-                  ))}
+                  <Text style={styles.top5Title}>{countedSectionTitle}</Text>
+                  {pres?.hasPerSpeciesQuota && pres.bySpecies.length > 0 ? (
+                    <>
+                      {pres.maxFishCounted != null && pres.maxFishCounted > 0 && (
+                        <Text style={styles.top5Subtitle}>
+                          Plafond global : {pres.maxFishCounted} prise(s) maximum au total (après quotas)
+                        </Text>
+                      )}
+                      {pres.bySpecies.map((block) => (
+                        <View key={block.speciesId} style={styles.scoringSpeciesBlock}>
+                          <Text style={styles.scoringSpeciesTitle}>
+                            {block.speciesName}
+                            {block.quota != null
+                              ? ` — ${block.countedCatchIds.length} / ${block.quota} retenue(s)`
+                              : ` — ${block.countedCatchIds.length} retenue(s)`}
+                          </Text>
+                          {block.countedCatchIds.map((cid, index) => {
+                            const catchItem = catchById[cid];
+                            if (!catchItem) return null;
+                            return (
+                              <CatchCard
+                                key={cid}
+                                catchItem={catchItem}
+                                index={index}
+                                isTop5={true}
+                                onImagePress={(uri: string) => setSelectedImage(uri)}
+                                isAdmin={isAdmin}
+                                onValidate={handleValidateCatch}
+                                onReject={handleRejectCatch}
+                                onEditSize={handleOpenEditSize}
+                                isHighlighted={highlightCatchId === catchItem.id}
+                              />
+                            );
+                          })}
+                        </View>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {pres &&
+                        pres.maxFishCounted != null &&
+                        pres.maxFishCounted > 0 &&
+                        !pres.hasPerSpeciesQuota && (
+                          <Text style={styles.top5Subtitle}>
+                            Les {pres.maxFishCounted} meilleures prises (toutes espèces) comptent pour le
+                            score de base
+                          </Text>
+                        )}
+                      {topCatches.map((catchItem: any, index: number) => (
+                        <CatchCard
+                          key={catchItem.id}
+                          catchItem={catchItem}
+                          index={index}
+                          isTop5={true}
+                          onImagePress={(uri: string) => setSelectedImage(uri)}
+                          isAdmin={isAdmin}
+                          onValidate={handleValidateCatch}
+                          onReject={handleRejectCatch}
+                          onEditSize={handleOpenEditSize}
+                          isHighlighted={highlightCatchId === catchItem.id}
+                        />
+                      ))}
+                    </>
+                  )}
                 </View>
               )}
 
@@ -508,6 +704,10 @@ export default function TeamDetailScreen({ route }: any) {
                       catchItem={catchItem}
                       onImagePress={(uri: string) => setSelectedImage(uri)}
                       isHighlighted={highlightCatchId === catchItem.id}
+                      isAdmin={isAdmin}
+                      onValidate={handleValidateCatch}
+                      onReject={handleRejectCatch}
+                      onEditSize={handleOpenEditSize}
                     />
                   ))}
                 </View>
@@ -528,6 +728,7 @@ export default function TeamDetailScreen({ route }: any) {
                       isAdmin={isAdmin}
                       onValidate={handleValidateCatch}
                       onReject={handleRejectCatch}
+                      onEditSize={handleOpenEditSize}
                       isHighlighted={highlightCatchId === catchItem.id}
                     />
                   ))}
@@ -621,17 +822,89 @@ export default function TeamDetailScreen({ route }: any) {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showEditSizeModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowEditSizeModal(false);
+          setSelectedCatchForSizeEdit(null);
+          setEditSizeValue('');
+        }}
+      >
+        <View style={styles.rejectModalOverlay}>
+          <View style={styles.rejectModalContent}>
+            <Text style={styles.rejectModalTitle}>Taille de la prise (cm)</Text>
+            {selectedCatchForSizeEdit && (
+              <View style={styles.rejectModalCatchInfo}>
+                <Text style={styles.rejectModalCatchText}>
+                  Espèce : {selectedCatchForSizeEdit.species?.name || 'N/A'}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.rejectModalLabel}>Nouvelle taille *</Text>
+            <TextInput
+              style={styles.rejectModalInput}
+              placeholder="Ex : 42 ou 32,5"
+              keyboardType={fishSizeKeyboardType}
+              value={editSizeValue}
+              onChangeText={(t) =>
+                setEditSizeValue((prev) => sanitizeFishSizeInput(prev, t))
+              }
+            />
+            <View style={styles.rejectModalActions}>
+              <TouchableOpacity
+                style={[styles.rejectModalButton, styles.rejectModalCancelButton]}
+                onPress={() => {
+                  setShowEditSizeModal(false);
+                  setSelectedCatchForSizeEdit(null);
+                  setEditSizeValue('');
+                }}
+                disabled={updateCatchSizeMutation.isPending}
+              >
+                <Text style={styles.rejectModalButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.rejectModalButton, styles.rejectModalConfirmButton]}
+                onPress={handleConfirmEditSize}
+                disabled={
+                  updateCatchSizeMutation.isPending || !editSizeValue.trim()
+                }
+              >
+                <Text style={styles.rejectModalButtonText}>
+                  {updateCatchSizeMutation.isPending ? 'Envoi…' : 'Enregistrer'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       </ScrollView>
     </>
   );
 }
 
-function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress, isAdmin, onValidate, onReject, isHighlighted }: any) {
+function CatchCard({
+  catchItem,
+  index,
+  isTop5,
+  isRejected,
+  onImagePress,
+  isAdmin,
+  onValidate,
+  onReject,
+  onEditSize,
+  isHighlighted,
+}: any) {
+  const showAdminBar =
+    !!isAdmin && (onValidate != null || onReject != null || onEditSize != null);
+
   return (
     <View style={[styles.catchCard, isHighlighted && styles.catchCardHighlighted]}>
       {isTop5 && (
         <View style={styles.top5Badge}>
-          <Text style={styles.top5BadgeText}>Top {index + 1}</Text>
+          <Text style={styles.top5BadgeText}>Top {(index ?? 0) + 1}</Text>
         </View>
       )}
       <View style={styles.catchHeader}>
@@ -690,26 +963,38 @@ function CatchCard({ catchItem, index, isTop5, isRejected, onImagePress, isAdmin
       ) : !catchItem.isValidated ? (
         <View style={styles.catchStatusPending}>
           <Text style={styles.catchStatusText}>⏳ En attente de validation</Text>
-          {isAdmin && (
-            <View style={styles.catchAdminActions}>
-              <TouchableOpacity
-                style={[styles.adminActionButton, styles.validateButton]}
-                onPress={() => onValidate(catchItem.id)}
-              >
-                <Text style={styles.adminActionButtonText}>✓ Valider</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.adminActionButton, styles.rejectButton]}
-                onPress={() => onReject(catchItem)}
-              >
-                <Text style={styles.adminActionButtonText}>✗ Rejeter</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
       ) : (
         <View style={styles.catchStatusValidated}>
           <Text style={styles.catchStatusText}>✅ Validée</Text>
+        </View>
+      )}
+      {showAdminBar && (
+        <View style={styles.catchAdminToolbar}>
+          {onValidate != null && !catchItem.isValidated && (
+            <TouchableOpacity
+              style={[styles.adminActionButton, styles.validateButton]}
+              onPress={() => onValidate(catchItem.id)}
+            >
+              <Text style={styles.adminActionButtonText}>✓ Valider</Text>
+            </TouchableOpacity>
+          )}
+          {onReject != null && !catchItem.rejectionReason && (
+            <TouchableOpacity
+              style={[styles.adminActionButton, styles.rejectButton]}
+              onPress={() => onReject(catchItem)}
+            >
+              <Text style={styles.adminActionButtonText}>✗ Rejeter</Text>
+            </TouchableOpacity>
+          )}
+          {onEditSize != null && (
+            <TouchableOpacity
+              style={[styles.adminActionButton, styles.editSizeButton]}
+              onPress={() => onEditSize(catchItem)}
+            >
+              <Text style={styles.adminActionButtonText}>✎ Taille</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -928,6 +1213,28 @@ const styles = StyleSheet.create({
     color: '#047857',
     textAlign: 'center',
   },
+  top5Subtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 14,
+    color: '#059669',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  scoringSpeciesBlock: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+  },
+  scoringSpeciesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 10,
+    color: '#065f46',
+  },
   otherCatchesSection: {
     marginTop: 24,
     padding: 16,
@@ -1115,13 +1422,18 @@ const styles = StyleSheet.create({
     width: '90%',
     height: '80%',
   },
-  catchAdminActions: {
+  catchAdminToolbar: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginTop: 8,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e8e8e8',
   },
   adminActionButton: {
     flex: 1,
+    minWidth: 88,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -1132,6 +1444,9 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     backgroundColor: '#FF3B30',
+  },
+  editSizeButton: {
+    backgroundColor: '#5856d6',
   },
   adminActionButtonText: {
     color: '#fff',

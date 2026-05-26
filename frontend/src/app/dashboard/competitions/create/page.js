@@ -29,7 +29,6 @@ export default function CreateCompetition() {
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: "",
     quotaBonusEnabled: false,
-    quotaBonusPoints: "",
     reglement: "",
     maxFishCounted: "",
   });
@@ -66,6 +65,7 @@ export default function CreateCompetition() {
         coefficient: firstSpecies.coefficient || 1.0,
         basePoints: formData.isBonusEnabled ? (firstSpecies.basePoints || 50) : null,
         quota: "",
+        quotaBonusPoints: "",
       },
     ]);
   };
@@ -113,10 +113,52 @@ export default function CreateCompetition() {
       const v = String(formData.maxFishCounted || "").trim();
       const maxFishCounted = !v || v === "0" ? null : (parseInt(v, 10) >= 1 ? parseInt(v, 10) : 5);
 
+      if (competitionSpecies.length === 0) {
+        setError("Au moins une espèce doit être configurée");
+        return;
+      }
+
+      if (formData.quotaBonusEnabled) {
+        for (const cs of competitionSpecies) {
+          if (!cs.quota || !String(cs.quota).trim()) continue;
+          const qbpStr = cs.quotaBonusPoints != null ? String(cs.quotaBonusPoints).trim() : "";
+          const qb = parseInt(qbpStr, 10);
+          if (!qbpStr || isNaN(qb) || qb < 1) {
+            setError(
+              "Avec le bonus quota activé, chaque espèce avec un quota doit avoir un bonus (points) d'au moins 1.",
+            );
+            return;
+          }
+        }
+      }
+
       const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
         ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
-      const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
-        ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
+
+      const speciesPayload = competitionSpecies.map((cs) => {
+        let coef = cs.coefficient;
+        if (typeof coef !== "number") {
+          const p = parseNumber(String(coef ?? ""));
+          coef = p == null || p < 0 || isNaN(p) ? 1 : p;
+        }
+        const quotaRaw =
+          cs.quota && String(cs.quota).trim()
+            ? parseInt(String(cs.quota).trim(), 10)
+            : null;
+        const quotaNorm =
+          quotaRaw != null && !isNaN(quotaRaw) && quotaRaw >= 1 ? quotaRaw : null;
+        const row = {
+          speciesId: cs.speciesId,
+          coefficient: coef,
+          basePoints: cs.basePoints ?? null,
+          quota: quotaNorm,
+        };
+        if (formData.quotaBonusEnabled && quotaNorm != null) {
+          const qb = parseInt(String(cs.quotaBonusPoints ?? "").trim(), 10);
+          row.quotaBonusPoints = !isNaN(qb) && qb >= 1 ? qb : 1;
+        }
+        return row;
+      });
 
       const competitionData = {
         ...formData,
@@ -125,13 +167,9 @@ export default function CreateCompetition() {
         newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
         newSpeciesBonusPoints: newSpeciesBonusPointsVal,
         quotaBonusEnabled: formData.quotaBonusEnabled,
-        quotaBonusPoints: quotaBonusPointsVal,
         reglement: formData.reglement?.trim() || null,
         scheduledPauses: scheduledPauses.length > 0 ? scheduledPauses : undefined,
-        species: competitionSpecies.length > 0 ? competitionSpecies.map(cs => ({
-          ...cs,
-          quota: cs.quota && String(cs.quota).trim() ? parseInt(String(cs.quota).trim(), 10) : null,
-        })) : undefined,
+        species: speciesPayload,
       };
       await competitionsService.create(competitionData);
       router.push("/dashboard");
@@ -404,27 +442,8 @@ export default function CreateCompetition() {
                 <HelpIcon text={COMPETITION_HELP.quotaBonus} />
               </label>
             </div>
-            {formData.quotaBonusEnabled && (
-              <div className={styles["competition-create__group"]} style={{ marginLeft: "1.5rem", marginTop: "0.5rem" }}>
-                <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
-                  Valeur du bonus (pts par quota rempli)
-                  <HelpIcon text={COMPETITION_HELP.quotaBonusPoints} />
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.quotaBonusPoints}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quotaBonusPoints: e.target.value.replace(/[^0-9]/g, "") })
-                  }
-                  className={styles["competition-create__input"]}
-                  placeholder="Ex: 500"
-                  style={{ maxWidth: "120px" }}
-                />
-              </div>
-            )}
             <p className={styles["competition-create__help_text"]}>
-              Points bonus quand le quota d&apos;une espèce est atteint (définir les quotas par espèce ci-dessous).
+              Activez puis indiquez, pour chaque espèce ayant un quota, le montant du bonus attribué lorsque ce quota est atteint.
             </p>
           </div>
 
@@ -444,7 +463,7 @@ export default function CreateCompetition() {
               </button>
             </div>
             <p className={styles["competition-create__help_text"]}>
-              Définissez les espèces disponibles pour cette compétition avec leurs coefficients et éventuellement un quota.
+              Définissez les espèces, leurs coefficients ; pour le bonus quota, remplissez aussi le bonus sur chaque ligne ayant un quota.
             </p>
 
             {competitionSpecies.length > 0 && (
@@ -539,6 +558,32 @@ export default function CreateCompetition() {
                       >
                         ✕
                       </button>
+                      {formData.quotaBonusEnabled ? (
+                        <div
+                          className={styles["competition-create__species_quota"]}
+                          style={{ gridColumn: "1 / -1" }}
+                        >
+                          <label className={styles["competition-create__label_with_help"]}>
+                            Bonus si quota atteint (pts){" "}
+                            <HelpIcon text={COMPETITION_HELP.speciesQuotaBonusPoints} />
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={compSpecies.quotaBonusPoints ?? ""}
+                            disabled={!(compSpecies.quota && String(compSpecies.quota).trim())}
+                            onChange={(e) =>
+                              handleSpeciesChange(index, "quotaBonusPoints", e.target.value.replace(/[^0-9]/g, ""))
+                            }
+                            className={styles["competition-create__input"]}
+                            placeholder={
+                              compSpecies.quota && String(compSpecies.quota).trim()
+                                ? "Ex: 500"
+                                : "Indiquez d'abord un quota"
+                            }
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}

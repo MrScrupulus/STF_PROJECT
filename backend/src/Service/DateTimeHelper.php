@@ -14,4 +14,14 @@ final class DateTimeHelper
         $dt->setTimezone(new \DateTimeZone('Europe/Paris'));
         return $dt->format('Y-m-d\TH:i:sP');
     }
+
+    /** Sérialisation API : dates de compétition parfois null en base. */
+    public static function formatParisOrNull(?\DateTimeInterface $date): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        return self::formatParis($date);
+    }
 }

@@ -11,6 +11,89 @@ import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
 import { resolvePhotoUri } from "../../../utils/photoUrl";
 
+
+function ScoringCountedCatchCard({ catchItem, rank, styles, setSelectedImage }) {
+  return (
+    <div
+      className={`${styles.teams__catch_card} ${styles["teams__catch_card--top5"]}`}
+    >
+      <div className={styles.teams__catch_top5_badge}>Top {rank}</div>
+      <div className={styles.teams__catch_header}>
+        <h3 className={styles.teams__catch_species}>{catchItem.species.name}</h3>
+        <div className={styles.teams__catch_points}>{catchItem.points} pts</div>
+      </div>
+
+      <div className={styles.teams__catch_details}>
+        <div className={styles.teams__catch_detail_row}>
+          <span className={styles.teams__catch_label}>Taille :</span>
+          <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+            {catchItem.size} cm
+          </span>
+        </div>
+        <div className={styles.teams__catch_detail_row}>
+          <span className={styles.teams__catch_label}>Coefficient :</span>
+          <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+            {catchItem.species.coefficient}
+          </span>
+        </div>
+        {catchItem.caughtBy && (
+          <div className={styles.teams__catch_detail_row}>
+            <span className={styles.teams__catch_label}>Pêché par :</span>
+            <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+              {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+            </span>
+          </div>
+        )}
+        {catchItem.comment && (
+          <div className={styles.teams__catch_comment}>
+            <span className={styles.teams__catch_label}>Commentaire :</span>
+            <p>{catchItem.comment}</p>
+          </div>
+        )}
+        {catchItem.createdAt && (
+          <div className={styles.teams__catch_detail_row}>
+            <span className={styles.teams__catch_label}>Date :</span>
+            <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+              {new Date(catchItem.createdAt).toLocaleString("fr-FR")}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {catchItem.photoUrl && (
+        <div
+          className={styles.teams__catch_photo}
+          onClick={() =>
+            setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)
+          }
+        >
+          <img
+            src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
+            alt={`${catchItem.species.name} de ${catchItem.size}cm`}
+            className={styles.teams__catch_image}
+            style={{
+              width: "150px",
+              height: "150px",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        </div>
+      )}
+
+      {catchItem.rejectionReason ? (
+        <div className={styles.teams__catch_status_rejected}>
+          ❌ Rejetée: {catchItem.rejectionReason}
+        </div>
+      ) : !catchItem.isValidated ? (
+        <div className={styles.teams__catch_status}>⏳ En attente de validation</div>
+      ) : (
+        <div className={styles.teams__catch_status_validated}>✅ Validée</div>
+      )}
+    </div>
+  );
+}
+
 export default function TeamDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -66,24 +149,6 @@ export default function TeamDetailPage() {
     };
   }, [selectedImage]);
 
-  // Séparer les prises rejetées des autres
-  const rejectedCatches = team?.catches
-    ? team.catches.filter(catchItem => catchItem.rejectionReason)
-    : [];
-  
-  // Filtrer les prises non rejetées et les trier par points décroissants
-  const validCatches = team?.catches
-    ? team.catches
-        .filter(catchItem => !catchItem.rejectionReason)
-        .sort((a, b) => b.points - a.points)
-    : [];
-
-  const maxFishCounted = team?.competition?.maxFishCounted ?? 5;
-  const topN = maxFishCounted && maxFishCounted > 0 ? maxFishCounted : validCatches.length;
-  const topCatches = validCatches.slice(0, topN);
-  const baseScore = team?.baseScore != null ? team.baseScore : topCatches.reduce((sum, catchItem) => sum + catchItem.points, 0);
-  const otherCatches = validCatches.slice(topN);
-
   if (isLoading) {
     return (
       <div className={classNames(layoutStyles.main, styles.loading)}>
@@ -102,6 +167,71 @@ export default function TeamDetailPage() {
       </div>
     );
   }
+
+  const rejectedCatches = team.catches
+    ? team.catches.filter((catchItem) => catchItem.rejectionReason)
+    : [];
+
+  const validCatches = team.catches
+    ? team.catches
+        .filter((catchItem) => !catchItem.rejectionReason)
+        .sort((a, b) => b.points - a.points)
+    : [];
+
+  const pres = team.competition ? team.scoringPresentation : undefined;
+
+  const catchById = Object.fromEntries(validCatches.map((c) => [c.id, c]));
+
+  const rawMfc = team.competition?.maxFishCounted;
+  const topNLegacy =
+    rawMfc != null && rawMfc !== "" && Number(rawMfc) > 0
+      ? Number(rawMfc)
+      : validCatches.length;
+
+  let topCatches = [];
+  let otherCatches = [];
+  let countedSectionTitle = "";
+  let baseScoreDescription = "";
+
+  if (pres != null && Array.isArray(pres.countedCatchIds)) {
+    const countedSet = new Set(pres.countedCatchIds);
+    topCatches = pres.countedCatchIds.map((id) => catchById[id]).filter(Boolean);
+    otherCatches = validCatches
+      .filter((c) => !countedSet.has(c.id))
+      .sort((a, b) => b.points - a.points);
+
+    if (pres.hasPerSpeciesQuota && pres.bySpecies.length > 0) {
+      countedSectionTitle = `🏆 Prises comptabilisées (quotas · jusqu'à ${pres.sumQuotaSlots})`;
+      const capGlobal =
+        pres.maxFishCounted != null && pres.maxFishCounted > 0
+          ? ` · plafond global ${pres.maxFishCounted}`
+          : "";
+      baseScoreDescription = `Meilleures prises par espèce (jusqu'à ${pres.sumQuotaSlots} prise(s) selon quotas${capGlobal})`;
+    } else {
+      const n = pres.countedCatchIds.length;
+      countedSectionTitle =
+        pres.maxFishCounted != null && pres.maxFishCounted > 0
+          ? `🏆 Prises comptabilisées (${n} / max ${pres.maxFishCounted})`
+          : `🏆 ${n} prise(s) comptabilisée(s)`;
+      baseScoreDescription =
+        pres.maxFishCounted != null && pres.maxFishCounted > 0
+          ? `Top ${pres.maxFishCounted} meilleures prises (plafond global)`
+          : "Toutes les prises validées comptent dans le score de base";
+    }
+  } else {
+    topCatches = validCatches.slice(0, topNLegacy);
+    otherCatches = validCatches.slice(topNLegacy);
+    countedSectionTitle = `🏆 Top ${topNLegacy || topCatches.length} prises comptabilisées pour le score`;
+    baseScoreDescription =
+      topNLegacy > 0 && topNLegacy < validCatches.length
+        ? `Top ${topNLegacy} meilleures prises`
+        : "Meilleures prises (toutes comptabilisées)";
+  }
+
+  const baseScore =
+    team.baseScore != null
+      ? team.baseScore
+      : topCatches.reduce((sum, catchItem) => sum + catchItem.points, 0);
 
   return (
     <div className={classNames(layoutStyles.main, styles.teams__container)}>
@@ -181,9 +311,7 @@ export default function TeamDetailPage() {
             <div className={styles.teams__score_card}>
               <div className={styles.teams__score_label}>Score Base</div>
               <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{baseScore}</div>
-              <div className={styles.teams__score_description}>
-                {topN > 0 ? `Top ${topN} meilleures prises` : 'Meilleures prises'}
-              </div>
+              <div className={styles.teams__score_description}>{baseScoreDescription}</div>
             </div>
             {(team.newSpeciesBonus > 0 || team.quotaBonus > 0 || (team.bonus > 0 && !team.newSpeciesBonus && !team.quotaBonus)) && (
               <>
@@ -354,108 +482,65 @@ export default function TeamDetailPage() {
               {/* Top N prises (celles qui comptent pour le score) */}
               {topCatches.length > 0 && (
                 <div className={styles.teams__top5_section}>
-                  <h3 className={styles.teams__top5_title}>
-                    🏆 Top {topN || topCatches.length} prises comptabilisées pour le score
-                  </h3>
-                  <div className={styles.teams__catches_grid}>
-                    {topCatches.map((catchItem, index) => (
-                      <div
-                        key={catchItem.id}
-                        className={`${styles.teams__catch_card} ${styles["teams__catch_card--top5"]}`}
-                      >
-                        <div className={styles.teams__catch_top5_badge}>
-                          Top {index + 1}
-                        </div>
-                        <div className={styles.teams__catch_header}>
-                          <h3 className={styles.teams__catch_species}>
-                            {catchItem.species.name}
-                          </h3>
-                          <div className={styles.teams__catch_points}>
-                            {catchItem.points} pts
+                  <h3 className={styles.teams__top5_title}>{countedSectionTitle}</h3>
+                  {pres?.hasPerSpeciesQuota && pres.bySpecies.length > 0 ? (
+                    <>
+                      {pres.maxFishCounted != null && pres.maxFishCounted > 0 && (
+                        <p className={styles.teams__top5_subtitle}>
+                          Plafond global : {pres.maxFishCounted} prise(s) maximum au total (après
+                          quotas)
+                        </p>
+                      )}
+                      {pres.bySpecies.map((block) => (
+                        <div key={block.speciesId} className={styles.teams__scoring_species_block}>
+                          <h4 className={styles.teams__scoring_species_title}>
+                            {block.speciesName}
+                            {block.quota != null
+                              ? ` — ${block.countedCatchIds.length} / ${block.quota} retenue(s)`
+                              : ` — ${block.countedCatchIds.length} retenue(s)`}
+                          </h4>
+                          <div className={styles.teams__catches_grid}>
+                            {block.countedCatchIds.map((cid, index) => {
+                              const catchItem = catchById[cid];
+                              if (!catchItem) return null;
+                              return (
+                                <ScoringCountedCatchCard
+                                  key={cid}
+                                  catchItem={catchItem}
+                                  rank={index + 1}
+                                  styles={styles}
+                                  setSelectedImage={setSelectedImage}
+                                />
+                              );
+                            })}
                           </div>
                         </div>
-
-                        <div className={styles.teams__catch_details}>
-                          <div className={styles.teams__catch_detail_row}>
-                            <span className={styles.teams__catch_label}>Taille :</span>
-                            <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
-                              {catchItem.size} cm
-                            </span>
-                          </div>
-                          <div className={styles.teams__catch_detail_row}>
-                            <span className={styles.teams__catch_label}>
-                              Coefficient :
-                            </span>
-                            <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
-                              {catchItem.species.coefficient}
-                            </span>
-                          </div>
-                          {catchItem.caughtBy && (
-                            <div className={styles.teams__catch_detail_row}>
-                              <span className={styles.teams__catch_label}>
-                                Pêché par :
-                              </span>
-                              <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
-                                {catchItem.caughtBy.firstname}{" "}
-                                {catchItem.caughtBy.lastname}
-                              </span>
-                            </div>
-                          )}
-                          {catchItem.comment && (
-                            <div className={styles.teams__catch_comment}>
-                              <span className={styles.teams__catch_label}>
-                                Commentaire :
-                              </span>
-                              <p>{catchItem.comment}</p>
-                            </div>
-                          )}
-                          {catchItem.createdAt && (
-                            <div className={styles.teams__catch_detail_row}>
-                              <span className={styles.teams__catch_label}>
-                                Date :
-                              </span>
-                              <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
-                                {new Date(catchItem.createdAt).toLocaleString("fr-FR")}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {catchItem.photoUrl && (
-                          <div 
-                            className={styles.teams__catch_photo}
-                            onClick={() => setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl)}
-                          >
-                            <img
-                              src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
-                              alt={`${catchItem.species.name} de ${catchItem.size}cm`}
-                              className={styles.teams__catch_image}
-                              style={{
-                                width: '150px',
-                                height: '150px',
-                                objectFit: 'cover',
-                                display: 'block'
-                              }}
-                            />
-                          </div>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {pres &&
+                        pres.maxFishCounted != null &&
+                        pres.maxFishCounted > 0 &&
+                        !pres.hasPerSpeciesQuota && (
+                          <p className={styles.teams__top5_subtitle}>
+                            Les {pres.maxFishCounted} meilleures prises (toutes espèces) comptent pour
+                            le score de base
+                          </p>
                         )}
-
-                        {catchItem.rejectionReason ? (
-                          <div className={styles.teams__catch_status_rejected}>
-                            ❌ Rejetée: {catchItem.rejectionReason}
-                          </div>
-                        ) : !catchItem.isValidated ? (
-                          <div className={styles.teams__catch_status}>
-                            ⏳ En attente de validation
-                          </div>
-                        ) : (
-                          <div className={styles.teams__catch_status_validated}>
-                            ✅ Validée
-                          </div>
-                        )}
+                      <div className={styles.teams__catches_grid}>
+                        {topCatches.map((catchItem, index) => (
+                          <ScoringCountedCatchCard
+                            key={catchItem.id}
+                            catchItem={catchItem}
+                            rank={index + 1}
+                            styles={styles}
+                            setSelectedImage={setSelectedImage}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
               )}
 

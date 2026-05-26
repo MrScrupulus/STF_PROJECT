@@ -46,7 +46,10 @@ class TeamRepository extends ServiceEntityRepository
         return $result && isset($result['lastNumber']) ? (int) $result['lastNumber'] : null;
     }
 
-    public function findTeamsByMember(User $user, bool $activeOnly = true): array
+    /**
+     * @param bool $excludePersonalJournal si true, n'inclut pas l'équipe « Journal personnel » (utile pour les règles métier équipes de compétition)
+     */
+    public function findTeamsByMember(User $user, bool $activeOnly = true, bool $excludePersonalJournal = false): array
     {
         // Trouver les IDs des équipes où l'utilisateur est membre
         $qb = $this->createQueryBuilder('t')
@@ -54,6 +57,11 @@ class TeamRepository extends ServiceEntityRepository
             ->innerJoin('t.members', 'm')
             ->where('m = :user')
             ->setParameter('user', $user);
+
+        if ($excludePersonalJournal) {
+            $qb->andWhere('t.isPersonalJournal = :notPj')
+                ->setParameter('notPj', false);
+        }
         
         if ($activeOnly) {
             $qb->andWhere('t.isActive = :isActive')

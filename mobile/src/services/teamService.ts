@@ -8,6 +8,20 @@ export interface TeamMember {
   email: string;
 }
 
+/** Aligné sur le barème serveur (quotas + plafond maxFishCounted). */
+export interface TeamScoringPresentation {
+  hasPerSpeciesQuota: boolean;
+  maxFishCounted: number | null;
+  sumQuotaSlots: number;
+  countedCatchIds: number[];
+  bySpecies: Array<{
+    speciesId: number;
+    speciesName: string;
+    quota: number | null;
+    countedCatchIds: number[];
+  }>;
+}
+
 export interface Team {
   id: number;
   name: string;
@@ -16,13 +30,19 @@ export interface Team {
     id: number;
     name: string;
     teamSize?: number;
+    maxFishCounted?: number | null;
     startDate?: string;
     endDate?: string;
   };
   totalScore?: number;
   bonus?: number;
+  baseScore?: number;
+  newSpeciesBonus?: number;
+  quotaBonus?: number;
   registrationNumber?: number;
   catches?: any[];
+  /** Présent uniquement si l’équipe est inscrite à une compétition. */
+  scoringPresentation?: TeamScoringPresentation | null;
   isActive?: boolean;
   isPersonalJournal?: boolean;
 }

@@ -115,7 +115,7 @@ export default function ChangePasswordScreen() {
                   onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
                   <FontAwesome
-                    name={showCurrentPassword ? 'eye' : 'eye-slash'}
+                    name={showCurrentPassword ? 'eye-slash' : 'eye'}
                     size={20}
                     color="#666"
                   />
@@ -139,7 +139,7 @@ export default function ChangePasswordScreen() {
                   onPress={() => setShowNewPassword(!showNewPassword)}
                 >
                   <FontAwesome
-                    name={showNewPassword ? 'eye' : 'eye-slash'}
+                    name={showNewPassword ? 'eye-slash' : 'eye'}
                     size={20}
                     color="#666"
                   />
@@ -173,7 +173,7 @@ export default function ChangePasswordScreen() {
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   <FontAwesome
-                    name={showConfirmPassword ? 'eye' : 'eye-slash'}
+                    name={showConfirmPassword ? 'eye-slash' : 'eye'}
                     size={20}
                     color="#666"
                   />

@@ -338,10 +338,173 @@
   &__section_header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
     margin-bottom: $spacing-base;
     padding-bottom: $spacing-sm;
     border-bottom: 1px solid $color-gray-200;
+  }
+
+  &__section_actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
+    align-items: center;
+  }
+
+  &__penalty_modal_content {
+    max-width: 520px;
+    width: 100%;
+  }
+
+  &__penalty_empty_hint {
+    margin: 0;
+    padding: $spacing-sm;
+    font-size: $font-size-sm;
+    color: $color-gray-600;
+    text-align: center;
+  }
+
+  &__penalty_team_list,
+  &__penalty_catch_list {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid $color-gray-200;
+    border-radius: $radius-md;
+    background: rgba($color-gray-100, 0.35);
+
+    [data-theme="dark"] & {
+      border-color: $color-gray-600;
+      background: rgba($color-gray-800, 0.4);
+    }
+  }
+
+  &__penalty_team_row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: $spacing-sm $spacing-base;
+    border: none;
+    border-bottom: 1px solid $color-gray-200;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    transition: background 0.15s;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: rgba($color-blue-500, 0.08);
+    }
+
+    &--selected {
+      background: rgba($color-blue-500, 0.18);
+      box-shadow: inset 3px 0 0 $color-blue-600;
+    }
+
+    [data-theme="dark"] & {
+      border-bottom-color: $color-gray-600;
+
+      &:hover {
+        background: rgba($color-blue-400, 0.12);
+      }
+
+      &--selected {
+        background: rgba($color-blue-500, 0.22);
+      }
+    }
+  }
+
+  &__penalty_team_row_name {
+    font-weight: 600;
+  }
+
+  &__penalty_team_row_members {
+    font-size: $font-size-sm;
+    opacity: 0.85;
+  }
+
+  &__penalty_catch_row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: $spacing-sm;
+    align-items: center;
+    width: 100%;
+    padding: $spacing-sm $spacing-base;
+    border: none;
+    border-bottom: 1px solid $color-gray-200;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    transition: background 0.15s;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: rgba($color-blue-500, 0.08);
+    }
+
+    &--selected {
+      background: rgba($color-blue-500, 0.18);
+      box-shadow: inset 3px 0 0 $color-blue-600;
+    }
+
+    [data-theme="dark"] & {
+      border-bottom-color: $color-gray-600;
+
+      &:hover {
+        background: rgba($color-blue-400, 0.12);
+      }
+
+      &--selected {
+        background: rgba($color-blue-500, 0.22);
+      }
+    }
+  }
+
+  &__penalty_catch_row_id {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__penalty_catch_row_species {
+    font-weight: 500;
+  }
+
+  &__penalty_catch_row_meta {
+    font-size: $font-size-sm;
+    opacity: 0.9;
+    white-space: nowrap;
+  }
+
+  &__penalty_button {
+    padding: $spacing-xs $spacing-sm;
+    background-color: #d97706;
+    color: $color-white;
+    border: none;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+
+    &:hover {
+      background-color: #b45309;
+      color: $color-white;
+    }
   }
 
   &__create_button {

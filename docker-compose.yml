@@ -1,5 +1,9 @@
 # Secrets : copier .env.example en .env et remplir les valeurs.
 # NE JAMAIS commiter le fichier .env (il est dans .gitignore).
+#
+# Migrations Doctrine : après un git pull, exécutez :
+#   docker compose exec backend php bin/console doctrine:migrations:migrate --no-interaction
+# Sinon des tables peuvent manquer (ex. team_penalty) et l’API renverra 500.
 
 services:
   database:

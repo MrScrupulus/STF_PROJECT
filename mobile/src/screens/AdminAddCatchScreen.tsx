@@ -19,6 +19,11 @@ import { competitionsService } from '../services/competitionsService';
 import { speciesService } from '../services/speciesService';
 import { teamService } from '../services/teamService';
 import { savePhotoToGallery } from '../utils/savePhotoToGallery';
+import {
+  fishSizeKeyboardType,
+  parseFishSizeCm,
+  sanitizeFishSizeInput,
+} from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
 
 export default function AdminAddCatchScreen() {
@@ -203,8 +208,9 @@ export default function AdminAddCatchScreen() {
       return;
     }
 
-    if (!size || parseFloat(size) <= 0) {
-      Alert.alert('Erreur', 'Veuillez entrer une taille valide');
+    const sizeCm = parseFishSizeCm(size.trim());
+    if (!size.trim() || !Number.isFinite(sizeCm) || sizeCm <= 0) {
+      Alert.alert('Erreur', 'Veuillez entrer une taille valide (ex. 32 ou 25,5)');
       return;
     }
 
@@ -217,7 +223,7 @@ export default function AdminAddCatchScreen() {
       competitionId: selectedCompetition,
       teamId: selectedTeam,
       speciesId: selectedSpecies,
-      size: parseFloat(size),
+      size: sizeCm,
       photoUrl: photo,
       comment: comment || undefined,
       caughtById: selectedMember || undefined,
@@ -401,10 +407,12 @@ export default function AdminAddCatchScreen() {
           <Text style={styles.label}>Taille (cm) *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ex: 25.5"
+            placeholder="Ex : 25,5 ou 11.2"
             value={size}
-            onChangeText={setSize}
-            keyboardType="decimal-pad"
+            onChangeText={(t) =>
+              setSize((prev) => sanitizeFishSizeInput(prev, t))
+            }
+            keyboardType={fishSizeKeyboardType}
           />
         </View>
 

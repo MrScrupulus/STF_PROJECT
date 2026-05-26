@@ -90,6 +90,13 @@ class PasswordResetController extends AbstractController
         $user = $resetToken->getUser();
         $newPassword = $data['password'];
 
+        if (\strlen((string) $newPassword) < 8 || !preg_match('/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/', $newPassword)) {
+            return $this->json(
+                ['message' => 'Le mot de passe doit contenir au moins 8 caractères, une lettre, un chiffre et un caractère parmi @$!%*#?&'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
         // Hasher et mettre à jour le mot de passe
         $hashedPassword = $this->passwordHasher->hashPassword($user, $newPassword);
         $user->setPassword($hashedPassword);

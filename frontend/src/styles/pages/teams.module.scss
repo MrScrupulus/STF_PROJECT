@@ -532,6 +532,30 @@
     text-align: center;
   }
 
+  &__top5_subtitle {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #059669;
+    margin: -0.75rem 0 1.25rem;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  &__scoring_species_block {
+    margin-bottom: 1.25rem;
+    padding: 0.875rem 1rem;
+    background-color: #fff;
+    border-radius: 0.625rem;
+    border: 1px solid #6ee7b7;
+  }
+
+  &__scoring_species_title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #065f46;
+    margin: 0 0 1rem;
+  }
+
   &__other_catches_section {
     margin-top: 2rem;
     padding: 1.5rem;

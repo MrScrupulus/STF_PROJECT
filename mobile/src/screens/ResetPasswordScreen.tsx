@@ -14,6 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function ResetPasswordScreen() {
   const navigation = useNavigation();
@@ -162,9 +163,11 @@ export default function ResetPasswordScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text style={styles.eyeButtonText}>
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </Text>
+                <FontAwesome
+                  name={showPassword ? 'eye-slash' : 'eye'}
+                  size={20}
+                  color="#666"
+                />
               </TouchableOpacity>
             </View>
             <Text style={styles.helperText}>
@@ -188,9 +191,11 @@ export default function ResetPasswordScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <Text style={styles.eyeButtonText}>
-                  {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-                </Text>
+                <FontAwesome
+                  name={showConfirmPassword ? 'eye-slash' : 'eye'}
+                  size={20}
+                  color="#666"
+                />
               </TouchableOpacity>
             </View>
 
@@ -271,9 +276,6 @@ const styles = StyleSheet.create({
     right: 12,
     top: 12,
     padding: 4,
-  },
-  eyeButtonText: {
-    fontSize: 20,
   },
   helperText: {
     fontSize: 12,

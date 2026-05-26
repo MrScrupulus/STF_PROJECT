@@ -13,10 +13,10 @@ export const COMPETITION_HELP = {
     "Valeur du bonus en points par espèce supplémentaire (au-delà de la première).",
 
   quotaBonus:
-    "Points bonus quand le quota d'une espèce est atteint. Ex : si quota Perche = 8 et vous validez 10 perches, les 8 meilleures comptent et vous gagnez le bonus.",
+    "Points bonus quand le quota d'une espèce est atteint. Activez cette option puis saisissez, pour chaque espèce avec un quota, le nombre de points bonus attribués lorsque ce quota est atteint.",
 
-  quotaBonusPoints:
-    "Valeur du bonus en points pour chaque quota d'espèce atteint.",
+  speciesQuotaBonusPoints:
+    "Nombre de points bonus pour cette ligne lorsque son quota est atteint. Obligatoire dès qu'un quota est renseigné (tant que le bonus quota est activé).",
 
   speciesQuota:
     "Limite du nombre de prises de cette espèce comptabilisées. Ex : 8 = au plus 8 perches dans le top N. Laisser vide = pas de limite pour cette espèce.",

@@ -13,6 +13,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome } from '@expo/vector-icons';
 import { authService, RegisterData } from '../services/authService';
 
 const COUNTRY_CODES = ['+33', '+32', '+41', '+49', '+39', '+34', '+44', '+212', '+213', '+216', '+221'];
@@ -34,7 +35,7 @@ export default function RegisterScreen() {
   });
 
   const handleRegister = async () => {
-    if (!formData.username || !formData.email || !formData.password || !formData.firstName || !formData.lastName) {
+    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -46,6 +47,7 @@ export default function RegisterScreen() {
 
     const dataToSend: RegisterData = {
       ...formData,
+      username: formData.username?.trim() || undefined,
       phoneNumber: phoneNumber.trim() ? `${phoneCountryCode}${phoneNumber.replace(/\D/g, '')}` : undefined,
     };
 
@@ -100,12 +102,15 @@ export default function RegisterScreen() {
 
             <TextInput
               style={styles.input}
-              placeholder="Pseudo * (3-30 caractères)"
+              placeholder="Pseudo (optionnel, 3-30 caractères)"
               value={formData.username}
               onChangeText={(text) => setFormData({ ...formData, username: text })}
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {/* <Text style={styles.optionalHint}>
+              Si laissé vide : prénom + initiale du nom (ex. Marie Dupont → Marie_D).
+            </Text> */}
 
             <TextInput
               style={styles.input}
@@ -146,7 +151,11 @@ export default function RegisterScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text style={styles.eyeIconText}>{showPassword ? '🙈' : '👁'}</Text>
+                <FontAwesome
+                  name={showPassword ? 'eye-slash' : 'eye'}
+                  size={20}
+                  color="#666"
+                />
               </TouchableOpacity>
             </View>
 
@@ -163,7 +172,11 @@ export default function RegisterScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <Text style={styles.eyeIconText}>{showConfirmPassword ? '🙈' : '👁'}</Text>
+                <FontAwesome
+                  name={showConfirmPassword ? 'eye-slash' : 'eye'}
+                  size={20}
+                  color="#666"
+                />
               </TouchableOpacity>
             </View>
 
@@ -312,6 +325,13 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
+  optionalHint: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: -8,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
   phoneRow: {
     marginBottom: 16,
   },
@@ -382,9 +402,7 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 16,
-  },
-  eyeIconText: {
-    fontSize: 20,
+    paddingLeft: 8,
   },
   passwordMismatch: {
     color: '#FF3B30',

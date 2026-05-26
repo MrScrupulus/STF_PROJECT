@@ -99,6 +99,36 @@ export const adminService = {
     }
   },
 
+  updateCatchSize: async (catchId, size) => {
+    try {
+      const response = await api.patch(`/api/admin/catches/${catchId}`, { size });
+      return response;
+    } catch (error) {
+      console.error("Error updating catch size:", error);
+      throw error;
+    }
+  },
+
+  getTeamPenalties: async (teamId) => {
+    const response = await api.get(`/admin/teams/${teamId}/penalties`);
+    return response;
+  },
+
+  getTeamPenaltyEligibleCatches: async (teamId) => {
+    const response = await api.get(`/admin/teams/${teamId}/penalty-eligible-catches`);
+    return response;
+  },
+
+  addTeamPenalty: async (teamId, payload) => {
+    const response = await api.post(`/admin/teams/${teamId}/penalties`, payload);
+    return response;
+  },
+
+  deleteTeamPenalty: async (teamId, penaltyId) => {
+    const response = await api.delete(`/admin/teams/${teamId}/penalties/${penaltyId}`);
+    return response;
+  },
+
   togglePause: async (competitionId, isPaused) => {
     try {
       const response = await api.post(`/api/admin/competitions/${competitionId}/pause`, {

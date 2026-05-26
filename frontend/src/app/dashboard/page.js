@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { adminService } from "../../services/adminService";
+import { teamService } from "../../services/teamService";
 import { competitionService } from "../../services/competitionService";
 import { competitionsService } from "../../services/competitions";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,14 @@ import { perimeterService } from "../../services/perimeterService";
 import { logger } from "../../utils/logger";
 import { resolvePhotoUri } from "../../utils/photoUrl";
 import { formatCompetitionDateTime } from "../../utils/dateUtils";
+
+/** Normalisation pour recherche sans accents */
+function normalizeForSearch(str) {
+  return String(str ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
 // Définir les en-têtes pour chaque section
 const TABLE_HEADERS = {
@@ -89,6 +98,19 @@ export default function Dashboard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showPenaltyModal, setShowPenaltyModal] = useState(false);
+  const [penaltyTeamId, setPenaltyTeamId] = useState("");
+  const [penaltyPoints, setPenaltyPoints] = useState("");
+  const [penaltyReason, setPenaltyReason] = useState("");
+  const [penaltyFishCatchId, setPenaltyFishCatchId] = useState("");
+  const [penaltyCatchOptions, setPenaltyCatchOptions] = useState([]);
+  const [penaltyList, setPenaltyList] = useState([]);
+  const [penaltyTotal, setPenaltyTotal] = useState(0);
+  const [penaltyLoading, setPenaltyLoading] = useState(false);
+  const [penaltyScope, setPenaltyScope] = useState("global");
+  const [penaltySubmitBusy, setPenaltySubmitBusy] = useState(false);
+  const [penaltyCompetitionId, setPenaltyCompetitionId] = useState("");
+  const [penaltyTeamSearch, setPenaltyTeamSearch] = useState("");
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -1514,6 +1536,86 @@ export default function Dashboard() {
     }
   }, [isDarkTheme]);
 
+  const penaltyEligibleTeams = useMemo(() => {
+    const cid = parseInt(String(penaltyCompetitionId), 10);
+    if (!penaltyCompetitionId || Number.isNaN(cid)) return [];
+    return teams.filter((t) => {
+      if (t.isPersonalJournal) return false;
+      const tcid = t.competition?.id;
+      if (tcid == null) return false;
+      return Number(tcid) === cid;
+    });
+  }, [teams, penaltyCompetitionId]);
+
+  const penaltyTeamsSearchResults = useMemo(() => {
+    const q = normalizeForSearch(penaltyTeamSearch);
+    if (!q) return penaltyEligibleTeams;
+    return penaltyEligibleTeams.filter((t) => {
+      if (normalizeForSearch(t.name).includes(q)) return true;
+      for (const m of t.members || []) {
+        if (normalizeForSearch(m.firstname).includes(q)) return true;
+        if (normalizeForSearch(m.lastname).includes(q)) return true;
+        if (normalizeForSearch(m.username).includes(q)) return true;
+      }
+      return false;
+    });
+  }, [penaltyEligibleTeams, penaltyTeamSearch]);
+
+  const reloadPenaltyModalData = async (teamIdRaw) => {
+    if (teamIdRaw === "" || teamIdRaw == null) {
+      setPenaltyCatchOptions([]);
+      setPenaltyList([]);
+      setPenaltyTotal(0);
+      return;
+    }
+    const tid = parseInt(String(teamIdRaw), 10);
+    if (Number.isNaN(tid)) {
+      return;
+    }
+    setPenaltyLoading(true);
+    try {
+      const [catchesRes, penRes] = await Promise.all([
+        adminService.getTeamPenaltyEligibleCatches(tid),
+        adminService.getTeamPenalties(tid),
+      ]);
+      if (catchesRes?.success && Array.isArray(catchesRes.catches)) {
+        setPenaltyCatchOptions(
+          catchesRes.catches.map((c) => ({
+            id: c.id,
+            speciesName: c.species?.name || "?",
+            size: c.size,
+            points: c.points,
+            label: `#${c.id} — ${c.species?.name || "?"} — ${c.size} cm (${c.points} pts)`,
+          }))
+        );
+      } else {
+        setPenaltyCatchOptions([]);
+      }
+      if (penRes?.success) {
+        setPenaltyList(penRes.penalties || []);
+        setPenaltyTotal(penRes.totalPenaltyPoints ?? 0);
+      }
+    } catch (e) {
+      toast.error(e.message || "Erreur chargement équipe / pénalités");
+    } finally {
+      setPenaltyLoading(false);
+    }
+  };
+
+  const openPenaltyModal = () => {
+    setPenaltyCompetitionId("");
+    setPenaltyTeamSearch("");
+    setPenaltyTeamId("");
+    setPenaltyPoints("");
+    setPenaltyReason("");
+    setPenaltyFishCatchId("");
+    setPenaltyCatchOptions([]);
+    setPenaltyList([]);
+    setPenaltyTotal(0);
+    setPenaltyScope("global");
+    setShowPenaltyModal(true);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -1659,7 +1761,7 @@ export default function Dashboard() {
           {/* Section Prises en attente de validation */}
           <div className={styles.dashboard__card}>
             <div className={styles.dashboard__section_header}>
-              <h2 className={styles.dashboard__section_title}>
+              <h2 className={styles.dashboard__section_title} style={{ flex: "1 1 auto" }}>
                 Prises en attente de validation
                 {pendingCatches.length > 0 && (
                   <span className={styles.dashboard__badge}>
@@ -1667,6 +1769,18 @@ export default function Dashboard() {
                   </span>
                 )}
               </h2>
+              <div className={styles.dashboard__section_actions}>
+                <Link href="/catch/add" className={styles.dashboard__create_button}>
+                  ➕ Ajouter une prise
+                </Link>
+                <button
+                  type="button"
+                  className={styles.dashboard__penalty_button}
+                  onClick={openPenaltyModal}
+                >
+                  ⚖️ Pénalités
+                </button>
+              </div>
             </div>
             {pendingCatches.length === 0 ? (
               <div className={styles.dashboard__empty_state}>
@@ -1841,6 +1955,292 @@ export default function Dashboard() {
                   onClick={() => setShowRoleModal(false)}
                 >
                   Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal pénalités équipe */}
+        {showPenaltyModal && (
+          <div className={modalStyles.modal__overlay}>
+            <div className={`${modalStyles.modal__content} ${styles.dashboard__penalty_modal_content}`}>
+              <h3 className={modalStyles.modal__title}>Pénalités (retirer des points au score)</h3>
+              <p className={modalStyles.modal__text}>
+                Choisissez la compétition, puis retrouvez l&apos;équipe (nom, prénom, nom ou pseudo d&apos;un membre).
+                Définissez si la retenue affecte tout le score ou une prise précise pour le suivi.
+              </p>
+              <div className={modalStyles.modal__form_group}>
+                <label htmlFor="penaltyCompetitionSelect">Compétition *</label>
+                <select
+                  id="penaltyCompetitionSelect"
+                  style={{ width: "100%", padding: "8px", borderRadius: 8 }}
+                  value={penaltyCompetitionId}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setPenaltyCompetitionId(v);
+                    setPenaltyTeamId("");
+                    setPenaltyTeamSearch("");
+                    setPenaltyFishCatchId("");
+                    setPenaltyCatchOptions([]);
+                    setPenaltyList([]);
+                    setPenaltyTotal(0);
+                  }}
+                >
+                  <option value="">Choisir une compétition…</option>
+                  {(competitions || []).map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {penaltyCompetitionId ? (
+                <>
+                  <div className={modalStyles.modal__form_group}>
+                    <label htmlFor="penaltyTeamSearchField">Rechercher une équipe</label>
+                    <input
+                      id="penaltyTeamSearchField"
+                      type="search"
+                      value={penaltyTeamSearch}
+                      onChange={(e) => setPenaltyTeamSearch(e.target.value)}
+                      placeholder="Nom d'équipe, prénom, nom ou pseudo…"
+                      style={{ width: "100%", padding: "8px", borderRadius: 8, boxSizing: "border-box" }}
+                    />
+                    <p style={{ fontSize: 13, opacity: 0.75, marginTop: 6, marginBottom: 0 }}>
+                      {penaltyTeamsSearchResults.length} équipe
+                      {penaltyTeamsSearchResults.length > 1 ? "s" : ""} dans cette compétition
+                      {penaltyTeamSearch.trim() ? " (filtrées)" : ""}.
+                    </p>
+                  </div>
+                  <div className={modalStyles.modal__form_group}>
+                    <span style={{ display: "block", marginBottom: 8 }}>Équipe *</span>
+                    <div className={styles.dashboard__penalty_team_list}>
+                      {penaltyTeamsSearchResults.length === 0 ? (
+                        <p className={styles.dashboard__penalty_empty_hint}>
+                          Aucune équipe ne correspond à la recherche.
+                        </p>
+                      ) : (
+                        penaltyTeamsSearchResults.map((t) => {
+                          const memberLine = (t.members || [])
+                            .slice(0, 4)
+                            .map((m) =>
+                              [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
+                              m.username ||
+                              ""
+                            )
+                            .filter(Boolean)
+                            .join(" · ");
+                          const selected =
+                            penaltyTeamId !== "" && String(penaltyTeamId) === String(t.id);
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              className={classNames(styles.dashboard__penalty_team_row, {
+                                [styles["dashboard__penalty_team_row--selected"]]: selected,
+                              })}
+                              onClick={() => {
+                                setPenaltyTeamId(String(t.id));
+                                setPenaltyFishCatchId("");
+                                reloadPenaltyModalData(t.id);
+                              }}
+                            >
+                              <span className={styles.dashboard__penalty_team_row_name}>{t.name}</span>
+                              {memberLine ? (
+                                <span className={styles.dashboard__penalty_team_row_members}>
+                                  {memberLine}
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className={styles.dashboard__penalty_empty_hint}>
+                  Sélectionnez d&apos;abord une compétition pour afficher les équipes.
+                </p>
+              )}
+
+              <div className={modalStyles.modal__form_group}>
+                <span style={{ display: "block", marginBottom: 8 }}>Portée</span>
+                <label style={{ marginRight: 16 }}>
+                  <input
+                    type="radio"
+                    name="penScope"
+                    checked={penaltyScope === "global"}
+                    onChange={() => setPenaltyScope("global")}
+                  />{" "}
+                  Globale sur le score
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="penScope"
+                    checked={penaltyScope === "catch"}
+                    onChange={() => setPenaltyScope("catch")}
+                  />{" "}
+                  Associée à une prise (référence)
+                </label>
+              </div>
+
+              {penaltyScope === "catch" && penaltyTeamId && (
+                <div className={modalStyles.modal__form_group}>
+                  <span style={{ display: "block", marginBottom: 8 }}>Prise *</span>
+                  {penaltyLoading ? (
+                    <p className={styles.dashboard__penalty_empty_hint}>Chargement des prises…</p>
+                  ) : penaltyCatchOptions.length === 0 ? (
+                    <p className={styles.dashboard__penalty_empty_hint}>
+                      Aucune prise validable pour cette équipe (prises rejetées exclues).
+                    </p>
+                  ) : (
+                    <div className={styles.dashboard__penalty_catch_list}>
+                      {penaltyCatchOptions.map((opt) => {
+                        const sel = String(penaltyFishCatchId) === String(opt.id);
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            className={classNames(styles.dashboard__penalty_catch_row, {
+                              [styles["dashboard__penalty_catch_row--selected"]]: sel,
+                            })}
+                            onClick={() => setPenaltyFishCatchId(String(opt.id))}
+                          >
+                            <span className={styles.dashboard__penalty_catch_row_id}>#{opt.id}</span>
+                            <span className={styles.dashboard__penalty_catch_row_species}>
+                              {opt.speciesName}
+                            </span>
+                            <span className={styles.dashboard__penalty_catch_row_meta}>
+                              {opt.size} cm · {opt.points} pts
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className={modalStyles.modal__form_group}>
+                <label htmlFor="penaltyPoints">Points à retirer *</label>
+                <input
+                  id="penaltyPoints"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={penaltyPoints}
+                  onChange={(e) =>
+                    setPenaltyPoints(e.target.value.replace(/[^\d]/g, ""))
+                  }
+                  placeholder="Ex. 50"
+                  style={{ width: "100%", padding: "8px", borderRadius: 8 }}
+                />
+              </div>
+              <div className={modalStyles.modal__form_group}>
+                <label htmlFor="penaltyReason">Motif (optionnel)</label>
+                <textarea
+                  id="penaltyReason"
+                  value={penaltyReason}
+                  onChange={(e) => setPenaltyReason(e.target.value)}
+                  placeholder="Motif..."
+                  rows={2}
+                  className={modalStyles.modal__textarea}
+                />
+              </div>
+
+              {penaltyTeamId ? (
+                <div style={{ marginBottom: 16 }}>
+                  <strong>Pénalités enregistrées :</strong> {penaltyLoading ? " …" : `−${penaltyTotal} pts cumulés`}
+                  {!penaltyLoading && penaltyList.length > 0 && (
+                    <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                      {penaltyList.map((p) => (
+                        <li key={p.id} style={{ marginBottom: 6 }}>
+                          <span>
+                            −{p.points} pts
+                            {p.speciesName ? ` (${p.speciesName}${p.fishCatchId ? ` #${p.fishCatchId}` : ""})` : ""}
+                            {p.reason ? ` — ${p.reason}` : ""}{" "}
+                          </span>
+                          <button
+                            type="button"
+                            style={{ marginLeft: 8, fontSize: 12, cursor: "pointer" }}
+                            onClick={async () => {
+                              if (!window.confirm("Supprimer cette pénalité ?")) return;
+                              try {
+                                await adminService.deleteTeamPenalty(
+                                  parseInt(penaltyTeamId, 10),
+                                  p.id
+                                );
+                                toast.success("Pénalité supprimée.");
+                                reloadPenaltyModalData(penaltyTeamId);
+                              } catch (err) {
+                                toast.error(err.message || "Erreur suppression");
+                              }
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {!penaltyLoading && penaltyList.length === 0 && (
+                    <p style={{ fontSize: 14, opacity: 0.8 }}>Aucune pénalité.</p>
+                  )}
+                </div>
+              ) : null}
+
+              <div className={modalStyles.modal__actions}>
+                <button
+                  type="button"
+                  className={`${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`}
+                  disabled={
+                    penaltySubmitBusy ||
+                    !penaltyTeamId ||
+                    !penaltyPoints ||
+                    parseInt(penaltyPoints, 10) < 1 ||
+                    (penaltyScope === "catch" && !penaltyFishCatchId)
+                  }
+                  onClick={async () => {
+                    const pid = parseInt(penaltyPoints, 10);
+                    if (Number.isNaN(pid) || pid < 1) {
+                      toast.error("Points invalides.");
+                      return;
+                    }
+                    setPenaltySubmitBusy(true);
+                    try {
+                      await adminService.addTeamPenalty(parseInt(penaltyTeamId, 10), {
+                        points: pid,
+                        reason: penaltyReason.trim() || undefined,
+                        fishCatchId:
+                          penaltyScope === "catch"
+                            ? parseInt(penaltyFishCatchId, 10)
+                            : undefined,
+                      });
+                      toast.success("Pénalité enregistrée.");
+                      setPenaltyPoints("");
+                      setPenaltyReason("");
+                      setPenaltyFishCatchId("");
+                      reloadPenaltyModalData(penaltyTeamId);
+                      fetchData();
+                    } catch (err) {
+                      toast.error(err.message || "Erreur lors de l'enregistrement");
+                    } finally {
+                      setPenaltySubmitBusy(false);
+                    }
+                  }}
+                >
+                  {penaltySubmitBusy ? "Enregistrement…" : "Enregistrer la pénalité"}
+                </button>
+                <button
+                  type="button"
+                  className={`${modalStyles.modal__button} ${modalStyles["modal__button--cancel"]}`}
+                  onClick={() => setShowPenaltyModal(false)}
+                >
+                  Fermer
                 </button>
               </div>
             </div>

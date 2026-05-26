@@ -124,12 +124,14 @@ class AdminController extends AbstractController
                         'id' => $member->getId(),
                         'firstname' => $member->getFirstname(),
                         'lastname' => $member->getLastname(),
+                        'username' => $member->getUsername(),
                     ];
                 }, $team->getMembers()->toArray()),
                 'competition' => $team->getCompetition() ? [
                     'id' => $team->getCompetition()->getId(),
                     'name' => $team->getCompetition()->getName(),
                 ] : null,
+                'isPersonalJournal' => $team->isPersonalJournal(),
             ];
         }, $teams);
 

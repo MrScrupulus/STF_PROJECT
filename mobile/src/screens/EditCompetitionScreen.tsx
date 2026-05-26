@@ -28,6 +28,8 @@ import Header from '../components/Header';
 import PerimeterMapView from '../components/PerimeterMapView';
 import HelpButton from '../components/HelpButton';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
+import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
+import { scheduledPauseService, ScheduledPause } from '../services/scheduledPauseService';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
 
 type PerimeterNameEditorProps = {
@@ -75,6 +77,7 @@ interface CompetitionSpeciesRow {
   coefficient: string | number;
   basePoints?: number | null;
   quota?: string | number | null;
+  quotaBonusPoints?: string | number | null;
 }
 
 const formatDateTime = (date: Date): string => {
@@ -112,7 +115,6 @@ export default function EditCompetitionScreen() {
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: '',
     quotaBonusEnabled: false,
-    quotaBonusPoints: '',
     maxFishCounted: '', // vide = tous, sinon nombre saisi
   });
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -131,6 +133,8 @@ export default function EditCompetitionScreen() {
   const [showSpeciesModal, setShowSpeciesModal] = useState(false);
   const [showCreateSpeciesModal, setShowCreateSpeciesModal] = useState(false);
   const [selectedSpeciesIndex, setSelectedSpeciesIndex] = useState<number | null>(null);
+  const [pauseModalVisible, setPauseModalVisible] = useState(false);
+  const [editingPause, setEditingPause] = useState<ScheduledPause | null>(null);
   const [mapRegion, setMapRegion] = useState({
     latitude: 50.6927,
     longitude: 3.1742,
@@ -154,6 +158,14 @@ export default function EditCompetitionScreen() {
     queryKey: ['species'],
     queryFn: () => speciesService.getAll(),
   });
+
+  const { data: pausesResponse, isLoading: loadingPauses, refetch: refetchPauses } = useQuery({
+    queryKey: ['scheduled-pauses', competitionId],
+    queryFn: () => scheduledPauseService.getByCompetition(competitionId),
+    enabled: !!competitionId,
+  });
+
+  const scheduledPausesList = pausesResponse?.pauses ?? [];
 
   /** Référence stable tant que competitionData ne change pas (évite boucle useEffect → setState). */
   const competition = useMemo(() => {
@@ -184,9 +196,6 @@ export default function EditCompetitionScreen() {
           ? String((competition as any).newSpeciesBonusPoints)
           : '',
         quotaBonusEnabled: (competition as any).quotaBonusEnabled ?? false,
-        quotaBonusPoints: (competition as any).hasOwnProperty('quotaBonusPoints') && (competition as any).quotaBonusPoints != null
-          ? String((competition as any).quotaBonusPoints)
-          : '',
         maxFishCounted: (competition as any).hasOwnProperty('maxFishCounted') && (competition as any).maxFishCounted != null
           ? String((competition as any).maxFishCounted)
           : '',
@@ -209,6 +218,10 @@ export default function EditCompetitionScreen() {
         coefficient: String(s.coefficient ?? 1),
         basePoints: s.basePoints ?? null,
         quota: s.quota != null && s.quota !== '' ? String(s.quota) : '',
+        quotaBonusPoints:
+          s.quotaBonusPoints != null && s.quotaBonusPoints !== ''
+            ? String(s.quotaBonusPoints)
+            : '',
       }))
     );
   }, [competition]);
@@ -225,7 +238,7 @@ export default function EditCompetitionScreen() {
     const first = availableSpecies[0];
     setCompetitionSpecies((prev) => [
       ...prev,
-      { speciesId: first.id, coefficient: first.coefficient || 1.0, basePoints: null, quota: '' },
+      { speciesId: first.id, coefficient: first.coefficient || 1.0, basePoints: null, quota: '', quotaBonusPoints: '' },
     ]);
   };
 
@@ -282,6 +295,84 @@ export default function EditCompetitionScreen() {
       refetchPerimeters();
     },
   });
+
+  const createPauseMutation = useMutation({
+    mutationFn: (body: { startDate: string; endDate: string; reason?: string | null }) =>
+      scheduledPauseService.create(competitionId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-pauses', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      refetchPauses();
+      setPauseModalVisible(false);
+      setEditingPause(null);
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Impossible de créer la pause.');
+    },
+  });
+
+  const updatePauseMutation = useMutation({
+    mutationFn: (args: { id: number; startDate: string; endDate: string; reason?: string | null }) => {
+      const { id, ...body } = args;
+      return scheduledPauseService.update(competitionId, id, body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-pauses', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      refetchPauses();
+      setPauseModalVisible(false);
+      setEditingPause(null);
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Impossible de mettre à jour la pause.');
+    },
+  });
+
+  const deletePauseMutation = useMutation({
+    mutationFn: (pauseId: number) => scheduledPauseService.delete(competitionId, pauseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduled-pauses', competitionId] });
+      queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+      refetchPauses();
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || 'Impossible de supprimer la pause.');
+    },
+  });
+
+  const openNewPauseModal = () => {
+    setEditingPause(null);
+    setPauseModalVisible(true);
+  };
+
+  const openEditPauseModal = (p: ScheduledPause) => {
+    setEditingPause(p);
+    setPauseModalVisible(true);
+  };
+
+  const handlePauseFormSave = (v: ScheduledPauseFormValues) => {
+    const body = {
+      startDate: formatDateTime(v.startDate),
+      endDate: formatDateTime(v.endDate),
+      reason: v.reason.trim(),
+    };
+    if (editingPause) {
+      updatePauseMutation.mutate({ id: editingPause.id, ...body });
+    } else {
+      createPauseMutation.mutate(body);
+    }
+  };
+
+  const confirmDeletePause = (p: ScheduledPause) => {
+    Alert.alert('Supprimer la pause', 'Confirmer la suppression de cette pause programmée ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: () => deletePauseMutation.mutate(p.id),
+      },
+    ]);
+  };
 
   const handleStartDateChange = (event: any, date?: Date) => {
     if (Platform.OS === 'android') {
@@ -359,10 +450,21 @@ export default function EditCompetitionScreen() {
       return;
     }
 
+    if (formData.quotaBonusEnabled) {
+      for (const cs of competitionSpecies) {
+        const quotaVal = cs.quota != null && String(cs.quota).trim() !== '';
+        if (!quotaVal) continue;
+        const qbpStr = cs.quotaBonusPoints != null ? String(cs.quotaBonusPoints).trim() : '';
+        const qb = parseInt(qbpStr, 10);
+        if (!qbpStr || isNaN(qb) || qb < 1) {
+          setError('Avec le bonus quota activé, chaque espèce avec un quota doit avoir un bonus (points) d’au moins 1.');
+          return;
+        }
+      }
+    }
+
     const newSpeciesBonusPointsVal = formData.newSpeciesBonusEnabled && formData.newSpeciesBonusPoints
       ? parseInt(String(formData.newSpeciesBonusPoints).trim(), 10) : null;
-    const quotaBonusPointsVal = formData.quotaBonusEnabled && formData.quotaBonusPoints
-      ? parseInt(String(formData.quotaBonusPoints).trim(), 10) : null;
 
     const speciesPayload: any[] = [];
     for (const cs of competitionSpecies) {
@@ -378,6 +480,20 @@ export default function EditCompetitionScreen() {
         row.quota = !isNaN(q) && q >= 1 ? q : null;
       } else {
         row.quota = null;
+      }
+      if (formData.quotaBonusEnabled && quotaVal) {
+        const qb = parseInt(String(cs.quotaBonusPoints ?? '').trim(), 10);
+        row.quotaBonusPoints = !isNaN(qb) && qb >= 1 ? qb : 1;
+      }
+      if (
+        formData.newSpeciesBonusEnabled &&
+        cs.basePoints != null &&
+        String(cs.basePoints).trim() !== ''
+      ) {
+        const bp = parseInt(String(cs.basePoints).trim(), 10);
+        if (!isNaN(bp) && bp >= 1) {
+          row.basePoints = bp;
+        }
       }
       speciesPayload.push(row);
     }
@@ -395,7 +511,6 @@ export default function EditCompetitionScreen() {
       newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusPoints: newSpeciesBonusPointsVal,
       quotaBonusEnabled: formData.quotaBonusEnabled,
-      quotaBonusPoints: quotaBonusPointsVal,
       maxFishCounted: (() => {
         const v = formData.maxFishCounted.trim();
         if (!v || v === '0') return null;
@@ -740,19 +855,9 @@ export default function EditCompetitionScreen() {
               />
             </View>
             {formData.quotaBonusEnabled && (
-              <View style={[styles.section, { marginTop: 8 }]}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Valeur du bonus (pts)</Text>
-                  <HelpButton text={COMPETITION_HELP.quotaBonusPoints} />
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={formData.quotaBonusPoints}
-                  onChangeText={(t) => setFormData({ ...formData, quotaBonusPoints: t.replace(/[^0-9]/g, '') })}
-                  placeholder="Ex: 500"
-                  keyboardType="number-pad"
-                />
-              </View>
+              <Text style={[styles.helpText, { marginTop: 8 }]}>
+                Pour chaque espèce à laquelle vous donnez un quota, renseignez aussi le montant du bonus lorsque ce quota est atteint (ex. 500 pts).
+              </Text>
             )}
           </View>
 
@@ -776,7 +881,9 @@ export default function EditCompetitionScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-            <Text style={styles.helpText}>Coefficients et quotas par espèce (identique à la création).</Text>
+            <Text style={styles.helpText}>
+              Coefficients et quotas par espèce ; avec le bonus quota activé, chaque quota doit avoir son propre montant de bonus (points).
+            </Text>
             {competitionSpecies.map((compSpecies, index) => {
               const species = availableSpecies?.find((s) => s.id === compSpecies.speciesId);
               return (
@@ -842,9 +949,66 @@ export default function EditCompetitionScreen() {
                       <Text style={styles.removeSpeciesButtonText}>✕</Text>
                     </TouchableOpacity>
                   </View>
+                  {formData.quotaBonusEnabled ? (
+                    <View style={{ marginTop: 10 }}>
+                      <View style={[styles.labelRow, { marginBottom: 4 }]}>
+                        <Text style={styles.speciesLabel}>Bonus si quota atteint (pts)</Text>
+                        <HelpButton text={COMPETITION_HELP.speciesQuotaBonusPoints} />
+                      </View>
+                      <TextInput
+                        style={styles.speciesInputWide}
+                        value={compSpecies.quotaBonusPoints != null ? String(compSpecies.quotaBonusPoints) : ''}
+                        onChangeText={(text) => handleSpeciesChange(index, 'quotaBonusPoints', text.replace(/[^0-9]/g, ''))}
+                        keyboardType="number-pad"
+                        editable={Boolean(compSpecies.quota != null && String(compSpecies.quota).trim() !== '')}
+                        placeholder={
+                          compSpecies.quota != null && String(compSpecies.quota).trim() !== ''
+                            ? 'Ex: 500'
+                            : 'Renseignez d’abord un quota'
+                        }
+                        placeholderTextColor="#999"
+                      />
+                    </View>
+                  ) : null}
                 </View>
               );
             })}
+          </View>
+
+          {/* Pauses programmées */}
+          <View style={styles.section}>
+            <View style={styles.speciesHeader}>
+              <Text style={styles.label}>Pauses programmées</Text>
+              <TouchableOpacity style={styles.addSpeciesButton} onPress={openNewPauseModal}>
+                <Text style={styles.addSpeciesButtonText}>+ Pause</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.helpText}>
+              Créneaux pendant lesquels la compétition sera en pause automatique. Les enregistrements sont appliqués immédiatement.
+            </Text>
+            {loadingPauses ? (
+              <ActivityIndicator style={{ marginVertical: 12 }} color="#007AFF" />
+            ) : scheduledPausesList.length === 0 ? (
+              <Text style={[styles.helpText, { fontStyle: 'italic' }]}>Aucune pause programmée.</Text>
+            ) : (
+              scheduledPausesList.map((p) => (
+                <View key={p.id} style={styles.pauseRow}>
+                  <TouchableOpacity style={styles.pauseRowMain} onPress={() => openEditPauseModal(p)}>
+                    <Text style={styles.pauseRowDates}>
+                      {p.startDate.replace(' ', ' à ')} → {p.endDate.replace(' ', ' à ')}
+                    </Text>
+                    {p.reason ? <Text style={styles.pauseRowReason}>{p.reason}</Text> : null}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.removeSpeciesButton}
+                    onPress={() => confirmDeletePause(p)}
+                    disabled={deletePauseMutation.isPending}
+                  >
+                    <Text style={styles.removeSpeciesButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
           </View>
 
           {/* Zones autorisées */}
@@ -894,6 +1058,27 @@ export default function EditCompetitionScreen() {
           </TouchableOpacity>
         </ScrollView>
 
+        <ScheduledPauseFormModal
+          visible={pauseModalVisible}
+          competitionStart={formData.startDate}
+          competitionEnd={formData.endDate}
+          initial={
+            editingPause
+              ? {
+                  startDate: parseApiDate(editingPause.startDate) ?? formData.startDate,
+                  endDate: parseApiDate(editingPause.endDate) ?? formData.endDate,
+                  reason: editingPause.reason ?? '',
+                }
+              : null
+          }
+          title={editingPause ? 'Modifier la pause' : 'Nouvelle pause'}
+          onClose={() => {
+            setPauseModalVisible(false);
+            setEditingPause(null);
+          }}
+          onSave={handlePauseFormSave}
+        />
+
         <CreateSpeciesModal
           visible={showCreateSpeciesModal}
           onClose={() => setShowCreateSpeciesModal(false)}
@@ -903,8 +1088,12 @@ export default function EditCompetitionScreen() {
               {
                 speciesId: payload.speciesId,
                 coefficient: payload.competitionCoefficient,
-                basePoints: null,
+                basePoints:
+                  payload.catalogBasePoints != null && payload.catalogBasePoints > 0
+                    ? payload.catalogBasePoints
+                    : null,
                 quota: '',
+                quotaBonusPoints: '',
               },
             ]);
           }}
@@ -1082,6 +1271,20 @@ const styles = StyleSheet.create({
   errorText: { color: '#c00', fontSize: 14 },
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  pauseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  pauseRowMain: { flex: 1 },
+  pauseRowDates: { fontSize: 14, color: '#333', fontWeight: '600' },
+  pauseRowReason: { fontSize: 13, color: '#666', marginTop: 4 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' },
   labelRowInSwitch: { flex: 1 },
@@ -1224,6 +1427,16 @@ const styles = StyleSheet.create({
     padding: 8,
     fontSize: 14,
     color: '#333',
+  },
+  speciesInputWide: {
+    backgroundColor: '#f9f9f9',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 14,
+    color: '#333',
+    width: '100%',
   },
   removeSpeciesButton: {
     width: 32,

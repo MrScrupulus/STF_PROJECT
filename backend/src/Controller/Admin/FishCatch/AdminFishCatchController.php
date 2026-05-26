@@ -9,6 +9,7 @@ use App\Service\CompetitionSnapshotService;
 use App\Service\EmailService;
 use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,8 +23,79 @@ class AdminFishCatchController extends AbstractController
         private CompetitionSnapshotService $snapshotService,
         private CatchPhotoStorageService $photoStorage,
         private EmailService $emailService,
-        private NotificationService $notificationService
+        private NotificationService $notificationService,
+        private LoggerInterface $logger,
     ) {
+    }
+
+    /**
+     * Met à jour une prise (ex. taille) et recalcule le score de l'équipe si besoin.
+     */
+    #[Route('/{id}', name: 'admin_catch_update', methods: ['PATCH'])]
+    public function update(FishCatch $catch, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $data = json_decode($request->getContent(), true) ?: [];
+            if (!array_key_exists('size', $data)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le champ size est requis',
+                ], 400);
+            }
+
+            $raw = $data['size'];
+            if (null === $raw || '' === $raw) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'La taille doit être un nombre positif',
+                ], 400);
+            }
+
+            $size = filter_var(
+                is_string($raw) ? str_replace(',', '.', trim($raw)) : $raw,
+                FILTER_VALIDATE_FLOAT
+            );
+            if (false === $size || $size <= 0) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'La taille doit être un nombre strictement positif',
+                ], 400);
+            }
+
+            $catch->setSize((float) $size);
+            $team = $catch->getTeam();
+            $team->updateTotalScore();
+            $em->flush();
+
+            $competition = $catch->getCompetition();
+            if ($competition && $competition->getEndDate() < new \DateTime()) {
+                $this->snapshotService->createSnapshotsForCompetition($competition, true);
+            }
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Prise mise à jour',
+                'catch' => [
+                    'id' => $catch->getId(),
+                    'size' => $catch->getSize(),
+                    'points' => $catch->calculatePoints(),
+                    'isValidated' => $catch->isValidated(),
+                    'rejectionReason' => $catch->getRejectionReason(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la mise à jour admin d\'une prise', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la mise à jour de la prise. Veuillez réessayer plus tard.',
+            ], 500);
+        }
     }
 
     /**

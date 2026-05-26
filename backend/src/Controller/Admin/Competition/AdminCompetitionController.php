@@ -59,8 +59,8 @@ class AdminCompetitionController extends AbstractController
             return [
                 'id' => $competition->getId(),
                 'name' => $competition->getName(),
-                'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-                'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+                'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                 'teamSize' => $competition->getTeamSize(),
                 'type' => $competition->getType(),
                 'maxParticipants' => $competition->getMaxParticipants(),

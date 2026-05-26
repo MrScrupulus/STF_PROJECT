@@ -7,6 +7,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Security\User;
+use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Entity\Competition\TeamInvitation;
 
@@ -61,11 +63,15 @@ class Team
     #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamInvitation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $invitations;
 
+    #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamPenalty::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $penalties;
+
     public function __construct()
     {
         $this->members = new ArrayCollection();
         $this->catches = new ArrayCollection();
         $this->invitations = new ArrayCollection();
+        $this->penalties = new ArrayCollection();
         $this->totalScore = 0;
         $this->hasBonus = false;
         $this->isActive = true;
@@ -179,12 +185,12 @@ class Team
     }
 
     /**
-     * Retourne le détail du score (baseScore, newSpeciesBonus, quotaBonus) pour l'affichage.
-     * @return array{baseScore: int, newSpeciesBonus: int, quotaBonus: int, bonus: int}
+     * Retourne le détail du score (baseScore, newSpeciesBonus, quotaBonus, pénalités) pour l'affichage.
+     * @return array{baseScore: int, newSpeciesBonus: int, quotaBonus: int, bonus: int, penaltyPoints: int}
      */
     public function getScoreBreakdownForCompetition(?Competition $competition): array
     {
-        $result = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0];
+        $result = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0, 'penaltyPoints' => $this->getTotalPenaltyPoints()];
         if (!$competition) {
             return $result;
         }
@@ -206,16 +212,18 @@ class Team
     }
 
     /**
-     * @return array{baseScore: int, newSpeciesBonus: int, quotaBonus: int}
+     * Prises sélectionnées pour le score de base (ordre décroissant des points puis quotas + plafond global maxFishCounted).
+     *
+     * @param list<FishCatch> $validatedCatches uniquement les prises validées de la compétition
+     * @return list<array{catch: FishCatch, points: float|int, speciesId: int}>
      */
-    private function computeScoreBreakdown(array $validatedCatches, Competition $competition): array
+    private function selectSortedCatchItemsForBaseScore(array $validatedCatches, Competition $competition): array
     {
-        $baseScore = 0;
-        $newSpeciesBonus = 0;
-        $quotaBonus = 0;
-
         $catchScores = [];
         foreach ($validatedCatches as $catch) {
+            if (!$catch->getSpecies()) {
+                continue;
+            }
             $catchScores[] = [
                 'catch' => $catch,
                 'points' => $catch->calculatePoints(),
@@ -230,7 +238,6 @@ class Team
                 $quotaBySpecies[$cs->getSpecies()->getId()] = $cs->getQuota();
             }
         }
-        $hasQuotas = !empty($quotaBySpecies);
         $limit = $competition->getMaxFishCounted() ?? count($catchScores);
         if ($limit <= 0) {
             $limit = count($catchScores);
@@ -245,12 +252,125 @@ class Team
             $sid = $item['speciesId'];
             $current = $countBySpecies[$sid] ?? 0;
             $quota = $quotaBySpecies[$sid] ?? null;
-            if ($quota !== null && $current >= $quota) {
+            if (null !== $quota && $current >= $quota) {
                 continue;
             }
             $selected[] = $item;
             $countBySpecies[$sid] = $current + 1;
         }
+
+        return $selected;
+    }
+
+    /**
+     * Infos pour l’affichage client (liste des prises qui comptent + groupement par espèce).
+     * Aligné sur {@see selectSortedCatchItemsForBaseScore} et computeScoreBreakdown.
+     *
+     * @return array{
+     *   hasPerSpeciesQuota: bool,
+     *   maxFishCounted: ?int,
+     *   sumQuotaSlots: int,
+     *   countedCatchIds: list<int>,
+     *   bySpecies: list<array{speciesId: int, speciesName: string, quota: ?int, countedCatchIds: list<int>}>
+     * }
+     */
+    public function getScoringPresentationForCompetition(Competition $competition): array
+    {
+        $validated = [];
+        foreach ($this->catches as $catch) {
+            if (
+                $catch->getCompetition()
+                && $catch->getCompetition()->getId() === $competition->getId()
+                && $catch->isValidated()
+                && $catch->getSpecies()
+            ) {
+                $validated[] = $catch;
+            }
+        }
+
+        $speciesMeta = [];
+        $quotaCaps = [];
+        $sumQuotaSlots = 0;
+        foreach ($competition->getCompetitionSpecies() as $cs) {
+            $species = $cs->getSpecies();
+            if (!$species) {
+                continue;
+            }
+            $sid = $species->getId();
+            $speciesMeta[$sid] = [
+                'name' => $species->getName(),
+                'quota' => $cs->getQuota(),
+            ];
+            $q = $cs->getQuota();
+            if (null !== $q && $q > 0) {
+                $quotaCaps[$sid] = $q;
+                $sumQuotaSlots += $q;
+            }
+        }
+        $hasPerSpeciesQuota = !empty($quotaCaps);
+
+        if (empty($validated)) {
+            return [
+                'hasPerSpeciesQuota' => $hasPerSpeciesQuota,
+                'maxFishCounted' => $competition->getMaxFishCounted(),
+                'sumQuotaSlots' => $sumQuotaSlots,
+                'countedCatchIds' => [],
+                'bySpecies' => [],
+            ];
+        }
+
+        $selected = $this->selectSortedCatchItemsForBaseScore($validated, $competition);
+        $countedCatchIds = array_map(static fn(array $row) => $row['catch']->getId(), $selected);
+
+        $bySpeciesOrder = [];
+        $bySpeciesMap = [];
+        foreach ($selected as $row) {
+            $sid = $row['speciesId'];
+            if (!isset($bySpeciesMap[$sid])) {
+                $bySpeciesOrder[] = $sid;
+                $meta = $speciesMeta[$sid] ?? ['name' => $row['catch']->getSpecies()->getName(), 'quota' => null];
+                $bySpeciesMap[$sid] = [
+                    'speciesId' => $sid,
+                    'speciesName' => $meta['name'],
+                    'quota' => $meta['quota'],
+                    'countedCatchIds' => [],
+                ];
+            }
+            $bySpeciesMap[$sid]['countedCatchIds'][] = $row['catch']->getId();
+        }
+
+        $bySpeciesList = [];
+        foreach ($bySpeciesOrder as $sid) {
+            $bySpeciesList[] = $bySpeciesMap[$sid];
+        }
+
+        return [
+            'hasPerSpeciesQuota' => $hasPerSpeciesQuota,
+            'maxFishCounted' => $competition->getMaxFishCounted(),
+            'sumQuotaSlots' => $sumQuotaSlots,
+            'countedCatchIds' => $countedCatchIds,
+            'bySpecies' => $bySpeciesList,
+        ];
+    }
+
+    /**
+     * @return array{baseScore: int, newSpeciesBonus: int, quotaBonus: int}
+     */
+    private function computeScoreBreakdown(array $validatedCatches, Competition $competition): array
+    {
+        $baseScore = 0;
+        $newSpeciesBonus = 0;
+        $quotaBonus = 0;
+
+        $quotaBySpeciesCheck = [];
+        foreach ($competition->getCompetitionSpecies() as $cs) {
+            if ($cs->getQuota() !== null && $cs->getSpecies()) {
+                $quotaBySpeciesCheck[$cs->getSpecies()->getId()] = $cs->getQuota();
+            }
+        }
+        $hasQuotas = !empty($quotaBySpeciesCheck);
+
+        $selected = $this->selectSortedCatchItemsForBaseScore($validatedCatches, $competition);
 
         foreach ($selected as $item) {
             $baseScore += $item['points'];
@@ -266,13 +386,28 @@ class Team
             }
         }
 
-        if ($competition->getQuotaBonusEnabled() && ($pts = $competition->getQuotaBonusPoints()) !== null && $pts > 0 && $hasQuotas) {
+        if ($competition->getQuotaBonusEnabled() && $hasQuotas) {
             $validatedCountBySpecies = [];
             foreach ($validatedCatches as $c) {
+                if (!$c->getSpecies()) {
+                    continue;
+                }
                 $sid = $c->getSpecies()->getId();
                 $validatedCountBySpecies[$sid] = ($validatedCountBySpecies[$sid] ?? 0) + 1;
             }
-            foreach ($quotaBySpecies as $sid => $quota) {
+            foreach ($competition->getCompetitionSpecies() as $cs) {
+                $quota = $cs->getQuota();
+                if ($quota === null || !$cs->getSpecies()) {
+                    continue;
+                }
+                $sid = $cs->getSpecies()->getId();
+                if (!isset($quotaBySpeciesCheck[$sid])) {
+                    continue;
+                }
+                $pts = $cs->getQuotaBonusPoints();
+                if ($pts === null || $pts <= 0) {
+                    continue;
+                }
                 if (($validatedCountBySpecies[$sid] ?? 0) >= $quota) {
                     $quotaBonus += $pts;
                 }
@@ -297,19 +432,27 @@ class Team
 
         if (empty($validatedCatches)) {
             $this->hasBonus = false;
-            return 0;
+
+            return max(0, 0 - $this->getTotalPenaltyPoints());
         }
+
+        $penalties = $this->getTotalPenaltyPoints();
+        $applyPenalty = static fn (int $raw): int => max(0, $raw - $penalties);
 
         if ($competition) {
             $breakdown = $this->computeScoreBreakdown($validatedCatches, $competition);
             $bonus = $breakdown['newSpeciesBonus'] + $breakdown['quotaBonus'];
             $this->hasBonus = ($bonus > 0);
-            return $breakdown['baseScore'] + $bonus;
+
+            return $applyPenalty($breakdown['baseScore'] + $bonus);
         }
 
         // Mode legacy (sans compétition) : bonus basé sur toutes les espèces validées
         $catchScores = [];
         foreach ($validatedCatches as $catch) {
+            if (!$catch->getSpecies()) {
+                continue;
+            }
             $catchScores[] = [
                 'catch' => $catch,
                 'points' => $catch->calculatePoints(),
@@ -331,7 +474,60 @@ class Team
             }
         }
         $this->hasBonus = ($bonus > 0);
-        return $baseScore + $bonus;
+
+        return $applyPenalty($baseScore + $bonus);
+    }
+
+    /** Somme des points retirés (pénalités). */
+    public function getTotalPenaltyPoints(): int
+    {
+        try {
+            $sum = 0;
+            foreach ($this->penalties as $penalty) {
+                $sum += $penalty->getPoints();
+            }
+
+            return $sum;
+        } catch (TableNotFoundException) {
+            // Migration non appliquée (table team_penalty) — éviter un 500 sur la fiche équipe publique.
+            return 0;
+        } catch (DbalException $e) {
+            // Erreur SQL hors TableNotFoundException enveloppée (certains drivers / couches).
+            if (str_contains($e->getMessage(), 'team_penalty')) {
+                return 0;
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @return Collection<int, TeamPenalty>
+     */
+    public function getPenalties(): Collection
+    {
+        return $this->penalties;
+    }
+
+    public function addPenalty(TeamPenalty $penalty): static
+    {
+        if (!$this->penalties->contains($penalty)) {
+            $this->penalties->add($penalty);
+            $penalty->setTeam($this);
+        }
+
+        return $this;
+    }
+
+    public function removePenalty(TeamPenalty $penalty): static
+    {
+        if ($this->penalties->removeElement($penalty)) {
+            if ($penalty->getTeam() === $this) {
+                $penalty->setTeam(null);
+            }
+        }
+
+        return $this;
     }
 
     public function getHasBonus(): ?bool

@@ -46,6 +46,13 @@ class CompetitionSpecies
     #[Groups(['competition:read'])]
     private ?int $quota = null;
 
+    /**
+     * Points bonus lorsque ce quota est atteint (obligatoire si bonus quota activé et quota défini sur cette ligne).
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    #[Groups(['competition:read'])]
+    private ?int $quotaBonusPoints = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -114,6 +121,17 @@ class CompetitionSpecies
     public function setQuota(?int $quota): static
     {
         $this->quota = $quota;
+        return $this;
+    }
+
+    public function getQuotaBonusPoints(): ?int
+    {
+        return $this->quotaBonusPoints;
+    }
+
+    public function setQuotaBonusPoints(?int $quotaBonusPoints): static
+    {
+        $this->quotaBonusPoints = $quotaBonusPoints;
         return $this;
     }
 }

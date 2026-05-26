@@ -18,12 +18,41 @@ const apiClient: AxiosInstance = axios.create({
   headers: baseHeaders,
 });
 
+/** Chemin relatif uniquement (`/api/...`), sans query string ni baseURL. */
+function normalizeRequestPath(url: string | undefined): string {
+  if (!url) return '';
+  const noQuery = url.split('?')[0];
+  if (noQuery.startsWith('http')) {
+    try {
+      return new URL(noQuery).pathname;
+    } catch {
+      return '';
+    }
+  }
+  return noQuery.startsWith('/') ? noQuery : `/${noQuery}`;
+}
+
+/**
+ * Routes publiques sans Bearer — alignées sur frontend/src/services/api.js.
+ * Sinon un JWT expiré force un 401 Lexik même pour du GET public et casse la fiche équipe.
+ */
+function shouldAttachAuthBearer(method: string | undefined, url: string | undefined): boolean {
+  const m = (method || 'get').toUpperCase();
+  const path = normalizeRequestPath(url);
+  if (m === 'GET' && /^\/api\/teams\/\d+$/.test(path)) {
+    return false;
+  }
+  return true;
+}
+
 // Intercepteur pour ajouter le token à chaque requête
 apiClient.interceptors.request.use(
   async (config) => {
     const token = await SecureStore.getItemAsync('jwtToken');
-    if (token) {
+    if (token && shouldAttachAuthBearer(config.method, config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
     return config;
   },

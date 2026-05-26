@@ -12,6 +12,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome } from '@expo/vector-icons';
 import { authService, LoginCredentials } from '../services/authService';
 
 export default function LoginScreen({ navigation, onLogin, route }: any) {
@@ -108,7 +109,11 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
             >
-              <Text style={styles.eyeIconText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+              <FontAwesome
+                name={showPassword ? 'eye-slash' : 'eye'}
+                size={20}
+                color="#666"
+              />
             </TouchableOpacity>
           </View>
 
@@ -238,9 +243,6 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 16,
     paddingLeft: 8,
-  },
-  eyeIconText: {
-    fontSize: 20,
   },
   button: {
     backgroundColor: '#007AFF',

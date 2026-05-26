@@ -24,6 +24,11 @@ import { isDatePast } from '../utils/dateUtils';
 import { savePhotoToGallery } from '../utils/savePhotoToGallery';
 import Header from '../components/Header';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
+import {
+  fishSizeKeyboardType,
+  parseFishSizeCm,
+  sanitizeFishSizeInput,
+} from '../utils/fishMeasurementInput';
 
 export default function AddCatchScreen({ navigation, route }: any) {
   const queryClient = useQueryClient();
@@ -446,7 +451,8 @@ export default function AddCatchScreen({ navigation, route }: any) {
       return;
     }
 
-    if (!size || parseFloat(size) <= 0) {
+    const sizeCm = parseFishSizeCm(size.trim());
+    if (!size.trim() || !Number.isFinite(sizeCm) || sizeCm <= 0) {
       Alert.alert('Erreur', 'Veuillez entrer une taille valide');
       return;
     }
@@ -459,7 +465,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
     if (journalMode) {
       const catchData: CreateCatchData = {
         speciesId: selectedSpecies,
-        size: parseFloat(size),
+        size: sizeCm,
         photoUrl: photo,
         comment: comment && comment.trim() ? comment.trim() : undefined,
         latitude: location?.latitude,
@@ -535,7 +541,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
 
     const catchData: CreateCatchData = {
       speciesId: selectedSpecies,
-      size: parseFloat(size),
+      size: sizeCm,
       photoUrl: photo,
       comment: comment && comment.trim() ? comment.trim() : undefined,
       caughtById: selectedMember || undefined,
@@ -636,10 +642,12 @@ export default function AddCatchScreen({ navigation, route }: any) {
         <Text style={styles.label}>Taille (cm) *</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ex: 25.5"
+          placeholder="Ex : 25,5 ou 11.2"
           value={size}
-          onChangeText={setSize}
-          keyboardType="decimal-pad"
+          onChangeText={(t) =>
+            setSize((prev) => sanitizeFishSizeInput(prev, t))
+          }
+          keyboardType={fishSizeKeyboardType}
         />
       </View>
 

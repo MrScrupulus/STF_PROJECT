@@ -72,16 +72,10 @@ class Competition
     private ?int $newSpeciesBonusPoints = null;
 
     /**
-     * Bonus quota atteint : activé (checkbox)
+     * Bonus quota atteint : activé (checkbox). Les montants sont sur chaque ligne competition_species.quota_bonus_points.
      */
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $quotaBonusEnabled = false;
-
-    /**
-     * Bonus quota atteint : valeur en points (si activé)
-     */
-    #[ORM\Column(type: 'integer', nullable: true)]
-    private ?int $quotaBonusPoints = null;
 
     /**
      * Nombre de poissons comptabilisés pour le score (null = tous).
@@ -343,17 +337,6 @@ class Competition
     public function setQuotaBonusEnabled(bool $quotaBonusEnabled): self
     {
         $this->quotaBonusEnabled = $quotaBonusEnabled;
-        return $this;
-    }
-
-    public function getQuotaBonusPoints(): ?int
-    {
-        return $this->quotaBonusPoints;
-    }
-
-    public function setQuotaBonusPoints(?int $quotaBonusPoints): self
-    {
-        $this->quotaBonusPoints = $quotaBonusPoints;
         return $this;
     }
 

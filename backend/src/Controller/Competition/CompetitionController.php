@@ -50,8 +50,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
@@ -153,8 +153,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'teamSize' => $competition->getTeamSize(),
@@ -205,8 +205,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'isPaused' => $competition->getIsPaused(),
@@ -232,15 +232,9 @@ class CompetitionController extends AbstractController
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
     public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, FishCatchRepository $catchRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository, CompetitionPerimeterRepository $perimeterRepository): JsonResponse
     {
-        // Charger la compétition avec les équipes et leurs membres pour éviter les requêtes N+1
-        $competition = $repository->createQueryBuilder('c')
-            ->select('c', 't', 'm')
-            ->leftJoin('c.teams', 't')
-            ->leftJoin('t.members', 'm')
-            ->where('c.id = :id')
-            ->setParameter('id', $id)
-            ->getQuery()
-            ->getOneOrNullResult();
+        // Ne pas faire de JOIN FETCH + getOneOrNullResult() avec équipes/membres : plusieurs lignes SQL
+        // → NonUniqueResultException (500). Charger la compétition puis laisser le lazy-loading hydrater au besoin.
+        $competition = $repository->find($id);
 
         if (!$competition) {
             return $this->json([
@@ -252,13 +246,8 @@ class CompetitionController extends AbstractController
         $user = $this->getUser();
         $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
         
-        // Si la compétition n'est pas publiée et que l'utilisateur n'est pas connecté/admin, refuser l'accès
-        if (!$competition->getIsRankingPublic() && !$user) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Les détails de cette compétition ne sont pas encore publics'
-            ], 403);
-        }
+        // Aperçu : les visiteurs non connectés peuvent lire la fiche (règlement, espèces, dates).
+        // Le classement / scores reste filtré ci-dessous (équipes vides si classement non public).
         
         $now = new \DateTime();
         $isEnded = $competition->getEndDate() < $now;
@@ -364,6 +353,7 @@ class CompetitionController extends AbstractController
                 'isBonusEnabled' => $compSpecies->isBonusEnabled(),
                 'basePoints' => $compSpecies->getBasePoints(),
                 'quota' => $compSpecies->getQuota(),
+                'quotaBonusPoints' => $compSpecies->getQuotaBonusPoints(),
             ];
         }, $competitionSpecies->toArray());
         
@@ -412,8 +402,8 @@ class CompetitionController extends AbstractController
             'id' => $competition->getId(),
             'name' => $competition->getName(),
             'type' => $competition->getType(),
-            'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-            'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+            'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+            'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
             'description' => $competition->getDescription(),
             'reglement' => $competition->getReglement(),
             'reglementImagePaths' => $competition->getReglementImagePaths(),
@@ -431,7 +421,6 @@ class CompetitionController extends AbstractController
             'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
             'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
             'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
-            'quotaBonusPoints' => $competition->getQuotaBonusPoints(),
             'maxFishCounted' => $competition->getMaxFishCounted(),
             'isRegistered' => $isRegistered,
             'scheduledPauses' => $scheduledPausesData,
@@ -549,10 +538,6 @@ class CompetitionController extends AbstractController
             if (array_key_exists('quotaBonusEnabled', $data)) {
                 $competition->setQuotaBonusEnabled((bool) $data['quotaBonusEnabled']);
             }
-            if (array_key_exists('quotaBonusPoints', $data)) {
-                $v = $data['quotaBonusPoints'];
-                $competition->setQuotaBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
-            }
             if (array_key_exists('reglementImagePaths', $data)) {
                 $paths = \is_array($data['reglementImagePaths']) ? $data['reglementImagePaths'] : [];
                 $competition->setReglementImagePaths(empty($paths) ? null : array_values($paths));
@@ -574,6 +559,22 @@ class CompetitionController extends AbstractController
                         'success' => false,
                         'message' => 'Au moins une espèce valide (identifiant et coefficient) est requise.',
                     ], 400);
+                }
+
+                if ($competition->getQuotaBonusEnabled()) {
+                    foreach ($validSpeciesRows as $sp) {
+                        $hasQuota = array_key_exists('quota', $sp) && $sp['quota'] !== null && $sp['quota'] !== '';
+                        if (!$hasQuota) {
+                            continue;
+                        }
+                        $vq = $sp['quotaBonusPoints'] ?? null;
+                        if ($vq === null || $vq === '' || !is_numeric($vq) || (int) $vq < 1) {
+                            return $this->json([
+                                'success' => false,
+                                'message' => 'Chaque espèce avec un quota doit avoir un bonus quota (points, ≥ 1) lorsque le bonus quota est activé.',
+                            ], 400);
+                        }
+                    }
                 }
 
                 foreach ($competition->getCompetitionSpecies()->toArray() as $existingCs) {
@@ -604,6 +605,17 @@ class CompetitionController extends AbstractController
                     } else {
                         $competitionSpecies->setQuota(null);
                     }
+                    if ($competition->getQuotaBonusEnabled()) {
+                        $hasQuota = array_key_exists('quota', $speciesData) && $speciesData['quota'] !== null && $speciesData['quota'] !== '';
+                        if ($hasQuota) {
+                            $vq = $speciesData['quotaBonusPoints'] ?? null;
+                            $competitionSpecies->setQuotaBonusPoints(max(1, (int) $vq));
+                        } else {
+                            $competitionSpecies->setQuotaBonusPoints(null);
+                        }
+                    } else {
+                        $competitionSpecies->setQuotaBonusPoints(null);
+                    }
 
                     $entityManager->persist($competitionSpecies);
                 }
@@ -618,8 +630,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),
@@ -630,7 +642,6 @@ class CompetitionController extends AbstractController
                     'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
                     'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
                     'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
-                    'quotaBonusPoints' => $competition->getQuotaBonusPoints(),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -793,10 +804,6 @@ class CompetitionController extends AbstractController
                 $competition->setNewSpeciesBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
             }
             $competition->setQuotaBonusEnabled($data['quotaBonusEnabled'] ?? false);
-            if (array_key_exists('quotaBonusPoints', $data)) {
-                $v = $data['quotaBonusPoints'];
-                $competition->setQuotaBonusPoints(($v === null || $v === '') ? null : max(0, (int) $v));
-            }
             if (array_key_exists('maxFishCounted', $data)) {
                 $v = $data['maxFishCounted'];
                 $competition->setMaxFishCounted(($v === null || $v === '' || $v === 'all') ? null : (int) $v);
@@ -806,6 +813,25 @@ class CompetitionController extends AbstractController
 
             if (!$data['hasNoLimit'] && isset($data['maxParticipants'])) {
                 $competition->setMaxParticipants((int) $data['maxParticipants']);
+            }
+
+            if ($competition->getQuotaBonusEnabled() && isset($data['species']) && \is_array($data['species'])) {
+                foreach ($data['species'] as $speciesData) {
+                    if (!isset($speciesData['speciesId'], $speciesData['coefficient'])) {
+                        continue;
+                    }
+                    $hasQuota = array_key_exists('quota', $speciesData) && $speciesData['quota'] !== null && $speciesData['quota'] !== '';
+                    if (!$hasQuota) {
+                        continue;
+                    }
+                    $vq = $speciesData['quotaBonusPoints'] ?? null;
+                    if ($vq === null || $vq === '' || !is_numeric($vq) || (int) $vq < 1) {
+                        return $this->json([
+                            'error' => 'Validation',
+                            'message' => 'Chaque espèce avec un quota doit avoir un bonus quota (points, ≥ 1) lorsque le bonus quota est activé.',
+                        ], 400);
+                    }
+                }
             }
 
             $entityManager->persist($competition);
@@ -839,6 +865,17 @@ class CompetitionController extends AbstractController
                             $competitionSpecies->setQuota(max(1, (int) $speciesData['quota']));
                         } else {
                             $competitionSpecies->setQuota(null);
+                        }
+                        if ($competition->getQuotaBonusEnabled()) {
+                            $hasQuota = array_key_exists('quota', $speciesData) && $speciesData['quota'] !== null && $speciesData['quota'] !== '';
+                            if ($hasQuota) {
+                                $vq = $speciesData['quotaBonusPoints'] ?? null;
+                                $competitionSpecies->setQuotaBonusPoints(max(1, (int) $vq));
+                            } else {
+                                $competitionSpecies->setQuotaBonusPoints(null);
+                            }
+                        } else {
+                            $competitionSpecies->setQuotaBonusPoints(null);
                         }
 
                         $entityManager->persist($competitionSpecies);
@@ -896,8 +933,8 @@ class CompetitionController extends AbstractController
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
                     'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParis($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParis($competition->getEndDate()),
+                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'hasNoLimit' => $competition->getHasNoLimit(),
@@ -907,7 +944,6 @@ class CompetitionController extends AbstractController
                     'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
                     'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
                     'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
-                    'quotaBonusPoints' => $competition->getQuotaBonusPoints(),
                 ]
             ], 201);
         } catch (\Exception $e) {
