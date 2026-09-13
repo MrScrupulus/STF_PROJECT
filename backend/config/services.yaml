@@ -1,9 +1,9 @@
 parameters:
-  app.mailer_from_email: "streetfishingroubaix@gmail.com"
+  app.mailer_from_email: "noreply@scrupy.com"
   app.uploads_path.default: "%kernel.project_dir%/data/uploads"
-  # URLs utilisées dans les emails (vérification, reset mot de passe). En dev avec téléphone réel, utiliser ngrok (voir .env / EMAIL_LINKS_README).
-  app.frontend_url.default: "http://localhost:3000"
-  app.backend_url.default: "http://localhost:8001"
+  # URLs utilisées dans les emails (vérification, reset mot de passe).
+  app.frontend_url.default: "https://scrupy.com"
+  app.backend_url.default: "https://api.scrupy.com"
   app.frontend_url: "%env(default:app.frontend_url.default:APP_FRONTEND_URL)%"
   app.backend_url: "%env(default:app.backend_url.default:APP_BACKEND_URL)%"
 
@@ -23,7 +23,7 @@ services:
   # Configuration EmailService
   App\Service\EmailService:
     arguments:
-      $mailerFromEmail: "streetfishingroubaix@gmail.com"
+      $mailerFromEmail: "%env(default:app.mailer_from_email:MAILER_FROM_EMAIL)%"
 
   App\Service\CatchPhotoStorageService:
     arguments:

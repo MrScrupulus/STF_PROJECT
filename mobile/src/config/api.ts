@@ -23,8 +23,7 @@ const getApiBaseUrl = () => {
     // return 'http://localhost:8001'; // Pour iOS simulateur
     return 'http://192.168.1.129:8001'; // Pour device physique (IP de votre machine)
   }
-  // En production
-  return 'https://api.votre-domaine.com';
+  return 'https://api.scrupy.com';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

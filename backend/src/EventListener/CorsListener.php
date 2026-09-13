@@ -22,12 +22,7 @@ class CorsListener
             $response = new Response();
             $origin = $request->headers->get('Origin');
             
-            $allowedOrigins = [
-                'http://localhost:3000',
-                'http://frontend:3000',
-                'http://localhost:8081',
-                'exp://localhost:8081',
-            ];
+            $allowedOrigins = $this->allowedOrigins();
 
             if ($origin && in_array($origin, $allowedOrigins)) {
                 $response->headers->set('Access-Control-Allow-Origin', $origin);
@@ -86,12 +81,7 @@ class CorsListener
         $origin = $request->headers->get('Origin');
         
         // Liste des origines autorisées
-        $allowedOrigins = [
-            'http://localhost:3000',
-            'http://frontend:3000',
-            'http://localhost:8081',
-            'exp://localhost:8081',
-        ];
+        $allowedOrigins = $this->allowedOrigins();
 
         if ($origin && in_array($origin, $allowedOrigins)) {
             $response->headers->set('Access-Control-Allow-Origin', $origin);
@@ -103,6 +93,20 @@ class CorsListener
         $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
         $response->headers->set('Access-Control-Allow-Credentials', 'true');
         $response->headers->set('Access-Control-Max-Age', '3600');
+    }
+
+    /** @return list<string> */
+    private function allowedOrigins(): array
+    {
+        return [
+            'http://localhost:3000',
+            'http://frontend:3000',
+            'http://localhost:8081',
+            'exp://localhost:8081',
+            'https://scrupy.com',
+            'https://www.scrupy.com',
+            'https://api.scrupy.com',
+        ];
     }
 }
 

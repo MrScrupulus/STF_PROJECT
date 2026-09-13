@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.0.0"
+    "version": ">= 5.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -13,17 +14,33 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.scrupy.com"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.scrupy.com"
+      },
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "distribution": "store"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "/home/mr_scrupulus/AuthKey_StfAdmin.p8",
+        "ascApiKeyIssuerId": "acd89e4c-679e-409d-b2ca-de527424f388",
+        "ascApiKeyId": "8VTKQZXL9W",
+        "ascAppId": "6811592801"
+      }
+    }
   }
 }

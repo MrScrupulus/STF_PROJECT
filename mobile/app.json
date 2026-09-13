@@ -1,10 +1,16 @@
 {
   "expo": {
     "name": "Street Fishing",
-    "slug": "stf-mobile",
+    "slug": "stfproject",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -12,6 +18,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.stf.mobile",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée.",
         "NSPhotoLibraryAddUsageDescription": "L'application enregistre la photo de votre prise dans votre galerie."
@@ -19,6 +26,10 @@
     },
     "android": {
       "package": "com.stf.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
@@ -59,17 +70,15 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
-          "color": "#ffffff",
-          "sounds": [
-            "./assets/notification.wav"
-          ],
+          "icon": "./assets/notification-icon.png",
+          "color": "#000000",
           "mode": "production"
         }
       ],
-      "expo-router",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "scheme": "stf",
     "extra": {

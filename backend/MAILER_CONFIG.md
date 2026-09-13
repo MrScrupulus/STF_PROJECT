@@ -1,65 +1,31 @@
-# Configuration de l'envoi d'emails
+# Envoi d’emails — OVH MX Plan (webmail souvent appelé Zimbra)
 
-## Problème actuel
-Le `MAILER_DSN` est configuré sur `null://null`, ce qui signifie que les emails ne sont pas réellement envoyés.
+Le DNS MX de scrupy.com pointe déjà vers `mx1/2/3.mail.ovh.net`.
+SMTP officiel : `smtp.mail.ovh.net`, port **465** (SSL) ou **587** (STARTTLS).
+Identifiant = l’adresse complète, mot de passe = celui de la boîte.
 
-## Solutions
-
-### Option 1 : Gmail (recommandé pour le développement)
-Si vous utilisez l'adresse `streetfishingroubaix@gmail.com`, configurez :
+Dans le `.env` à la **racine** du projet (lu par Docker) :
 
 ```env
-MAILER_DSN=gmail://APP_PASSWORD:APP_PASSWORD@default
+MAILER_FROM_EMAIL=noreply@scrupy.com
+MAILER_DSN=smtps://noreply%40scrupy.com:MOT_DE_PASSE@smtp.mail.ovh.net:465
 ```
 
-**Important** : Vous devez créer un "Mot de passe d'application" dans votre compte Google :
-1. Allez sur https://myaccount.google.com/security
-2. Activez la validation en 2 étapes si ce n'est pas déjà fait
-3. Créez un "Mot de passe d'application"
-4. Utilisez ce mot de passe dans le MAILER_DSN
+- Remplacer `MOT_DE_PASSE` par le mot de passe de `noreply@scrupy.com`.
+- Le `@` de l’adresse mail dans le DSN s’écrit **`%40`**.
+- Si le mot de passe contient `@`, `#`, `%`, etc., les encoder aussi (ex. `@` → `%40`).
 
-Exemple :
-```env
-MAILER_DSN=gmail://streetfishingroubaix@gmail.com:VOTRE_MOT_DE_PASSE_APP@default
-```
-
-### Option 2 : SMTP générique
-Pour un serveur SMTP classique :
+Variante port 587 :
 
 ```env
-MAILER_DSN=smtp://USERNAME:PASSWORD@HOST:PORT
+MAILER_DSN=smtp://noreply%40scrupy.com:MOT_DE_PASSE@smtp.mail.ovh.net:587?encryption=tls
 ```
 
-Exemple avec un serveur SMTP :
-```env
-MAILER_DSN=smtp://user:password@smtp.example.com:587
-```
+Puis :
 
-### Option 3 : Mailtrap (pour les tests)
-Pour tester sans envoyer de vrais emails :
-
-```env
-MAILER_DSN=smtp://USERNAME:PASSWORD@smtp.mailtrap.io:2525
-```
-
-### Option 4 : File (pour le développement local)
-Pour sauvegarder les emails dans des fichiers (utile pour le développement) :
-
-```env
-MAILER_DSN=file://%kernel.project_dir%/var/mail
-```
-
-## Après configuration
-
-1. Redémarrez le conteneur backend :
 ```bash
-docker-compose restart backend
+cd ~/works/STF_Project
+docker compose up -d backend
 ```
 
-2. Testez une nouvelle inscription
-
-3. Vérifiez les logs :
-```bash
-docker-compose logs backend | grep -i "email\|mail"
-```
-
+Tester : inscription d’un compte, ou reset mot de passe, et vérifier la boîte (et les spams).

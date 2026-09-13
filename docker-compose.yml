@@ -42,7 +42,10 @@ services:
       - DATABASE_URL=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@database:3306/${MARIADB_DATABASE:-stf_db}?serverVersion=mariadb-10.11.0
       - APP_SECRET=${APP_SECRET}
       - MAILER_DSN=${MAILER_DSN}
-    command: ["./start-server.sh"]
+      - MAILER_FROM_EMAIL=${MAILER_FROM_EMAIL:-noreply@scrupy.com}
+      - APP_BACKEND_URL=${APP_BACKEND_URL:-https://api.scrupy.com}
+      - APP_FRONTEND_URL=${APP_FRONTEND_URL:-https://scrupy.com}
+    command: ["bash", "./start-server.sh"]
     depends_on:
       - database
     networks:
@@ -96,7 +99,7 @@ services:
       - WDS_SOCKET_PORT=3000
       - HOST=0.0.0.0
       - PORT=3000
-      - NEXT_PUBLIC_API_URL=http://localhost:8001
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.scrupy.com}
     depends_on:
       - backend
     networks:
