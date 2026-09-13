@@ -93,6 +93,8 @@ function AppNavigator() {
       screens: {
         VerifyEmail: 'verify-email/:token',
         ResetPassword: 'reset-password/:token',
+        TeamDetail: 'teams/:id',
+        CompetitionDetail: 'competitions/:id',
         Login: 'login',
       },
     },
@@ -141,6 +143,20 @@ function AppNavigator() {
       // Naviguer vers l'écran de réinitialisation avec le token
       if (rootNavigationRef.isReady()) {
         rootNavigationRef.navigate('ResetPassword' as never, { token } as never);
+      }
+    }
+
+    if (url.startsWith('stf://teams/')) {
+      const id = Number(url.replace('stf://teams/', '').split('?')[0]);
+      if (id && rootNavigationRef.isReady()) {
+        rootNavigationRef.navigate('TeamDetail' as never, { id } as never);
+      }
+    }
+
+    if (url.startsWith('stf://competitions/')) {
+      const id = Number(url.replace('stf://competitions/', '').split('?')[0]);
+      if (id && rootNavigationRef.isReady()) {
+        rootNavigationRef.navigate('CompetitionDetail' as never, { id } as never);
       }
     }
   };

@@ -39,7 +39,7 @@ final class RedirectController extends AbstractController
         if ($isMobile) {
             return $this->mobileRedirectPage(
                 'Vérification de votre email',
-                'Validez votre compte en poursuivant dans le navigateur (bouton ci-dessous).',
+                'Ouvrez Street Fishing pour valider votre compte, ou continuez dans le navigateur.',
                 $deepLink,
                 $webUrl,
                 'Ouvrir l’application',
@@ -187,7 +187,7 @@ HTML;
         if ($isMobile) {
             return $this->mobileRedirectPage(
                 'Réinitialisation du mot de passe',
-                'Définissez un nouveau mot de passe en poursuivant dans le navigateur (bouton ci-dessous).',
+                'Ouvrez Street Fishing pour définir un nouveau mot de passe, ou continuez dans le navigateur.',
                 $deepLink,
                 $browserFormUrl,
                 'Ouvrir l’application',
@@ -198,8 +198,46 @@ HTML;
         return new RedirectResponse($frontendResetUrl);
     }
 
+    #[Route('/redirect/teams/{id}', name: 'redirect_team', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function redirectTeam(int $id, Request $request): Response
+    {
+        $frontendUrl = rtrim($this->params->get('app.frontend_url'), '/') . '/teams/' . $id;
+        $deepLink = 'stf://teams/' . $id;
+        if ($this->isMobileDevice($request->headers->get('User-Agent', ''))) {
+            return $this->mobileRedirectPage(
+                'Ouvrir l’équipe',
+                'Continuez dans Street Fishing si l’application est installée.',
+                $deepLink,
+                $frontendUrl,
+                'Ouvrir l’application',
+                'Voir sur le site'
+            );
+        }
+
+        return new RedirectResponse($frontendUrl);
+    }
+
+    #[Route('/redirect/competitions/{id}', name: 'redirect_competition', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function redirectCompetition(int $id, Request $request): Response
+    {
+        $frontendUrl = rtrim($this->params->get('app.frontend_url'), '/') . '/competitions/' . $id;
+        $deepLink = 'stf://competitions/' . $id;
+        if ($this->isMobileDevice($request->headers->get('User-Agent', ''))) {
+            return $this->mobileRedirectPage(
+                'Ouvrir la compétition',
+                'Continuez dans Street Fishing si l’application est installée.',
+                $deepLink,
+                $frontendUrl,
+                'Ouvrir l’application',
+                'Voir sur le site'
+            );
+        }
+
+        return new RedirectResponse($frontendUrl);
+    }
+
     /**
-     * Page HTML pour mobile : lien « navigateur » (+ bouton app / deep link désactivé, voir corps).
+     * Page HTML pour mobile : ouvre l’app (stf://) + repli navigateur.
      */
     private function mobileRedirectPage(
         string $title,
@@ -209,15 +247,13 @@ HTML;
         string $buttonApp,
         string $linkWeb
     ): Response {
-        // Onglet « Ouvrir l'application » – deep link ($deepLink ex. stf://...) – désactivé provisoirement :
-        // $deepLinkEsc = htmlspecialchars($deepLink, \ENT_QUOTES, 'UTF-8');
-        // $buttonAppEsc = htmlspecialchars($buttonApp, \ENT_QUOTES, 'UTF-8');
-        // HTML : <a href="{$deepLinkEsc}" class="btn-app">{$buttonAppEsc}</a>
-
+        $deepLinkEsc = htmlspecialchars($deepLink, \ENT_QUOTES, 'UTF-8');
+        $buttonAppEsc = htmlspecialchars($buttonApp, \ENT_QUOTES, 'UTF-8');
         $webUrlEsc = htmlspecialchars($webUrl, \ENT_QUOTES, 'UTF-8');
         $titleEsc = htmlspecialchars($title, \ENT_QUOTES, 'UTF-8');
         $messageEsc = htmlspecialchars($message, \ENT_QUOTES, 'UTF-8');
         $linkWebEsc = htmlspecialchars($linkWeb, \ENT_QUOTES, 'UTF-8');
+        $deepLinkJs = json_encode($deepLink, \JSON_UNESCAPED_SLASHES | \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_THROW_ON_ERROR);
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -227,12 +263,12 @@ HTML;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$titleEsc} - Street Fishing</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
         .card { background: #fff; border-radius: 12px; padding: 24px; max-width: 360px; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         h1 { font-size: 20px; color: #333; margin: 0 0 12px 0; text-align: center; }
         p { font-size: 15px; color: #666; margin: 0 0 20px 0; line-height: 1.5; text-align: center; }
         a { display: block; text-align: center; padding: 14px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-bottom: 12px; }
-        /* .btn-app désactivé tant que le bouton deep link est commenté */
+        .btn-app { background: #000; color: #fff; }
         .btn-web { background: transparent; color: #007AFF; border: 2px solid #007AFF; }
     </style>
 </head>
@@ -240,8 +276,12 @@ HTML;
     <div class="card">
         <h1>{$titleEsc}</h1>
         <p>{$messageEsc}</p>
+        <a href="{$deepLinkEsc}" class="btn-app" id="open-app">{$buttonAppEsc}</a>
         <a href="{$webUrlEsc}" class="btn-web">{$linkWebEsc}</a>
     </div>
+    <script>
+        setTimeout(function () { window.location.href = {$deepLinkJs}; }, 400);
+    </script>
 </body>
 </html>
 HTML;

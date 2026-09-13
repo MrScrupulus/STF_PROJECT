@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -28,6 +29,41 @@ final class EmailService
         $this->fromEmail = $mailerFromEmail;
         $this->frontendUrl = $params->get('app.frontend_url');
         $this->backendUrl = $params->get('app.backend_url', 'http://localhost:8001');
+    }
+
+    private function brandedFrom(): Address
+    {
+        return new Address($this->fromEmail, 'Street Fishing');
+    }
+
+    private function wrapEmailHtml(string $innerHtml): string
+    {
+        $logoUrl = htmlspecialchars(rtrim($this->frontendUrl, '/') . '/logo-email.png?v=2', \ENT_QUOTES, 'UTF-8');
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f5;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
+        <tr>
+          <td style="background:#000000;text-align:center;padding:20px;">
+            <img src="{$logoUrl}" width="80" height="80" alt="Street Fishing" style="display:block;margin:0 auto;border:0;border-radius:16px;" />
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;color:#333;font-size:16px;line-height:1.5;">
+            {$innerHtml}
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+HTML;
     }
 
     /**
@@ -56,10 +92,10 @@ final class EmailService
             error_log("Email expéditeur: " . $this->fromEmail);
             
             $email = (new Email())
-                ->from($this->fromEmail)
+                ->from($this->brandedFrom())
                 ->to($user->getEmail())
                 ->subject('Vérification de votre compte Street Fishing')
-                ->html(
+                ->html($this->wrapEmailHtml(
                     "<h1>Vérification de votre adresse email</h1>
                     <p>Pour confirmer votre inscription, cliquez sur le lien ci-dessous :</p>
                     
@@ -74,7 +110,7 @@ final class EmailService
                     
                     <p><strong>Ce lien est valable pendant 24 heures.</strong></p>
                     <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>"
-                );
+                ));
 
             try {
                 $this->mailer->send($email);
@@ -108,10 +144,10 @@ final class EmailService
 
         try {
             $email = (new Email())
-                ->from($this->fromEmail)
+                ->from($this->brandedFrom())
                 ->to($user->getEmail())
                 ->subject('Réinitialisation de votre mot de passe Street Fishing')
-                ->html(
+                ->html($this->wrapEmailHtml(
                     "<h1>Réinitialisation de votre mot de passe</h1>
                     <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.</p>
                     <p>Pour définir un nouveau mot de passe, cliquez sur le lien ci-dessous :</p>
@@ -127,7 +163,7 @@ final class EmailService
                     
                     <p><strong>Ce lien est valable pendant 1 heure.</strong></p>
                     <p>Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>"
-                );
+                ));
 
             $this->mailer->send($email);
         } catch (TransportExceptionInterface $e) {
@@ -149,7 +185,7 @@ final class EmailService
         }
         $membersHtml = '<ul><li>' . implode('</li><li>', $membersList) . '</li></ul>';
         
-        $teamUrl = rtrim($this->frontendUrl, '/') . '/teams/' . $team->getId();
+        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $team->getId();
 
         try {
             // Envoyer l'email à tous les membres de l'équipe
@@ -159,10 +195,10 @@ final class EmailService
                 }
 
                 $email = (new Email())
-                    ->from($this->fromEmail)
+                    ->from($this->brandedFrom())
                     ->to($member->getEmail())
                     ->subject("Votre équipe '{$teamName}' a été créée - Street Fishing")
-                    ->html(
+                    ->html($this->wrapEmailHtml(
                         "<h1>Félicitations ! Votre équipe a été créée</h1>
                         <p>Bonjour " . htmlspecialchars($member->getFirstname()) . ",</p>
                         <p>Votre équipe <strong>{$teamName}</strong> a été créée avec succès.</p>
@@ -179,7 +215,7 @@ final class EmailService
                         
                         <p>Bonne chance pour vos prochaines compétitions !</p>
                         <p>L'équipe Street Fishing</p>"
-                    );
+                    ));
 
                 try {
                     $this->mailer->send($email);
@@ -207,8 +243,8 @@ final class EmailService
         $endDate = $competition->getEndDate()->format('d/m/Y à H:i');
         $description = $competition->getDescription() ? nl2br(htmlspecialchars($competition->getDescription())) : 'Aucune description disponible.';
         
-        $competitionUrl = rtrim($this->frontendUrl, '/') . '/competitions/' . $competition->getId();
-        $teamUrl = rtrim($this->frontendUrl, '/') . '/teams/' . $team->getId();
+        $competitionUrl = rtrim($this->backendUrl, '/') . '/redirect/competitions/' . $competition->getId();
+        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $team->getId();
 
         try {
             // Envoyer l'email à tous les membres de l'équipe
@@ -218,10 +254,10 @@ final class EmailService
                 }
 
                 $email = (new Email())
-                    ->from($this->fromEmail)
+                    ->from($this->brandedFrom())
                     ->to($member->getEmail())
                     ->subject("Votre équipe '{$teamName}' est inscrite à la compétition '{$competitionName}' - Street Fishing")
-                    ->html(
+                    ->html($this->wrapEmailHtml(
                         "<h1>Inscription confirmée !</h1>
                         <p>Bonjour " . htmlspecialchars($member->getFirstname()) . ",</p>
                         <p>Votre équipe <strong>{$teamName}</strong> a été inscrite avec succès à la compétition <strong>{$competitionName}</strong>.</p>
@@ -246,7 +282,7 @@ final class EmailService
                         
                         <p>Bonne chance pour la compétition !</p>
                         <p>L'équipe Street Fishing</p>"
-                    );
+                    ));
 
                 try {
                     $this->mailer->send($email);
@@ -280,7 +316,7 @@ final class EmailService
         }
         $membersHtml = '<ul><li>' . implode('</li><li>', $membersList) . '</li></ul>';
         
-        $teamUrl = rtrim($this->frontendUrl, '/') . '/teams/' . $team->getId();
+        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $team->getId();
 
         try {
             if (!$this->shouldSendNotificationEmail($invitedUser)) {
@@ -288,10 +324,10 @@ final class EmailService
             }
 
             $email = (new Email())
-                ->from($this->fromEmail)
+                ->from($this->brandedFrom())
                 ->to($invitedUser->getEmail())
                 ->subject("Invitation à rejoindre l'équipe '{$teamName}' - Street Fishing")
-                ->html(
+                ->html($this->wrapEmailHtml(
                     "<h1>Invitation à rejoindre une équipe</h1>
                     <p>Bonjour " . htmlspecialchars($invitedUser->getFirstname()) . ",</p>
                     <p><strong>{$inviterName}</strong> vous invite à rejoindre l'équipe <strong>{$teamName}</strong>.</p>
@@ -308,7 +344,7 @@ final class EmailService
                     
                     <p>Bonne chance pour vos prochaines compétitions !</p>
                     <p>L'équipe Street Fishing</p>"
-                );
+                ));
 
             try {
                 $this->mailer->send($email);
@@ -341,7 +377,7 @@ final class EmailService
             ? htmlspecialchars($catch->getTeam()->getCompetition()->getName())
             : 'Compétition';
         
-        $teamUrl = rtrim($this->frontendUrl, '/') . '/teams/' . $catch->getTeam()->getId();
+        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $catch->getTeam()->getId();
 
         try {
             if ($validated) {
@@ -351,10 +387,10 @@ final class EmailService
 
                 // Email de validation
                 $email = (new Email())
-                    ->from($this->fromEmail)
+                    ->from($this->brandedFrom())
                     ->to($user->getEmail())
                     ->subject("Votre prise a été validée - Street Fishing")
-                    ->html(
+                    ->html($this->wrapEmailHtml(
                         "<h1>Prise validée !</h1>
                         <p>Bonjour " . htmlspecialchars($user->getFirstname()) . ",</p>
                         <p>Votre prise a été <strong>validée</strong> par un administrateur.</p>
@@ -373,7 +409,7 @@ final class EmailService
                         
                         <p>Bonne continuation !</p>
                         <p>L'équipe Street Fishing</p>"
-                    );
+                    ));
             } else {
                 // Email de rejet
                 if (!$this->shouldSendNotificationEmail($user)) {
@@ -383,10 +419,10 @@ final class EmailService
                 $rejectionReasonHtml = $rejectionReason ? nl2br(htmlspecialchars($rejectionReason)) : 'Aucun motif spécifié.';
                 
                 $email = (new Email())
-                    ->from($this->fromEmail)
+                    ->from($this->brandedFrom())
                     ->to($user->getEmail())
                     ->subject("Votre prise a été rejetée - Street Fishing")
-                    ->html(
+                    ->html($this->wrapEmailHtml(
                         "<h1>Prise rejetée</h1>
                         <p>Bonjour " . htmlspecialchars($user->getFirstname()) . ",</p>
                         <p>Votre prise a été <strong>rejetée</strong> par un administrateur.</p>
@@ -409,7 +445,7 @@ final class EmailService
                         
                         <p>Cordialement,</p>
                         <p>L'équipe Street Fishing</p>"
-                    );
+                    ));
             }
 
             try {
