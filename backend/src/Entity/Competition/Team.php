@@ -502,6 +502,39 @@ class Team
     }
 
     /**
+     * Liste publique des pénalités (fiche équipe). Vide si la table n’existe pas encore.
+     *
+     * @return list<array{id: int|null, points: int, reason: string|null, createdAt: string|null, fishCatchId: int|null, speciesName: string|null}>
+     */
+    public function getPenaltiesForApi(): array
+    {
+        try {
+            $items = [];
+            foreach ($this->penalties as $penalty) {
+                $catch = $penalty->getFishCatch();
+                $items[] = [
+                    'id' => $penalty->getId(),
+                    'points' => $penalty->getPoints(),
+                    'reason' => $penalty->getReason(),
+                    'createdAt' => $penalty->getCreatedAt()?->format('Y-m-d H:i:s'),
+                    'fishCatchId' => $catch?->getId(),
+                    'speciesName' => $catch?->getSpecies()?->getName(),
+                ];
+            }
+
+            return $items;
+        } catch (TableNotFoundException) {
+            return [];
+        } catch (DbalException $e) {
+            if (str_contains($e->getMessage(), 'team_penalty')) {
+                return [];
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
      * @return Collection<int, TeamPenalty>
      */
     public function getPenalties(): Collection

@@ -12,6 +12,24 @@ import { toast } from "react-hot-toast";
 import { resolvePhotoUri } from "../../../utils/photoUrl";
 
 
+function CatchPenalties({ catchItem, styles }) {
+  const list = Array.isArray(catchItem.penalties) ? catchItem.penalties : [];
+  if (list.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={styles.teams__catch_penalty}>
+      {list.map((penalty) => (
+        <div key={penalty.id || `${penalty.points}-${penalty.reason}`}>
+          Pénalité : −{penalty.points} pts
+          {penalty.reason ? ` — ${penalty.reason}` : ""}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ScoringCountedCatchCard({ catchItem, rank, styles, setSelectedImage }) {
   return (
     <div
@@ -90,6 +108,7 @@ function ScoringCountedCatchCard({ catchItem, rank, styles, setSelectedImage }) 
       ) : (
         <div className={styles.teams__catch_status_validated}>✅ Validée</div>
       )}
+      <CatchPenalties catchItem={catchItem} styles={styles} />
     </div>
   );
 }
@@ -299,13 +318,15 @@ export default function TeamDetailPage() {
         )}
 
         {/* Résumé des scores en haut pour un aperçu rapide */}
-        {team.catches && team.catches.length > 0 && (
+        {((team.catches && team.catches.length > 0) || (team.penaltyPoints > 0)) && (
           <div className={styles.teams__score_summary}>
             <div className={styles.teams__score_card}>
               <div className={styles.teams__score_label}>Score Total</div>
               <div className={styles.teams__score_value} style={{ fontWeight: '900' }}>{team.totalScore || 0}</div>
               <div className={styles.teams__score_description}>
-                Score de base + Bonus
+                {team.penaltyPoints > 0
+                  ? "Score de base + bonus − pénalités"
+                  : "Score de base + Bonus"}
               </div>
             </div>
             <div className={styles.teams__score_card}>
@@ -343,6 +364,25 @@ export default function TeamDetailPage() {
                   </div>
                 )}
               </>
+            )}
+            {team.penaltyPoints > 0 && (
+              <div className={`${styles.teams__score_card} ${styles["teams__score_card--penalty"]}`}>
+                <div className={styles.teams__score_label}>Pénalités</div>
+                <div className={styles.teams__score_value} style={{ fontWeight: '900', color: '#b91c1c' }}>
+                  −{team.penaltyPoints} pts
+                </div>
+                <div className={styles.teams__score_description}>
+                  {(team.penalties || []).length > 0
+                    ? (team.penalties || []).map((p) => (
+                        <div key={p.id || `${p.points}-${p.reason}`}>
+                          {p.speciesName ? `${p.speciesName} : ` : "Équipe : "}
+                          −{p.points} pts
+                          {p.reason ? ` — ${p.reason}` : ""}
+                        </div>
+                      ))
+                    : "Retenues sur le score"}
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -643,6 +683,7 @@ export default function TeamDetailPage() {
                             ✅ Validée
                           </div>
                         )}
+                        <CatchPenalties catchItem={catchItem} styles={styles} />
                       </div>
                     ))}
                   </div>
@@ -741,6 +782,7 @@ export default function TeamDetailPage() {
                             <p>{catchItem.rejectionReason}</p>
                           </div>
                         )}
+                        <CatchPenalties catchItem={catchItem} styles={styles} />
                       </div>
                     ))}
                   </div>

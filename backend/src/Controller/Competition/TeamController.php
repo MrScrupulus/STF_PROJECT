@@ -665,6 +665,20 @@ class TeamController extends AbstractController
             $scoreBreakdown['bonus'] = max(0, $teamScore - $scoreBreakdown['baseScore']);
         }
 
+        $penaltiesPayload = $team->getPenaltiesForApi();
+        $penaltiesByCatchId = [];
+        foreach ($penaltiesPayload as $penaltyRow) {
+            $catchId = $penaltyRow['fishCatchId'] ?? null;
+            if ($catchId === null) {
+                continue;
+            }
+            $penaltiesByCatchId[$catchId][] = [
+                'id' => $penaltyRow['id'],
+                'points' => $penaltyRow['points'],
+                'reason' => $penaltyRow['reason'],
+            ];
+        }
+
         // Transformer manuellement les données pour éviter les références circulaires
         return $this->json([
             'success' => true,
@@ -678,6 +692,7 @@ class TeamController extends AbstractController
                 'quotaBonus' => $scoreBreakdown['quotaBonus'],
                 'baseScore' => $scoreBreakdown['baseScore'],
                 'penaltyPoints' => $scoreBreakdown['penaltyPoints'] ?? 0,
+                'penalties' => $penaltiesPayload,
                 'registrationNumber' => $team->getRegistrationNumber(),
                 'members' => array_map(function ($member) {
                     return [
@@ -698,7 +713,7 @@ class TeamController extends AbstractController
                 'scoringPresentation' => $team->getCompetition()
                     ? $team->getScoringPresentationForCompetition($team->getCompetition())
                     : null,
-                'catches' => array_values(array_filter(array_map(function ($catch) use ($competitionSpeciesMap) {
+                'catches' => array_values(array_filter(array_map(function ($catch) use ($competitionSpeciesMap, $penaltiesByCatchId) {
                     $species = $catch->getSpecies();
                     if ($species === null) {
                         return null;
@@ -723,6 +738,7 @@ class TeamController extends AbstractController
                         'comment' => $catch->getComment(),
                         'isValidated' => $catch->isValidated(),
                         'rejectionReason' => $catch->getRejectionReason(),
+                        'penalties' => $penaltiesByCatchId[$catch->getId()] ?? [],
                         'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
                         'caughtBy' => $catch->getCaughtBy() ? [
                             'id' => $catch->getCaughtBy()->getId(),

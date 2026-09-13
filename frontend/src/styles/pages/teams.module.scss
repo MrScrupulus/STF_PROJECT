@@ -822,6 +822,23 @@
     margin-top: 0.5rem;
   }
 
+  &__catch_penalty {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  &__score_card--penalty {
+    border: 1px solid #fecaca;
+    background-color: #fef2f2;
+  }
+
   &__catch-status {
     margin-top: 1rem;
     padding: 0.5rem;

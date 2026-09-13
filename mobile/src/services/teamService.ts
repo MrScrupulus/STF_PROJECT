@@ -39,6 +39,15 @@ export interface Team {
   baseScore?: number;
   newSpeciesBonus?: number;
   quotaBonus?: number;
+  penaltyPoints?: number;
+  penalties?: Array<{
+    id: number;
+    points: number;
+    reason?: string | null;
+    fishCatchId?: number | null;
+    speciesName?: string | null;
+    createdAt?: string | null;
+  }>;
   registrationNumber?: number;
   catches?: any[];
   /** Présent uniquement si l’équipe est inscrite à une compétition. */

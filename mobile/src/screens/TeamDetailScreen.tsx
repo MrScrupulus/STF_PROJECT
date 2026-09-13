@@ -412,12 +412,16 @@ export default function TeamDetailScreen({ route }: any) {
         )}
 
         {/* Résumé des scores */}
-        {team?.catches && team.catches.length > 0 && (
+        {((team?.catches && team.catches.length > 0) || ((team.penaltyPoints ?? 0) > 0)) && (
           <View style={styles.scoreSummary}>
             <View style={styles.scoreCard}>
               <Text style={styles.scoreLabel}>Score Total</Text>
               <Text style={styles.scoreValue}>{team.totalScore || 0}</Text>
-              <Text style={styles.scoreDescription}>Score de base + Bonus</Text>
+              <Text style={styles.scoreDescription}>
+                {(team.penaltyPoints ?? 0) > 0
+                  ? 'Score de base + bonus − pénalités'
+                  : 'Score de base + Bonus'}
+              </Text>
             </View>
             <View style={styles.scoreCard}>
               <Text style={styles.scoreLabel}>Score Base</Text>
@@ -448,6 +452,25 @@ export default function TeamDetailScreen({ route }: any) {
                   </View>
                 )}
               </>
+            )}
+            {(team.penaltyPoints ?? 0) > 0 && (
+              <View style={[styles.scoreCard, styles.scoreCardPenalty]}>
+                <Text style={styles.scoreLabel}>Pénalités</Text>
+                <Text style={[styles.scoreValue, styles.scoreValuePenalty]}>
+                  −{team.penaltyPoints} pts
+                </Text>
+                {(team.penalties ?? []).length > 0 ? (
+                  (team.penalties ?? []).map((p) => (
+                    <Text key={p.id ?? `${p.points}-${p.reason}`} style={styles.scoreDescription}>
+                      {p.speciesName ? `${p.speciesName} : ` : 'Équipe : '}
+                      −{p.points} pts
+                      {p.reason ? ` — ${p.reason}` : ''}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.scoreDescription}>Retenues sur le score</Text>
+                )}
+              </View>
             )}
           </View>
         )}
@@ -969,6 +992,16 @@ function CatchCard({
           <Text style={styles.catchStatusText}>✅ Validée</Text>
         </View>
       )}
+      {Array.isArray(catchItem.penalties) && catchItem.penalties.length > 0 && (
+        <View style={styles.catchPenalty}>
+          {catchItem.penalties.map((penalty: { id?: number; points: number; reason?: string | null }) => (
+            <Text key={penalty.id ?? `${penalty.points}-${penalty.reason}`} style={styles.catchPenaltyText}>
+              Pénalité : −{penalty.points} pts
+              {penalty.reason ? ` — ${penalty.reason}` : ''}
+            </Text>
+          ))}
+        </View>
+      )}
       {showAdminBar && (
         <View style={styles.catchAdminToolbar}>
           {onValidate != null && !catchItem.isValidated && (
@@ -1043,16 +1076,25 @@ const styles = StyleSheet.create({
   },
   scoreSummary: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 24,
     gap: 8,
   },
   scoreCard: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 100,
     backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  scoreCardPenalty: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    flexBasis: '100%',
   },
   scoreLabel: {
     fontSize: 12,
@@ -1064,6 +1106,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#007AFF',
     marginBottom: 4,
+  },
+  scoreValuePenalty: {
+    color: '#b91c1c',
   },
   scoreDescription: {
     fontSize: 10,
@@ -1356,6 +1401,19 @@ const styles = StyleSheet.create({
   catchStatusRejectedText: {
     fontSize: 14,
     color: '#721c24',
+  },
+  catchPenalty: {
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#fdba74',
+    padding: 8,
+    borderRadius: 4,
+    marginTop: 8,
+  },
+  catchPenaltyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9a3412',
   },
   catchStatusText: {
     fontSize: 14,
