@@ -35,6 +35,8 @@ export default function CreateCompetition() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [scheduledPauses, setScheduledPauses] = useState([]);
+  const [coverFile, setCoverFile] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
   const [availableSpecies, setAvailableSpecies] = useState([]);
   const [competitionSpecies, setCompetitionSpecies] = useState([]);
   const [loadingSpecies, setLoadingSpecies] = useState(false);
@@ -171,7 +173,11 @@ export default function CreateCompetition() {
         scheduledPauses: scheduledPauses.length > 0 ? scheduledPauses : undefined,
         species: speciesPayload,
       };
-      await competitionsService.create(competitionData);
+      const created = await competitionsService.create(competitionData);
+      const newId = created?.competition?.id;
+      if (newId && coverFile) {
+        await competitionsService.uploadCoverImage(newId, coverFile);
+      }
       router.push("/dashboard");
     } catch (error) {
       setError(error.message || "Une erreur est survenue lors de la création");
@@ -203,6 +209,29 @@ export default function CreateCompetition() {
               }
               className={styles["competition-create__input"]}
               required
+            />
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <label className={styles["competition-create__label"]}>Jaquette (optionnel)</label>
+            <p className={styles["competition-create__help_text"]}>
+              Image jpg, png ou webp affichée à côté du titre dans la liste. Pas de PDF.
+            </p>
+            {coverPreview && (
+              <img
+                src={coverPreview}
+                alt="Aperçu jaquette"
+                style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, marginBottom: 8 }}
+              />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setCoverFile(file);
+                setCoverPreview(file ? URL.createObjectURL(file) : null);
+              }}
             />
           </div>
 
@@ -449,19 +478,17 @@ export default function CreateCompetition() {
 
           {/* Gestion des espèces */}
           <div className={styles["competition-create__group"]}>
-            <div className={styles["competition-create__species_header"]}>
-              <label className={styles["competition-create__label"]}>
-                Espèces de la compétition
-              </label>
-              <button
-                type="button"
-                onClick={handleAddSpecies}
-                className={styles["competition-create__add_species_btn"]}
-                disabled={loadingSpecies || availableSpecies.length === 0}
-              >
-                + Ajouter une espèce
-              </button>
-            </div>
+            <label className={styles["competition-create__label"]}>
+              Espèces de la compétition
+            </label>
+            <button
+              type="button"
+              onClick={handleAddSpecies}
+              className={styles["competition-create__add_species_btn"]}
+              disabled={loadingSpecies || availableSpecies.length === 0}
+            >
+              + Ajouter une espèce
+            </button>
             <p className={styles["competition-create__help_text"]}>
               Définissez les espèces, leurs coefficients ; pour le bonus quota, remplissez aussi le bonus sur chaque ligne ayant un quota.
             </p>

@@ -1,5 +1,9 @@
+import * as FileSystem from 'expo-file-system/legacy';
+import * as SecureStore from 'expo-secure-store';
+import * as Sharing from 'expo-sharing';
 import apiClient from './api';
-import { API_ENDPOINTS } from '../config/api';
+import { API_BASE_URL } from '../config/api';
+import { uriToJpegDataUrl } from '../utils/imageUpload';
 
 export interface PendingCatch {
   id: number;
@@ -134,20 +138,76 @@ export const adminService = {
   },
 
   uploadReglementImage: async (competitionId: number, uri: string, type: string = 'image/jpeg'): Promise<any> => {
-    const formData = new FormData();
-    const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
-    formData.append('image', {
-      uri,
-      name: `reglement.${ext}`,
-      type: type || 'image/jpeg',
-    } as any);
-    const response = await apiClient.post(`/api/admin/competitions/${competitionId}/reglement-image`, formData);
+    const image = await uriToJpegDataUrl(uri);
+    const response = await apiClient.post(
+      `/api/admin/competitions/${competitionId}/reglement-image`,
+      { image },
+      { timeout: 60000 }
+    );
     return response.data;
   },
 
   deleteReglementImage: async (competitionId: number, index: number): Promise<any> => {
     const response = await apiClient.delete(`/api/admin/competitions/${competitionId}/reglement-image/${index}`);
     return response.data;
+  },
+
+  uploadCoverImage: async (competitionId: number, uri: string, _type: string = 'image/jpeg'): Promise<any> => {
+    const image = await uriToJpegDataUrl(uri);
+    const response = await apiClient.post(
+      `/api/admin/competitions/${competitionId}/cover-image`,
+      { image },
+      { timeout: 60000 }
+    );
+    return response.data;
+  },
+
+  deleteCoverImage: async (competitionId: number): Promise<any> => {
+    const response = await apiClient.delete(`/api/admin/competitions/${competitionId}/cover-image`);
+    return response.data;
+  },
+
+  deleteCompetition: async (competitionId: number): Promise<any> => {
+    const response = await apiClient.delete(`/api/admin/competitions/${competitionId}`);
+    return response.data;
+  },
+
+  downloadCompetitionPdf: async (competitionId: number, competitionName: string): Promise<void> => {
+    const token = await SecureStore.getItemAsync('jwtToken');
+    if (!token) {
+      throw new Error('Session expirée. Veuillez vous reconnecter.');
+    }
+    const safeName = (competitionName || 'competition').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `classement_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const destDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+    if (!destDir) {
+      throw new Error('Stockage local indisponible.');
+    }
+    const dest = `${destDir}${filename}`;
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/pdf',
+    };
+    if (API_BASE_URL.includes('ngrok')) {
+      headers['ngrok-skip-browser-warning'] = '1';
+    }
+    const result = await FileSystem.downloadAsync(
+      `${API_BASE_URL}/api/admin/competitions/${competitionId}/pdf`,
+      dest,
+      { headers }
+    );
+    if (result.status !== 200) {
+      throw new Error('Impossible de générer le PDF du classement.');
+    }
+    const canShare = await Sharing.isAvailableAsync();
+    if (!canShare) {
+      throw new Error('Le partage de fichiers n’est pas disponible sur cet appareil.');
+    }
+    await Sharing.shareAsync(result.uri, {
+      mimeType: 'application/pdf',
+      UTI: 'com.adobe.pdf',
+      dialogTitle: filename,
+    });
   },
 
   /** Création admin ; si une espèce du même nom existe (casse / espaces), le backend renvoie reused + l’existant. */

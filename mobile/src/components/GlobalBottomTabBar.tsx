@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import FaIcon from './FaIcon';
 
 // Routes où la barre de navigation ne doit pas être affichée
 const HIDDEN_ROUTES = ['Login', 'Register'];
@@ -80,11 +80,11 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
   // Déterminer quel onglet afficher (Teams ou AdminCatchValidation)
   const teamsTabName = isAuthenticated && isAdmin ? 'AdminCatchValidation' : 'Teams';
   const teamsTabLabel = isAuthenticated && isAdmin ? 'Validation' : 'Mon équipe';
-  const teamsTabIcon = isAuthenticated && isAdmin ? '✓' : '👥';
+  const teamsTabIcon: 'check' | 'users' = isAuthenticated && isAdmin ? 'check' : 'users';
   const teamsTabActive = isAuthenticated && isAdmin ? isAdminValidationActive : isTeamsActive;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <View style={styles.safeArea}>
       <View style={styles.container}>
         {/* Premier onglet : Compétitions */}
         <TouchableOpacity
@@ -92,7 +92,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
           onPress={() => handleNavigation('Competitions')}
           activeOpacity={0.7}
         >
-          <Text style={styles.tabIcon}>🏆</Text>
+          <FaIcon name="trophy" size={22} color={isCompetitionsActive ? '#007AFF' : '#666'} />
           <Text style={[styles.tabLabel, isCompetitionsActive && styles.tabLabelActive]}>
             Compétitions
           </Text>
@@ -105,7 +105,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
           activeOpacity={0.8}
         >
           <View style={styles.addButtonInner}>
-            <Text style={styles.addButtonIcon}>📷</Text>
+            <FaIcon name="camera" size={26} color="#fff" />
           </View>
         </TouchableOpacity>
 
@@ -115,13 +115,31 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
           onPress={() => handleNavigation(teamsTabName)}
           activeOpacity={0.7}
         >
-          <Text style={styles.tabIcon}>{teamsTabIcon}</Text>
-          <Text style={[styles.tabLabel, teamsTabActive && styles.tabLabelActive]}>
+          <FaIcon
+            name={teamsTabIcon}
+            size={22}
+            color={
+              isAuthenticated && isAdmin
+                ? teamsTabActive
+                  ? '#248A3D'
+                  : '#34C759'
+                : teamsTabActive
+                  ? '#007AFF'
+                  : '#666'
+            }
+          />
+          <Text
+            style={[
+              styles.tabLabel,
+              teamsTabActive && styles.tabLabelActive,
+              isAuthenticated && isAdmin && styles.tabLabelAdmin,
+            ]}
+          >
             {teamsTabLabel}
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -162,6 +180,9 @@ const styles = StyleSheet.create({
   tabLabelActive: {
     color: '#007AFF',
     fontWeight: '600',
+  },
+  tabLabelAdmin: {
+    color: '#34C759',
   },
   addButton: {
     width: 64,

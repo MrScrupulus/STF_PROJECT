@@ -181,6 +181,8 @@ class TeamController extends AbstractController
                     'comment' => $catch->getComment(),
                     'isValidated' => $catch->isValidated(),
                     'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
+                    'latitude' => $catch->getLatitude(),
+                    'longitude' => $catch->getLongitude(),
                     'caughtBy' => $catch->getCaughtBy() ? [
                         'id' => $catch->getCaughtBy()->getId(),
                         'firstname' => $catch->getCaughtBy()->getFirstname(),

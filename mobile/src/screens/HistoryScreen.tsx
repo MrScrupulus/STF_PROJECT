@@ -20,6 +20,7 @@ import Header from '../components/Header';
 import CatchesMapView from '../components/competition/CatchesMapView';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
+import { boundsFromCatchTimes, parseCatchDate } from '../utils/timelineScale';
 
 export type HistoryTab = 'catches' | 'competitions' | 'stats';
 
@@ -49,22 +50,10 @@ function groupTeamsByCompetition(teams: any[]) {
 }
 
 function timelineBounds(timeline: any[]): { startDate?: string; endDate?: string } {
-  if (!timeline?.length) return {};
-  let min = Infinity;
-  let max = -Infinity;
-  for (const t of timeline) {
-    const d = new Date(t.createdAt).getTime();
-    if (!isNaN(d)) {
-      min = Math.min(min, d);
-      max = Math.max(max, d);
-    }
-  }
-  if (min === Infinity) return {};
-  const padMs = 60 * 60 * 1000;
-  return {
-    startDate: new Date(min - padMs).toISOString(),
-    endDate: new Date(max + padMs).toISOString(),
-  };
+  const dates = (timeline || [])
+    .map((t) => parseCatchDate(t?.createdAt))
+    .filter((d): d is Date => d instanceof Date);
+  return boundsFromCatchTimes(dates) ?? {};
 }
 
 export default function HistoryScreen() {
@@ -344,6 +333,9 @@ function StatsTab({
                 speciesStats={globalStats.speciesStats || []}
                 height={320}
               />
+            )}
+            {!globalStatsLoading && globalStats && !(globalStats.catchesForMap?.length > 0) && (
+              <Text style={styles.globalHint}>Aucune prise géolocalisée à afficher sur la carte.</Text>
             )}
             {globalStats.timeline?.length > 0 && timelineStart && timelineEnd && (
               <CatchesTimelineChart

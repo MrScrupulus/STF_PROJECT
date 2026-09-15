@@ -13,7 +13,6 @@ import { useNavigation } from '@react-navigation/native';
 import { teamService, Team } from '../services/teamService';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
 
 export default function TeamsScreen() {
   const navigation = useNavigation();
@@ -153,7 +152,6 @@ export default function TeamsScreen() {
             <Text style={styles.createButtonText}>+ Créer une équipe</Text>
           </TouchableOpacity>
         }
-        ListFooterComponent={<Footer />}
       />
       </View>
     </>

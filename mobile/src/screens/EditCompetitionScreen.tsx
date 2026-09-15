@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Polygon, Marker, Polyline } from 'react-native-maps';
-import * as Location from 'expo-location';
+import { getPreciseGpsPosition } from '../utils/deviceCapture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -126,6 +126,8 @@ export default function EditCompetitionScreen() {
   const [error, setError] = useState('');
   const [reglementImageUrls, setReglementImageUrls] = useState<string[]>([]);
   const [reglementImageUploading, setReglementImageUploading] = useState(false);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
   const [showZoneModal, setShowZoneModal] = useState(false);
   const [zonePoints, setZonePoints] = useState<{ latitude: number; longitude: number }[]>([]);
   const [newZoneName, setNewZoneName] = useState('');
@@ -202,6 +204,7 @@ export default function EditCompetitionScreen() {
       });
       const urls = (competition as any).reglementImageUrls;
       setReglementImageUrls(Array.isArray(urls) ? urls : ((competition as any).reglementImageUrl ? [(competition as any).reglementImageUrl] : []));
+      setCoverImageUrl((competition as any).coverImageUrl || null);
     }
   }, [competition]);
 
@@ -269,6 +272,46 @@ export default function EditCompetitionScreen() {
       Alert.alert('Erreur', msg);
     },
   });
+
+  const deleteCompetitionMutation = useMutation({
+    mutationFn: () => adminService.deleteCompetition(competitionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-competitions'] });
+      queryClient.invalidateQueries({ queryKey: ['competitions'] });
+      Alert.alert('Succès', 'Compétition supprimée.', [
+        {
+          text: 'OK',
+          onPress: () =>
+            (navigation as any).reset({
+              index: 1,
+              routes: [{ name: 'MainTabs' }, { name: 'AdminDashboard' }],
+            }),
+        },
+      ]);
+    },
+    onError: (error: any) => {
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Impossible de supprimer la compétition.';
+      Alert.alert('Suppression impossible', msg);
+    },
+  });
+
+  const confirmDeleteCompetition = () => {
+    Alert.alert(
+      'Supprimer la compétition',
+      'Supprimer définitivement cette compétition ? Impossible s’il reste des équipes inscrites.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => deleteCompetitionMutation.mutate(),
+        },
+      ]
+    );
+  };
 
   const createPerimeterMutation = useMutation({
     mutationFn: (payload: { coordinates: number[][]; name?: string }) =>
@@ -527,16 +570,11 @@ export default function EditCompetitionScreen() {
 
   const openZoneModal = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission requise', 'Autorisez l\'accès à la position pour définir une zone.');
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({});
+      const loc = await getPreciseGpsPosition();
       setMapRegion({
         ...mapRegion,
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
       });
     } catch (_) {}
     setZonePoints([]);
@@ -604,6 +642,69 @@ export default function EditCompetitionScreen() {
               onChangeText={(t) => setFormData({ ...formData, name: t })}
               placeholder="Nom de la compétition"
             />
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Jaquette (optionnel)</Text>
+            <Text style={styles.helpText}>Image jpg, png ou webp à côté du titre dans la liste. Pas de PDF.</Text>
+            {coverImageUrl ? (
+              <Image source={{ uri: coverImageUrl }} style={{ width: 80, height: 80, borderRadius: 8, marginVertical: 8 }} />
+            ) : null}
+            {coverImageUrl ? (
+              <TouchableOpacity
+                style={[styles.deleteButton, { marginBottom: 8 }]}
+                onPress={async () => {
+                  try {
+                    await adminService.deleteCoverImage(competitionId);
+                    setCoverImageUrl(null);
+                    queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+                    queryClient.invalidateQueries({ queryKey: ['competitions'] });
+                  } catch (err: any) {
+                    Alert.alert('Erreur', err.response?.data?.message || 'Erreur suppression jaquette');
+                  }
+                }}
+              >
+                <Text style={styles.deleteButtonText}>Supprimer la jaquette</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.addZoneButton}
+              disabled={coverUploading}
+              onPress={async () => {
+                try {
+                  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (status !== 'granted') {
+                    Alert.alert('Permission requise', 'Autorisez l\'accès à la galerie pour importer une image.');
+                    return;
+                  }
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.9,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    setCoverUploading(true);
+                    const res = await adminService.uploadCoverImage(
+                      competitionId,
+                      result.assets[0].uri,
+                      result.assets[0].mimeType || 'image/jpeg'
+                    );
+                    setCoverImageUrl(res.coverImageUrl || null);
+                    queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
+                    queryClient.invalidateQueries({ queryKey: ['competitions'] });
+                  }
+                } catch (err: any) {
+                  Alert.alert('Erreur', err.response?.data?.message || 'Erreur lors de l\'upload');
+                } finally {
+                  setCoverUploading(false);
+                }
+              }}
+            >
+              <Text style={styles.addZoneButtonText}>
+                {coverUploading ? 'Upload en cours...' : (coverImageUrl ? 'Changer la jaquette' : 'Choisir une jaquette')}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
@@ -863,9 +964,8 @@ export default function EditCompetitionScreen() {
 
           {/* Espèces */}
           <View style={styles.section}>
-            <View style={styles.speciesHeader}>
-              <Text style={styles.label}>Espèces de la compétition *</Text>
-              <View style={styles.speciesHeaderButtons}>
+            <Text style={styles.label}>Espèces de la compétition *</Text>
+            <View style={styles.speciesHeaderButtons}>
                 <TouchableOpacity
                   style={styles.newSpeciesButton}
                   onPress={() => setShowCreateSpeciesModal(true)}
@@ -879,7 +979,6 @@ export default function EditCompetitionScreen() {
                 >
                   <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
                 </TouchableOpacity>
-              </View>
             </View>
             <Text style={styles.helpText}>
               Coefficients et quotas par espèce ; avec le bonus quota activé, chaque quota doit avoir son propre montant de bonus (points).
@@ -977,12 +1076,10 @@ export default function EditCompetitionScreen() {
 
           {/* Pauses programmées */}
           <View style={styles.section}>
-            <View style={styles.speciesHeader}>
-              <Text style={styles.label}>Pauses programmées</Text>
-              <TouchableOpacity style={styles.addSpeciesButton} onPress={openNewPauseModal}>
-                <Text style={styles.addSpeciesButtonText}>+ Pause</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.label}>Pauses programmées</Text>
+            <TouchableOpacity style={[styles.addSpeciesButton, styles.pauseAddButton]} onPress={openNewPauseModal}>
+              <Text style={styles.addSpeciesButtonText}>+ Pause</Text>
+            </TouchableOpacity>
             <Text style={styles.helpText}>
               Créneaux pendant lesquels la compétition sera en pause automatique. Les enregistrements sont appliqués immédiatement.
             </Text>
@@ -1052,9 +1149,20 @@ export default function EditCompetitionScreen() {
           <TouchableOpacity
             style={[styles.submitButton, updateMutation.isPending && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || deleteCompetitionMutation.isPending}
           >
             {updateMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Enregistrer</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.deleteCompetitionButton, deleteCompetitionMutation.isPending && styles.submitButtonDisabled]}
+            onPress={confirmDeleteCompetition}
+            disabled={updateMutation.isPending || deleteCompetitionMutation.isPending}
+          >
+            {deleteCompetitionMutation.isPending ? (
+              <ActivityIndicator color="#b91c1c" />
+            ) : (
+              <Text style={styles.deleteCompetitionButtonText}>Supprimer la compétition</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
 
@@ -1324,6 +1432,17 @@ const styles = StyleSheet.create({
   submitButton: { backgroundColor: '#007AFF', borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 24 },
   submitButtonDisabled: { opacity: 0.6 },
   submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  deleteCompetitionButton: {
+    marginTop: 12,
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+  },
+  deleteCompetitionButtonText: { color: '#b91c1c', fontSize: 16, fontWeight: '600' },
   modalContainer: { flex: 1, padding: 16, paddingTop: 48 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   modalTitle: { fontSize: 18, fontWeight: '600' },
@@ -1382,21 +1501,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  speciesHeaderButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  speciesHeaderButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 8,
+  },
   newSpeciesButton: {
     backgroundColor: '#34C759',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 6,
+    alignItems: 'center',
   },
   newSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   addSpeciesButton: {
     backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 6,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
-  addSpeciesButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  addSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  pauseAddButton: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
   speciesItem: {
     backgroundColor: '#fff',
     borderWidth: 1,

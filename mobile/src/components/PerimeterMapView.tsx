@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import MapView, { Polygon } from 'react-native-maps';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import MapView, { Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
 
 interface Perimeter {
   id: number;
@@ -60,7 +60,14 @@ export default function PerimeterMapView({ perimeters, height = 250 }: Perimeter
 
       {expanded && (
         <View style={[styles.mapWrapper, { height }]}>
-          <MapView style={styles.map} initialRegion={region} mapType="standard">
+          <MapView
+            style={styles.map}
+            initialRegion={region}
+            mapType="standard"
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            pitchEnabled={false}
+            rotateEnabled={false}
+          >
             {perimeters.map((perimeter, index) => {
               const coords = perimeter.coordinates.map((c) => ({
                 latitude: c[0],
@@ -111,5 +118,15 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
     width: '100%',
+  },
+  mapPlaceholder: {
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: '#f3f4f6',
+  },
+  placeholderText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

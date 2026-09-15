@@ -50,6 +50,12 @@ class Competition
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $reglementImagePaths = null;
 
+    /**
+     * Jaquette affichée dans les listes (jpg/png/webp). Chemin relatif, ex. covers/xxx.jpg.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $coverImagePath = null;
+
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isRankingPublic = false;
 
@@ -271,6 +277,17 @@ class Competition
             array_splice($paths, $index, 1);
             $this->reglementImagePaths = empty($paths) ? null : array_values($paths);
         }
+        return $this;
+    }
+
+    public function getCoverImagePath(): ?string
+    {
+        return $this->coverImagePath;
+    }
+
+    public function setCoverImagePath(?string $coverImagePath): self
+    {
+        $this->coverImagePath = $coverImagePath;
         return $this;
     }
 

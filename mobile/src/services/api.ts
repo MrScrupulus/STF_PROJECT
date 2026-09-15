@@ -54,6 +54,15 @@ apiClient.interceptors.request.use(
     } else {
       delete config.headers.Authorization;
     }
+    const data = config.data as unknown;
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      const headers = config.headers as { delete?: (k: string) => void };
+      if (typeof headers.delete === 'function') {
+        headers.delete('Content-Type');
+      } else {
+        delete (config.headers as Record<string, unknown>)['Content-Type'];
+      }
+    }
     return config;
   },
   (error) => {

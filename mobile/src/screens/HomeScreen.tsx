@@ -11,7 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
+import { homeContent } from '../constants/homeContent';
+import FaIcon from '../components/FaIcon';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -41,167 +42,78 @@ export default function HomeScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.headerSection}>
-            <Text style={styles.title}>Street Fishing</Text>
-            <Text style={styles.subtitle}>L'application de compétition de pêche urbaine</Text>
+            <Text style={styles.title}>{homeContent.title}</Text>
+            <Text style={styles.subtitle}>{homeContent.subtitle}</Text>
           </View>
 
           <View style={styles.descriptionSection}>
-            <Text style={styles.descriptionTitle}>À propos de l'application</Text>
-            <Text style={styles.description}>
-              Street Fishing est une application dédiée aux compétitions de pêche urbaine. 
-              Participez à des compétitions, enregistrez vos prises, formez des équipes et 
-              suivez vos statistiques en temps réel.
-            </Text>
+            <Text style={styles.descriptionTitle}>{homeContent.aboutTitle}</Text>
+            <Text style={styles.description}>{homeContent.about}</Text>
           </View>
 
           <View style={styles.featuresSection}>
-            <Text style={styles.featuresTitle}>Fonctionnalités principales</Text>
-            
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>🏆</Text>
+            <Text style={styles.featuresTitle}>{homeContent.featuresTitle}</Text>
+            {homeContent.features.map((feature) => (
+            <View key={feature.title} style={styles.featureCard}>
+            <View style={styles.featureIcon}>
+              <FaIcon name={feature.icon} size={28} color="#007AFF" />
+            </View>
               <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>Compétitions</Text>
-                <Text style={styles.featureDescription}>
-                  Consultez les compétitions en cours, à venir ou terminées. 
-                  Inscrivez-vous avec votre équipe et suivez le classement en direct.
-                </Text>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                <Text style={styles.featureDescription}>{feature.description}</Text>
               </View>
             </View>
-
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>📷</Text>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>Enregistrement de prises</Text>
-                <Text style={styles.featureDescription}>
-                  Photographiez et enregistrez vos prises directement depuis l'application. 
-                  Géolocalisation automatique et validation par les administrateurs.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>👥</Text>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>Gestion d'équipe</Text>
-                <Text style={styles.featureDescription}>
-                  Créez ou rejoignez une équipe, invitez vos amis et participez ensemble 
-                  aux compétitions. Suivez les performances de votre équipe.
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.featureCard}>
-              <Text style={styles.featureIcon}>📊</Text>
-              <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>Statistiques</Text>
-                <Text style={styles.featureDescription}>
-                  Consultez votre historique de prises, le nombre de compétitions auxquelles 
-                  vous avez participé et vos statistiques par espèce de poisson.
-                </Text>
-              </View>
-            </View>
+            ))}
           </View>
 
-          {/* Section Tutoriel */}
           <View style={styles.tutorialSection}>
-            <Text style={styles.tutorialTitle}>📚 Guide rapide</Text>
-            
-            {/* Tutoriel : Saisie de prise */}
+            <Text style={styles.tutorialTitle}>{homeContent.tutorialTitle}</Text>
             <View style={styles.tutorialCard}>
               <View style={styles.tutorialHeader}>
-                <Text style={styles.tutorialIcon}>📷</Text>
-                <Text style={styles.tutorialCardTitle}>Comment enregistrer une prise ?</Text>
+                <FaIcon name="camera" size={24} color="#007AFF" />
+                <Text style={styles.tutorialCardTitle}>{homeContent.catchTutorialTitle}</Text>
               </View>
               <View style={styles.tutorialSteps}>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>1</Text>
-                  <Text style={styles.stepText}>Cliquez sur le bouton central bleu (📷) en bas de l'écran</Text>
+                {homeContent.catchTutorialSteps.map((text, index) => (
+                <View key={text} style={styles.step}>
+                  <Text style={styles.stepNumber}>{index + 1}</Text>
+                  <Text style={styles.stepText}>{text}</Text>
                 </View>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>2</Text>
-                  <Text style={styles.stepText}>Prenez une photo de votre prise ou sélectionnez une photo existante</Text>
-                </View>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>3</Text>
-                  <Text style={styles.stepText}>Sélectionnez l'espèce de poisson capturé</Text>
-                </View>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>4</Text>
-                  <Text style={styles.stepText}>Indiquez la taille (en cm) et ajoutez un commentaire si vous le souhaitez</Text>
-                </View>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>5</Text>
-                  <Text style={styles.stepText}>Si vous participez à une compétition, sélectionnez-la ainsi que votre équipe</Text>
-                </View>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>6</Text>
-                  <Text style={styles.stepText}>Autorisez la géolocalisation pour valider votre position</Text>
-                </View>
-                <View style={styles.step}>
-                  <Text style={styles.stepNumber}>7</Text>
-                  <Text style={styles.stepText}>Validez ! Votre prise sera soumise à validation par un administrateur</Text>
-                </View>
+                ))}
               </View>
               {isAuthenticated && (
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => (navigation as any).navigate('AddCatch')}
                 >
-                  <Text style={styles.actionButtonText}>Ajouter une prise maintenant</Text>
+                  <Text style={styles.actionButtonText}>{homeContent.catchTutorialButton}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Tutoriel : Création de compétition (admin seulement) */}
             {isAuthenticated && isAdmin && (
               <View style={styles.tutorialCard}>
                 <View style={styles.tutorialHeader}>
-                  <Text style={styles.tutorialIcon}>🏆</Text>
-                  <Text style={styles.tutorialCardTitle}>Comment créer une compétition ?</Text>
-                  <Text style={styles.adminBadge}>Admin uniquement</Text>
+                  <FaIcon name="trophy" size={24} color="#007AFF" />
+                  <Text style={styles.tutorialCardTitle}>{homeContent.competitionTutorialTitle}</Text>
+                  <Text style={styles.adminBadge}>{homeContent.adminBadge}</Text>
                 </View>
                 <View style={styles.tutorialSteps}>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>1</Text>
-                    <Text style={styles.stepText}>Accédez au Dashboard Admin depuis le menu burger (☰)</Text>
+                  {homeContent.competitionTutorialSteps.map((text, index) => (
+                  <View key={text} style={styles.step}>
+                    <Text style={styles.stepNumber}>{index + 1}</Text>
+                    <Text style={styles.stepText}>{text}</Text>
                   </View>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>2</Text>
-                    <Text style={styles.stepText}>Cliquez sur "Créer une compétition"</Text>
-                  </View>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>3</Text>
-                    <Text style={styles.stepText}>Remplissez les informations : nom, dates de début et fin, taille d'équipe</Text>
-                  </View>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>4</Text>
-                    <Text style={styles.stepText}>Ajoutez les espèces autorisées avec leurs coefficients de points</Text>
-                  </View>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>5</Text>
-                    <Text style={styles.stepText}>Configurez les options : nombre max de participants, classement public, bonus</Text>
-                  </View>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>6</Text>
-                    <Text style={styles.stepText}>Ajoutez une description pour expliquer les règles de la compétition</Text>
-                  </View>
-                  <View style={styles.step}>
-                    <Text style={styles.stepNumber}>7</Text>
-                    <Text style={styles.stepText}>Validez la création. La compétition apparaîtra dans la liste des compétitions</Text>
-                  </View>
+                  ))}
                 </View>
               </View>
             )}
           </View>
 
           <View style={styles.footerSection}>
-            <Text style={styles.footerText}>
-              Utilisez la barre de navigation en bas pour accéder rapidement aux compétitions 
-              et à votre équipe. Le bouton central permet d'ajouter une prise rapidement.
-            </Text>
+            <Text style={styles.footerText}>{homeContent.footer}</Text>
           </View>
         </View>
-        <Footer />
       </ScrollView>
     </>
   );
@@ -255,6 +167,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     flexWrap: 'wrap',
+    gap: 8,
   },
   tutorialIcon: {
     fontSize: 28,
@@ -362,8 +275,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   featureIcon: {
-    fontSize: 32,
+    width: 40,
     marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   featureContent: {
     flex: 1,

@@ -11,9 +11,8 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
 import { authService, LoginCredentials } from '../services/authService';
+import FaIcon from '../components/FaIcon';
 
 export default function LoginScreen({ navigation, onLogin, route }: any) {
   // Pré-remplir l'email depuis les paramètres de route (après vérification d'email)
@@ -109,11 +108,7 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
               style={styles.eyeIcon}
               onPress={() => setShowPassword(!showPassword)}
             >
-              <FontAwesome
-                name={showPassword ? 'eye-slash' : 'eye'}
-                size={20}
-                color="#666"
-              />
+              <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
             </TouchableOpacity>
           </View>
 

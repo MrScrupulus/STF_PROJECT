@@ -9,19 +9,15 @@
 // Ou utiliser un tunnel: EXPO_PUBLIC_API_URL=https://votre-tunnel.ngrok.io
 
 const getApiBaseUrl = () => {
-  // Priorité 1: Variable d'environnement (pour tester depuis un autre réseau)
+  // Priorité 1: Variable d'environnement (EAS, .env, ou test hors LAN)
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
   if (__DEV__) {
-    // En développement
-    // Android émulateur: 10.0.2.2
-    // iOS simulateur: localhost
-    // Device physique: IP de votre machine
-    // return 'http://10.0.2.2:8001'; // Pour Android émulateur
-    // return 'http://localhost:8001'; // Pour iOS simulateur
-    return 'http://192.168.1.129:8001'; // Pour device physique (IP de votre machine)
+    // Device sur le même Wi-Fi que le PC. Hors LAN → définir EXPO_PUBLIC_API_URL=https://api.scrupy.com
+    // Ngrok (--tunnel) ne sert qu'à charger le JS Expo, pas l'API.
+    return 'http://192.168.1.129:8001';
   }
   return 'https://api.scrupy.com';
 };

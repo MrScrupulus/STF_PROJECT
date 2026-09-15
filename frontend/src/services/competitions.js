@@ -32,6 +32,15 @@ export const competitionsService = {
   deleteReglementImage: (id, index) =>
     api.delete(`/api/admin/competitions/${id}/reglement-image/${index}`),
 
+  uploadCoverImage: async (id, file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    return api.uploadFile(`/api/admin/competitions/${id}/cover-image`, formData);
+  },
+
+  deleteCoverImage: (id) =>
+    api.delete(`/api/admin/competitions/${id}/cover-image`),
+
   delete: (id) => api.delete(`/api/admin/competitions/${id}`),
 
   start: (id) => api.put(ENDPOINTS.competitions.start(id), {}),

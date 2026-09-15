@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getSpeciesColor, getPinColorForAndroid } from '../../utils/speciesColors';
 
 const PIN_SIZE = 14;
@@ -70,10 +70,14 @@ export default function CatchesMapView({
       <Text style={styles.title}>
         🗺️ Carte des prises ({withCoords.length} localisation{withCoords.length > 1 ? 's' : ''})
       </Text>
+      <View style={[styles.mapWrap, { height: mapHeight }]} collapsable={false}>
       <MapView
-        style={[styles.map, { height: mapHeight }]}
+        style={styles.map}
         initialRegion={region}
         mapType="standard"
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        pitchEnabled={false}
+        rotateEnabled={false}
       >
         {withCoords.map((c, idx) => {
           const color = getSpeciesColor(c.species?.id, speciesStats);
@@ -116,6 +120,7 @@ export default function CatchesMapView({
           );
         })}
       </MapView>
+      </View>
     </View>
   );
 }
@@ -131,9 +136,21 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 12,
   },
-  map: {
+  mapWrap: {
     width: '100%',
     borderRadius: 8,
+    overflow: 'hidden',
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  mapPlaceholder: {
+    width: '100%',
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
   },
   pin: {
     borderWidth: 1.5,

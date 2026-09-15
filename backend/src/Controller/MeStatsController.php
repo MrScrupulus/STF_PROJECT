@@ -45,9 +45,6 @@ class MeStatsController extends AbstractController
 
             foreach ($catches as $catch) {
                 $competition = $catch->getCompetition();
-                if (!$competition) {
-                    continue;
-                }
 
                 $points = $catch->calculatePoints();
                 $totalPoints += $points;
@@ -68,15 +65,16 @@ class MeStatsController extends AbstractController
                 $speciesStats[$speciesId]['points'] += $points;
 
                 $createdAt = $catch->getCreatedAt()->format('Y-m-d H:i:s');
+                $competitionPayload = $competition ? [
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                ] : null;
                 $timeline[] = [
                     'id' => $catch->getId(),
                     'createdAt' => $createdAt,
                     'points' => $points,
                     'cumulativePoints' => $cumulative,
-                    'competition' => [
-                        'id' => $competition->getId(),
-                        'name' => $competition->getName(),
-                    ],
+                    'competition' => $competitionPayload,
                     'species' => [
                         'id' => $speciesId,
                         'name' => $species->getName(),
@@ -99,10 +97,7 @@ class MeStatsController extends AbstractController
                         'createdAt' => $createdAt,
                         'latitude' => $catch->getLatitude(),
                         'longitude' => $catch->getLongitude(),
-                        'competition' => [
-                            'id' => $competition->getId(),
-                            'name' => $competition->getName(),
-                        ],
+                        'competition' => $competitionPayload,
                     ];
                 }
             }
@@ -111,7 +106,7 @@ class MeStatsController extends AbstractController
                 'success' => true,
                 'stats' => [
                     'scope' => 'official_validated_global',
-                    'description' => 'Toutes vos prises validées (caughtBy), toutes compétitions. Coefficients selon chaque compétition.',
+                    'description' => 'Toutes vos prises validées (caughtBy), journal personnel inclus. Coefficients selon chaque compétition.',
                     'totalCatches' => \count($catches),
                     'totalPoints' => $totalPoints,
                     'speciesStats' => array_values($speciesStats),

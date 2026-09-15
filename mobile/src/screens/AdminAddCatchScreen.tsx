@@ -19,6 +19,8 @@ import { competitionsService } from '../services/competitionsService';
 import { speciesService } from '../services/speciesService';
 import { teamService } from '../services/teamService';
 import { savePhotoToGallery } from '../utils/savePhotoToGallery';
+import { captureJpegFromCamera } from '../utils/deviceCapture';
+import { uriToJpegDataUrl } from '../utils/imageUpload';
 import {
   fishSizeKeyboardType,
   parseFishSizeCm,
@@ -79,18 +81,6 @@ export default function AdminAddCatchScreen() {
     enabled: !!selectedTeam,
   });
 
-  // Demander les permissions pour la caméra
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== 'web') {
-        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
-        if (cameraStatus.status !== 'granted') {
-          console.log('Permission caméra refusée');
-        }
-      }
-    })();
-  }, []);
-
   // Réinitialiser les sélections quand la compétition change
   useEffect(() => {
     if (selectedCompetition) {
@@ -110,21 +100,17 @@ export default function AdminAddCatchScreen() {
   // Prendre une photo avec la caméra
   const takePhoto = async () => {
     try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const base64Image = `data:image/jpeg;base64,${asset.base64}`;
-        setPhoto(base64Image);
-        await savePhotoToGallery(asset.uri);
+      const captured = await captureJpegFromCamera();
+      if (captured) {
+        setPhoto(captured.dataUrl);
+        void savePhotoToGallery(captured.uri);
       }
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de prendre la photo');
+      console.error('Erreur caméra:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d’ouvrir l’appareil photo. Vérifiez la permission Caméra dans les paramètres Android.'
+      );
     }
   };
 
@@ -132,15 +118,15 @@ export default function AdminAddCatchScreen() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-        base64: true,
+        mediaTypes: ['images'],
+        allowsEditing: Platform.OS === 'ios',
+        quality: 0.7,
+        base64: false,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        setPhoto(base64Image);
+      if (!result.canceled && result.assets[0]?.uri) {
+        const dataUrl = await uriToJpegDataUrl(result.assets[0].uri);
+        setPhoto(dataUrl);
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de sélectionner la photo');

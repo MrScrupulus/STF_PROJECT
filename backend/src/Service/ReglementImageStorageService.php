@@ -18,29 +18,29 @@ final class ReglementImageStorageService
     /**
      * Sauvegarde une image de règlement et retourne le chemin relatif.
      */
-    public function save(UploadedFile|string $source): string
+    public function save(UploadedFile|string $source, string $subDir = self::SUB_DIR): string
     {
         if ($source instanceof UploadedFile) {
-            return $this->saveUploadedFile($source);
+            return $this->saveUploadedFile($source, $subDir);
         }
 
         if (\is_string($source) && preg_match('#^data:image/(\w+);base64,([\s\S]+)$#', trim($source), $m)) {
-            return $this->saveBase64($m[1], $m[2]);
+            return $this->saveBase64($m[1], $m[2], $subDir);
         }
 
         throw new \InvalidArgumentException('Source must be UploadedFile or base64 data URL');
     }
 
-    private function saveUploadedFile(UploadedFile $file): string
+    private function saveUploadedFile(UploadedFile $file, string $subDir): string
     {
         $extension = $file->guessExtension() ?: 'jpg';
         if (!\in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'webp'], true)) {
             $extension = 'jpg';
         }
-        return $this->writeFile($file->getPathname(), $extension);
+        return $this->writeFile($file->getPathname(), $extension, $subDir);
     }
 
-    private function saveBase64(string $format, string $base64Data): string
+    private function saveBase64(string $format, string $base64Data, string $subDir): string
     {
         $extension = match (strtolower($format)) {
             'jpeg', 'jpg' => 'jpg',
@@ -55,15 +55,16 @@ final class ReglementImageStorageService
         $tmpFile = tempnam(sys_get_temp_dir(), 'reglement_');
         file_put_contents($tmpFile, $binary);
         try {
-            return $this->writeFile($tmpFile, $extension);
+            return $this->writeFile($tmpFile, $extension, $subDir);
         } finally {
             @unlink($tmpFile);
         }
     }
 
-    private function writeFile(string $sourcePath, string $extension): string
+    private function writeFile(string $sourcePath, string $extension, string $subDir = self::SUB_DIR): string
     {
-        $fullDir = rtrim($this->uploadsPath, '/') . '/' . self::SUB_DIR;
+        $subDir = trim($subDir, '/');
+        $fullDir = rtrim($this->uploadsPath, '/') . '/' . $subDir;
 
         if (!is_dir($fullDir) && !mkdir($fullDir, 0755, true)) {
             throw new \RuntimeException(sprintf('Unable to create directory: %s', $fullDir));
@@ -76,7 +77,7 @@ final class ReglementImageStorageService
             throw new \RuntimeException(sprintf('Unable to save file to: %s', $targetPath));
         }
 
-        return self::SUB_DIR . '/' . $filename;
+        return $subDir . '/' . $filename;
     }
 
     public function getPublicUrl(string $relativePath): string

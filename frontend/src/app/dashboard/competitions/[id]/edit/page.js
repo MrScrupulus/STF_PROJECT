@@ -36,6 +36,9 @@ export default function EditCompetition() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [reglementImageUrls, setReglementImageUrls] = useState([]);
   const [reglementImageUploading, setReglementImageUploading] = useState(false);
+  const [coverImageUrl, setCoverImageUrl] = useState(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchCompetition = async () => {
@@ -85,6 +88,7 @@ export default function EditCompetition() {
           quotaBonusEnabled: compData.quotaBonusEnabled || false,
         });
         setReglementImageUrls(Array.isArray(compData.reglementImageUrls) ? compData.reglementImageUrls : (compData.reglementImageUrl ? [compData.reglementImageUrl] : []));
+        setCoverImageUrl(compData.coverImageUrl || null);
       } catch (error) {
         console.error("Error fetching competition:", error);
         setError("Erreur lors du chargement de la compétition");
@@ -143,6 +147,23 @@ export default function EditCompetition() {
     }
   };
 
+  const handleDeleteCompetition = async () => {
+    const ok = window.confirm(
+      "Supprimer définitivement cette compétition ? Impossible s’il reste des équipes inscrites."
+    );
+    if (!ok) return;
+    setIsDeleting(true);
+    setError("");
+    try {
+      await competitionsService.delete(competitionId);
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(err.message || "Impossible de supprimer la compétition");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoadingData) {
     return (
       <ProtectedRoute requiredRole="ROLE_ADMIN">
@@ -177,6 +198,56 @@ export default function EditCompetition() {
               className={styles["competition-create__input"]}
               required
             />
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <label className={styles["competition-create__label"]}>Jaquette (optionnel)</label>
+            <p className={styles["competition-create__help_text"]}>
+              Image jpg, png ou webp affichée à côté du titre dans la liste. Pas de PDF.
+            </p>
+            {coverImageUrl && (
+              <div style={{ marginBottom: "0.75rem" }}>
+                <img
+                  src={coverImageUrl}
+                  alt="Jaquette"
+                  style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8 }}
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await competitionsService.deleteCoverImage(competitionId);
+                      setCoverImageUrl(null);
+                    } catch (err) {
+                      setError(err.message || "Erreur suppression jaquette");
+                    }
+                  }}
+                  style={{ display: "block", marginTop: 8 }}
+                >
+                  Supprimer la jaquette
+                </button>
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={coverUploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setCoverUploading(true);
+                try {
+                  const res = await competitionsService.uploadCoverImage(competitionId, file);
+                  setCoverImageUrl(res.coverImageUrl || null);
+                } catch (err) {
+                  setError(err.message || "Erreur upload jaquette");
+                } finally {
+                  setCoverUploading(false);
+                  e.target.value = "";
+                }
+              }}
+            />
+            {coverUploading && <p className={styles["competition-create__help_text"]}>Upload en cours…</p>}
           </div>
 
           <div className={styles["competition-create__grid"]}>
@@ -477,16 +548,24 @@ export default function EditCompetition() {
           <div className={styles["competition-create__actions"]}>
             <button
               type="button"
+              onClick={handleDeleteCompetition}
+              className={`${styles["competition-create__button"]} ${styles["competition-create__button--delete"]}`}
+              disabled={isLoading || isDeleting}
+            >
+              {isDeleting ? "Suppression..." : "Supprimer la compétition"}
+            </button>
+            <button
+              type="button"
               onClick={() => router.push("/dashboard")}
               className={`${styles["competition-create__button"]} ${styles["competition-create__button--cancel"]}`}
-              disabled={isLoading}
+              disabled={isLoading || isDeleting}
             >
               Annuler
             </button>
             <button
               type="submit"
               className={`${styles["competition-create__button"]} ${styles["competition-create__button--submit"]}`}
-              disabled={isLoading}
+              disabled={isLoading || isDeleting}
             >
               {isLoading ? "Mise à jour..." : "Enregistrer les modifications"}
             </button>

@@ -7,11 +7,14 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import { rootNavigationRef } from '../navigation/rootNavigationRef';
+import FaIcon, { type AppIconName } from './FaIcon';
 
 interface HeaderProps {
   title?: string;
@@ -48,21 +51,23 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
   }, [isAuthenticated]);
 
   // Menu items selon l'état d'authentification (Profil en premier pour ergonomie)
-  const menuItems = isAuthenticated
+  const menuItems: { name: string; label: string; icon: AppIconName }[] = isAuthenticated
     ? [
-        { name: 'Profile', label: 'Mon compte', icon: '👤' },
-        { name: 'Home', label: 'Accueil', icon: '🏠' },
-        { name: 'History', label: 'Historique & prises', icon: '📜' },
-        { name: 'Notifications', label: 'Notifications', icon: '🔔' },
-        { name: 'Invitations', label: 'Mes Invitations', icon: '✉️' },
-        ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: '⚙️' }] : []),
-        { name: 'LegalNotice', label: 'Mentions légales', icon: '📄' },
+        { name: 'Home', label: 'Accueil', icon: 'home' },
+        { name: 'Profile', label: 'Mon compte', icon: 'user' },
+        { name: 'Competitions', label: 'Compétitions', icon: 'trophy' },
+        { name: 'History', label: 'Historique & prises', icon: 'history' },
+        { name: 'Notifications', label: 'Notifications', icon: 'bell' },
+        { name: 'Invitations', label: 'Mes Invitations', icon: 'envelope' },
+        { name: 'Settings', label: 'Réglages', icon: 'gear' },
+        ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: 'key' as const }] : []),
+        { name: 'LegalNotice', label: 'Mentions légales', icon: 'file' },
       ]
     : [
-        { name: 'Home', label: 'Accueil', icon: '🏠' },
-        { name: 'Login', label: 'Connexion', icon: '🔐' },
-        { name: 'Register', label: 'Inscription', icon: '📝' },
-        { name: 'LegalNotice', label: 'Mentions légales', icon: '📄' },
+        { name: 'Home', label: 'Accueil', icon: 'home' },
+        { name: 'Login', label: 'Connexion', icon: 'key' },
+        { name: 'Register', label: 'Inscription', icon: 'register' },
+        { name: 'LegalNotice', label: 'Mentions légales', icon: 'file' },
       ];
 
   const handleProfilePress = () => {
@@ -75,30 +80,25 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
 
   const handleMenuPress = (screenName: string) => {
     setMenuVisible(false);
-    if (route.name !== screenName) {
-      // Si on navigue vers Home, Competitions ou Teams, naviguer dans le Tab Navigator
-      if (screenName === 'Profile' || screenName === 'Home' || screenName === 'Competitions' || screenName === 'Teams') {
-        // Obtenir le navigateur parent (Stack) et naviguer vers MainTabs avec l'écran spécifique
-        const parent = navigation.getParent();
-        if (parent && screenName !== 'Profile') {
-          // Naviguer vers MainTabs, puis vers l'écran spécifique dans les tabs
-          // @ts-ignore - nested navigation typing
-          parent.navigate('MainTabs', {
-            screen: screenName,
-          });
-        } else {
-          // Profile et autres écrans : navigation normale
-          navigation.navigate(screenName as never);
-        }
-      } else {
-        if (screenName === 'History') {
-          // @ts-ignore
-          navigation.navigate('History', { initialTab: 'catches' });
-        } else {
-          navigation.navigate(screenName as never);
-        }
+    const go = (name: string, params?: object) => {
+      if (rootNavigationRef.isReady()) {
+        // @ts-ignore
+        rootNavigationRef.navigate(name, params);
+        return;
       }
+      // @ts-ignore
+      navigation.navigate(name, params);
+    };
+
+    if (screenName === 'Home' || screenName === 'Competitions' || screenName === 'Teams') {
+      go('MainTabs', { screen: screenName });
+      return;
     }
+    if (screenName === 'History') {
+      go('History', { initialTab: 'catches' });
+      return;
+    }
+    go(screenName);
   };
 
   const queryClient = useQueryClient();
@@ -125,25 +125,46 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <FaIcon name="back" size={20} color="#007AFF" />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => {
-              // Si on ne peut pas revenir, naviguer vers Home
               const parent = navigation.getParent();
               if (parent) {
-                // @ts-ignore - nested navigation typing
+                // @ts-ignore
                 parent.navigate('MainTabs', { screen: 'Home' });
+              } else if (rootNavigationRef.isReady()) {
+                // @ts-ignore
+                rootNavigationRef.navigate('MainTabs', { screen: 'Home' });
               } else {
                 navigation.navigate('Home' as never);
               }
             }}
           >
-            <Text style={[styles.backIcon, styles.backIconDisabled]}>←</Text>
+            <View style={styles.backIconDisabled}>
+              <FaIcon name="back" size={20} color="#007AFF" />
+            </View>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity
+          style={styles.logoButton}
+          onPress={() => {
+            if (rootNavigationRef.isReady()) {
+              // @ts-ignore
+              rootNavigationRef.navigate('MainTabs', { screen: 'Home' });
+            }
+          }}
+          accessibilityLabel="Accueil"
+        >
+          <Image
+            source={require('../../assets/logo-black.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
 
         {/* Titre au centre */}
         <View style={styles.titleContainer}>
@@ -159,7 +180,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
               style={styles.menuButton}
               onPress={() => setMenuVisible(true)}
             >
-              <Text style={styles.menuIcon}>☰</Text>
+              <FaIcon name="menu" size={22} color="#333" />
             </TouchableOpacity>
           )}
           {showProfile ? (
@@ -167,7 +188,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              <Text style={styles.profileIcon}>👤</Text>
+              <FaIcon name="user" size={22} color="#007AFF" />
             </TouchableOpacity>
           ) : showMenu ? null : (
             <View style={styles.placeholder} />
@@ -190,7 +211,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                 style={styles.closeButton}
                 onPress={() => setMenuVisible(false)}
               >
-                <Text style={styles.closeIcon}>✕</Text>
+                <FaIcon name="close" size={22} color="#666" />
               </TouchableOpacity>
             </View>
 
@@ -204,7 +225,13 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                   ]}
                   onPress={() => handleMenuPress(item.name)}
                 >
-                  <Text style={styles.menuItemIcon}>{item.icon}</Text>
+                <View style={styles.menuItemIcon}>
+                  <FaIcon
+                    name={item.icon}
+                    size={20}
+                    color={route.name === item.name ? '#007AFF' : '#333'}
+                  />
+                </View>
                   <Text
                     style={[
                       styles.menuItemText,
@@ -222,7 +249,9 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                   style={[styles.menuItem, styles.logoutItem]}
                   onPress={handleLogout}
                 >
-                  <Text style={styles.menuItemIcon}>🚪</Text>
+                <View style={styles.menuItemIcon}>
+                  <FaIcon name="logout" size={20} color="#dc3545" />
+                </View>
                   <Text style={[styles.menuItemText, styles.logoutText]}>
                     Déconnexion
                   </Text>
@@ -269,6 +298,19 @@ const styles = StyleSheet.create({
   },
   backIconDisabled: {
     opacity: 0.5,
+  },
+  logoButton: {
+    width: 40,
+    height: 40,
+    marginLeft: 6,
+    marginRight: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
   },
   titleContainer: {
     flex: 1,
@@ -363,9 +405,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f7ff',
   },
   menuItemIcon: {
-    fontSize: 24,
     marginRight: 16,
     width: 32,
+    alignItems: 'center',
   },
   menuItemText: {
     fontSize: 16,

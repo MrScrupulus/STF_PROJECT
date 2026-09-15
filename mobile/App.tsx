@@ -1,10 +1,12 @@
 import { StatusBar } from 'expo-status-bar';
+import './src/icons';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { setAuthSessionExpiredHandler } from './src/utils/authSessionEvents';
 
@@ -36,6 +38,8 @@ import NotificationPreferencesScreen from './src/screens/NotificationPreferences
 import LegalNoticeScreen from './src/screens/LegalNoticeScreen';
 import NotificationInitializer from './src/components/NotificationInitializer';
 import GlobalBottomTabBar from './src/components/GlobalBottomTabBar';
+import Footer from './src/components/Footer';
+import SettingsScreen from './src/screens/SettingsScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainTabs from './src/navigation/MainTabs';
 import { rootNavigationRef } from './src/navigation/rootNavigationRef';
@@ -179,8 +183,10 @@ function AppNavigator() {
         if (state) setCurrentRoute(getActiveRouteName(state));
       }}
     >
+      <View style={styles.appShell}>
       <NotificationInitializer />
       <StatusBar style="auto" />
+      <View style={styles.stackArea}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
           <>
@@ -226,12 +232,16 @@ function AppNavigator() {
             <Stack.Screen name="CreateCompetition" component={CreateCompetitionScreen} />
             <Stack.Screen name="EditCompetition" component={EditCompetitionScreen} />
             <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="LegalNotice" component={LegalNoticeScreen} />
           </>
         )}
       </Stack.Navigator>
-      {/* Barre de navigation globale visible sur toutes les pages sauf Login et Register */}
+      </View>
+      {/* Barre de navigation puis bandeau copyright, visibles partout sauf Login/Register pour la barre */}
       <GlobalBottomTabBar navigationRef={rootNavigationRef} currentRoute={currentRoute} />
+      <Footer />
+      </View>
     </NavigationContainer>
   );
 }
@@ -248,4 +258,13 @@ export default function App() {
     </QueryClientProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  appShell: {
+    flex: 1,
+  },
+  stackArea: {
+    flex: 1,
+  },
+});
 

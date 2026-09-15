@@ -26,6 +26,7 @@ export interface Competition {
   isPaused?: boolean;
   description?: string;
   isRegistered?: boolean;
+  coverImageUrl?: string | null;
 }
 
 export interface Team {

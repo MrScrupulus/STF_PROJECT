@@ -14,7 +14,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
-import { FontAwesome } from '@expo/vector-icons';
+import FaIcon from '../components/FaIcon';
 
 export default function ResetPasswordScreen() {
   const navigation = useNavigation();
@@ -163,11 +163,7 @@ export default function ResetPasswordScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <FontAwesome
-                  name={showPassword ? 'eye-slash' : 'eye'}
-                  size={20}
-                  color="#666"
-                />
+                <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
             <Text style={styles.helperText}>
@@ -191,11 +187,7 @@ export default function ResetPasswordScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <FontAwesome
-                  name={showConfirmPassword ? 'eye-slash' : 'eye'}
-                  size={20}
-                  color="#666"
-                />
+                <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
 

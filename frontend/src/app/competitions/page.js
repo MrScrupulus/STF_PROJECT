@@ -227,23 +227,39 @@ function CompetitionsPageContent() {
           "div",
           {
             key: competition.id,
-            className: `${styles.competition__card} ${isEnded ? styles.competition__card_ended : ""}`,
+            className: `${styles.competitions__card} ${isEnded ? styles.competitions__card_ended : ""} ${competition.coverImageUrl ? styles.competitions__card_with_cover : ""}`,
           },
+          competition.coverImageUrl && createElement(
+            "div",
+            {
+              className: styles.competitions__cover_wrap,
+            },
+            createElement("img", {
+              src: competition.coverImageUrl,
+              alt: "",
+              className: styles.competitions__cover,
+            })
+          ),
           createElement(
             "div",
             {
-              className: styles.competition__header,
+              className: styles.competitions__body,
+            },
+          createElement(
+            "div",
+            {
+              className: styles.competitions__header,
             },
             createElement(
               Link,
               {
                 href: `/competitions/${competition.id}`,
-                className: styles.competition__link,
+                className: styles.competitions__link,
               },
               createElement(
                 "h3",
                 {
-                  className: styles.competition__name,
+                  className: styles.competitions__name,
                 },
                 competition.name
               )
@@ -279,7 +295,7 @@ function CompetitionsPageContent() {
           createElement(
             "div",
             {
-              className: styles.competition__details,
+              className: styles.competitions__details,
             },
             createElement(
               "div",
@@ -312,16 +328,17 @@ function CompetitionsPageContent() {
           competition.description && createElement(
             "div",
             {
-              className: styles.competition__description,
+              className: styles.competitions__description,
             },
             competition.description
           ),
           createElement(
             "div",
             {
-              className: styles.competition__info,
+              className: styles.competitions__info,
             },
             `Taille d'équipe: ${competition.teamSize} membre(s)`
+          )
           )
         );
       }),

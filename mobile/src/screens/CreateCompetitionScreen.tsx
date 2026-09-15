@@ -12,10 +12,12 @@ import {
   Platform,
   Switch,
   Modal,
+  Image,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
@@ -72,6 +74,7 @@ export default function CreateCompetitionScreen() {
   const [pauseModalVisible, setPauseModalVisible] = useState(false);
   const [pauseModalInitial, setPauseModalInitial] = useState<ScheduledPauseFormValues | null>(null);
   const [pauseEditingKey, setPauseEditingKey] = useState<string | null>(null);
+  const [coverAsset, setCoverAsset] = useState<{ uri: string; mimeType?: string } | null>(null);
 
   const { data: availableSpecies, isLoading: loadingSpecies } = useQuery({
     queryKey: ['species'],
@@ -79,7 +82,14 @@ export default function CreateCompetitionScreen() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => adminService.createCompetition(data),
+    mutationFn: async (data: any) => {
+      const res = await adminService.createCompetition(data);
+      const id = res.competition?.id;
+      if (id && coverAsset) {
+        await adminService.uploadCoverImage(id, coverAsset.uri, coverAsset.mimeType || 'image/jpeg');
+      }
+      return res;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-competitions'] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
@@ -440,6 +450,40 @@ export default function CreateCompetitionScreen() {
             />
           </View>
 
+          <View style={styles.section}>
+            <Text style={styles.label}>Jaquette (optionnel)</Text>
+            <Text style={styles.helpText}>Image jpg, png ou webp à côté du titre dans la liste. Pas de PDF.</Text>
+            {coverAsset && (
+              <Image source={{ uri: coverAsset.uri }} style={styles.coverPreview} />
+            )}
+            <TouchableOpacity
+              style={styles.addZoneButton}
+              onPress={async () => {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permission requise', 'Autorisez l\'accès à la galerie pour importer une image.');
+                  return;
+                }
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: true,
+                  aspect: [1, 1],
+                  quality: 0.9,
+                });
+                if (!result.canceled && result.assets[0]) {
+                  setCoverAsset({
+                    uri: result.assets[0].uri,
+                    mimeType: result.assets[0].mimeType || 'image/jpeg',
+                  });
+                }
+              }}
+            >
+              <Text style={styles.addZoneButtonText}>
+                {coverAsset ? 'Changer la jaquette' : 'Choisir une jaquette'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Dates */}
           <View style={styles.section}>
             <Text style={styles.label}>Date de début *</Text>
@@ -770,9 +814,8 @@ export default function CreateCompetitionScreen() {
 
           {/* Espèces */}
           <View style={styles.section}>
-            <View style={styles.speciesHeader}>
-              <Text style={styles.label}>Espèces de la compétition *</Text>
-              <View style={styles.speciesHeaderButtons}>
+            <Text style={styles.label}>Espèces de la compétition *</Text>
+            <View style={styles.speciesHeaderButtons}>
                 <TouchableOpacity
                   style={styles.newSpeciesButton}
                   onPress={() => setShowCreateSpeciesModal(true)}
@@ -786,7 +829,6 @@ export default function CreateCompetitionScreen() {
                 >
                   <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
                 </TouchableOpacity>
-              </View>
             </View>
             <Text style={styles.helpText}>
               Définissez les espèces avec leurs coefficients et quotas. Si le bonus quota est activé, indiquez aussi le bonus sur chaque ligne qui a un quota.
@@ -896,12 +938,10 @@ export default function CreateCompetitionScreen() {
 
           {/* Pauses programmées (optionnel) */}
           <View style={styles.section}>
-            <View style={styles.speciesHeader}>
-              <Text style={styles.label}>Pauses programmées</Text>
-              <TouchableOpacity style={styles.addSpeciesButton} onPress={openAddPauseModal}>
-                <Text style={styles.addSpeciesButtonText}>+ Pause</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.label}>Pauses programmées</Text>
+            <TouchableOpacity style={[styles.addSpeciesButton, styles.pauseAddButton]} onPress={openAddPauseModal}>
+              <Text style={styles.addSpeciesButtonText}>+ Pause</Text>
+            </TouchableOpacity>
             <Text style={styles.helpText}>
               Périodes pendant lesquelles la compétition sera en pause automatique (ex. relâché). Optionnel.
             </Text>
@@ -1089,6 +1129,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
+  coverPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginVertical: 8,
+    backgroundColor: '#111',
+  },
+  addZoneButton: {
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  addZoneButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -1166,24 +1226,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  speciesHeaderButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  speciesHeaderButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 8,
+  },
   newSpeciesButton: {
     backgroundColor: '#34C759',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 6,
+    alignItems: 'center',
   },
   newSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   addSpeciesButton: {
     backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 6,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   addSpeciesButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
+  },
+  pauseAddButton: {
+    marginTop: 4,
+    marginBottom: 8,
   },
   speciesItem: {
     backgroundColor: '#fff',

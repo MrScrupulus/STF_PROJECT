@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
 import { formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
 
 const FILTERS = {
   ALL: 'all',
@@ -89,36 +89,47 @@ export default function CompetitionsScreen() {
     
     return (
       <TouchableOpacity
-        style={[styles.card, isEnded && styles.cardEnded]}
+        style={[
+          styles.card,
+          isEnded && styles.cardEnded,
+          item.coverImageUrl ? styles.cardWithCover : null,
+        ]}
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          <View style={styles.badgesContainer}>
-            {item.isRegistered && !isEnded && (
-              <View style={styles.registeredBadge}>
-                <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
+        {item.coverImageUrl ? (
+          <View style={styles.coverWrap}>
+            <Image source={{ uri: item.coverImageUrl }} style={styles.cover} resizeMode="cover" />
+          </View>
+        ) : null}
+        <View style={[styles.cardBody, item.coverImageUrl ? styles.cardBodyWithCover : null]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>{item.name}</Text>
+            <View style={styles.badgesContainer}>
+              {item.isRegistered && !isEnded && (
+                <View style={styles.registeredBadge}>
+                  <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
+                </View>
+              )}
+              {item.isRegistered && isEnded && (
+                <View style={styles.participatedBadge}>
+                  <Text style={styles.participatedBadgeText}>✓ Participé</Text>
+                </View>
+              )}
+              <View style={[styles.statusBadge, status.style]}>
+                <Text style={styles.statusBadgeText}>{status.text}</Text>
               </View>
-            )}
-            {item.isRegistered && isEnded && (
-              <View style={styles.participatedBadge}>
-                <Text style={styles.participatedBadgeText}>✓ Participé</Text>
-              </View>
-            )}
-            <View style={[styles.statusBadge, status.style]}>
-              <Text style={styles.statusBadgeText}>{status.text}</Text>
             </View>
           </View>
-        </View>
-        <Text style={styles.cardDate}>
-          {formatCompetitionDateRange(item.startDate, item.endDate)}
-        </Text>
-        {item.teams && item.teams.length > 0 && (
-          <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>
-        )}
-        <View style={styles.moreInfoContainer}>
-          <Text style={styles.moreInfoText}>+ d'infos</Text>
+          <Text style={styles.cardDate}>
+            {formatCompetitionDateRange(item.startDate, item.endDate)}
+          </Text>
+          {item.teams && item.teams.length > 0 && (
+            <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>
+          )}
+          <View style={styles.moreInfoContainer}>
+            <Text style={styles.moreInfoText}>+ d'infos</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -248,7 +259,6 @@ export default function CompetitionsScreen() {
               )}
             </View>
           }
-          ListFooterComponent={<Footer />}
         />
       </View>
     </>
@@ -334,11 +344,36 @@ const styles = StyleSheet.create({
   cardEnded: {
     opacity: 0.7,
   },
+  cardWithCover: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  coverWrap: {
+    width: 72,
+    height: 72,
+    marginRight: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f3f4f6',
+  },
+  cover: {
+    width: 72,
+    height: 72,
+  },
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardBodyWithCover: {
+    padding: 0,
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
+    gap: 8,
   },
   badgesContainer: {
     flexDirection: 'row',
@@ -347,7 +382,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
     flex: 1,
@@ -395,7 +430,7 @@ const styles = StyleSheet.create({
     color: '#92400e',
   },
   cardDate: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     marginBottom: 4,
   },
@@ -410,7 +445,7 @@ const styles = StyleSheet.create({
   },
   moreInfoText: {
     color: '#007AFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

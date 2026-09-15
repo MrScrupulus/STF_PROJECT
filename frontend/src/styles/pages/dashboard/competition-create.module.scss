@@ -102,6 +102,8 @@
   &__actions {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 1rem;
     margin-top: 2rem;
   }
@@ -136,6 +138,17 @@
         background-color: #059669;
       }
     }
+
+    &--delete {
+      background-color: transparent;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      margin-right: auto;
+
+      &:hover:not(:disabled) {
+        background-color: #fef2f2;
+      }
+    }
   }
 
   &__help_text {
@@ -161,6 +174,8 @@
   }
 
   &__add_species_btn {
+    display: inline-block;
+    margin-top: 0.5rem;
     padding: 0.5rem 1rem;
     background-color: #3b82f6;
     color: white;

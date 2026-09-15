@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import FaIcon from './FaIcon';
 
 interface BottomTabBarProps {
   state: any;
@@ -94,7 +95,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
               onPress={() => handleNavigation('Competitions')}
               activeOpacity={0.7}
             >
-              <Text style={styles.tabIcon}>🏆</Text>
+              <FaIcon name="trophy" size={22} color={isFocused ? '#007AFF' : '#666'} />
               <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
                 Compétitions
               </Text>
@@ -109,7 +110,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
           activeOpacity={0.8}
         >
           <View style={styles.addButtonInner}>
-            <Text style={styles.addButtonIcon}>📷</Text>
+            <FaIcon name="camera" size={26} color="#fff" />
           </View>
         </TouchableOpacity>
 
@@ -128,7 +129,19 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
               onPress={() => handleNavigation(tabName)}
               activeOpacity={0.7}
             >
-              <Text style={styles.tabIcon}>{isAuthenticated && isAdmin ? '✓' : '👥'}</Text>
+              <FaIcon
+                name={isAuthenticated && isAdmin ? 'check' : 'users'}
+                size={22}
+                color={
+                  isAuthenticated && isAdmin
+                    ? isFocused
+                      ? '#248A3D'
+                      : '#34C759'
+                    : isFocused
+                      ? '#007AFF'
+                      : '#666'
+                }
+              />
               <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
                 {isAuthenticated && isAdmin ? 'Validation' : 'Mon équipe'}
               </Text>

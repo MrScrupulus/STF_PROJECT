@@ -2,7 +2,7 @@
   "expo": {
     "name": "Street Fishing",
     "slug": "stfproject",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
@@ -21,6 +21,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée.",
+        "NSCameraUsageDescription": "L'application a besoin d'accéder à votre caméra pour photographier les poissons.",
+        "NSPhotoLibraryUsageDescription": "L'application a besoin d'accéder à vos photos pour la jaquette et les prises.",
         "NSPhotoLibraryAddUsageDescription": "L'application enregistre la photo de votre prise dans votre galerie."
       }
     },
@@ -36,16 +38,19 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO"
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
-      [
+        [
         "expo-image-picker",
         {
-          "photosPermission": "L'application a besoin d'accéder à vos photos pour enregistrer les prises de poissons."
+          "photosPermission": "L'application a besoin d'accéder à vos photos pour enregistrer les prises de poissons.",
+          "cameraPermission": "L'application a besoin d'accéder à votre caméra pour photographier les poissons.",
+          "microphonePermission": false
         }
       ],
       [
@@ -64,7 +69,9 @@
       [
         "expo-location",
         {
-          "locationPermission": "L'application a besoin d'accéder à votre localisation pour valider que les prises sont effectuées dans la zone autorisée."
+          "locationWhenInUsePermission": "L'application a besoin de votre position GPS pour valider que les prises sont effectuées dans la zone autorisée.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ],
       [
@@ -76,6 +83,7 @@
         }
       ],
       "expo-secure-store",
+      "expo-sharing",
       "@react-native-community/datetimepicker",
       "expo-splash-screen",
       "expo-status-bar"

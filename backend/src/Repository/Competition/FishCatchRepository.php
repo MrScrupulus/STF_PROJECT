@@ -95,8 +95,8 @@ class FishCatchRepository extends ServiceEntityRepository
     }
 
     /**
-     * Toutes les prises validées dont l'utilisateur est l'auteur (toutes compétitions confondues).
-     * Ordre chronologique croissant.
+     * Toutes les prises validées dont l'utilisateur est l'auteur
+     * (compétitions et journal personnel). Ordre chronologique croissant.
      *
      * @return FishCatch[]
      */
@@ -107,13 +107,12 @@ class FishCatchRepository extends ServiceEntityRepository
             ->addSelect('t')
             ->join('c.species', 's')
             ->addSelect('s')
-            ->join('c.competition', 'comp')
+            ->leftJoin('c.competition', 'comp')
             ->addSelect('comp')
             ->leftJoin('c.caughtBy', 'u')
             ->addSelect('u')
             ->where('c.caughtBy = :user')
             ->andWhere('c.isValidated = :validated')
-            ->andWhere('c.competition IS NOT NULL')
             ->setParameter('user', $user)
             ->setParameter('validated', true)
             ->orderBy('c.createdAt', 'ASC')

@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
+import FaIcon from './FaIcon';
 
 interface HelpButtonProps {
   text: string;
@@ -19,7 +20,7 @@ export default function HelpButton({ text, title = 'Aide' }: HelpButtonProps) {
       accessibilityLabel="Afficher l'aide"
       accessibilityRole="button"
     >
-      <Text style={styles.text}>?</Text>
+      <FaIcon name="help" size={14} color="#64748b" />
     </TouchableOpacity>
   );
 }

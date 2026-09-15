@@ -4,32 +4,38 @@ import {
   Text,
   StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <View style={styles.footer}>
-      <Text style={styles.copyright}>
-        © {currentYear} MrScrupulus - Tous droits réservés.
-      </Text>
-    </View>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.footer}>
+        <Text style={styles.copyright}>
+          © {currentYear} MrScrupulus — Tous droits réservés.
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  footer: {
+  safe: {
+    width: '100%',
     backgroundColor: '#1a1a1a',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+  },
+  footer: {
+    width: '100%',
+    backgroundColor: '#1a1a1a',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#333',
   },
   copyright: {
     color: '#a3a3a3',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
 });

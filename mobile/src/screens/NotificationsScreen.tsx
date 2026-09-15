@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { notificationService, Notification } from '../services/notificationService';
 import { formatRelativeTime } from '../utils/dateUtils';
 import Header from '../components/Header';
+import FaIcon, { type AppIconName } from '../components/FaIcon';
 
 export default function NotificationsScreen() {
   const navigation = useNavigation();
@@ -45,19 +46,19 @@ export default function NotificationsScreen() {
     setRefreshing(false);
   };
 
-  const getNotificationIcon = (type: string) => {
-    const icons: { [key: string]: string } = {
-      catch_validated: '✅',
-      catch_rejected: '❌',
-      catch_pending: '⏳',
-      team_invitation: '👥',
-      competition_registered: '📝',
-      competition_started: '🚀',
-      competition_ended: '🏁',
-      competition_paused: '⏸️',
-      competition_resumed: '▶️',
+  const getNotificationIcon = (type: string): AppIconName => {
+    const icons: { [key: string]: AppIconName } = {
+      catch_validated: 'circleCheck',
+      catch_rejected: 'circleXmark',
+      catch_pending: 'hourglass',
+      team_invitation: 'users',
+      competition_registered: 'file',
+      competition_started: 'rocket',
+      competition_ended: 'flagCheckered',
+      competition_paused: 'pause',
+      competition_resumed: 'play',
     };
-    return icons[type] || '🔔';
+    return icons[type] || 'bell';
   };
 
   const handleNotificationPress = (notification: Notification) => {
@@ -120,9 +121,7 @@ export default function NotificationsScreen() {
                     onPress={() => handleNotificationPress(notification)}
                   >
                     <View style={styles.notificationIcon}>
-                      <Text style={styles.notificationIconText}>
-                        {getNotificationIcon(notification.type)}
-                      </Text>
+                      <FaIcon name={getNotificationIcon(notification.type)} size={18} color="#007AFF" />
                     </View>
                     <View style={styles.notificationContent}>
                       <Text

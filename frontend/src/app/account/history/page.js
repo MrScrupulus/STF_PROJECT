@@ -11,6 +11,10 @@ import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
 import { resolvePhotoUri } from "../../../utils/photoUrl";
+import { competitionsService } from "../../../services/competitions";
+import CatchesMap from "../../../components/competition/CatchesMap";
+import CatchesTimelineChart from "../../../components/competition/CatchesTimelineChart";
+import { boundsFromCatchTimes, parseCatchDate } from "../../../utils/timelineScale";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -24,6 +28,7 @@ export default function HistoryPage() {
   const [catchesPages, setCatchesPages] = useState(1);
   const [allCatches, setAllCatches] = useState([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [globalStats, setGlobalStats] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -59,6 +64,18 @@ export default function HistoryPage() {
     };
 
     fetchHistory();
+  }, []);
+
+  useEffect(() => {
+    const fetchGlobalStats = async () => {
+      try {
+        const response = await competitionsService.getMyGlobalStats();
+        if (response?.success && response.stats) {
+          setGlobalStats(response.stats);
+        }
+      } catch (_) {}
+    };
+    fetchGlobalStats();
   }, []);
 
   const loadMoreCatches = async () => {
@@ -145,6 +162,32 @@ export default function HistoryPage() {
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
   );
 
+  const tlBounds = boundsFromCatchTimes(
+    (globalStats?.timeline || []).map((t) => parseCatchDate(t.createdAt)).filter(Boolean)
+  ) || {};
+
+  const historyViz = globalStats ? (
+    <div className={styles.history__section}>
+      <h2 className={styles.history__section_title}>Carte et frise</h2>
+      {globalStats.catchesForMap?.length > 0 ? (
+        <CatchesMap
+          catches={globalStats.catchesForMap}
+          speciesStats={globalStats.speciesStats || []}
+        />
+      ) : (
+        <p>Aucune prise géolocalisée à afficher sur la carte.</p>
+      )}
+      {globalStats.timeline?.length > 0 && tlBounds.startDate && tlBounds.endDate && (
+        <CatchesTimelineChart
+          catches={globalStats.timeline}
+          startDate={tlBounds.startDate}
+          endDate={tlBounds.endDate}
+          speciesStats={globalStats.speciesStats || []}
+        />
+      )}
+    </div>
+  ) : null;
+
   return (
     <ProtectedRoute>
       <div className={classNames(layoutStyles.main, styles.history__container)}>
@@ -230,6 +273,8 @@ export default function HistoryPage() {
                 </div>
               </div>
             </div>
+
+            {historyViz}
 
             {/* Répartition par espèce */}
             {stats.speciesStats && stats.speciesStats.length > 0 && (

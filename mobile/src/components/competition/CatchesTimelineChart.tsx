@@ -1,36 +1,13 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { getSpeciesColor } from '../../utils/speciesColors';
+import { buildTimeTicks, parseCatchDate, parseTimeBounds } from '../../utils/timelineScale';
 
 const CHART_WIDTH = Dimensions.get('window').width - 32;
 const CHART_HEIGHT = 200;
 const POINT_SIZE = 10;
-
-function parseCreatedAt(createdAt: string | undefined) {
-  if (!createdAt) return null;
-  const str = String(createdAt);
-  const match = str.match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
-  if (match) {
-    const date = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
-    const hour = parseInt(match[4], 10);
-    const minute = parseInt(match[5], 10) || 0;
-    date.setHours(hour, minute, 0, 0);
-    return date;
-  }
-  return null;
-}
-
-function parseBounds(startDate?: string, endDate?: string) {
-  if (!startDate || !endDate) return { start: new Date(0), totalHours: 24 };
-  try {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const totalHours = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
-    return { start, totalHours };
-  } catch {
-    return { start: new Date(0), totalHours: 24 };
-  }
-}
+const PLOT_LEFT = 12;
+const PLOT_WIDTH = CHART_WIDTH - 24;
 
 interface CatchItem {
   id?: number;
@@ -53,7 +30,10 @@ export default function CatchesTimelineChart({
   endDate,
   speciesStats = [],
 }: CatchesTimelineChartProps) {
-  const { start, totalHours } = useMemo(() => parseBounds(startDate, endDate), [startDate, endDate]);
+  const { start, durationMs } = useMemo(
+    () => parseTimeBounds(startDate, endDate),
+    [startDate, endDate]
+  );
 
   const { points, uniqueSpecies } = useMemo(() => {
     const pts: Array<{ x: number; y: number; color: string; speciesName: string; size?: number }> = [];
@@ -62,10 +42,10 @@ export default function CatchesTimelineChart({
     let nextIdx = 0;
 
     catches.forEach((c) => {
-      const date = parseCreatedAt(c.createdAt);
+      const date = parseCatchDate(c.createdAt);
       if (!date) return;
-      const x = (date.getTime() - start.getTime()) / (1000 * 60 * 60);
-      if (x < -0.5 || x > totalHours + 0.5) return;
+      const offsetMs = date.getTime() - start.getTime();
+      if (offsetMs < -durationMs * 0.02 || offsetMs > durationMs * 1.02) return;
 
       let speciesIdx = map[c.species?.id ?? 0];
       if (speciesIdx === undefined) {
@@ -73,7 +53,7 @@ export default function CatchesTimelineChart({
         map[c.species?.id ?? 0] = speciesIdx;
       }
 
-      const slotKey = `${Math.floor(x * 2)}_${speciesIdx}`;
+      const slotKey = `${Math.floor(offsetMs / (15 * 60 * 1000))}_${speciesIdx}`;
       const slotIdx = slots[slotKey] ?? 0;
       slots[slotKey] = slotIdx + 1;
 
@@ -83,7 +63,7 @@ export default function CatchesTimelineChart({
       const y = Math.min(baseY + 20 + yOffset, CHART_HEIGHT - 25);
 
       pts.push({
-        x: (x / totalHours) * (CHART_WIDTH - 24) + 12,
+        x: PLOT_LEFT + (Math.min(Math.max(offsetMs, 0), durationMs) / durationMs) * PLOT_WIDTH,
         y,
         color: getSpeciesColor(c.species?.id, speciesStats),
         speciesName: c.species?.name ?? '?',
@@ -91,9 +71,10 @@ export default function CatchesTimelineChart({
       });
     });
 
-    const speciesList = speciesStats?.length ? speciesStats : [];
-    return { points: pts, uniqueSpecies: speciesList };
-  }, [catches, start, totalHours, speciesStats]);
+    return { points: pts, uniqueSpecies: speciesStats?.length ? speciesStats : [] };
+  }, [catches, start, durationMs, speciesStats]);
+
+  const xTicks = useMemo(() => buildTimeTicks(start, durationMs), [start, durationMs]);
 
   if (!catches || catches.length === 0) {
     return (
@@ -103,27 +84,19 @@ export default function CatchesTimelineChart({
     );
   }
 
-  const startHour = start.getHours() + start.getMinutes() / 60;
-  const tickStep = totalHours > 18 ? 2 : 1;
-  const xTicks = useMemo(() => {
-    const ticks: number[] = [];
-    for (let h = 0; h <= totalHours; h += tickStep) {
-      ticks.push(h);
-    }
-    if (ticks[ticks.length - 1] < totalHours - 0.01) {
-      ticks.push(totalHours);
-    }
-    return ticks;
-  }, [totalHours, tickStep]);
+  const durationHours = durationMs / (1000 * 60 * 60);
+  const titleSuffix =
+    durationHours < 24
+      ? ` (${Math.max(1, Math.round(durationHours * 10) / 10)} h)`
+      : ` (${Math.max(1, Math.round(durationHours / 24))} j)`;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Prises dans le temps</Text>
+      <Text style={styles.title}>Prises dans le temps{titleSuffix}</Text>
       <View style={styles.chartWrapper}>
         <View style={[styles.chartArea, { width: CHART_WIDTH, height: CHART_HEIGHT }]}>
-          {/* Lignes verticales de graduation (heures) */}
-          {xTicks.map((hoursFromStart, i) => {
-            const pos = Math.min(hoursFromStart / totalHours, 1) * (CHART_WIDTH - 24) + 12;
+          {xTicks.map((tick, i) => {
+            const pos = PLOT_LEFT + (tick.offsetMs / durationMs) * PLOT_WIDTH;
             return <View key={`vl-${i}`} style={[styles.gridLine, { left: pos }]} />;
           })}
           {points.map((p, i) => (
@@ -143,27 +116,16 @@ export default function CatchesTimelineChart({
             />
           ))}
         </View>
-        <View style={[styles.xLabels, { width: CHART_WIDTH, position: 'relative' }]}>
-          {xTicks.map((hoursFromStart, i) => {
-            const label =
-              totalHours <= 24
-                ? `${Math.floor(startHour + hoursFromStart) % 24}h`
-                : hoursFromStart === 0
-                  ? '0h'
-                  : `+${hoursFromStart}h`;
-            const prevLabel =
-              i > 0
-                ? totalHours <= 24
-                  ? `${Math.floor(startHour + xTicks[i - 1]) % 24}h`
-                  : xTicks[i - 1] === 0
-                    ? '0h'
-                    : `+${xTicks[i - 1]}h`
-                : null;
-            if (prevLabel === label) return null;
-            const left = Math.min(hoursFromStart / totalHours, 1) * (CHART_WIDTH - 24) + 12;
+        <View style={[styles.xLabels, { width: CHART_WIDTH }]}>
+          {xTicks.map((tick, i) => {
+            const left = PLOT_LEFT + (tick.offsetMs / durationMs) * PLOT_WIDTH;
             return (
-              <Text key={`h-${i}`} style={[styles.xLabel, { position: 'absolute', left: left - 8 }]}>
-                {label}
+              <Text
+                key={`h-${i}`}
+                style={[styles.xLabel, { left: Math.max(0, left - 22) }]}
+                numberOfLines={1}
+              >
+                {tick.label}
               </Text>
             );
           })}
@@ -220,13 +182,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.8)',
   },
   xLabels: {
-    height: 24,
+    height: 28,
     marginTop: 8,
+    position: 'relative',
   },
   xLabel: {
-    fontSize: 12,
+    position: 'absolute',
+    fontSize: 10,
     fontWeight: '500',
     color: '#374151',
+    width: 52,
+    textAlign: 'center',
   },
   legend: {
     flexDirection: 'row',

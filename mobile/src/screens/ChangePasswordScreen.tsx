@@ -12,9 +12,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 
 export default function ChangePasswordScreen() {
   const navigation = useNavigation();
@@ -114,11 +114,7 @@ export default function ChangePasswordScreen() {
                   style={styles.eyeIcon}
                   onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
-                  <FontAwesome
-                    name={showCurrentPassword ? 'eye-slash' : 'eye'}
-                    size={20}
-                    color="#666"
-                  />
+                  <FaIcon name={showCurrentPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -138,11 +134,7 @@ export default function ChangePasswordScreen() {
                   style={styles.eyeIcon}
                   onPress={() => setShowNewPassword(!showNewPassword)}
                 >
-                  <FontAwesome
-                    name={showNewPassword ? 'eye-slash' : 'eye'}
-                    size={20}
-                    color="#666"
-                  />
+                  <FaIcon name={showNewPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
                 </TouchableOpacity>
               </View>
               {passwordValidation && (
@@ -172,11 +164,7 @@ export default function ChangePasswordScreen() {
                   style={styles.eyeIcon}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <FontAwesome
-                    name={showConfirmPassword ? 'eye-slash' : 'eye'}
-                    size={20}
-                    color="#666"
-                  />
+                  <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
                 </TouchableOpacity>
               </View>
               {passwordsMatch !== null && (

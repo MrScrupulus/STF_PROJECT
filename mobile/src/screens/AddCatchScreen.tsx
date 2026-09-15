@@ -9,11 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
-  Platform,
-  Linking,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catchesService, CreateCatchData } from '../services/catchesService';
 import { speciesService } from '../services/speciesService';
@@ -22,7 +18,13 @@ import { competitionsService } from '../services/competitionsService';
 import { authService } from '../services/authService';
 import { isDatePast } from '../utils/dateUtils';
 import { savePhotoToGallery } from '../utils/savePhotoToGallery';
+import {
+  captureJpegFromCamera,
+  getPreciseGpsPosition,
+  openAppSettings,
+} from '../utils/deviceCapture';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import {
   fishSizeKeyboardType,
@@ -192,108 +194,31 @@ export default function AddCatchScreen({ navigation, route }: any) {
     }
   }, [selectedCompetition, location]);
 
-  // Demander les permissions pour la caméra et la localisation
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== 'web') {
-        // Permission caméra
-        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
-        if (cameraStatus.status !== 'granted') {
-          Alert.alert(
-            'Permission requise',
-            'Nous avons besoin de la permission pour utiliser la caméra.'
-          );
-        }
-
-        // Permission localisation
-        const locationStatus = await Location.requestForegroundPermissionsAsync();
-        if (locationStatus.status !== 'granted') {
-          Alert.alert(
-            'Permission de localisation requise',
-            'Nous avons besoin de votre position GPS pour valider que la prise est effectuée dans la zone autorisée de la compétition.'
-          );
-        }
-      }
-    })();
-  }, []);
-
-  // Capturer la position GPS
-  const getCurrentLocation = async () => {
+  const getCurrentLocation = async (opts?: { quiet?: boolean }) => {
     try {
       setIsGettingLocation(true);
       setLocationError(null);
 
-      // Demander la permission
-      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== 'granted') {
-        setIsGettingLocation(false);
-        setLocationError('Permission de localisation refusée');
-        
-        // Vérifier si la permission a été refusée définitivement
-        if (canAskAgain === false) {
-          // Permission refusée définitivement, proposer d'ouvrir les paramètres
-          Alert.alert(
-            'Permission de localisation requise',
-            'La permission de localisation a été refusée. Veuillez l\'activer dans les paramètres de votre téléphone pour pouvoir ajouter des prises.',
-            [
-              {
-                text: 'Annuler',
-                style: 'cancel',
-              },
-              {
-                text: 'Ouvrir les paramètres',
-                onPress: () => {
-                  if (Platform.OS === 'ios') {
-                    Linking.openURL('app-settings:');
-                  } else {
-                    Linking.openSettings();
-                  }
-                },
-              },
-            ]
-          );
-        } else {
-          // Permission peut encore être demandée
-          Alert.alert(
-            'Permission requise',
-            'Nous avons besoin de votre position GPS pour valider que la prise est effectuée dans la zone autorisée. Veuillez autoriser l\'accès à votre localisation.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  // Réessayer après un court délai
-                  setTimeout(() => {
-                    getCurrentLocation();
-                  }, 500);
-                },
-              },
-            ]
-          );
-        }
-        return;
-      }
-
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      const newLocation = {
-        latitude: currentLocation.coords.latitude,
-        longitude: currentLocation.coords.longitude,
-      };
+      const newLocation = await getPreciseGpsPosition();
       setLocation(newLocation);
       setLocationError(null);
-      
-      // Vérifier si la position est dans la zone autorisée
       checkLocationInZone(newLocation);
     } catch (error: any) {
       console.error('Erreur lors de la récupération de la position:', error);
-      setLocationError('Impossible de récupérer votre position');
-      Alert.alert(
-        'Erreur de localisation',
-        'Impossible de récupérer votre position GPS. Veuillez réessayer.'
-      );
+      const message =
+        error?.message || 'Impossible de récupérer votre position GPS. Veuillez réessayer.';
+      setLocationError(message);
+      if (opts?.quiet) {
+        return;
+      }
+      if (error?.code === 'permission' && error?.canAskAgain === false) {
+        Alert.alert('Permission de localisation requise', message, [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Ouvrir les paramètres', onPress: openAppSettings },
+        ]);
+      } else {
+        Alert.alert('Erreur de localisation', message);
+      }
     } finally {
       setIsGettingLocation(false);
     }
@@ -410,27 +335,21 @@ export default function AddCatchScreen({ navigation, route }: any) {
   // Prendre une photo et capturer la position GPS (flux caméra d'abord)
   const takePhoto = async () => {
     try {
-      // Capturer la position GPS avant de prendre la photo
-      await getCurrentLocation();
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-        base64: true,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const base64Image = `data:image/jpeg;base64,${asset.base64}`;
-        setPhoto(base64Image);
-        // Heure de la photo = fait foi pour la date officielle de la prise (pas le clic sur "Enregistrer")
+      // Caméra d'abord : un GPS lent/bloqué sur Android ne doit plus empêcher de photographier.
+      const locPromise = getCurrentLocation({ quiet: true });
+      const captured = await captureJpegFromCamera();
+      if (captured) {
+        setPhoto(captured.dataUrl);
         setPhotoCapturedAt(new Date());
-
-        await savePhotoToGallery(asset.uri);
+        void savePhotoToGallery(captured.uri);
       }
+      await locPromise;
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de prendre la photo');
+      console.error('Erreur caméra:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d’ouvrir l’appareil photo. Vérifiez la permission Caméra dans les paramètres Android.'
+      );
     }
   };
 
@@ -580,7 +499,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
               : "Prenez d'abord la photo de la prise. L'heure de la photo fera foi pour la date officielle."}
           </Text>
           <TouchableOpacity style={styles.cameraStepButton} onPress={takePhoto}>
-            <Text style={styles.cameraStepButtonIcon}>📷</Text>
+            <FaIcon name="camera" size={22} color="#fff" />
             <Text style={styles.cameraStepButtonText}>Prendre la photo</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -692,7 +611,8 @@ export default function AddCatchScreen({ navigation, route }: any) {
           </View>
         ) : (
           <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
-            <Text style={styles.photoButtonText}>📷 Prendre une photo</Text>
+            <FaIcon name="camera" size={18} color="#fff" />
+            <Text style={styles.photoButtonText}> Prendre une photo</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -841,6 +761,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
   },
   cameraStepButtonIcon: {
     fontSize: 48,
@@ -934,6 +857,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   photoButtonText: {
     color: '#fff',

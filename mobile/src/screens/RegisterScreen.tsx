@@ -13,8 +13,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { FontAwesome } from '@expo/vector-icons';
 import { authService, RegisterData } from '../services/authService';
+import FaIcon from '../components/FaIcon';
 
 const COUNTRY_CODES = ['+33', '+32', '+41', '+49', '+39', '+34', '+44', '+212', '+213', '+216', '+221'];
 
@@ -83,7 +83,7 @@ export default function RegisterScreen() {
             style={styles.backButton}
             onPress={() => navigation.navigate('Login' as never)}
           >
-            <Text style={styles.backIcon}>←</Text>
+            <FaIcon name="back" size={20} color="#007AFF" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Inscription</Text>
@@ -151,11 +151,7 @@ export default function RegisterScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <FontAwesome
-                  name={showPassword ? 'eye-slash' : 'eye'}
-                  size={20}
-                  color="#666"
-                />
+                <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
 
@@ -172,11 +168,7 @@ export default function RegisterScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <FontAwesome
-                  name={showConfirmPassword ? 'eye-slash' : 'eye'}
-                  size={20}
-                  color="#666"
-                />
+                <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { AxiosError } from 'axios';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
+import FaIcon, { type AppIconName } from '../components/FaIcon';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -37,12 +37,10 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     try {
       await authService.logout();
-      // Invalider tous les caches React Query pour éviter d'afficher les données de l'ancien utilisateur
       queryClient.clear();
-      // Mettre à jour l'état d'authentification pour que App.tsx change le stack
       setIsAuthenticated(false);
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+    } catch (err) {
+      console.error('Erreur lors de la déconnexion:', err);
     }
   };
 
@@ -50,12 +48,13 @@ export default function ProfileScreen() {
     try {
       await authService.deleteAccount();
       Alert.alert('Succès', 'Compte supprimé avec succès');
-      // Invalider tous les caches React Query
       queryClient.clear();
-      // Mettre à jour l'état d'authentification pour que App.tsx change le stack
       setIsAuthenticated(false);
-    } catch (error: any) {
-      const message = error.response?.data?.message || error.message || 'Une erreur est survenue lors de la suppression. Veuillez réessayer.';
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        'Une erreur est survenue lors de la suppression. Veuillez réessayer.';
       Alert.alert('Erreur', message);
     }
   };
@@ -86,94 +85,160 @@ export default function ProfileScreen() {
     );
   }
 
+  const displayName = [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || 'Mon profil';
+  const initials = [user.firstname, user.lastname]
+    .filter(Boolean)
+    .map((part: string) => part.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2) || (user.username ? user.username.charAt(0).toUpperCase() : '?');
+
+  const go = (screen: string, params?: object) => {
+    // @ts-ignore
+    navigation.navigate(screen, params);
+  };
+
+  const tiles: { label: string; hint: string; icon: AppIconName; onPress: () => void }[] = [
+    {
+      label: 'Modifier',
+      hint: 'Profil',
+      icon: 'edit',
+      onPress: () => go('EditProfile'),
+    },
+    {
+      label: 'Sécurité',
+      hint: 'Mot de passe',
+      icon: 'lock',
+      onPress: () => go('ChangePassword'),
+    },
+    {
+      label: 'Historique',
+      hint: 'Prises & stats',
+      icon: 'history',
+      onPress: () => go('History', { initialTab: 'stats' }),
+    },
+    {
+      label: 'Invitations',
+      hint: 'Équipes',
+      icon: 'envelope',
+      onPress: () => go('Invitations'),
+    },
+  ];
+
+  const rows: { label: string; hint: string; icon: AppIconName; onPress: () => void }[] = [
+    {
+      label: 'Réglages',
+      hint: 'Préférences de l’application',
+      icon: 'gear',
+      onPress: () => go('Settings'),
+    },
+    {
+      label: 'Notifications et e-mails',
+      hint: 'Push, alertes et mails',
+      icon: 'bell',
+      onPress: () => go('NotificationPreferences'),
+    },
+  ];
+
   return (
     <>
       <Header title="Mon Profil" showBack={true} showMenu={true} />
-      <ScrollView style={styles.container}>
-        <View style={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.identityText}>
+            <Text style={styles.displayName}>{displayName}</Text>
+            {user.username ? <Text style={styles.username}>@{user.username}</Text> : null}
+            <Text style={styles.identityEmail}>{user.email}</Text>
+          </View>
+        </View>
 
         <View style={styles.infoSection}>
-          {user.username && (
+          <Text style={styles.sectionTitle}>Informations</Text>
+          {user.username ? (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Pseudo:</Text>
+              <Text style={styles.infoLabel}>Pseudo</Text>
               <Text style={styles.infoValue}>{user.username}</Text>
             </View>
-          )}
+          ) : null}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Nom:</Text>
+            <Text style={styles.infoLabel}>Nom</Text>
             <Text style={styles.infoValue}>{user.lastname}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Prénom:</Text>
+            <Text style={styles.infoLabel}>Prénom</Text>
             <Text style={styles.infoValue}>{user.firstname}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email:</Text>
+            <Text style={styles.infoLabel}>Email</Text>
             <Text style={styles.infoValue}>{user.email}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Téléphone:</Text>
-            <Text style={styles.infoValue}>
-              {user.phone_number || 'Non renseigné'}
-            </Text>
+          <View style={[styles.infoRow, styles.infoRowLast]}>
+            <Text style={styles.infoLabel}>Téléphone</Text>
+            <Text style={styles.infoValue}>{user.phone_number || 'Non renseigné'}</Text>
           </View>
         </View>
 
-        <View style={styles.actionsSection}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('EditProfile' as never)}
-          >
-            <Text style={styles.actionButtonText}>Modifier mon profil</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('ChangePassword' as never)}
-          >
-            <Text style={styles.actionButtonText}>Modifier le mot de passe</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() =>
-              // @ts-ignore
-              navigation.navigate('History', { initialTab: 'stats' })
-            }
-          >
-            <Text style={styles.actionButtonText}>Voir mon historique</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Invitations' as never)}
-          >
-            <Text style={styles.actionButtonText}>Mes invitations</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('NotificationPreferences' as never)}
-          >
-            <Text style={styles.actionButtonText}>🔔 Préférences notifications</Text>
-          </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Actions</Text>
+        <View style={styles.grid}>
+          {tiles.map((tile) => (
+            <TouchableOpacity
+              key={tile.label}
+              style={styles.tile}
+              onPress={tile.onPress}
+              activeOpacity={0.75}
+            >
+              <View style={styles.tileIcon}>
+                <FaIcon name={tile.icon} size={20} color="#007AFF" />
+              </View>
+              <Text style={styles.tileLabel}>{tile.label}</Text>
+              <Text style={styles.tileHint}>{tile.hint}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
+
+        <View style={styles.listCard}>
+          {rows.map((row, index) => (
+            <TouchableOpacity
+              key={row.label}
+              style={[styles.listRow, index === rows.length - 1 && styles.listRowLast]}
+              onPress={row.onPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.listIcon}>
+                <FaIcon name={row.icon} size={18} color="#007AFF" />
+              </View>
+              <View style={styles.listText}>
+                <Text style={styles.listLabel}>{row.label}</Text>
+                <Text style={styles.listHint}>{row.hint}</Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.75}>
+          <FaIcon name="logout" size={18} color="#dc3545" />
+          <Text style={styles.logoutButtonText}>Déconnexion</Text>
+        </TouchableOpacity>
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerZoneTitle}>Zone dangereuse</Text>
           <Text style={styles.dangerZoneText}>
-            La suppression de votre compte est irréversible. Toutes vos données seront définitivement effacées.
+            La suppression de votre compte est irréversible. Toutes vos données seront
+            définitivement effacées.
           </Text>
           <TouchableOpacity
             style={styles.dangerButton}
             onPress={() => setShowDeleteModal(true)}
+            activeOpacity={0.8}
           >
             <Text style={styles.dangerButtonText}>Supprimer mon compte</Text>
           </TouchableOpacity>
         </View>
+      </ScrollView>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Déconnexion</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Modal de confirmation de suppression */}
       <Modal
         visible={showDeleteModal}
         transparent={true}
@@ -206,8 +271,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-      </ScrollView>
-      <Footer />
     </>
   );
 }
@@ -218,69 +281,201 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   content: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 32,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#333',
+  identityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  identityText: {
+    flex: 1,
+  },
+  displayName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111',
+  },
+  username: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginTop: 2,
+  },
+  identityEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 10,
+    marginLeft: 4,
   },
   infoSection: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 24,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 4,
+    marginBottom: 20,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    gap: 12,
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
   },
   infoLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#666',
+    color: '#888',
   },
   infoValue: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#222',
     flex: 1,
     textAlign: 'right',
   },
-  actionsSection: {
-    marginBottom: 24,
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  actionButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 16,
+  tile: {
+    width: '48.5%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
     alignItems: 'center',
     marginBottom: 12,
   },
-  actionButtonText: {
-    color: '#fff',
+  tileIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E8F1FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  tileLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111',
+  },
+  tileHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  listCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  listRowLast: {
+    borderBottomWidth: 0,
+  },
+  listIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F1FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  listText: {
+    flex: 1,
+  },
+  listLabel: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#222',
+  },
+  listHint: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 2,
+  },
+  chevron: {
+    fontSize: 22,
+    color: '#ccc',
+    fontWeight: '300',
+    marginLeft: 8,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: '#ffd0cd',
+  },
+  logoutButtonText: {
+    color: '#dc3545',
+    fontSize: 16,
+    fontWeight: '700',
   },
   dangerZone: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#fff5f5',
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderColor: '#ffc9c6',
   },
   dangerZoneTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#ff3b30',
     marginBottom: 8,
   },
@@ -292,26 +487,14 @@ const styles = StyleSheet.create({
   },
   dangerButton: {
     backgroundColor: '#ff3b30',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
     alignItems: 'center',
   },
   dangerButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  logoutButton: {
-    backgroundColor: '#ff3b30',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   errorText: {
     color: '#ff3b30',
@@ -376,4 +559,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

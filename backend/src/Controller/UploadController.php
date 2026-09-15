@@ -19,9 +19,10 @@ class UploadController extends AbstractController
      * Sert les fichiers uploadés :
      * - catches/ : photos de prises
      * - reglements/ : images du règlement
+     * - covers/ : jaquettes de compétition
      * - stock/ : rétrocompatibilité (anciens chemins stock/catches, stock/reglements)
      */
-    #[Route('/{path}', name: 'upload_serve', requirements: ['path' => '(catches|reglements|stock)/.+' ], methods: ['GET'])]
+    #[Route('/{path}', name: 'upload_serve', requirements: ['path' => '(catches|reglements|covers|stock)/.+' ], methods: ['GET'])]
     public function serve(string $path): Response
     {
         if (str_contains($path, '..')) {

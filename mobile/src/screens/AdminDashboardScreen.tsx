@@ -13,9 +13,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { navigateToCompetitions } from '../navigation/rootNavigationRef';
 import { adminService } from '../services/adminService';
-import { competitionsService } from '../services/competitionsService';
 import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
+import FaIcon, { type AppIconName } from '../components/FaIcon';
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -25,21 +25,21 @@ export default function AdminDashboardScreen() {
   const [allCatches, setAllCatches] = useState<any[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Charger la première page
   const { data: pendingCatchesData, isLoading: loadingCatches } = useQuery({
     queryKey: ['admin-pending-catches', catchesPage],
     queryFn: () => adminService.getPendingCatches(catchesPage, 10),
   });
 
-  // Mettre à jour les prises
   useEffect(() => {
     if (pendingCatchesData) {
       if (catchesPage === 1) {
         setAllCatches(pendingCatchesData.catches || []);
       } else {
-        setAllCatches(prev => {
-          const existingIds = new Set(prev.map(c => c.id));
-          const uniqueNew = (pendingCatchesData.catches || []).filter(c => !existingIds.has(c.id));
+        setAllCatches((prev) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const uniqueNew = (pendingCatchesData.catches || []).filter(
+            (c: any) => !existingIds.has(c.id)
+          );
           return [...prev, ...uniqueNew];
         });
         setIsLoadingMore(false);
@@ -51,7 +51,7 @@ export default function AdminDashboardScreen() {
   const loadMoreCatches = () => {
     if (catchesPage < catchesPages && !isLoadingMore) {
       setIsLoadingMore(true);
-      setCatchesPage(prev => prev + 1);
+      setCatchesPage((prev) => prev + 1);
     }
   };
 
@@ -67,23 +67,18 @@ export default function AdminDashboardScreen() {
       Alert.alert('Succès', 'Prise validée avec succès.');
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
+      const message =
+        error.response?.data?.message ||
+        'Une erreur est survenue lors de la validation. Veuillez réessayer.';
       Alert.alert('Erreur', message);
     },
   });
 
   const handleValidate = (catchId: number) => {
-    Alert.alert(
-      'Valider la prise',
-      'Êtes-vous sûr de vouloir valider cette prise ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Valider',
-          onPress: () => validateMutation.mutate(catchId),
-        },
-      ]
-    );
+    Alert.alert('Valider la prise', 'Êtes-vous sûr de vouloir valider cette prise ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Valider', onPress: () => validateMutation.mutate(catchId) },
+    ]);
   };
 
   const handleReject = (catchId: number) => {
@@ -107,132 +102,206 @@ export default function AdminDashboardScreen() {
 
   const pendingCount = pendingCatchesData?.total || allCatches.length;
   const competitionsCount = competitions?.length || 0;
-  const activeCompetitions = competitions?.filter((c: any) => {
-    const now = new Date();
-    const start = new Date(c.startDate);
-    const end = new Date(c.endDate);
-    return now >= start && now <= end;
-  }).length || 0;
+  const now = new Date();
+  const activeCompetitions =
+    competitions?.filter((c: any) => {
+      const start = new Date(c.startDate);
+      const end = new Date(c.endDate);
+      return now >= start && now <= end;
+    }).length || 0;
+  const endedCompetitions =
+    competitions?.filter((c: any) => {
+      const end = new Date(String(c.endDate).replace(' ', 'T'));
+      return !Number.isNaN(end.getTime()) && end < now;
+    }) || [];
+
+  const tiles: { label: string; hint: string; icon: AppIconName; onPress: () => void }[] = [
+    {
+      label: 'Compétitions',
+      hint: 'Toutes les manches',
+      icon: 'trophy',
+      onPress: navigateToCompetitions,
+    },
+    {
+      label: 'Créer',
+      hint: 'Nouvelle manche',
+      icon: 'plus',
+      onPress: () => (navigation as any).navigate('CreateCompetition'),
+    },
+    {
+      label: 'Saisie',
+      hint: 'Ajouter une prise',
+      icon: 'camera',
+      onPress: () => (navigation as any).navigate('AdminAddCatch'),
+    },
+    {
+      label: 'Pénalités',
+      hint: 'Points & motifs',
+      icon: 'flag',
+      onPress: () => (navigation as any).navigate('AdminPenalty'),
+    },
+  ];
 
   return (
     <>
       <Header title="Dashboard Admin" showBack={true} showMenu={true} />
-      <ScrollView style={styles.container}>
-        <View style={styles.content}>
-          {/* Statistiques */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{pendingCount}</Text>
-              <Text style={styles.statLabel}>Prises en attente</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{competitionsCount}</Text>
-              <Text style={styles.statLabel}>Compétitions</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{activeCompetitions}</Text>
-              <Text style={styles.statLabel}>En cours</Text>
-            </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <FaIcon name="key" size={22} color="#fff" />
           </View>
-
-          {/* Prises en attente */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Prises en attente de validation</Text>
-            {pendingCount === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Aucune prise en attente</Text>
-                <Text style={styles.emptySubtext}>
-                  Toutes les prises ont été validées ou rejetées.
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={allCatches}
-                keyExtractor={(item: any) => item.id.toString()}
-                renderItem={({ item: catchItem }: any) => (
-                  <TouchableOpacity
-                    style={styles.catchCard}
-                    onPress={() => handleViewCatch(catchItem.id)}
-                  >
-                    <View style={styles.catchHeader}>
-                      <Text style={styles.catchTitle}>
-                        {catchItem.species?.name || 'Espèce inconnue'}
-                      </Text>
-                      <Text style={styles.catchSize}>{catchItem.size} cm</Text>
-                    </View>
-                    <Text style={styles.catchTeam}>
-                      Équipe: {catchItem.team?.name || 'N/A'}
-                    </Text>
-                    {catchItem.caughtBy && (
-                      <Text style={styles.catchMember}>
-                        Pêché par: {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
-                      </Text>
-                    )}
-                    <Text style={styles.catchDate}>
-                      {formatDateTime(catchItem.createdAt)}
-                    </Text>
-                    <View style={styles.catchActions}>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.validateButton]}
-                        onPress={() => handleValidate(catchItem.id)}
-                        disabled={validateMutation.isPending}
-                      >
-                        <Text style={styles.actionButtonText}>✓ Valider</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.rejectButton]}
-                        onPress={() => handleReject(catchItem.id)}
-                        disabled={validateMutation.isPending}
-                      >
-                        <Text style={styles.actionButtonText}>✗ Rejeter</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                onEndReached={loadMoreCatches}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={
-                  isLoadingMore ? (
-                    <View style={styles.loadingMore}>
-                      <ActivityIndicator size="small" color="#007AFF" />
-                      <Text style={styles.loadingMoreText}>Chargement...</Text>
-                    </View>
-                  ) : null
-                }
-                scrollEnabled={false}
-              />
-            )}
-          </View>
-
-          {/* Compétitions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Compétitions</Text>
-            <TouchableOpacity
-              style={styles.navigationButton}
-              onPress={navigateToCompetitions}
-            >
-              <Text style={styles.navigationButtonText}>Voir toutes les compétitions</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.navigationButton, styles.adminButton]}
-              onPress={() => (navigation as any).navigate('CreateCompetition')}
-            >
-              <Text style={styles.navigationButtonText}>➕ Créer une compétition</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.navigationButton, styles.adminButton]}
-              onPress={() => (navigation as any).navigate('AdminAddCatch')}
-            >
-              <Text style={styles.navigationButtonText}>➕ Ajouter une prise (Admin)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.navigationButton, styles.adminButton, styles.penaltyNavButton]}
-              onPress={() => (navigation as any).navigate('AdminPenalty')}
-            >
-              <Text style={styles.navigationButtonText}>⚖️ Pénalités</Text>
-            </TouchableOpacity>
+          <View style={styles.identityText}>
+            <Text style={styles.displayName}>Administration</Text>
+            <Text style={styles.identityHint}>Validation, compétitions et exports PDF</Text>
           </View>
         </View>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, styles.statIconPending]}>
+              <FaIcon name="check" size={14} color="#34C759" />
+            </View>
+            <Text style={styles.statValue}>{pendingCount}</Text>
+            <Text style={styles.statLabel}>En attente</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, styles.statIconComp]}>
+              <FaIcon name="trophy" size={14} color="#007AFF" />
+            </View>
+            <Text style={styles.statValue}>{competitionsCount}</Text>
+            <Text style={styles.statLabel}>Compétitions</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, styles.statIconLive]}>
+              <FaIcon name="play" size={14} color="#FF9500" />
+            </View>
+            <Text style={styles.statValue}>{activeCompetitions}</Text>
+            <Text style={styles.statLabel}>En cours</Text>
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Actions</Text>
+        <View style={styles.grid}>
+          {tiles.map((tile) => (
+            <TouchableOpacity
+              key={tile.label}
+              style={styles.tile}
+              onPress={tile.onPress}
+              activeOpacity={0.75}
+            >
+              <View style={styles.tileIcon}>
+                <FaIcon name={tile.icon} size={20} color="#007AFF" />
+              </View>
+              <Text style={styles.tileLabel}>{tile.label}</Text>
+              <Text style={styles.tileHint}>{tile.hint}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.sectionTitle}>Prises en attente</Text>
+        {pendingCount === 0 ? (
+          <View style={styles.emptyCard}>
+            <FaIcon name="circleCheck" size={28} color="#34C759" />
+            <Text style={styles.emptyText}>Aucune prise en attente</Text>
+            <Text style={styles.emptySubtext}>Toutes les prises ont été traitées.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={allCatches}
+            keyExtractor={(item: any) => item.id.toString()}
+            renderItem={({ item: catchItem }: any) => (
+              <TouchableOpacity
+                style={styles.catchCard}
+                onPress={() => handleViewCatch(catchItem.id)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.catchHeader}>
+                  <Text style={styles.catchTitle}>
+                    {catchItem.species?.name || 'Espèce inconnue'}
+                  </Text>
+                  <Text style={styles.catchSize}>{catchItem.size} cm</Text>
+                </View>
+                <Text style={styles.catchTeam}>Équipe : {catchItem.team?.name || 'N/A'}</Text>
+                {catchItem.caughtBy ? (
+                  <Text style={styles.catchMember}>
+                    Pêché par : {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+                  </Text>
+                ) : null}
+                <Text style={styles.catchDate}>{formatDateTime(catchItem.createdAt)}</Text>
+                <View style={styles.catchActions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.validateButton]}
+                    onPress={() => handleValidate(catchItem.id)}
+                    disabled={validateMutation.isPending}
+                  >
+                    <FaIcon name="circleCheck" size={16} color="#fff" />
+                    <Text style={styles.actionButtonText}>Valider</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.rejectButton]}
+                    onPress={() => handleReject(catchItem.id)}
+                    disabled={validateMutation.isPending}
+                  >
+                    <FaIcon name="circleXmark" size={16} color="#fff" />
+                    <Text style={styles.actionButtonText}>Rejeter</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            )}
+            onEndReached={loadMoreCatches}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isLoadingMore ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color="#007AFF" />
+                  <Text style={styles.loadingMoreText}>Chargement…</Text>
+                </View>
+              ) : null
+            }
+            scrollEnabled={false}
+          />
+        )}
+
+        {endedCompetitions.length > 0 ? (
+          <>
+            <Text style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
+              PDF des compétitions terminées
+            </Text>
+            <View style={styles.listCard}>
+              {endedCompetitions.map((item: any, index: number) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.listRow,
+                    index === endedCompetitions.length - 1 && styles.listRowLast,
+                  ]}
+                >
+                  <View style={styles.listIcon}>
+                    <FaIcon name="trophy" size={16} color="#007AFF" />
+                  </View>
+                  <Text style={styles.endedName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.pdfIconButton}
+                    onPress={async () => {
+                      try {
+                        await adminService.downloadCompetitionPdf(item.id, item.name);
+                      } catch (err: any) {
+                        Alert.alert(
+                          'Erreur',
+                          err?.message || 'Impossible de générer le PDF.'
+                        );
+                      }
+                    }}
+                  >
+                    <FaIcon name="filePdf" size={20} color="#C41E3A" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
       </ScrollView>
     </>
   );
@@ -245,62 +314,156 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 32,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  identityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  identityText: {
+    flex: 1,
+  },
+  displayName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111',
+  },
+  identityHint: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 20,
+    gap: 8,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  },
+  statIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  statIconPending: {
+    backgroundColor: '#E8F8ED',
+  },
+  statIconComp: {
+    backgroundColor: '#E8F1FF',
+  },
+  statIconLive: {
+    backgroundColor: '#FFF4E5',
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: '#888',
     textAlign: 'center',
-  },
-  section: {
-    marginBottom: 24,
+    fontWeight: '600',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 10,
+    marginLeft: 4,
   },
-  catchesList: {
-    gap: 12,
+  sectionTitleSpaced: {
+    marginTop: 20,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  tile: {
+    width: '48.5%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tileIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E8F1FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  tileLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111',
+  },
+  tileHint: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  emptyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 4,
+    textAlign: 'center',
   },
   catchCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 12,
   },
   catchHeader: {
     flexDirection: 'row',
@@ -309,14 +472,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   catchTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111',
+    flex: 1,
+    marginRight: 8,
   },
   catchSize: {
     fontSize: 16,
     color: '#007AFF',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   catchTeam: {
     fontSize: 14,
@@ -339,10 +504,12 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 10,
   },
   validateButton: {
     backgroundColor: '#34C759',
@@ -352,33 +519,51 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
   },
-  emptyContainer: {
-    padding: 32,
+  loadingMore: {
+    paddingVertical: 12,
     alignItems: 'center',
+    gap: 6,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
+  loadingMoreText: {
+    fontSize: 13,
+    color: '#888',
   },
-  navigationButton: {
-    backgroundColor: '#007AFF',
-    padding: 16,
-    borderRadius: 8,
+  listCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  listRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  navigationButtonText: {
-    color: '#fff',
+  listRowLast: {
+    borderBottomWidth: 0,
+  },
+  listIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F1FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  endedName: {
+    flex: 1,
+    fontSize: 15,
     fontWeight: '600',
-    fontSize: 16,
+    color: '#222',
+    marginRight: 8,
   },
-  adminButton: {
-    backgroundColor: '#FF9500',
-    marginTop: 12,
-  },
-  penaltyNavButton: {
-    backgroundColor: '#d97706',
+  pdfIconButton: {
+    padding: 8,
   },
 });

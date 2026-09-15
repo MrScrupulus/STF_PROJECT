@@ -20,6 +20,7 @@ import { speciesService } from '../services/speciesService';
 import { formatDateTimeLocal, formatCompetitionDate, formatCompetitionDateRange, parseApiDate } from '../utils/dateUtils';
 import { API_BASE_URL } from '../config/api';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 import PerimeterMapView from '../components/PerimeterMapView';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
@@ -44,6 +45,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [showTop3, setShowTop3] = useState(false);
   const [reglementImageViewerVisible, setReglementImageViewerVisible] = useState(false);
   const [reglementImageViewerIndex, setReglementImageViewerIndex] = useState(0);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
 
   const { data: competitionResponse, isLoading, isError, error } = useQuery({
     queryKey: ['competition', competitionId],
@@ -708,7 +710,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 style={[styles.adminButton, styles.editButton]}
                 onPress={() => (navigation as any).navigate('EditCompetition', { id: competition.id })}
               >
-                <Text style={styles.adminButtonText}>✏️ Modifier la compétition</Text>
+                <Text style={styles.adminButtonText}>Modifier la compétition</Text>
               </TouchableOpacity>
             )}
             {!isEnded && (
@@ -724,8 +726,8 @@ export default function CompetitionDetailScreen({ route }: any) {
                   {pauseMutation.isPending
                     ? '...'
                     : (competition as any).isPaused
-                    ? '▶️ Reprendre la compétition'
-                    : '⏸️ Mettre en pause'}
+                    ? 'Reprendre la compétition'
+                    : 'Mettre en pause'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -757,10 +759,33 @@ export default function CompetitionDetailScreen({ route }: any) {
                 {rankingMutation.isPending
                   ? '...'
                   : (competition as any).isRankingPublic
-                  ? '🔒 Masquer le classement'
-                  : '✅ Publier le classement'}
+                  ? 'Masquer le classement'
+                  : 'Publier le classement'}
               </Text>
             </TouchableOpacity>
+            {isEnded && (
+              <TouchableOpacity
+                style={[styles.adminButton, styles.pdfButton]}
+                onPress={async () => {
+                  try {
+                    setPdfDownloading(true);
+                    await adminService.downloadCompetitionPdf(competition.id, competition.name);
+                  } catch (err: any) {
+                    Alert.alert('Erreur', err?.message || 'Impossible de générer le PDF.');
+                  } finally {
+                    setPdfDownloading(false);
+                  }
+                }}
+                disabled={pdfDownloading}
+              >
+                <View style={styles.pdfButtonInner}>
+                  <FaIcon name="filePdf" size={18} color="#fff" />
+                  <Text style={styles.adminButtonText}>
+                    {pdfDownloading ? 'Génération…' : 'PDF classement & stats'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1761,6 +1786,14 @@ const styles = StyleSheet.create({
   },
   rankingPrivateButton: {
     backgroundColor: '#8E8E93',
+  },
+  pdfButton: {
+    backgroundColor: '#C41E3A',
+  },
+  pdfButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   adminButtonText: {
     color: '#fff',

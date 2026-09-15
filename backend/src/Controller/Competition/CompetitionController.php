@@ -9,6 +9,7 @@ use App\Repository\Competition\TeamRepository;
 use App\Repository\Competition\FishCatchRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -33,6 +34,44 @@ class CompetitionController extends AbstractController
         private readonly ReglementImageStorageService $reglementStorage,
     ) {
     }
+
+    private function coverImageUrl(?Competition $competition): ?string
+    {
+        if (!$competition) {
+            return null;
+        }
+        $path = $competition->getCoverImagePath();
+
+        return $path ? $this->reglementStorage->getPublicUrl($path) : null;
+    }
+
+    /**
+     * Fichier multipart (image|file) ou data URL JSON { "image": "data:image/jpeg;base64,..." }.
+     * Expo / Axios envoie souvent du JSON : $_FILES est alors vide.
+     */
+    private function getUploadedImageSource(Request $request): UploadedFile|string|null
+    {
+        $file = $request->files->get('image') ?? $request->files->get('file');
+        if ($file instanceof UploadedFile && $file->isValid()) {
+            $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: '');
+            if ($ext === '' || \in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                return $file;
+            }
+
+            return null;
+        }
+
+        $raw = $request->request->get('image');
+        if (!\is_string($raw) || $raw === '') {
+            $payload = json_decode($request->getContent() ?: '', true);
+            $raw = \is_array($payload) ? ($payload['image'] ?? null) : null;
+        }
+        if (\is_string($raw) && preg_match('#^data:image/(jpeg|jpg|png|webp);base64,#i', trim($raw))) {
+            return trim($raw);
+        }
+
+        return null;
+    }
     #[Route('/admin/competitions', name: 'app_admin_competitions_list', methods: ['GET'])]
     public function adminList(CompetitionRepository $repository): JsonResponse
     {
@@ -56,6 +95,7 @@ class CompetitionController extends AbstractController
                     'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'isPaused' => $competition->getIsPaused(),
+                    'coverImageUrl' => $this->coverImageUrl($competition),
                 ];
             }, $competitions);
 
@@ -161,6 +201,7 @@ class CompetitionController extends AbstractController
                     'hasNoLimit' => $competition->getHasNoLimit(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'isRegistered' => $isRegistered,
+                    'coverImageUrl' => $this->coverImageUrl($competition),
                 ];
             }, $competitions);
 
@@ -210,6 +251,7 @@ class CompetitionController extends AbstractController
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
                     'isPaused' => $competition->getIsPaused(),
+                    'coverImageUrl' => $this->coverImageUrl($competition),
                 ];
             }, $competitions);
 
@@ -406,6 +448,7 @@ class CompetitionController extends AbstractController
             'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
             'description' => $competition->getDescription(),
             'reglement' => $competition->getReglement(),
+            'coverImageUrl' => $this->coverImageUrl($competition),
             'reglementImagePaths' => $competition->getReglementImagePaths(),
             'reglementImageUrls' => array_map(
                 fn($p) => $this->reglementStorage->getPublicUrl($p),
@@ -668,23 +711,15 @@ class CompetitionController extends AbstractController
                 return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
             }
 
-            $file = $request->files->get('image') ?? $request->files->get('file');
-            if (!$file || !$file->isValid()) {
+            $source = $this->getUploadedImageSource($request);
+            if ($source === null) {
                 return $this->json([
                     'success' => false,
                     'message' => 'Fichier image requis (image ou file). Formats : jpg, png, webp.',
                 ], 400);
             }
 
-            $ext = strtolower($file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'jpg');
-            if (!\in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Format non supporté. Utilisez jpg, png ou webp.',
-                ], 400);
-            }
-
-            $newPath = $this->reglementStorage->save($file);
+            $newPath = $this->reglementStorage->save($source);
             $competition->addReglementImagePath($newPath);
             $entityManager->flush();
 
@@ -742,6 +777,73 @@ class CompetitionController extends AbstractController
         }
     }
 
+    #[Route('/admin/competitions/{id}/cover-image', name: 'app_admin_competition_upload_cover', methods: ['POST'])]
+    public function uploadCoverImage(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $repository->find($id);
+            if (!$competition) {
+                return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
+            }
+
+            $source = $this->getUploadedImageSource($request);
+            if ($source === null) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Fichier image requis (image ou file). Formats : jpg, png, webp.',
+                ], 400);
+            }
+
+            $oldPath = $competition->getCoverImagePath();
+            $newPath = $this->reglementStorage->save($source, 'covers');
+            $competition->setCoverImagePath($newPath);
+            $entityManager->flush();
+            if ($oldPath && $oldPath !== $newPath) {
+                $this->reglementStorage->delete($oldPath);
+            }
+
+            return $this->json([
+                'success' => true,
+                'coverImagePath' => $newPath,
+                'coverImageUrl' => $this->reglementStorage->getPublicUrl($newPath),
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur upload jaquette', ['error' => $e->getMessage()]);
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload de la jaquette.',
+            ], 500);
+        }
+    }
+
+    #[Route('/admin/competitions/{id}/cover-image', name: 'app_admin_competition_delete_cover', methods: ['DELETE'])]
+    public function deleteCoverImage(int $id, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
+    {
+        try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+            $competition = $repository->find($id);
+            if (!$competition) {
+                return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
+            }
+
+            $pathToDelete = $competition->getCoverImagePath();
+            $competition->setCoverImagePath(null);
+            $entityManager->flush();
+            $this->reglementStorage->delete($pathToDelete);
+
+            return $this->json([
+                'success' => true,
+                'coverImageUrl' => null,
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur suppression jaquette', ['error' => $e->getMessage()]);
+            return $this->json(['success' => false, 'message' => 'Erreur lors de la suppression.'], 500);
+        }
+    }
+
     #[Route('/admin/competitions/{id}', name: 'app_admin_competition_delete', methods: ['DELETE'])]
     public function delete(Competition $competition, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -751,12 +853,15 @@ class CompetitionController extends AbstractController
             // Vérifier s'il y a des équipes liées
             if (!$competition->getTeams()->isEmpty()) {
                 return $this->json([
-                    'error' => 'Impossible de supprimer cette compétition car elle contient des équipes'
+                    'error' => 'Impossible de supprimer cette compétition car elle contient des équipes',
+                    'message' => 'Impossible de supprimer cette compétition : des équipes y sont encore inscrites.',
                 ], 400);
             }
 
+            $coverPath = $competition->getCoverImagePath();
             $entityManager->remove($competition);
             $entityManager->flush();
+            $this->reglementStorage->delete($coverPath);
 
             return $this->json([
                 'message' => 'Compétition supprimée avec succès'

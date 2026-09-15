@@ -358,7 +358,7 @@ export default function TeamDetailScreen({ route }: any) {
       .sort((a: any, b: any) => b.points - a.points);
 
     if (pres.hasPerSpeciesQuota && pres.bySpecies.length > 0) {
-      countedSectionTitle = `🏆 Prises comptabilisées (quotas · jusqu'à ${pres.sumQuotaSlots})`;
+      countedSectionTitle = `Prises comptabilisées (quotas · jusqu'à ${pres.sumQuotaSlots})`;
       const capGlobal =
         pres.maxFishCounted != null && pres.maxFishCounted > 0
           ? ` · plafond global ${pres.maxFishCounted}`
@@ -368,8 +368,8 @@ export default function TeamDetailScreen({ route }: any) {
       const n = pres.countedCatchIds.length;
       countedSectionTitle =
         pres.maxFishCounted != null && pres.maxFishCounted > 0
-          ? `🏆 Prises comptabilisées (${n} / max ${pres.maxFishCounted})`
-          : `🏆 ${n} prise(s) comptabilisée(s)`;
+          ? `Prises comptabilisées (${n} / max ${pres.maxFishCounted})`
+          : `${n} prise(s) comptabilisée(s)`;
       baseScoreDescription =
         pres.maxFishCounted != null && pres.maxFishCounted > 0
           ? `Top ${pres.maxFishCounted} meilleures prises (plafond global)`
@@ -378,7 +378,7 @@ export default function TeamDetailScreen({ route }: any) {
   } else {
     topCatches = validCatches.slice(0, topNLegacy);
     otherCatches = validCatches.slice(topNLegacy);
-    countedSectionTitle = `🏆 Top ${topNLegacy || topCatches.length} prises comptabilisées`;
+    countedSectionTitle = `Top ${topNLegacy || topCatches.length} prises comptabilisées`;
     baseScoreDescription =
       topNLegacy > 0 && topNLegacy < validCatches.length
         ? `Top ${topNLegacy} meilleures prises`
