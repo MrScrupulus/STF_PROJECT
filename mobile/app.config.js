@@ -16,11 +16,7 @@ module.exports = () => {
       ...(expo.android.config || {}),
       googleMaps: { apiKey: mapsKey },
     };
-    expo.ios = expo.ios || {};
-    expo.ios.config = {
-      ...(expo.ios.config || {}),
-      googleMapsApiKey: mapsKey,
-    };
+    // iOS : Apple Maps (react-native-maps 1.27 n’a plus le pod react-native-google-maps).
   }
 
   expo.extra = {
