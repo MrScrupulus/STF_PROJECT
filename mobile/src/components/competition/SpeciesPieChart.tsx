@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
 import { SPECIES_COLORS } from '../../utils/speciesColors';
+import { useThemeColors } from '../../contexts/ThemeContext';
+import { type ThemeColors } from '../../theme';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -18,6 +20,9 @@ interface SpeciesPieChartProps {
 }
 
 export default function SpeciesPieChart({ speciesStats, showTitle = true }: SpeciesPieChartProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   if (!speciesStats || speciesStats.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -31,7 +36,7 @@ export default function SpeciesPieChart({ speciesStats, showTitle = true }: Spec
     name: species.name,
     population: species.count,
     color: SPECIES_COLORS[index % SPECIES_COLORS.length],
-    legendFontColor: '#333',
+    legendFontColor: theme.text,
     legendFontSize: 12,
   }));
 
@@ -39,9 +44,9 @@ export default function SpeciesPieChart({ speciesStats, showTitle = true }: Spec
   const total = speciesStats.reduce((sum, species) => sum + species.count, 0);
 
   const chartConfig = {
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
+    backgroundColor: theme.surface,
+    backgroundGradientFrom: theme.surface,
+    backgroundGradientTo: theme.surface,
     color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
     strokeWidth: 2,
@@ -86,9 +91,9 @@ export default function SpeciesPieChart({ speciesStats, showTitle = true }: Spec
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 15,
     marginVertical: 10,
@@ -104,7 +109,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -113,14 +118,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: '#666',
+    color: theme.textMuted,
     fontSize: 14,
   },
   legend: {
     marginTop: 15,
     paddingTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: theme.border,
   },
   legendItem: {
     flexDirection: 'row',
@@ -135,7 +140,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
 });

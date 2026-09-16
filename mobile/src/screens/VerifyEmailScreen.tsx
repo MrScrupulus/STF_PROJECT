@@ -10,8 +10,13 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function VerifyEmailScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const route = useRoute();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
@@ -73,7 +78,7 @@ export default function VerifyEmailScreen() {
         {status === 'verifying' && (
           <View style={styles.content}>
             <Text style={styles.title}>Vérification en cours...</Text>
-            <ActivityIndicator size="large" color="#007AFF" style={styles.spinner} />
+            <ActivityIndicator size="large" color={theme.accent} style={styles.spinner} />
           </View>
         )}
 
@@ -109,10 +114,10 @@ export default function VerifyEmailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     flex: 1,
@@ -124,7 +129,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#333',
+    color: theme.text,
   },
   spinner: {
     marginTop: 20,
@@ -158,7 +163,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loginButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     padding: 16,
     width: '100%',
@@ -166,7 +171,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   loginButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { getSpeciesColor } from '../../utils/speciesColors';
 import { buildTimeTicks, parseCatchDate, parseTimeBounds } from '../../utils/timelineScale';
+import { useThemeColors } from '../../contexts/ThemeContext';
+import { type ThemeColors } from '../../theme';
 
 const CHART_WIDTH = Dimensions.get('window').width - 32;
 const CHART_HEIGHT = 200;
@@ -30,6 +32,9 @@ export default function CatchesTimelineChart({
   endDate,
   speciesStats = [],
 }: CatchesTimelineChartProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const { start, durationMs } = useMemo(
     () => parseTimeBounds(startDate, endDate),
     [startDate, endDate]
@@ -150,14 +155,14 @@ export default function CatchesTimelineChart({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: 16,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -165,7 +170,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chartArea: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.surfaceRaised,
     borderRadius: 8,
     position: 'relative',
   },
@@ -174,7 +179,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.border,
   },
   point: {
     position: 'absolute',
@@ -190,7 +195,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 10,
     fontWeight: '500',
-    color: '#374151',
+    color: theme.text,
     width: 52,
     textAlign: 'center',
   },
@@ -213,14 +218,14 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#374151',
+    color: theme.text,
   },
   empty: {
     padding: 20,
     alignItems: 'center',
   },
   emptyText: {
-    color: '#666',
+    color: theme.textMuted,
     fontSize: 14,
   },
 });

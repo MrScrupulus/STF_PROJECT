@@ -13,8 +13,13 @@ import { useNavigation } from '@react-navigation/native';
 import { adminService } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function AdminCatchValidationListScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [catchesPage, setCatchesPage] = useState(1);
@@ -103,7 +108,7 @@ export default function AdminCatchValidationListScreen() {
       <>
         <Header title="Validation de prises" showBack={false} showMenu={true}  />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -178,7 +183,7 @@ export default function AdminCatchValidationListScreen() {
             ListFooterComponent={
               isLoadingMore ? (
                 <View style={styles.loadingMore}>
-                  <ActivityIndicator size="small" color="#007AFF" />
+                  <ActivityIndicator size="small" color={theme.accent} />
                   <Text style={styles.loadingMoreText}>Chargement...</Text>
                 </View>
               ) : null
@@ -191,10 +196,10 @@ export default function AdminCatchValidationListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   listContent: {
     padding: 16,
@@ -205,7 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   catchCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -224,26 +229,26 @@ const styles = StyleSheet.create({
   catchTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   catchSize: {
     fontSize: 16,
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   catchTeam: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   catchMember: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   catchDate: {
     fontSize: 12,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 12,
   },
   catchActions: {
@@ -258,13 +263,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   validateButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   rejectButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
   },
   actionButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -276,12 +281,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   loadingMore: {
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
   },
   loadingMoreText: {
     marginTop: 8,
-    color: '#666',
+    color: theme.textMuted,
     fontSize: 14,
   },
 });

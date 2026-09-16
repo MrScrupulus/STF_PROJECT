@@ -16,8 +16,13 @@ import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function ProfileScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { setIsAuthenticated } = useAuth();
@@ -62,7 +67,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -71,7 +76,7 @@ export default function ProfileScreen() {
   if (isError && (errStatus === 401 || errStatus === 403)) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
         <Text style={styles.sessionHint}>Session expirée, redirection…</Text>
       </View>
     );
@@ -190,7 +195,7 @@ export default function ProfileScreen() {
               activeOpacity={0.75}
             >
               <View style={styles.tileIcon}>
-                <FaIcon name={tile.icon} size={20} color="#007AFF" />
+                <FaIcon name={tile.icon} size={20} color={theme.accent} />
               </View>
               <Text style={styles.tileLabel}>{tile.label}</Text>
               <Text style={styles.tileHint}>{tile.hint}</Text>
@@ -207,7 +212,7 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.listIcon}>
-                <FaIcon name={row.icon} size={18} color="#007AFF" />
+                <FaIcon name={row.icon} size={18} color={theme.accent} />
               </View>
               <View style={styles.listText}>
                 <Text style={styles.listLabel}>{row.label}</Text>
@@ -219,7 +224,7 @@ export default function ProfileScreen() {
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.75}>
-          <FaIcon name="logout" size={18} color="#dc3545" />
+          <FaIcon name="logout" size={18} color={theme.danger} />
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
         </TouchableOpacity>
 
@@ -275,10 +280,10 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   identityCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -301,13 +306,13 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
   avatarText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 22,
     fontWeight: '700',
   },
@@ -317,29 +322,29 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
   },
   username: {
     fontSize: 14,
-    color: '#007AFF',
+    color: theme.accent,
     marginTop: 2,
   },
   identityEmail: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#888',
+    color: theme.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: 10,
     marginLeft: 4,
   },
   infoSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -352,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
     gap: 12,
   },
   infoRowLast: {
@@ -361,11 +366,11 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#888',
+    color: theme.textMuted,
   },
   infoValue: {
     fontSize: 15,
-    color: '#222',
+    color: theme.text,
     flex: 1,
     textAlign: 'right',
   },
@@ -377,7 +382,7 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: '48.5%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 12,
@@ -388,7 +393,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E8F1FF',
+    backgroundColor: theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -396,16 +401,16 @@ const styles = StyleSheet.create({
   tileLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
   },
   tileHint: {
     fontSize: 12,
-    color: '#888',
+    color: theme.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
   listCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     marginBottom: 16,
     overflow: 'hidden',
@@ -416,7 +421,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   listRowLast: {
     borderBottomWidth: 0,
@@ -425,7 +430,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#E8F1FF',
+    backgroundColor: theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -436,16 +441,16 @@ const styles = StyleSheet.create({
   listLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#222',
+    color: theme.text,
   },
   listHint: {
     fontSize: 13,
-    color: '#888',
+    color: theme.textMuted,
     marginTop: 2,
   },
   chevron: {
     fontSize: 22,
-    color: '#ccc',
+    color: theme.textMuted,
     fontWeight: '300',
     marginLeft: 8,
   },
@@ -454,7 +459,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     paddingVertical: 14,
     marginBottom: 20,
@@ -462,7 +467,7 @@ const styles = StyleSheet.create({
     borderColor: '#ffd0cd',
   },
   logoutButtonText: {
-    color: '#dc3545',
+    color: theme.danger,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -476,34 +481,34 @@ const styles = StyleSheet.create({
   dangerZoneTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ff3b30',
+    color: theme.danger,
     marginBottom: 8,
   },
   dangerZoneText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 16,
     lineHeight: 20,
   },
   dangerButton: {
-    backgroundColor: '#ff3b30',
+    backgroundColor: theme.danger,
     borderRadius: 10,
     padding: 14,
     alignItems: 'center',
   },
   dangerButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '700',
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
   },
   sessionHint: {
     marginTop: 12,
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   modalOverlay: {
     flex: 1,
@@ -512,7 +517,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 24,
     width: '80%',
@@ -521,11 +526,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333',
+    color: theme.text,
   },
   modalText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 24,
     lineHeight: 22,
   },
@@ -536,25 +541,25 @@ const styles = StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    backgroundColor: '#ddd',
+    backgroundColor: theme.surfaceRaised,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   modalButtonCancelText: {
-    color: '#333',
+    color: theme.text,
     fontSize: 16,
     fontWeight: '600',
   },
   modalButtonConfirm: {
     flex: 1,
-    backgroundColor: '#ff3b30',
+    backgroundColor: theme.danger,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   modalButtonConfirmText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

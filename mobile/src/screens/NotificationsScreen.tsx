@@ -14,8 +14,13 @@ import { notificationService, Notification } from '../services/notificationServi
 import { formatRelativeTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function NotificationsScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +87,7 @@ export default function NotificationsScreen() {
       >
         {isLoading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={theme.accent} />
           </View>
         ) : (
           <>
@@ -121,7 +126,7 @@ export default function NotificationsScreen() {
                     onPress={() => handleNotificationPress(notification)}
                   >
                     <View style={styles.notificationIcon}>
-                      <FaIcon name={getNotificationIcon(notification.type)} size={18} color="#007AFF" />
+                      <FaIcon name={getNotificationIcon(notification.type)} size={18} color={theme.accent} />
                     </View>
                     <View style={styles.notificationContent}>
                       <Text
@@ -148,10 +153,10 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -166,13 +171,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   markAllButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   markAllButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -182,14 +187,14 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
   },
   notificationsList: {
     gap: 12,
   },
   notificationItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
@@ -216,7 +221,7 @@ const styles = StyleSheet.create({
   },
   notificationMessage: {
     fontSize: 15,
-    color: '#1f2937',
+    color: theme.text,
     marginBottom: 4,
     lineHeight: 20,
   },
@@ -225,7 +230,7 @@ const styles = StyleSheet.create({
   },
   notificationTime: {
     fontSize: 12,
-    color: '#6b7280',
+    color: theme.textMuted,
   },
   unreadDot: {
     width: 8,

@@ -8,8 +8,13 @@ import {
   Pressable,
 } from 'react-native';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function LegalNoticeScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={styles.container}>
       <Header title="Mentions légales" showBack={true} showMenu={true} />
@@ -114,10 +119,10 @@ export default function LegalNoticeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   content: {
     flex: 1,
@@ -129,13 +134,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   intro: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 22,
     marginBottom: 24,
     textAlign: 'center',
@@ -143,7 +148,7 @@ const styles = StyleSheet.create({
   partTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
     marginTop: 8,
     marginBottom: 16,
   },
@@ -153,25 +158,25 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#007AFF',
+    color: theme.accent,
     marginBottom: 8,
   },
   text: {
     fontSize: 15,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 24,
     marginBottom: 8,
   },
   link: {
     fontSize: 15,
-    color: '#007AFF',
+    color: theme.accent,
     lineHeight: 24,
     marginBottom: 8,
     textDecorationLine: 'underline',
   },
   lastUpdated: {
     fontSize: 13,
-    color: '#999',
+    color: theme.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 20,

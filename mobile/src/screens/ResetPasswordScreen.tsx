@@ -15,8 +15,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
 import FaIcon from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function ResetPasswordScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const route = useRoute();
   const [token, setToken] = useState<string>('');
@@ -163,7 +168,7 @@ export default function ResetPasswordScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
             <Text style={styles.helperText}>
@@ -187,7 +192,7 @@ export default function ResetPasswordScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -197,7 +202,7 @@ export default function ResetPasswordScreen() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.onAccent} />
               ) : (
                 <Text style={styles.buttonText}>
                   Réinitialiser le mot de passe
@@ -211,10 +216,10 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   scrollContent: {
     flexGrow: 1,
@@ -228,13 +233,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 32,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 22,
   },
   errorBox: {
@@ -256,12 +261,12 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 16,
     paddingRight: 50,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   eyeButton: {
     position: 'absolute',
@@ -271,12 +276,12 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 16,
     marginLeft: 4,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -286,7 +291,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -303,14 +308,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   loginButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     padding: 16,
     width: '100%',
     alignItems: 'center',
   },
   loginButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

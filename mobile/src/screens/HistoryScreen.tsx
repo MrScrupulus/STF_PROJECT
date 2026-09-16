@@ -21,6 +21,8 @@ import CatchesMapView from '../components/competition/CatchesMapView';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
 import { boundsFromCatchTimes, parseCatchDate } from '../utils/timelineScale';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export type HistoryTab = 'catches' | 'competitions' | 'stats';
 
@@ -57,6 +59,9 @@ function timelineBounds(timeline: any[]): { startDate?: string; endDate?: string
 }
 
 export default function HistoryScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const route = useRoute();
   const initialTabParam = (route.params as { initialTab?: string } | undefined)?.initialTab;
@@ -128,7 +133,7 @@ export default function HistoryScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -279,6 +284,9 @@ function StatsTab({
   timelineStart,
   timelineEnd,
 }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={styles.overview}>
       <View style={styles.statsGrid}>
@@ -341,7 +349,7 @@ function StatsTab({
         </Text>
         {globalStatsLoading && (
           <View style={styles.inlineLoading}>
-            <ActivityIndicator size="small" color="#007AFF" />
+            <ActivityIndicator size="small" color={theme.accent} />
           </View>
         )}
         {!globalStatsLoading && globalStats && (
@@ -409,6 +417,9 @@ function StatsTab({
 }
 
 function CompetitionsTab({ grouped, orphanTeams, navigation }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   if ((!grouped || grouped.length === 0) && (!orphanTeams || orphanTeams.length === 0)) {
     return (
       <View style={styles.emptyContainer}>
@@ -485,6 +496,9 @@ function CatchesTab({
   onLoadMore,
   isLoadingMore,
 }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
     <FlatList
       style={styles.content}
@@ -592,7 +606,7 @@ function CatchesTab({
       ListFooterComponent={
         isLoadingMore ? (
           <View style={styles.loadingMore}>
-            <ActivityIndicator size="small" color="#007AFF" />
+            <ActivityIndicator size="small" color={theme.accent} />
             <Text style={styles.loadingMoreText}>Chargement...</Text>
           </View>
         ) : null
@@ -610,10 +624,10 @@ function CatchesTab({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   center: {
     flex: 1,
@@ -622,9 +636,9 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: theme.border,
   },
   tab: {
     flex: 1,
@@ -636,23 +650,23 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#007AFF',
+    borderBottomColor: theme.accent,
   },
   tabInner: {
     alignItems: 'center',
   },
   tabLine1: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   tabLine1Active: {
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   tabLine2: {
     fontSize: 10,
-    color: '#999',
+    color: theme.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -670,26 +684,26 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   statLabel: {
     fontSize: 11,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
     textAlign: 'center',
   },
   statValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: theme.accent,
     marginBottom: 4,
   },
   statDescription: {
     fontSize: 10,
-    color: '#999',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   section: {
@@ -699,11 +713,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
+    color: theme.text,
   },
   globalHint: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 12,
     lineHeight: 18,
   },
@@ -713,7 +727,7 @@ const styles = StyleSheet.create({
   globalKpiText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   inlineLoading: {
     paddingVertical: 16,
@@ -723,7 +737,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -731,16 +745,16 @@ const styles = StyleSheet.create({
   speciesName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   speciesCount: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginLeft: 12,
   },
   teamCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
@@ -759,7 +773,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   teamBadgeText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -767,39 +781,39 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   teamScore: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: theme.accent,
     marginBottom: 4,
   },
   teamMembers: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   teamCompetition: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   teamCatches: {
     fontSize: 14,
-    color: '#999',
+    color: theme.textMuted,
   },
   competitionsTab: {
     padding: 16,
   },
   competitionsIntro: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 18,
     marginBottom: 16,
   },
   competitionCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -807,23 +821,23 @@ const styles = StyleSheet.create({
   competitionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   competitionDates: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   competitionTeamsReminder: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 8,
     lineHeight: 16,
   },
   competitionHint: {
     fontSize: 13,
-    color: '#007AFF',
+    color: theme.accent,
     marginTop: 8,
   },
   catchesTab: {
@@ -835,7 +849,7 @@ const styles = StyleSheet.create({
   speciesFilterLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#888',
+    color: theme.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: 8,
@@ -845,9 +859,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     marginRight: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     borderWidth: 1.5,
-    borderColor: '#eee',
+    borderColor: theme.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -856,22 +870,22 @@ const styles = StyleSheet.create({
     minWidth: 88,
   },
   speciesChipSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   speciesChipText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 18,
   },
   speciesChipTextSelected: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   catchCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -882,19 +896,19 @@ const styles = StyleSheet.create({
   catchSpecies: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   catchDetails: {
     marginBottom: 8,
   },
   catchDetail: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   catchValue: {
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   catchPhoto: {
     marginTop: 8,
@@ -925,10 +939,10 @@ const styles = StyleSheet.create({
   },
   catchStatusText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
   },
   loadingMore: {
@@ -939,7 +953,7 @@ const styles = StyleSheet.create({
   loadingMoreText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   emptyContainer: {
     padding: 32,
@@ -947,7 +961,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   imageModal: {
@@ -963,7 +977,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   imageModalCloseText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 40,
     fontWeight: '300',
   },

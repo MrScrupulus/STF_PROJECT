@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getSpeciesColor, getPinColorForAndroid } from '../../utils/speciesColors';
+import { useThemeColors } from '../../contexts/ThemeContext';
+import { type ThemeColors } from '../../theme';
 
 const PIN_SIZE = 14;
 
@@ -26,6 +28,9 @@ export default function CatchesMapView({
   speciesStats = [],
   height = 300,
 }: CatchesMapViewProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const withCoords = useMemo(
     () => catches.filter((c) => c.latitude != null && c.longitude != null),
     [catches]
@@ -125,7 +130,7 @@ export default function CatchesMapView({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: 16,
     overflow: 'hidden',
@@ -133,7 +138,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 12,
   },
   mapWrap: {
@@ -148,7 +153,7 @@ const styles = StyleSheet.create({
   mapPlaceholder: {
     width: '100%',
     borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
@@ -157,7 +162,7 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   emptyText: {
-    color: '#666',
+    color: theme.textMuted,
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: 24,

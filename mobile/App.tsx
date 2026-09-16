@@ -40,6 +40,7 @@ import NotificationInitializer from './src/components/NotificationInitializer';
 import GlobalBottomTabBar from './src/components/GlobalBottomTabBar';
 import Footer from './src/components/Footer';
 import SettingsScreen from './src/screens/SettingsScreen';
+import { ThemeProvider, useThemeColors } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainTabs from './src/navigation/MainTabs';
 import { rootNavigationRef } from './src/navigation/rootNavigationRef';
@@ -87,6 +88,7 @@ function SessionExpiredBridge() {
 
 function AppNavigator() {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
+  const theme = useThemeColors();
   const linkingRef = useRef<any>(null);
   const [currentRoute, setCurrentRoute] = useState<string | null>(null);
 
@@ -183,9 +185,9 @@ function AppNavigator() {
         if (state) setCurrentRoute(getActiveRouteName(state));
       }}
     >
-      <View style={styles.appShell}>
+      <View style={[styles.appShell, { backgroundColor: theme.bg }]}>
       <NotificationInitializer />
-      <StatusBar style="auto" />
+      <StatusBar style={theme.statusBar} />
       <View style={styles.stackArea}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
@@ -250,10 +252,12 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <SessionExpiredBridge />
-          <AppNavigator />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SessionExpiredBridge />
+            <AppNavigator />
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );

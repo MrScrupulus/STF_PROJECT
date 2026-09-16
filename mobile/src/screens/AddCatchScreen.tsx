@@ -31,8 +31,13 @@ import {
   parseFishSizeCm,
   sanitizeFishSizeInput,
 } from '../utils/fishMeasurementInput';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function AddCatchScreen({ navigation, route }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const queryClient = useQueryClient();
   const [selectedSpecies, setSelectedSpecies] = useState<number | null>(null);
   const [size, setSize] = useState('');
@@ -477,7 +482,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
       <>
         <Header title="Ajouter une prise" showBack={true} showMenu={true} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -499,7 +504,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
               : "Prenez d'abord la photo de la prise. L'heure de la photo fera foi pour la date officielle."}
           </Text>
           <TouchableOpacity style={styles.cameraStepButton} onPress={takePhoto}>
-            <FaIcon name="camera" size={22} color="#fff" />
+            <FaIcon name="camera" size={22} color={theme.onAccent} />
             <Text style={styles.cameraStepButtonText}>Prendre la photo</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -521,7 +526,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
       <View style={styles.section}>
         <Text style={styles.label}>Espèce *</Text>
         {loadingSpecies ? (
-          <ActivityIndicator color="#007AFF" />
+          <ActivityIndicator color={theme.accent} />
         ) : species && species.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {(Array.isArray(species) ? species : []).map((spec: any) => (
@@ -611,7 +616,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
           </View>
         ) : (
           <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
-            <FaIcon name="camera" size={18} color="#fff" />
+            <FaIcon name="camera" size={18} color={theme.onAccent} />
             <Text style={styles.photoButtonText}> Prendre une photo</Text>
           </TouchableOpacity>
         )}
@@ -656,7 +661,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
               disabled={isGettingLocation}
             >
               {isGettingLocation ? (
-                <ActivityIndicator color="#007AFF" />
+                <ActivityIndicator color={theme.accent} />
               ) : (
                 <Text style={styles.updateLocationButtonText}>
                   🔄 Mettre à jour la position
@@ -675,7 +680,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
               disabled={isGettingLocation}
             >
               {isGettingLocation ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.onAccent} />
               ) : (
                 <Text style={styles.locationButtonText}>
                   📍 Capturer la position GPS
@@ -717,7 +722,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
         disabled={createCatchMutation.isPending || createJournalMutation.isPending}
       >
         {createCatchMutation.isPending || createJournalMutation.isPending ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={theme.onAccent} />
         ) : (
           <Text style={styles.submitButtonText}>Enregistrer la prise</Text>
         )}
@@ -736,10 +741,10 @@ export default function AddCatchScreen({ navigation, route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -751,12 +756,12 @@ const styles = StyleSheet.create({
   },
   cameraStepHint: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 32,
     textAlign: 'center',
   },
   cameraStepButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingVertical: 20,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -771,7 +776,7 @@ const styles = StyleSheet.create({
   },
   cameraStepButtonText: {
     fontSize: 18,
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   center: {
@@ -783,11 +788,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 24,
   },
   section: {
@@ -797,15 +802,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   textArea: {
     height: 100,
@@ -815,45 +820,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   speciesButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   speciesButtonText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   speciesButtonTextSelected: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   memberButton: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   memberButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   memberButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   memberButtonTextSelected: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   photoButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -862,7 +867,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   photoButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -876,17 +881,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retakeButton: {
-    backgroundColor: '#ff3b30',
+    backgroundColor: theme.danger,
     padding: 12,
     borderRadius: 8,
   },
   retakeButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -896,20 +901,20 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
   errorText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#ff3b30',
+    color: theme.danger,
     textAlign: 'center',
     marginTop: 40,
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -918,35 +923,35 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   createSpeciesLinkText: {
-    color: '#007AFF',
+    color: theme.accent,
     fontSize: 15,
     fontWeight: '600',
   },
   optionalHint: {
     fontSize: 14,
-    color: '#888',
+    color: theme.textMuted,
     fontWeight: '400',
   },
   required: {
-    color: '#ff3b30',
+    color: theme.danger,
   },
   locationContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   locationText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   locationStatusContainer: {
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
   },
   locationStatusInZone: {
     backgroundColor: '#d1fae5',
@@ -960,7 +965,7 @@ const styles = StyleSheet.create({
   },
   locationStatusText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -977,13 +982,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   locationButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
   },
   locationButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -993,10 +998,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
   },
   updateLocationButtonText: {
-    color: '#007AFF',
+    color: theme.accent,
     fontSize: 14,
     fontWeight: '600',
   },

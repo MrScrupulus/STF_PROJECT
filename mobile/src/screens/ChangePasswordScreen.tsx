@@ -15,8 +15,13 @@ import { useNavigation } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
 import FaIcon from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function ChangePasswordScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -114,7 +119,7 @@ export default function ChangePasswordScreen() {
                   style={styles.eyeIcon}
                   onPress={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
-                  <FaIcon name={showCurrentPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                  <FaIcon name={showCurrentPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -134,7 +139,7 @@ export default function ChangePasswordScreen() {
                   style={styles.eyeIcon}
                   onPress={() => setShowNewPassword(!showNewPassword)}
                 >
-                  <FaIcon name={showNewPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                  <FaIcon name={showNewPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
                 </TouchableOpacity>
               </View>
               {passwordValidation && (
@@ -164,7 +169,7 @@ export default function ChangePasswordScreen() {
                   style={styles.eyeIcon}
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                  <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
                 </TouchableOpacity>
               </View>
               {passwordsMatch !== null && (
@@ -185,7 +190,7 @@ export default function ChangePasswordScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.onAccent} />
               ) : (
                 <Text style={styles.submitButtonText}>Modifier le mot de passe</Text>
               )}
@@ -197,10 +202,10 @@ export default function ChangePasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   scrollContent: {
     flexGrow: 1,
@@ -216,15 +221,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
   },
   passwordInput: {
     flex: 1,
@@ -243,10 +248,10 @@ const styles = StyleSheet.create({
     color: '#10b981',
   },
   validationError: {
-    color: '#ef4444',
+    color: theme.danger,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -256,7 +261,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

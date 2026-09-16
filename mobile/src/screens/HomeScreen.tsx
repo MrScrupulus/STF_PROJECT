@@ -13,8 +13,13 @@ import { authService } from '../services/authService';
 import Header from '../components/Header';
 import { homeContent } from '../constants/homeContent';
 import FaIcon from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function HomeScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
   const [isAdmin, setIsAdmin] = React.useState(false);
@@ -56,7 +61,7 @@ export default function HomeScreen() {
             {homeContent.features.map((feature) => (
             <View key={feature.title} style={styles.featureCard}>
             <View style={styles.featureIcon}>
-              <FaIcon name={feature.icon} size={28} color="#007AFF" />
+              <FaIcon name={feature.icon} size={28} color={theme.accent} />
             </View>
               <View style={styles.featureContent}>
                 <Text style={styles.featureTitle}>{feature.title}</Text>
@@ -70,7 +75,7 @@ export default function HomeScreen() {
             <Text style={styles.tutorialTitle}>{homeContent.tutorialTitle}</Text>
             <View style={styles.tutorialCard}>
               <View style={styles.tutorialHeader}>
-                <FaIcon name="camera" size={24} color="#007AFF" />
+                <FaIcon name="camera" size={24} color={theme.accent} />
                 <Text style={styles.tutorialCardTitle}>{homeContent.catchTutorialTitle}</Text>
               </View>
               <View style={styles.tutorialSteps}>
@@ -94,7 +99,7 @@ export default function HomeScreen() {
             {isAuthenticated && isAdmin && (
               <View style={styles.tutorialCard}>
                 <View style={styles.tutorialHeader}>
-                  <FaIcon name="trophy" size={24} color="#007AFF" />
+                  <FaIcon name="trophy" size={24} color={theme.accent} />
                   <Text style={styles.tutorialCardTitle}>{homeContent.competitionTutorialTitle}</Text>
                   <Text style={styles.adminBadge}>{homeContent.adminBadge}</Text>
                 </View>
@@ -119,10 +124,10 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 20,
@@ -134,12 +139,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: theme.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 18,
-    color: '#666',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   tutorialSection: {
@@ -148,19 +153,16 @@ const styles = StyleSheet.create({
   tutorialTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 16,
   },
   tutorialCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   tutorialHeader: {
     flexDirection: 'row',
@@ -176,11 +178,11 @@ const styles = StyleSheet.create({
   tutorialCardTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   adminBadge: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: theme.danger,
     fontSize: 11,
     fontWeight: '600',
     paddingHorizontal: 8,
@@ -188,7 +190,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginLeft: 8,
     overflow: 'hidden',
-    color: '#fff',
+    color: theme.onAccent,
   },
   tutorialSteps: {
     marginTop: 8,
@@ -202,8 +204,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#007AFF',
-    color: '#fff',
+    backgroundColor: theme.accent,
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
@@ -214,12 +216,12 @@ const styles = StyleSheet.create({
   stepText: {
     flex: 1,
     fontSize: 15,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 22,
     paddingTop: 2,
   },
   actionButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -227,30 +229,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
   descriptionSection: {
     marginBottom: 32,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   descriptionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 12,
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 24,
   },
   featuresSection: {
@@ -259,20 +258,17 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 16,
   },
   featureCard: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   featureIcon: {
     width: 40,
@@ -286,23 +282,23 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 6,
   },
   featureDescription: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 20,
   },
   footerSection: {
-    backgroundColor: '#e8f4fd',
+    backgroundColor: theme.accentMuted,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
   footerText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: theme.accent,
     textAlign: 'center',
     lineHeight: 20,
   },

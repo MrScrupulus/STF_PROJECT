@@ -31,6 +31,8 @@ import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
 import { scheduledPauseService, ScheduledPause } from '../services/scheduledPauseService';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 type PerimeterNameEditorProps = {
   competitionId: number;
@@ -40,6 +42,9 @@ type PerimeterNameEditorProps = {
 };
 
 function PerimeterNameEditor({ competitionId, perimeterId, initialName, onSaved }: PerimeterNameEditorProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const [value, setValue] = useState(() => (initialName ?? '').trim());
   useEffect(() => {
     setValue((initialName ?? '').trim());
@@ -66,7 +71,7 @@ function PerimeterNameEditor({ competitionId, perimeterId, initialName, onSaved 
       onEndEditing={persist}
       onSubmitEditing={persist}
       placeholder="Nom de la zone (optionnel)"
-      placeholderTextColor="#999"
+      placeholderTextColor={theme.textMuted}
       returnKeyType="done"
     />
   );
@@ -96,6 +101,9 @@ const parseApiDate = (dateStr: string): Date | null => {
 };
 
 export default function EditCompetitionScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const route = useRoute();
   const queryClient = useQueryClient();
@@ -615,7 +623,7 @@ export default function EditCompetitionScreen() {
     return (
       <View style={styles.center}>
         <Header title="Modifier" showBack={true} showMenu={false} />
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -847,7 +855,7 @@ export default function EditCompetitionScreen() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 }}>
                 {reglementImageUrls.map((url, idx) => (
                   <View key={idx} style={{ width: '47%' }}>
-                    <Image source={{ uri: url }} style={{ width: '100%', height: 150, resizeMode: 'contain', borderWidth: 1, borderColor: '#ccc', borderRadius: 4 }} />
+                    <Image source={{ uri: url }} style={{ width: '100%', height: 150, resizeMode: 'contain', borderWidth: 1, borderColor: theme.border, borderRadius: 4 }} />
                     <TouchableOpacity
                       style={[styles.deleteButton, { marginTop: 4 }]}
                       onPress={async () => {
@@ -1065,7 +1073,7 @@ export default function EditCompetitionScreen() {
                             ? 'Ex: 500'
                             : 'Renseignez d’abord un quota'
                         }
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.textMuted}
                       />
                     </View>
                   ) : null}
@@ -1084,7 +1092,7 @@ export default function EditCompetitionScreen() {
               Créneaux pendant lesquels la compétition sera en pause automatique. Les enregistrements sont appliqués immédiatement.
             </Text>
             {loadingPauses ? (
-              <ActivityIndicator style={{ marginVertical: 12 }} color="#007AFF" />
+              <ActivityIndicator style={{ marginVertical: 12 }} color={theme.accent} />
             ) : scheduledPausesList.length === 0 ? (
               <Text style={[styles.helpText, { fontStyle: 'italic' }]}>Aucune pause programmée.</Text>
             ) : (
@@ -1151,7 +1159,7 @@ export default function EditCompetitionScreen() {
             onPress={handleSubmit}
             disabled={updateMutation.isPending || deleteCompetitionMutation.isPending}
           >
-            {updateMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Enregistrer</Text>}
+            {updateMutation.isPending ? <ActivityIndicator color={theme.onAccent} /> : <Text style={styles.submitButtonText}>Enregistrer</Text>}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.deleteCompetitionButton, deleteCompetitionMutation.isPending && styles.submitButtonDisabled]}
@@ -1159,7 +1167,7 @@ export default function EditCompetitionScreen() {
             disabled={updateMutation.isPending || deleteCompetitionMutation.isPending}
           >
             {deleteCompetitionMutation.isPending ? (
-              <ActivityIndicator color="#b91c1c" />
+              <ActivityIndicator color={theme.danger} />
             ) : (
               <Text style={styles.deleteCompetitionButtonText}>Supprimer la compétition</Text>
             )}
@@ -1280,7 +1288,7 @@ export default function EditCompetitionScreen() {
                 value={newZoneName}
                 onChangeText={setNewZoneName}
                 placeholder="Ex. : Quai nord, Zone A…"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textMuted}
               />
             </View>
             <View style={styles.mapContainer}>
@@ -1357,7 +1365,7 @@ export default function EditCompetitionScreen() {
                 disabled={zonePoints.length < 3 || createPerimeterMutation.isPending}
               >
                 {createPerimeterMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={theme.onAccent} size="small" />
                 ) : (
                   <Text style={styles.saveZoneButtonText}>Enregistrer la zone</Text>
                 )}
@@ -1370,8 +1378,8 @@ export default function EditCompetitionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.bg },
   scrollView: { flex: 1 },
   content: { padding: 16, paddingBottom: 48 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -1383,30 +1391,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
   },
   pauseRowMain: { flex: 1 },
-  pauseRowDates: { fontSize: 14, color: '#333', fontWeight: '600' },
-  pauseRowReason: { fontSize: 13, color: '#666', marginTop: 4 },
+  pauseRowDates: { fontSize: 14, color: theme.text, fontWeight: '600' },
+  pauseRowReason: { fontSize: 13, color: theme.textMuted, marginTop: 4 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' },
   labelRowInSwitch: { flex: 1 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#fff' },
+  input: { borderWidth: 1, borderColor: theme.border, borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: theme.surface },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
-  dateButton: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, backgroundColor: '#fff' },
+  dateButton: { borderWidth: 1, borderColor: theme.border, borderRadius: 8, padding: 12, backgroundColor: theme.surface },
   dateText: { fontSize: 16 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  helpText: { fontSize: 12, color: '#666', marginBottom: 8 },
+  helpText: { fontSize: 12, color: theme.textMuted, marginBottom: 8 },
   chipsRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 8, marginTop: 8 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#ddd' },
-  chipActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  chipText: { fontSize: 14, color: '#333', fontWeight: '500' },
-  chipTextActive: { color: '#fff' },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: theme.surfaceRaised, borderWidth: 1, borderColor: theme.border },
+  chipActive: { backgroundColor: theme.accent, borderColor: theme.accent },
+  chipText: { fontSize: 14, color: theme.text, fontWeight: '500' },
+  chipTextActive: { color: theme.onAccent },
   perimeterList: { marginBottom: 12 },
   perimeterRow: {
     flexDirection: 'row',
@@ -1418,20 +1426,20 @@ const styles = StyleSheet.create({
   perimeterRowMain: { flex: 1, minWidth: 0 },
   perimeterNameInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   deleteButton: { padding: 8 },
   deleteButtonText: { color: '#c00', fontSize: 14 },
-  addZoneButton: { borderWidth: 2, borderColor: '#007AFF', borderRadius: 8, padding: 16, alignItems: 'center' },
-  addZoneButtonText: { color: '#007AFF', fontSize: 16, fontWeight: '600' },
-  submitButton: { backgroundColor: '#007AFF', borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 24 },
+  addZoneButton: { borderWidth: 2, borderColor: theme.accent, borderRadius: 8, padding: 16, alignItems: 'center' },
+  addZoneButtonText: { color: theme.accent, fontSize: 16, fontWeight: '600' },
+  submitButton: { backgroundColor: theme.accent, borderRadius: 8, padding: 16, alignItems: 'center', marginTop: 24 },
   submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  submitButtonText: { color: theme.onAccent, fontSize: 16, fontWeight: '600' },
   deleteCompetitionButton: {
     marginTop: 12,
     marginBottom: 24,
@@ -1446,18 +1454,18 @@ const styles = StyleSheet.create({
   modalContainer: { flex: 1, padding: 16, paddingTop: 48 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   modalTitle: { fontSize: 18, fontWeight: '600' },
-  modalCloseText: { color: '#007AFF', fontSize: 16 },
-  modalHelp: { fontSize: 14, color: '#666', marginBottom: 12 },
+  modalCloseText: { color: theme.accent, fontSize: 16 },
+  modalHelp: { fontSize: 14, color: theme.textMuted, marginBottom: 12 },
   modalField: { marginBottom: 12 },
-  modalFieldLabel: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
+  modalFieldLabel: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 6 },
   modalNameInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   mapContainer: { height: 400, borderRadius: 8, overflow: 'hidden', marginBottom: 12 },
   map: { flex: 1, width: '100%', height: '100%' },
@@ -1465,7 +1473,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderWidth: 2,
     borderColor: '#fff',
     alignItems: 'center',
@@ -1476,25 +1484,25 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 4,
   },
-  zoneVertexMarkerText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  pointsCount: { fontSize: 14, color: '#666', marginBottom: 8 },
+  zoneVertexMarkerText: { color: theme.onAccent, fontSize: 13, fontWeight: '700' },
+  pointsCount: { fontSize: 14, color: theme.textMuted, marginBottom: 8 },
   undoVertexButton: {
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     marginBottom: 12,
     backgroundColor: '#f0f7ff',
   },
-  undoVertexButtonDisabled: { opacity: 0.45, borderColor: '#ccc', backgroundColor: '#f5f5f5' },
-  undoVertexButtonText: { color: '#007AFF', fontSize: 15, fontWeight: '600' },
+  undoVertexButtonDisabled: { opacity: 0.45, borderColor: theme.border, backgroundColor: theme.bg },
+  undoVertexButtonText: { color: theme.accent, fontSize: 15, fontWeight: '600' },
   modalActions: { flexDirection: 'row', gap: 12 },
-  cancelZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#eee', borderRadius: 8 },
+  cancelZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: theme.surfaceRaised, borderRadius: 8 },
   cancelZoneButtonText: { fontSize: 16 },
-  saveZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: '#007AFF', borderRadius: 8 },
+  saveZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: theme.accent, borderRadius: 8 },
   saveZoneButtonDisabled: { opacity: 0.5 },
-  saveZoneButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  saveZoneButtonText: { color: theme.onAccent, fontSize: 16, fontWeight: '600' },
   speciesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1510,30 +1518,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   newSpeciesButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 6,
     alignItems: 'center',
   },
-  newSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  newSpeciesButtonText: { color: theme.onAccent, fontSize: 13, fontWeight: '600' },
   addSpeciesButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 6,
     alignItems: 'center',
     alignSelf: 'flex-start',
   },
-  addSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  addSpeciesButtonText: { color: theme.onAccent, fontSize: 13, fontWeight: '600' },
   pauseAddButton: {
     marginTop: 4,
     marginBottom: 8,
   },
   speciesItem: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -1541,34 +1549,34 @@ const styles = StyleSheet.create({
   speciesRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
   speciesSelect: { flex: 2 },
   speciesSelectButton: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     minHeight: 40,
     justifyContent: 'center',
   },
-  speciesSelectButtonText: { fontSize: 14, color: '#333' },
+  speciesSelectButtonText: { fontSize: 14, color: theme.text },
   speciesCoefficient: { flex: 1 },
-  speciesLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
+  speciesLabel: { fontSize: 12, color: theme.textMuted, marginBottom: 4 },
   speciesInput: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   speciesInputWide: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     width: '100%',
   },
   removeSpeciesButton: {
@@ -1579,14 +1587,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  removeSpeciesButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  removeSpeciesButtonText: { color: theme.onAccent, fontSize: 18, fontWeight: 'bold' },
   speciesModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   speciesModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -1597,21 +1605,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: theme.border,
   },
-  speciesModalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  speciesModalTitle: { fontSize: 18, fontWeight: '600', color: theme.text },
   speciesModalCloseButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceRaised,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  speciesModalCloseButtonText: { fontSize: 18, color: '#666', fontWeight: 'bold' },
+  speciesModalCloseButtonText: { fontSize: 18, color: theme.textMuted, fontWeight: 'bold' },
   speciesModalList: { maxHeight: 400 },
-  speciesModalOption: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  speciesModalOption: { padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
   speciesModalOptionActive: { backgroundColor: '#f0f8ff' },
-  speciesModalOptionText: { fontSize: 16, color: '#333' },
-  speciesModalOptionTextActive: { color: '#007AFF', fontWeight: '600' },
+  speciesModalOptionText: { fontSize: 16, color: theme.text },
+  speciesModalOptionTextActive: { color: theme.accent, fontWeight: '600' },
 });

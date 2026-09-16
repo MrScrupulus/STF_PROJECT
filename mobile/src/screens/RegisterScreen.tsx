@@ -15,10 +15,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { authService, RegisterData } from '../services/authService';
 import FaIcon from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 const COUNTRY_CODES = ['+33', '+32', '+41', '+49', '+39', '+34', '+44', '+212', '+213', '+216', '+221'];
 
 export default function RegisterScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -83,7 +88,7 @@ export default function RegisterScreen() {
             style={styles.backButton}
             onPress={() => navigation.navigate('Login' as never)}
           >
-            <FaIcon name="back" size={20} color="#007AFF" />
+            <FaIcon name="back" size={20} color={theme.accent} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Inscription</Text>
@@ -151,7 +156,7 @@ export default function RegisterScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                <FaIcon name={showPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -168,7 +173,7 @@ export default function RegisterScreen() {
                 style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color="#666" />
+                <FaIcon name={showConfirmPassword ? 'eyeSlash' : 'eye'} size={20} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -218,7 +223,7 @@ export default function RegisterScreen() {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.onAccent} />
               ) : (
                 <Text style={styles.buttonText}>S'inscrire</Text>
               )}
@@ -237,11 +242,11 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   headerSafeArea: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.chrome,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   header: {
     flexDirection: 'row',
@@ -249,7 +254,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.chrome,
     minHeight: 56,
   },
   backButton: {
@@ -260,7 +265,7 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 28,
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   headerTitleContainer: {
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     textAlign: 'center',
   },
   headerPlaceholder: {
@@ -280,7 +285,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   scrollContent: {
     flexGrow: 1,
@@ -295,31 +300,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   subtitle: {
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 32,
-    color: '#666',
+    color: theme.textMuted,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   optionalLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 8,
   },
   optionalHint: {
     fontSize: 13,
-    color: '#888',
+    color: theme.textMuted,
     marginTop: -8,
     marginBottom: 16,
     lineHeight: 18,
@@ -336,27 +341,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceRaised,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   countryCodeChipActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   countryCodeText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   countryCodeTextActive: {
-    color: '#fff',
+    color: theme.onAccent,
   },
   phoneInput: {
     marginBottom: 0,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -366,7 +371,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -375,16 +380,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#007AFF',
+    color: theme.accent,
     fontSize: 16,
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     marginBottom: 16,
   },
   passwordInput: {
@@ -397,7 +402,7 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
   passwordMismatch: {
-    color: '#FF3B30',
+    color: theme.danger,
     fontSize: 12,
     marginTop: -12,
     marginBottom: 16,

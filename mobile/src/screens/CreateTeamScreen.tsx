@@ -15,8 +15,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function CreateTeamScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -103,7 +108,7 @@ export default function CreateTeamScreen() {
       <>
         <Header title="Créer une équipe" showBack={true} showMenu={true} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -215,7 +220,7 @@ export default function CreateTeamScreen() {
               disabled={createMutation.isPending}
             >
               {createMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.onAccent} />
               ) : (
                 <Text style={styles.submitButtonText}>Créer l'équipe</Text>
               )}
@@ -228,10 +233,10 @@ export default function CreateTeamScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   scrollContent: {
     flexGrow: 1,
@@ -248,17 +253,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 24,
-    color: '#333',
+    color: theme.text,
   },
   message: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 12,
     lineHeight: 24,
   },
   teamName: {
     fontWeight: '600',
-    color: '#007AFF',
+    color: theme.accent,
   },
   reactivateSection: {
     marginBottom: 24,
@@ -267,42 +272,42 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   reactivateDescription: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 16,
     lineHeight: 20,
   },
   inactiveTeamCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   inactiveTeamName: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   inactiveTeamInfo: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   reactivateButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
     alignItems: 'center',
   },
   reactivateButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -313,7 +318,7 @@ const styles = StyleSheet.create({
   dividerText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999',
+    color: theme.textMuted,
   },
   form: {
     marginTop: 8,
@@ -325,23 +330,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   helpText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -351,19 +356,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
   },
   buttonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

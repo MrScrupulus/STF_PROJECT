@@ -26,6 +26,8 @@ import HelpButton from '../components/HelpButton';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 type PauseDraft = { key: string } & ScheduledPauseFormValues;
 
@@ -38,6 +40,9 @@ interface CompetitionSpecies {
 }
 
 export default function CreateCompetitionScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
 
@@ -442,7 +447,7 @@ export default function CreateCompetitionScreen() {
 
           <View style={styles.identityCard}>
             <View style={styles.avatar}>
-              <FaIcon name="trophy" size={22} color="#fff" />
+              <FaIcon name="trophy" size={22} color={theme.onAccent} />
             </View>
             <View style={styles.identityText}>
               <Text style={styles.displayName}>Nouvelle manche</Text>
@@ -938,7 +943,7 @@ export default function CreateCompetitionScreen() {
                             ? 'Ex: 500'
                             : 'Renseignez d’abord un quota'
                         }
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.textMuted}
                       />
                     </View>
                   ) : null}
@@ -999,10 +1004,10 @@ export default function CreateCompetitionScreen() {
             disabled={createMutation.isPending}
           >
             {createMutation.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={theme.onAccent} />
             ) : (
               <>
-                <FaIcon name="plus" size={16} color="#fff" />
+                <FaIcon name="plus" size={16} color={theme.onAccent} />
                 <Text style={styles.submitButtonText}>Créer la compétition</Text>
               </>
             )}
@@ -1098,10 +1103,10 @@ export default function CreateCompetitionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   scrollView: {
     flex: 1,
@@ -1111,7 +1116,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   identityCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -1122,14 +1127,14 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
   identityText: { flex: 1 },
-  displayName: { fontSize: 20, fontWeight: '700', color: '#111' },
-  identityHint: { fontSize: 14, color: '#666', marginTop: 4 },
+  displayName: { fontSize: 20, fontWeight: '700', color: theme.text },
+  identityHint: { fontSize: 14, color: theme.textMuted, marginTop: 4 },
   errorBox: {
     backgroundColor: '#fee2e2',
     borderColor: '#ef4444',
@@ -1144,14 +1149,14 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   labelRow: {
@@ -1163,7 +1168,7 @@ const styles = StyleSheet.create({
   labelRowInSwitch: { flex: 1 },
   helpText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
     fontStyle: 'italic',
   },
@@ -1176,41 +1181,41 @@ const styles = StyleSheet.create({
   },
   addZoneButton: {
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
   },
   addZoneButtonText: {
-    color: '#007AFF',
+    color: theme.accent,
     fontSize: 16,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   textArea: {
     minHeight: 100,
     textAlignVertical: 'top',
   },
   dateButton: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   dateText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   iosDatePickerActions: {
     flexDirection: 'row',
@@ -1218,13 +1223,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   iosDatePickerButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
   iosDatePickerButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1234,24 +1239,24 @@ const styles = StyleSheet.create({
   },
   typeButton: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   typeButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   typeButtonText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     fontWeight: '600',
   },
   typeButtonTextActive: {
-    color: '#fff',
+    color: theme.onAccent,
   },
   switchRow: {
     flexDirection: 'row',
@@ -1273,15 +1278,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   newSpeciesButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 6,
     alignItems: 'center',
   },
-  newSpeciesButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  newSpeciesButtonText: { color: theme.onAccent, fontSize: 13, fontWeight: '600' },
   addSpeciesButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 6,
@@ -1289,7 +1294,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   addSpeciesButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -1298,9 +1303,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   speciesItem: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -1314,9 +1319,9 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   speciesSelectButton: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     minHeight: 40,
@@ -1324,7 +1329,7 @@ const styles = StyleSheet.create({
   },
   speciesSelectButtonText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   modalOverlay: {
     flex: 1,
@@ -1332,7 +1337,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -1343,24 +1348,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: theme.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   modalCloseButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceRaised,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseButtonText: {
     fontSize: 18,
-    color: '#666',
+    color: theme.textMuted,
     fontWeight: 'bold',
   },
   modalList: {
@@ -1369,17 +1374,17 @@ const styles = StyleSheet.create({
   modalOption: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   modalOptionActive: {
     backgroundColor: '#f0f8ff',
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   modalOptionTextActive: {
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   speciesCoefficient: {
@@ -1390,26 +1395,26 @@ const styles = StyleSheet.create({
   },
   speciesLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   speciesInput: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   speciesInputWide: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 6,
     padding: 8,
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     width: '100%',
   },
   removeSpeciesButton: {
@@ -1421,7 +1426,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   removeSpeciesButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -1429,9 +1434,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
@@ -1441,16 +1446,16 @@ const styles = StyleSheet.create({
   },
   pauseDraftDates: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontWeight: '600',
   },
   pauseDraftReason: {
     fontSize: 13,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1464,7 +1469,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

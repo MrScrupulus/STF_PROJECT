@@ -9,8 +9,13 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { speciesService, Species } from '../services/speciesService';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function SpeciesScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const { data: species, isLoading, error } = useQuery({
     queryKey: ['species'],
     queryFn: () => speciesService.getAll(),
@@ -19,7 +24,7 @@ export default function SpeciesScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -68,21 +73,21 @@ export default function SpeciesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: theme.border,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   list: {
     padding: 16,
@@ -93,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -107,7 +112,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   pointsInfo: {
     flexDirection: 'row',
@@ -116,7 +121,7 @@ const styles = StyleSheet.create({
   },
   coefficient: {
     fontSize: 16,
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   bonusBadge: {
@@ -126,16 +131,16 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   bonusText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     fontWeight: '600',
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
   },
   emptyText: {
-    color: '#999',
+    color: theme.textMuted,
     fontSize: 16,
   },
 });

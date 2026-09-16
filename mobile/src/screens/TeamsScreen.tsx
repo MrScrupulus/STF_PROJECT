@@ -13,8 +13,13 @@ import { useNavigation } from '@react-navigation/native';
 import { teamService, Team } from '../services/teamService';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function TeamsScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -67,7 +72,7 @@ export default function TeamsScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -158,10 +163,10 @@ export default function TeamsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   list: {
     padding: 16,
@@ -172,7 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -191,7 +196,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   inactiveBadge: {
@@ -201,61 +206,61 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   inactiveText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     fontWeight: '600',
   },
   cardCompetition: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   cardMembers: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   cardScore: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: theme.accent,
     marginTop: 8,
   },
   reactivateButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 8,
     borderRadius: 6,
     marginTop: 8,
     alignItems: 'center',
   },
   reactivateButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
   createButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 16,
   },
   createButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
   },
   emptyText: {
-    color: '#999',
+    color: theme.textMuted,
     fontSize: 16,
     marginBottom: 16,
   },
   emptySubtext: {
-    color: '#999',
+    color: theme.textMuted,
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'center',

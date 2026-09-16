@@ -15,6 +15,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export type SpeciesReadyPayload = {
   speciesId: number;
@@ -40,6 +42,9 @@ export default function CreateSpeciesModal({
   onSpeciesReady,
   variant = 'admin',
 }: Props) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [coefficient, setCoefficient] = useState('1');
@@ -196,7 +201,7 @@ export default function CreateSpeciesModal({
             </TouchableOpacity>
             <TouchableOpacity style={styles.btnOk} onPress={submit} disabled={loading}>
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={theme.onAccent} />
               ) : (
                 <Text style={styles.btnOkText}>Ajouter</Text>
               )}
@@ -208,7 +213,7 @@ export default function CreateSpeciesModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,34 +227,34 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
     zIndex: 1,
   },
-  title: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#111' },
-  hint: { fontSize: 13, color: '#666', marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 6, color: '#333' },
+  title: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: theme.text },
+  hint: { fontSize: 13, color: theme.textMuted, marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 6, color: theme.text },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     marginBottom: 12,
-    backgroundColor: '#fafafa',
+    backgroundColor: theme.bg,
   },
-  helpCoef: { fontSize: 12, color: '#888', marginBottom: 16 },
+  helpCoef: { fontSize: 12, color: theme.textMuted, marginBottom: 16 },
   actions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },
   btnCancel: { paddingVertical: 12, paddingHorizontal: 16 },
-  btnCancelText: { color: '#666', fontSize: 16 },
+  btnCancelText: { color: theme.textMuted, fontSize: 16 },
   btnOk: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     minWidth: 100,
     alignItems: 'center',
   },
-  btnOkText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  btnOkText: { color: theme.onAccent, fontSize: 16, fontWeight: '600' },
 });

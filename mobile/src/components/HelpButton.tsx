@@ -1,6 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import FaIcon from './FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 interface HelpButtonProps {
   text: string;
@@ -8,6 +10,9 @@ interface HelpButtonProps {
 }
 
 export default function HelpButton({ text, title = 'Aide' }: HelpButtonProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const onPress = () => {
     Alert.alert(title, text, [{ text: 'OK' }]);
   };
@@ -20,17 +25,17 @@ export default function HelpButton({ text, title = 'Aide' }: HelpButtonProps) {
       accessibilityLabel="Afficher l'aide"
       accessibilityRole="button"
     >
-      <FaIcon name="help" size={14} color="#64748b" />
+      <FaIcon name="help" size={14} color={theme.textMuted} />
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   button: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.surfaceRaised,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 6,
@@ -38,6 +43,6 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#64748b',
+    color: theme.textMuted,
   },
 });

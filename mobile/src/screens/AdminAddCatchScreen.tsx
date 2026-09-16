@@ -28,8 +28,13 @@ import {
 } from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
 import FaIcon from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function AdminAddCatchScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [selectedCompetition, setSelectedCompetition] = useState<number | null>(null);
@@ -224,7 +229,7 @@ export default function AdminAddCatchScreen() {
       <>
         <Header title="Saisie" showBack={true} showMenu={true} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -239,7 +244,7 @@ export default function AdminAddCatchScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
-            <FaIcon name="camera" size={22} color="#fff" />
+            <FaIcon name="camera" size={22} color={theme.onAccent} />
           </View>
           <View style={styles.identityText}>
             <Text style={styles.displayName}>Saisie admin</Text>
@@ -290,7 +295,7 @@ export default function AdminAddCatchScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Équipe *</Text>
             {loadingCompetition ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color={theme.accent} />
             ) : teams.length === 0 ? (
               <Text style={styles.errorText}>Aucune équipe inscrite à cette compétition</Text>
             ) : (
@@ -324,7 +329,7 @@ export default function AdminAddCatchScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Membre (optionnel)</Text>
             {loadingTeam ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color={theme.accent} />
             ) : members.length === 0 ? (
               <Text style={styles.errorText}>Aucun membre dans cette équipe</Text>
             ) : (
@@ -374,7 +379,7 @@ export default function AdminAddCatchScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Espèce *</Text>
             {loadingCompetition ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color={theme.accent} />
             ) : species.length === 0 ? (
               <Text style={styles.errorText}>
                 Aucune espèce configurée pour cette compétition
@@ -443,11 +448,11 @@ export default function AdminAddCatchScreen() {
           <Text style={styles.label}>Photo *</Text>
           <View style={styles.photoButtonsContainer}>
             <TouchableOpacity style={[styles.photoButton, styles.photoButtonCamera]} onPress={takePhoto}>
-              <FaIcon name="camera" size={18} color="#fff" />
+              <FaIcon name="camera" size={18} color={theme.onAccent} />
               <Text style={styles.photoButtonText}>Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.photoButton, styles.photoButtonGallery]} onPress={pickImage}>
-              <FaIcon name="image" size={18} color="#fff" />
+              <FaIcon name="image" size={18} color={theme.onAccent} />
               <Text style={styles.photoButtonText}>Galerie</Text>
             </TouchableOpacity>
           </View>
@@ -474,10 +479,10 @@ export default function AdminAddCatchScreen() {
           disabled={createCatchMutation.isPending}
         >
           {createCatchMutation.isPending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.onAccent} />
           ) : (
             <>
-              <FaIcon name="circleCheck" size={18} color="#fff" />
+              <FaIcon name="circleCheck" size={18} color={theme.onAccent} />
               <Text style={styles.submitButtonText}>Créer la prise</Text>
             </>
           )}
@@ -487,17 +492,17 @@ export default function AdminAddCatchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
     paddingBottom: 32,
   },
   identityCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -508,14 +513,14 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
   identityText: { flex: 1 },
-  displayName: { fontSize: 20, fontWeight: '700', color: '#111' },
-  identityHint: { fontSize: 14, color: '#666', marginTop: 4 },
+  displayName: { fontSize: 20, fontWeight: '700', color: theme.text },
+  identityHint: { fontSize: 14, color: theme.textMuted, marginTop: 4 },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -523,36 +528,36 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   optionButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     marginRight: 8,
     borderWidth: 1.5,
-    borderColor: '#eee',
+    borderColor: theme.border,
   },
   optionButtonSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   optionButtonText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     fontWeight: '500',
   },
   optionButtonTextSelected: {
-    color: '#fff',
+    color: theme.onAccent,
   },
   competitionChip: {
     maxWidth: 132,
@@ -567,16 +572,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 11,
     fontWeight: '600',
-    color: '#888',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: theme.border,
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: theme.surfaceRaised,
   },
   textArea: {
     minHeight: 100,
@@ -596,13 +601,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   photoButtonCamera: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
   },
   photoButtonGallery: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   photoButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -616,18 +621,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   removePhotoButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
     padding: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
   removePhotoButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -640,12 +645,12 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 18,
     fontWeight: '600',
   },
   errorText: {
-    color: '#FF3B30',
+    color: theme.danger,
     fontSize: 14,
     marginTop: 8,
   },

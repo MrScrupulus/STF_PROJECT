@@ -24,6 +24,8 @@ import {
   sanitizeFishSizeInput,
 } from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 function getTeamLoadErrorMessage(err: unknown): string {
   if (err != null && typeof err === 'object' && 'response' in err) {
@@ -39,6 +41,9 @@ function getTeamLoadErrorMessage(err: unknown): string {
 }
 
 export default function TeamDetailScreen({ route }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { id, highlightCatchId } = route.params || {};
@@ -301,7 +306,7 @@ export default function TeamDetailScreen({ route }: any) {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -615,7 +620,7 @@ export default function TeamDetailScreen({ route }: any) {
                   disabled={leaveTeamMutation.isPending || !canLeave}
                 >
                   {leaveTeamMutation.isPending ? (
-                    <ActivityIndicator color="#ff3b30" />
+                    <ActivityIndicator color={theme.danger} />
                   ) : (
                     <Text style={[
                       styles.leaveTeamButtonText,
@@ -920,6 +925,9 @@ function CatchCard({
   onEditSize,
   isHighlighted,
 }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const showAdminBar =
     !!isAdmin && (onValidate != null || onReject != null || onEditSize != null);
 
@@ -1034,10 +1042,10 @@ function CatchCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -1051,27 +1059,27 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#333',
+    color: theme.text,
   },
   competitionInfo: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   competitionLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   competitionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginTop: 4,
   },
   registrationNumber: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   scoreSummary: {
@@ -1085,7 +1093,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: '30%',
     minWidth: 100,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1098,13 +1106,13 @@ const styles = StyleSheet.create({
   },
   scoreLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   scoreValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#007AFF',
+    color: theme.accent,
     marginBottom: 4,
   },
   scoreValuePenalty: {
@@ -1112,7 +1120,7 @@ const styles = StyleSheet.create({
   },
   scoreDescription: {
     fontSize: 10,
-    color: '#999',
+    color: theme.textMuted,
     textAlign: 'center',
   },
   section: {
@@ -1121,13 +1129,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -1136,42 +1144,42 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   memberInitials: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 16,
   },
   memberName: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   inviteSection: {
     marginTop: 12,
   },
   inviteButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   inviteButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
   inviteSubtext: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     marginTop: 4,
     opacity: 0.9,
   },
   inviteForm: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
   },
@@ -1179,11 +1187,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
+    color: theme.text,
   },
   inviteInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -1195,25 +1203,25 @@ const styles = StyleSheet.create({
   },
   inviteSubmitButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   inviteSubmitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
   inviteCancelButton: {
     flex: 1,
-    backgroundColor: '#ddd',
+    backgroundColor: theme.surfaceRaised,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   inviteCancelButtonText: {
-    color: '#333',
+    color: theme.text,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1221,10 +1229,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
+    borderTopColor: theme.border,
   },
   leaveTeamButton: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: '#ff3b30',
     padding: 12,
@@ -1232,16 +1240,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   leaveTeamButtonText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
     fontWeight: '600',
   },
   leaveTeamButtonDisabled: {
     opacity: 0.5,
-    borderColor: '#ccc',
+    borderColor: theme.border,
   },
   leaveTeamButtonTextDisabled: {
-    color: '#999',
+    color: theme.textMuted,
   },
   top5Section: {
     marginBottom: 24,
@@ -1269,7 +1277,7 @@ const styles = StyleSheet.create({
   scoringSpeciesBlock: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#6ee7b7',
@@ -1296,14 +1304,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   catchCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
   },
   catchCardHighlighted: {
     borderWidth: 3,
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
     backgroundColor: '#f0f8ff',
     shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 2 },
@@ -1312,7 +1320,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   top5Badge: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1320,7 +1328,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   top5BadgeText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -1333,12 +1341,12 @@ const styles = StyleSheet.create({
   catchSpecies: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   catchPoints: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: theme.accent,
   },
   catchDetails: {
     marginBottom: 8,
@@ -1350,19 +1358,19 @@ const styles = StyleSheet.create({
   },
   catchLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   catchValue: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#333',
+    color: theme.text,
   },
   catchComment: {
     marginTop: 8,
   },
   catchCommentText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   catchPhoto: {
@@ -1417,7 +1425,7 @@ const styles = StyleSheet.create({
   },
   catchStatusText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
   },
   rejectedCatchesSection: {
     marginTop: 24,
@@ -1441,10 +1449,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: theme.textMuted,
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
     marginBottom: 16,
   },
@@ -1455,7 +1463,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backButtonText: {
-    color: '#007AFF',
+    color: theme.accent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1472,7 +1480,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   imageModalCloseText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 40,
     fontWeight: '300',
   },
@@ -1487,7 +1495,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#e8e8e8',
+    borderTopColor: theme.border,
   },
   adminActionButton: {
     flex: 1,
@@ -1498,16 +1506,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   validateButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   rejectButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
   },
   editSizeButton: {
     backgroundColor: '#5856d6',
   },
   adminActionButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 12,
   },
@@ -1519,7 +1527,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   rejectModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
     width: '100%',
@@ -1529,28 +1537,28 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 16,
-    color: '#333',
+    color: theme.text,
   },
   rejectModalCatchInfo: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   rejectModalCatchText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   rejectModalLabel: {
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   rejectModalInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
@@ -1572,10 +1580,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e5e5',
   },
   rejectModalConfirmButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
   },
   rejectModalButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -1617,13 +1625,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   editButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   editButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },

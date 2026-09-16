@@ -14,8 +14,13 @@ import { useNavigation } from '@react-navigation/native';
 import { notificationPreferencesService, NotificationPreferences } from '../services/notificationPreferencesService';
 import { authService } from '../services/authService';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function NotificationPreferencesScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -71,7 +76,7 @@ export default function NotificationPreferencesScreen() {
       <>
         <Header title="Préférences notifications" showBack={true} showMenu={false} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -235,10 +240,10 @@ export default function NotificationPreferencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -247,34 +252,34 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginTop: 8,
     marginBottom: 8,
   },
   adminSectionTitle: {
     marginTop: 24,
-    color: '#007AFF',
+    color: theme.accent,
   },
   sectionDescription: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 16,
   },
   preferenceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
   },
   preferenceInfo: {
     flex: 1,
@@ -283,12 +288,12 @@ const styles = StyleSheet.create({
   preferenceLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   preferenceDescription: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 16,
   },
 });

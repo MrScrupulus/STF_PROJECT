@@ -10,6 +10,8 @@ import { useNavigation } from '@react-navigation/native';
 import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import FaIcon from './FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 interface BottomTabBarProps {
   state: any;
@@ -18,6 +20,9 @@ interface BottomTabBarProps {
 }
 
 export default function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const [isAdmin, setIsAdmin] = React.useState(false);
   const { isAuthenticated } = useAuth();
   const nav = useNavigation();
@@ -95,7 +100,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
               onPress={() => handleNavigation('Competitions')}
               activeOpacity={0.7}
             >
-              <FaIcon name="trophy" size={22} color={isFocused ? '#007AFF' : '#666'} />
+              <FaIcon name="trophy" size={22} color={isFocused ? theme.accent : theme.textMuted} />
               <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
                 Compétitions
               </Text>
@@ -110,7 +115,7 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
           activeOpacity={0.8}
         >
           <View style={styles.addButtonInner}>
-            <FaIcon name="camera" size={26} color="#fff" />
+            <FaIcon name="camera" size={26} color={theme.onAccent} />
           </View>
         </TouchableOpacity>
 
@@ -135,11 +140,11 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
                 color={
                   isAuthenticated && isAdmin
                     ? isFocused
-                      ? '#248A3D'
-                      : '#34C759'
+                      ? theme.successDim
+                      : theme.success
                     : isFocused
-                      ? '#007AFF'
-                      : '#666'
+                      ? theme.accent
+                      : theme.textMuted
                 }
               />
               <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
@@ -153,24 +158,19 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   safeArea: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.chrome,
   },
   container: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.chrome,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: theme.border,
     paddingVertical: 8,
     paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'space-around',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
   },
   tab: {
     flex: 1,
@@ -184,32 +184,27 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     fontWeight: '500',
   },
   tabLabelActive: {
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   addButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 16,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   addButtonInner: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

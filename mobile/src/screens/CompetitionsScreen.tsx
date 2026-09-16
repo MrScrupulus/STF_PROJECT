@@ -14,6 +14,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
 import { formatCompetitionDateRange } from '../utils/dateUtils';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 const FILTERS = {
   ALL: 'all',
@@ -24,6 +26,9 @@ const FILTERS = {
 };
 
 export default function CompetitionsScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const route = useRoute();
   const routeParams = route.params as { filter?: string } | undefined;
@@ -38,7 +43,7 @@ export default function CompetitionsScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -265,17 +270,17 @@ export default function CompetitionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   filtersWrapper: {
     flexShrink: 0,
     flexGrow: 0,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: theme.border,
   },
   filtersContainer: {
     flexShrink: 0,
@@ -292,9 +297,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
     marginRight: 8,
     minWidth: 'auto',
     width: 'auto',
@@ -321,17 +326,17 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6b7280',
+    color: theme.textMuted,
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   list: {
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -355,7 +360,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
   },
   cover: {
     width: 72,
@@ -384,7 +389,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   statusBadge: {
@@ -396,7 +401,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#fff',
+    color: theme.onAccent,
   },
   statusUpcoming: {
     backgroundColor: '#60a5fa',
@@ -431,12 +436,12 @@ const styles = StyleSheet.create({
   },
   cardDate: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   cardTeams: {
     fontSize: 12,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 8,
   },
   moreInfoContainer: {
@@ -444,7 +449,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   moreInfoText: {
-    color: '#007AFF',
+    color: theme.accent,
     fontSize: 13,
     fontWeight: '600',
     textDecorationLine: 'underline',
@@ -455,19 +460,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
   },
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 20,

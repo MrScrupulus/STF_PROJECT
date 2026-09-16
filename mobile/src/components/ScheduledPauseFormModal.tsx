@@ -12,15 +12,8 @@ import {
   Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
-/** Roulette iOS : en mode sombre système, UIDatePicker peut garder des labels blancs sur fond clair du modal */
-const IOS_SPINNER_VISUAL_PROPS =
-  Platform.OS === 'ios'
-    ? ({
-        themeVariant: 'light' as const,
-        textColor: '#111827',
-      } as const)
-    : {};
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export type ScheduledPauseFormValues = {
   startDate: Date;
@@ -76,6 +69,16 @@ export default function ScheduledPauseFormModal({
   onClose,
   onSave,
 }: Props) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
+  const iosPickerProps =
+    Platform.OS === 'ios'
+      ? {
+          themeVariant: theme.statusBar === 'light' ? ('dark' as const) : ('light' as const),
+          textColor: theme.text,
+        }
+      : {};
   const [startDate, setStartDate] = useState<Date>(() => competitionStart);
   const [endDate, setEndDate] = useState<Date>(() => competitionEnd);
   const [reason, setReason] = useState('');
@@ -228,7 +231,7 @@ export default function ScheduledPauseFormModal({
               value={reason}
               onChangeText={setReason}
               placeholder="Ex. : relâché commun"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textMuted}
             />
 
             <TouchableOpacity style={styles.saveBtn} onPress={validateAndSave}>
@@ -282,7 +285,7 @@ export default function ScheduledPauseFormModal({
                 onChange={onIosStartChange}
                 minimumDate={cs}
                 maximumDate={ce}
-                {...IOS_SPINNER_VISUAL_PROPS}
+                {...iosPickerProps}
               />
               <TouchableOpacity style={styles.doneIos} onPress={() => setIosShowStartPicker(false)}>
                 <Text style={styles.doneIosText}>OK</Text>
@@ -298,7 +301,7 @@ export default function ScheduledPauseFormModal({
                 onChange={onIosEndChange}
                 minimumDate={startDate}
                 maximumDate={ce}
-                {...IOS_SPINNER_VISUAL_PROPS}
+                {...iosPickerProps}
               />
               <TouchableOpacity style={styles.doneIos} onPress={() => setIosShowEndPicker(false)}>
                 <Text style={styles.doneIosText}>OK</Text>
@@ -311,7 +314,7 @@ export default function ScheduledPauseFormModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -321,7 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '88%',
@@ -329,8 +332,8 @@ const styles = StyleSheet.create({
   },
   pickerDock: {
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fafafa',
+    borderTopColor: theme.border,
+    backgroundColor: theme.bg,
     paddingBottom: 8,
     paddingHorizontal: 8,
   },
@@ -352,17 +355,17 @@ const styles = StyleSheet.create({
   pickerToolbarTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   pickerOkBtn: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   pickerOkText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 15,
   },
@@ -372,24 +375,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: theme.border,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   closeBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
     fontSize: 18,
-    color: '#666',
+    color: theme.textMuted,
     fontWeight: '600',
   },
   body: {
@@ -398,50 +401,50 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   dateBtn: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   dateBtnText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   doneIos: {
     alignSelf: 'flex-end',
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     marginTop: 8,
   },
   doneIosText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   saveBtn: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 14,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 24,
   },
   saveBtnText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },

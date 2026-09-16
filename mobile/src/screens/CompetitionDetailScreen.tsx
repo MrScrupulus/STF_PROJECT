@@ -26,8 +26,13 @@ import SpeciesPieChart from '../components/competition/SpeciesPieChart';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
 import CatchesMapView from '../components/competition/CatchesMapView';
 import ImageView from 'react-native-image-viewing';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function CompetitionDetailScreen({ route }: any) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const { id } = route.params ?? {};
@@ -314,7 +319,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -647,7 +652,7 @@ export default function CompetitionDetailScreen({ route }: any) {
         ) : activeTab === 'species' ? (
           <View style={styles.speciesTabContent}>
             {loadingSpecies ? (
-              <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 32 }} />
+              <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 32 }} />
             ) : speciesData && speciesData.length > 0 ? (
               <>
                 <Text style={styles.sectionTitle}>Espèces disponibles</Text>
@@ -779,7 +784,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 disabled={pdfDownloading}
               >
                 <View style={styles.pdfButtonInner}>
-                  <FaIcon name="filePdf" size={18} color="#fff" />
+                  <FaIcon name="filePdf" size={18} color={theme.onAccent} />
                   <Text style={styles.adminButtonText}>
                     {pdfDownloading ? 'Génération…' : 'PDF classement & stats'}
                   </Text>
@@ -854,7 +859,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                   </TouchableOpacity>
                 )}
                 {status.text !== 'À venir' && (
-                  <Text style={[styles.alreadyRegisteredText, { marginTop: 8, fontSize: 12, color: '#666' }]}>
+                  <Text style={[styles.alreadyRegisteredText, { marginTop: 8, fontSize: 12, color: theme.textMuted }]}>
                     Vous ne pouvez quitter que les compétitions à venir.
                   </Text>
                 )}
@@ -1081,7 +1086,7 @@ export default function CompetitionDetailScreen({ route }: any) {
             </Text>
 
             {(loadingMyStats || loadingMyTeamStats) && (
-              <ActivityIndicator size="small" color="#007AFF" style={{ marginVertical: 12 }} />
+              <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 12 }} />
             )}
 
             {(myStatsError || myTeamStatsError) && !loadingMyStats && !loadingMyTeamStats && (
@@ -1211,7 +1216,7 @@ export default function CompetitionDetailScreen({ route }: any) {
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Statistiques</Text>
             {loadingStats ? (
-              <ActivityIndicator size="small" color="#007AFF" />
+              <ActivityIndicator size="small" color={theme.accent} />
             ) : (
               <>
                 <View style={styles.statCard}>
@@ -1311,10 +1316,10 @@ export default function CompetitionDetailScreen({ route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -1328,7 +1333,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1339,7 +1344,7 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 16,
-    color: '#666',
+    color: theme.textMuted,
     flex: 1,
   },
   badgesContainer: {
@@ -1357,7 +1362,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fff',
+    color: theme.onAccent,
   },
   registeredBadge: {
     paddingHorizontal: 10,
@@ -1392,19 +1397,19 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 16,
     lineHeight: 20,
   },
   infoSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   actionsSection: {
@@ -1432,19 +1437,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   unregisterButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
   registerButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 16,
   },
   registerButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1461,22 +1466,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   createTeamButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 12,
     borderRadius: 8,
   },
   createTeamButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
   endedText: {
-    color: '#999',
+    color: theme.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
   registerForm: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 24,
@@ -1485,16 +1490,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 16,
-    color: '#333',
+    color: theme.text,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   teamOption: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -1502,18 +1507,18 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   teamOptionSelected: {
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
     backgroundColor: '#e3f2fd',
   },
   teamOptionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   teamOptionMembers: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   formActions: {
     flexDirection: 'row',
@@ -1522,7 +1527,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1531,19 +1536,19 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#ddd',
+    backgroundColor: theme.surfaceRaised,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#333',
+    color: theme.text,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1554,7 +1559,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
+    color: theme.text,
   },
   rankingInfo: {
     backgroundColor: '#fff3cd',
@@ -1569,7 +1574,7 @@ const styles = StyleSheet.create({
   teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -1577,24 +1582,24 @@ const styles = StyleSheet.create({
   teamRowUser: {
     backgroundColor: '#eff6ff',
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: theme.accent,
   },
   showMoreRanking: {
     marginTop: 8,
     padding: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
     borderRadius: 8,
     alignItems: 'center',
   },
   showMoreRankingText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#4b5563',
+    color: theme.textMuted,
   },
   teamRank: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: theme.accent,
     marginRight: 12,
     width: 40,
   },
@@ -1604,28 +1609,28 @@ const styles = StyleSheet.create({
   teamName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   teamNumber: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 2,
   },
   teamMembers: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   teamScore: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: theme.accent,
   },
   statsSection: {
     marginBottom: 24,
   },
   statCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
@@ -1633,13 +1638,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: theme.accent,
   },
   speciesSection: {
     marginBottom: 16,
@@ -1664,7 +1669,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: theme.border,
   },
   showTop3Btn: {
     padding: 12,
@@ -1684,12 +1689,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
+    color: theme.text,
   },
   speciesItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -1697,11 +1702,11 @@ const styles = StyleSheet.create({
   speciesName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   speciesCount: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   top3Section: {
     marginTop: 16,
@@ -1713,11 +1718,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: theme.text,
   },
   top3Item: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -1725,7 +1730,7 @@ const styles = StyleSheet.create({
   top3Rank: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: theme.accent,
     marginRight: 12,
     width: 30,
   },
@@ -1735,20 +1740,20 @@ const styles = StyleSheet.create({
   top3Size: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   top3Team: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 2,
   },
   top3CaughtBy: {
     fontSize: 12,
-    color: '#999',
+    color: theme.textMuted,
   },
   errorText: {
-    color: '#ff3b30',
+    color: theme.danger,
     fontSize: 16,
   },
   pausedBadge: {
@@ -1759,7 +1764,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pausedText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1773,16 +1778,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   editButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
   },
   pauseButton: {
     backgroundColor: '#FF9500',
   },
   resumeButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   rankingPublicButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   rankingPrivateButton: {
     backgroundColor: '#8E8E93',
@@ -1796,7 +1801,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   adminButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1804,7 +1809,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   pauseCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
@@ -1820,7 +1825,7 @@ const styles = StyleSheet.create({
   pauseDates: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   activeBadge: {
@@ -1831,13 +1836,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   activeBadgeText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     fontWeight: '600',
   },
   pauseReason: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   perimeterSection: {
@@ -1848,7 +1853,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    borderBottomColor: theme.border,
   },
   tab: {
     flex: 1,
@@ -1859,22 +1864,22 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#007AFF',
+    borderBottomColor: theme.accent,
   },
   tabText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textMuted,
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   speciesTabContent: {
     marginTop: 16,
   },
   speciesCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
@@ -1888,7 +1893,7 @@ const styles = StyleSheet.create({
   speciesCardName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   bonusBadge: {
     backgroundColor: '#ff9500',
@@ -1897,7 +1902,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   bonusText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -1906,23 +1911,23 @@ const styles = StyleSheet.create({
   },
   speciesCoefficient: {
     fontSize: 14,
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
     marginBottom: 4,
   },
   speciesBasePoints: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
   },
   reglementText: {
     fontSize: 15,
-    color: '#333',
+    color: theme.text,
     lineHeight: 22,
     marginTop: 8,
   },
   rulesIntro: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -1930,62 +1935,62 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   rulesCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 10,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
     marginBottom: 4,
   },
   ruleRow: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   ruleLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: theme.text,
     marginBottom: 4,
   },
   ruleValue: {
     fontSize: 14,
-    color: '#1f2937',
+    color: theme.text,
     lineHeight: 20,
   },
   ruleSpeciesBlock: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   ruleSpeciesName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 4,
   },
   ruleSpeciesDetail: {
     fontSize: 13,
-    color: '#6b7280',
+    color: theme.textMuted,
     lineHeight: 18,
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: theme.textMuted,
     textAlign: 'center',
     marginTop: 32,
   },
   myStatsSection: {
     marginBottom: 24,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
   },
   myStatsHint: {
     fontSize: 13,
-    color: '#6b7280',
+    color: theme.textMuted,
     marginBottom: 12,
   },
   myStatsErrorText: {
@@ -1999,12 +2004,12 @@ const styles = StyleSheet.create({
   myStatsBlockTeam: {
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: theme.border,
   },
   myStatsSubsectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.text,
     marginBottom: 10,
   },
   myStatsKpis: {
@@ -2014,25 +2019,25 @@ const styles = StyleSheet.create({
   },
   myStatsKpi: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: theme.surfaceRaised,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   myStatsKpiLabel: {
     fontSize: 12,
-    color: '#6b7280',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   myStatsKpiValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#007AFF',
+    color: theme.accent,
   },
   myStatsTimelineTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: theme.text,
     marginTop: 8,
     marginBottom: 8,
   },
@@ -2043,12 +2048,12 @@ const styles = StyleSheet.create({
   },
   myStatsTimelineDate: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: theme.textMuted,
     marginBottom: 2,
   },
   myStatsTimelineBody: {
     fontSize: 14,
-    color: '#1f2937',
+    color: theme.text,
   },
   byMemberRow: {
     marginBottom: 12,
@@ -2056,12 +2061,12 @@ const styles = StyleSheet.create({
   byMemberTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4b5563',
+    color: theme.textMuted,
     marginBottom: 6,
   },
   byMemberLine: {
     fontSize: 13,
-    color: '#374151',
+    color: theme.text,
     marginBottom: 4,
   },
   myStatsViz: {

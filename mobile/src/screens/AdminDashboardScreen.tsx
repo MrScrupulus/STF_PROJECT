@@ -16,8 +16,13 @@ import { adminService } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function AdminDashboardScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const [catchesPage, setCatchesPage] = useState(1);
@@ -94,7 +99,7 @@ export default function AdminDashboardScreen() {
       <>
         <Header title="Dashboard Admin" showBack={true} showMenu={true} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -148,7 +153,7 @@ export default function AdminDashboardScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
-            <FaIcon name="key" size={22} color="#fff" />
+            <FaIcon name="key" size={22} color={theme.onAccent} />
           </View>
           <View style={styles.identityText}>
             <Text style={styles.displayName}>Administration</Text>
@@ -159,14 +164,14 @@ export default function AdminDashboardScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, styles.statIconPending]}>
-              <FaIcon name="check" size={14} color="#34C759" />
+              <FaIcon name="check" size={14} color={theme.success} />
             </View>
             <Text style={styles.statValue}>{pendingCount}</Text>
             <Text style={styles.statLabel}>En attente</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, styles.statIconComp]}>
-              <FaIcon name="trophy" size={14} color="#007AFF" />
+              <FaIcon name="trophy" size={14} color={theme.accent} />
             </View>
             <Text style={styles.statValue}>{competitionsCount}</Text>
             <Text style={styles.statLabel}>Compétitions</Text>
@@ -190,7 +195,7 @@ export default function AdminDashboardScreen() {
               activeOpacity={0.75}
             >
               <View style={styles.tileIcon}>
-                <FaIcon name={tile.icon} size={20} color="#007AFF" />
+                <FaIcon name={tile.icon} size={20} color={theme.accent} />
               </View>
               <Text style={styles.tileLabel}>{tile.label}</Text>
               <Text style={styles.tileHint}>{tile.hint}</Text>
@@ -201,7 +206,7 @@ export default function AdminDashboardScreen() {
         <Text style={styles.sectionTitle}>Prises en attente</Text>
         {pendingCount === 0 ? (
           <View style={styles.emptyCard}>
-            <FaIcon name="circleCheck" size={28} color="#34C759" />
+            <FaIcon name="circleCheck" size={28} color={theme.success} />
             <Text style={styles.emptyText}>Aucune prise en attente</Text>
             <Text style={styles.emptySubtext}>Toutes les prises ont été traitées.</Text>
           </View>
@@ -234,7 +239,7 @@ export default function AdminDashboardScreen() {
                     onPress={() => handleValidate(catchItem.id)}
                     disabled={validateMutation.isPending}
                   >
-                    <FaIcon name="circleCheck" size={16} color="#fff" />
+                    <FaIcon name="circleCheck" size={16} color={theme.onAccent} />
                     <Text style={styles.actionButtonText}>Valider</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -242,7 +247,7 @@ export default function AdminDashboardScreen() {
                     onPress={() => handleReject(catchItem.id)}
                     disabled={validateMutation.isPending}
                   >
-                    <FaIcon name="circleXmark" size={16} color="#fff" />
+                    <FaIcon name="circleXmark" size={16} color={theme.onAccent} />
                     <Text style={styles.actionButtonText}>Rejeter</Text>
                   </TouchableOpacity>
                 </View>
@@ -253,7 +258,7 @@ export default function AdminDashboardScreen() {
             ListFooterComponent={
               isLoadingMore ? (
                 <View style={styles.loadingMore}>
-                  <ActivityIndicator size="small" color="#007AFF" />
+                  <ActivityIndicator size="small" color={theme.accent} />
                   <Text style={styles.loadingMoreText}>Chargement…</Text>
                 </View>
               ) : null
@@ -277,7 +282,7 @@ export default function AdminDashboardScreen() {
                   ]}
                 >
                   <View style={styles.listIcon}>
-                    <FaIcon name="trophy" size={16} color="#007AFF" />
+                    <FaIcon name="trophy" size={16} color={theme.accent} />
                   </View>
                   <Text style={styles.endedName} numberOfLines={1}>
                     {item.name}
@@ -307,10 +312,10 @@ export default function AdminDashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -322,7 +327,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   identityCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -333,7 +338,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -344,11 +349,11 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
   },
   identityHint: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 4,
   },
   statsContainer: {
@@ -359,7 +364,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 8,
@@ -377,7 +382,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F8ED',
   },
   statIconComp: {
-    backgroundColor: '#E8F1FF',
+    backgroundColor: theme.accentMuted,
   },
   statIconLive: {
     backgroundColor: '#FFF4E5',
@@ -385,19 +390,19 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 11,
-    color: '#888',
+    color: theme.textMuted,
     textAlign: 'center',
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#888',
+    color: theme.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginBottom: 10,
@@ -414,7 +419,7 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: '48.5%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 12,
@@ -425,7 +430,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E8F1FF',
+    backgroundColor: theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -433,16 +438,16 @@ const styles = StyleSheet.create({
   tileLabel: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
   },
   tileHint: {
     fontSize: 12,
-    color: '#888',
+    color: theme.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
   emptyCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 28,
     alignItems: 'center',
@@ -450,17 +455,17 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginTop: 12,
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#888',
+    color: theme.textMuted,
     marginTop: 4,
     textAlign: 'center',
   },
   catchCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -474,28 +479,28 @@ const styles = StyleSheet.create({
   catchTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#111',
+    color: theme.text,
     flex: 1,
     marginRight: 8,
   },
   catchSize: {
     fontSize: 16,
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '700',
   },
   catchTeam: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   catchMember: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 4,
   },
   catchDate: {
     fontSize: 12,
-    color: '#999',
+    color: theme.textMuted,
     marginBottom: 12,
   },
   catchActions: {
@@ -512,13 +517,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   validateButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   rejectButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
   },
   actionButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -529,10 +534,10 @@ const styles = StyleSheet.create({
   },
   loadingMoreText: {
     fontSize: 13,
-    color: '#888',
+    color: theme.textMuted,
   },
   listCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -542,7 +547,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   listRowLast: {
     borderBottomWidth: 0,
@@ -551,7 +556,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#E8F1FF',
+    backgroundColor: theme.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -560,7 +565,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#222',
+    color: theme.text,
     marginRight: 8,
   },
   pdfIconButton: {

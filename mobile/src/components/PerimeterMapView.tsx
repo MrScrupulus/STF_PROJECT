@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import MapView, { Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 interface Perimeter {
   id: number;
@@ -14,6 +16,9 @@ interface PerimeterMapViewProps {
 }
 
 export default function PerimeterMapView({ perimeters, height = 250 }: PerimeterMapViewProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const [expanded, setExpanded] = useState(false);
 
   if (!perimeters || perimeters.length === 0) {
@@ -91,7 +96,7 @@ export default function PerimeterMapView({ perimeters, height = 250 }: Perimeter
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: 24,
   },
@@ -100,20 +105,20 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
     alignItems: 'center',
   },
   toggleButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: theme.accent,
   },
   mapWrapper: {
     marginTop: 12,
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
   },
   map: {
     flex: 1,
@@ -122,10 +127,10 @@ const styles = StyleSheet.create({
   mapPlaceholder: {
     justifyContent: 'center',
     paddingHorizontal: 16,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
   },
   placeholderText: {
-    color: '#666',
+    color: theme.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },

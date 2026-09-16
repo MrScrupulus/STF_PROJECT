@@ -17,8 +17,13 @@ import { adminService, PendingCatch } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 export default function AdminCatchValidationScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const route = useRoute();
   const navigation = useNavigation();
   const queryClient = useQueryClient();
@@ -110,7 +115,7 @@ export default function AdminCatchValidationScreen() {
       <>
         <Header title="Détail de la prise" showBack={true} showMenu={true} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.accent} />
         </View>
       </>
     );
@@ -217,7 +222,7 @@ export default function AdminCatchValidationScreen() {
                   disabled={validateMutation.isPending}
                 >
                   {validateMutation.isPending ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={theme.onAccent} />
                   ) : (
                     <Text style={styles.actionButtonText}>✓ Valider</Text>
                   )}
@@ -252,7 +257,7 @@ export default function AdminCatchValidationScreen() {
                   disabled={rejectMutation.isPending || !rejectionReason.trim()}
                 >
                   {rejectMutation.isPending ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={theme.onAccent} />
                   ) : (
                     <Text style={styles.actionButtonText}>Confirmer le rejet</Text>
                   )}
@@ -290,10 +295,10 @@ export default function AdminCatchValidationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -304,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -317,13 +322,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.textMuted,
     marginTop: 12,
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
   },
   thumbnail: {
     width: '100%',
@@ -333,7 +338,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -355,32 +360,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   validateButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: theme.success,
   },
   rejectButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
   },
   cancelButton: {
     backgroundColor: '#8E8E93',
   },
   actionButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 16,
   },
   errorText: {
     fontSize: 16,
-    color: '#FF3B30',
+    color: theme.danger,
     marginBottom: 16,
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 16,
   },
@@ -403,7 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imageModalCloseText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 24,
     fontWeight: 'bold',
   },

@@ -1,9 +1,14 @@
 import React, { useLayoutEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 /** Ancien écran « Mes prises » : redirige vers l’historique unifié (onglet prises). */
 export default function CatchesScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
 
   useLayoutEffect(() => {
@@ -13,16 +18,16 @@ export default function CatchesScreen() {
 
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color="#007AFF" />
+      <ActivityIndicator size="large" color={theme.accent} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
 });

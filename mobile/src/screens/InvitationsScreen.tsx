@@ -14,6 +14,8 @@ import { useNavigation } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import Header from '../components/Header';
 import { formatDateTime } from '../utils/dateUtils';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 interface Invitation {
   id: number;
@@ -32,6 +34,9 @@ interface Invitation {
 }
 
 export default function InvitationsScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const queryClient = useQueryClient();
 
@@ -114,7 +119,7 @@ export default function InvitationsScreen() {
     return (
       <View style={styles.center}>
         <Header title="Mes Invitations" showBack={true} showMenu={true} />
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={theme.accent} />
       </View>
     );
   }
@@ -193,10 +198,10 @@ export default function InvitationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -205,22 +210,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   errorText: {
-    color: '#ef4444',
+    color: theme.danger,
     fontSize: 16,
     marginBottom: 16,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -231,19 +236,19 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 20,
   },
   invitationCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -262,24 +267,24 @@ const styles = StyleSheet.create({
   teamName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1f2937',
+    color: theme.text,
     flex: 1,
   },
   invitationDate: {
     fontSize: 12,
-    color: '#6b7280',
+    color: theme.textMuted,
   },
   invitationBody: {
     marginBottom: 16,
   },
   invitationText: {
     fontSize: 14,
-    color: '#4b5563',
+    color: theme.textMuted,
     lineHeight: 20,
   },
   invitedByText: {
     fontWeight: '600',
-    color: '#1f2937',
+    color: theme.text,
   },
   invitationActions: {
     flexDirection: 'row',
@@ -297,17 +302,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
   },
   acceptButtonText: {
-    color: '#fff',
+    color: theme.onAccent,
     fontSize: 16,
     fontWeight: '600',
   },
   rejectButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.surfaceRaised,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.border,
   },
   rejectButtonText: {
-    color: '#6b7280',
+    color: theme.textMuted,
     fontSize: 16,
     fontWeight: '600',
   },

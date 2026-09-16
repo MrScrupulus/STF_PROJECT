@@ -18,6 +18,8 @@ import Header from '../components/Header';
 import FaIcon from '../components/FaIcon';
 import { formatDateTimeLocal } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 const PHOTO_PREVIEW_H = Math.round(Dimensions.get('window').height * 0.72);
 
@@ -54,6 +56,9 @@ type PenaltyCatchRow = {
 };
 
 export default function AdminPenaltyScreen() {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const queryClient = useQueryClient();
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [competitionId, setCompetitionId] = useState<number | null>(null);
@@ -194,7 +199,7 @@ export default function AdminPenaltyScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
-            <FaIcon name="flag" size={22} color="#fff" />
+            <FaIcon name="flag" size={22} color={theme.onAccent} />
           </View>
           <View style={styles.identityText}>
             <Text style={styles.displayName}>Pénalités</Text>
@@ -209,7 +214,7 @@ export default function AdminPenaltyScreen() {
         </View>
 
         {loadingHeader ? (
-          <ActivityIndicator color="#007AFF" style={{ marginVertical: 16 }} />
+          <ActivityIndicator color={theme.accent} style={{ marginVertical: 16 }} />
         ) : (
           <>
             <Text style={styles.sectionTitle}>Compétition</Text>
@@ -326,7 +331,7 @@ export default function AdminPenaltyScreen() {
                       pénalité à une prise.
                     </Text>
                     {loadingPenaltyCatches ? (
-                      <ActivityIndicator color="#007AFF" style={{ marginVertical: 12 }} />
+                      <ActivityIndicator color={theme.accent} style={{ marginVertical: 12 }} />
                     ) : penaltyCatchesError ? (
                       <Text style={styles.hintMuted}>
                         Impossible de charger les prises. Vérifiez votre connexion et que votre compte a bien les droits
@@ -458,7 +463,7 @@ export default function AdminPenaltyScreen() {
                   onPress={handleSubmit}
                   disabled={busy || (scope === 'catch' && catchId == null)}
                 >
-                  <FaIcon name="flag" size={16} color="#fff" />
+                  <FaIcon name="flag" size={16} color={theme.onAccent} />
                   <Text style={styles.submitText}>{busy ? 'Enregistrement…' : 'Enregistrer la pénalité'}</Text>
                 </TouchableOpacity>
 
@@ -474,7 +479,7 @@ export default function AdminPenaltyScreen() {
                         style={[styles.pItem, index === penalties.length - 1 && styles.pItemLast]}
                       >
                         <View style={styles.pItemIcon}>
-                          <FaIcon name="circleXmark" size={16} color="#FF3B30" />
+                          <FaIcon name="circleXmark" size={16} color={theme.danger} />
                         </View>
                         <Text style={styles.pItemText}>
                           −{pen.points} pts
@@ -534,11 +539,11 @@ export default function AdminPenaltyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.bg },
   content: { padding: 16, paddingBottom: 40 },
   identityCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -555,89 +560,89 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   identityText: { flex: 1 },
-  displayName: { fontSize: 20, fontWeight: '700', color: '#111' },
-  identityHint: { fontSize: 14, color: '#666', marginTop: 4 },
+  displayName: { fontSize: 20, fontWeight: '700', color: theme.text },
+  identityHint: { fontSize: 14, color: theme.textMuted, marginTop: 4 },
   helpCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
   },
-  help: { fontSize: 14, color: '#555', lineHeight: 20 },
+  help: { fontSize: 14, color: theme.textMuted, lineHeight: 20 },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#888',
+    color: theme.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginTop: 8,
     marginBottom: 10,
     marginLeft: 4,
   },
-  hintMuted: { fontSize: 13, color: '#888', marginTop: 4, marginBottom: 8 },
-  countHint: { fontSize: 12, color: '#666', marginBottom: 8 },
+  hintMuted: { fontSize: 13, color: theme.textMuted, marginTop: 4, marginBottom: 8 },
+  countHint: { fontSize: 12, color: theme.textMuted, marginBottom: 8 },
   label: { fontWeight: '600', marginTop: 12, marginBottom: 8 },
   chip: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     marginRight: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     borderWidth: 1.5,
-    borderColor: '#eee',
+    borderColor: theme.border,
     maxWidth: 132,
     minWidth: 108,
     alignItems: 'center',
   },
-  chipSelected: { borderColor: '#007AFF', backgroundColor: '#007AFF' },
-  chipText: { fontSize: 14, color: '#333', fontWeight: '500', textAlign: 'center', lineHeight: 18 },
-  chipTextSelected: { color: '#fff', fontWeight: '600' },
+  chipSelected: { borderColor: theme.accent, backgroundColor: theme.accent },
+  chipText: { fontSize: 14, color: theme.text, fontWeight: '500', textAlign: 'center', lineHeight: 18 },
+  chipTextSelected: { color: theme.onAccent, fontWeight: '600' },
   teamList: { maxHeight: 220, marginBottom: 4 },
   teamRow: {
     padding: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1.5,
-    borderColor: '#eee',
+    borderColor: theme.border,
   },
-  teamRowSel: { borderColor: '#007AFF', backgroundColor: '#007AFF' },
-  teamRowName: { fontSize: 15, fontWeight: '700', color: '#111' },
-  teamRowNameSel: { color: '#fff' },
-  teamRowMembers: { fontSize: 13, color: '#555', marginTop: 4 },
+  teamRowSel: { borderColor: theme.accent, backgroundColor: theme.accent },
+  teamRowName: { fontSize: 15, fontWeight: '700', color: theme.text },
+  teamRowNameSel: { color: theme.onAccent },
+  teamRowMembers: { fontSize: 13, color: theme.textMuted, marginTop: 4 },
   teamRowMembersSel: { color: 'rgba(255,255,255,0.9)' },
   row: { flexDirection: 'row', gap: 8 },
   scopeBtn: {
     flex: 1,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#eee',
+    borderColor: theme.border,
   },
-  scopeBtnSel: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  scopeBtnText: { fontWeight: '600', color: '#333' },
-  scopeBtnTextSel: { color: '#fff' },
+  scopeBtnSel: { backgroundColor: theme.accent, borderColor: theme.accent },
+  scopeBtnText: { fontWeight: '600', color: theme.text },
+  scopeBtnTextSel: { color: theme.onAccent },
   catchList: { maxHeight: 420, marginBottom: 8 },
   catchCard: {
     flexDirection: 'row',
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: theme.border,
     alignItems: 'flex-start',
     gap: 10,
   },
-  catchCardSel: { borderColor: '#007AFF', backgroundColor: '#f7fbff' },
+  catchCardSel: { borderColor: theme.accent, backgroundColor: '#f7fbff' },
   catchThumbTouchable: {
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f9f9f9',
+    borderColor: theme.border,
+    backgroundColor: theme.surfaceRaised,
   },
   catchThumbImg: { width: 92, height: 92 },
   catchThumbPlaceholder: {
@@ -647,12 +652,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  catchThumbPlaceholderText: { fontSize: 11, color: '#999', fontWeight: '600' },
+  catchThumbPlaceholderText: { fontSize: 11, color: theme.textMuted, fontWeight: '600' },
   catchCardBody: { flex: 1, minWidth: 0 },
-  catchDatetime: { fontSize: 12, color: '#333', marginBottom: 6, fontWeight: '600' },
-  catchRowMain: { fontSize: 15, fontWeight: '600', color: '#111' },
+  catchDatetime: { fontSize: 12, color: theme.text, marginBottom: 6, fontWeight: '600' },
+  catchRowMain: { fontSize: 15, fontWeight: '600', color: theme.text },
   catchHash: { fontVariant: ['tabular-nums'] },
-  catchRowMeta: { fontSize: 13, color: '#555', marginTop: 4 },
+  catchRowMeta: { fontSize: 13, color: theme.textMuted, marginTop: 4 },
   catchSelectBtn: {
     alignSelf: 'stretch',
     marginTop: 10,
@@ -660,15 +665,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#007AFF',
+    borderColor: theme.accent,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
-  catchSelectBtnSel: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  catchSelectBtnText: { fontSize: 14, fontWeight: '700', color: '#007AFF' },
-  catchSelectBtnTextSel: { color: '#fff' },
+  catchSelectBtnSel: { backgroundColor: theme.accent, borderColor: theme.accent },
+  catchSelectBtnText: { fontSize: 14, fontWeight: '700', color: theme.accent },
+  catchSelectBtnTextSel: { color: theme.onAccent },
   penaltyFormCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 14,
     marginTop: 6,
@@ -676,8 +681,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#cce0f5',
   },
-  penaltyFormCardTitle: { fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 10 },
-  hintMutedCompact: { fontSize: 12, color: '#666', marginBottom: 10, lineHeight: 18 },
+  penaltyFormCardTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 10 },
+  hintMutedCompact: { fontSize: 12, color: theme.textMuted, marginBottom: 10, lineHeight: 18 },
   labelInCard: { marginTop: 6 },
   selectedCatchSummary: { fontSize: 13, color: '#0c4a6e', marginBottom: 6, fontWeight: '700' },
   photoModalBackdrop: {
@@ -696,22 +701,22 @@ const styles = StyleSheet.create({
     zIndex: 2,
     padding: 12,
   },
-  photoModalCloseText: { color: '#fff', fontSize: 32, lineHeight: 34, fontWeight: '200' },
+  photoModalCloseText: { color: theme.onAccent, fontSize: 32, lineHeight: 34, fontWeight: '200' },
   photoModalImage: { width: '100%' },
   photoModalDoneButton: {
     marginTop: 20,
     paddingVertical: 12,
     paddingHorizontal: 28,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
   },
-  photoModalDoneText: { fontWeight: '700', color: '#111', fontSize: 16 },
+  photoModalDoneText: { fontWeight: '700', color: theme.text, fontSize: 16 },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
   },
   area: { minHeight: 70, textAlignVertical: 'top' },
   submit: {
@@ -726,14 +731,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitDisabled: { opacity: 0.6 },
-  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  submitText: { color: theme.onAccent, fontWeight: '700', fontSize: 16 },
   listCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 8,
   },
-  totalPen: { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 10 },
+  totalPen: { fontSize: 15, fontWeight: '700', color: theme.text, marginBottom: 10 },
   pItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -751,6 +756,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pItemText: { flex: 1, fontSize: 14, color: '#333' },
+  pItemText: { flex: 1, fontSize: 14, color: theme.text },
   del: { color: '#c00', fontWeight: '600' },
 });

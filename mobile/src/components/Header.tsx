@@ -15,6 +15,8 @@ import { authService } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import { rootNavigationRef } from '../navigation/rootNavigationRef';
 import FaIcon, { type AppIconName } from './FaIcon';
+import { useThemeColors } from '../contexts/ThemeContext';
+import { type ThemeColors } from '../theme';
 
 interface HeaderProps {
   title?: string;
@@ -24,6 +26,9 @@ interface HeaderProps {
 }
 
 export default function Header({ title, showBack = true, showMenu = true, showProfile = false }: HeaderProps) {
+  const theme = useThemeColors();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   const navigation = useNavigation();
   const route = useRoute();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -126,7 +131,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <FaIcon name="back" size={20} color="#007AFF" />
+            <FaIcon name="back" size={20} color={theme.accent} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -145,7 +150,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
             }}
           >
             <View style={styles.backIconDisabled}>
-              <FaIcon name="back" size={20} color="#007AFF" />
+              <FaIcon name="back" size={20} color={theme.accent} />
             </View>
           </TouchableOpacity>
         )}
@@ -160,11 +165,13 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
           }}
           accessibilityLabel="Accueil"
         >
-          <Image
-            source={require('../../assets/logo-black.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <View style={styles.logoFrame}>
+            <Image
+              source={require('../../assets/logo-black.png')}
+              style={styles.logo}
+              resizeMode="cover"
+            />
+          </View>
         </TouchableOpacity>
 
         {/* Titre au centre */}
@@ -181,7 +188,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
               style={styles.menuButton}
               onPress={() => setMenuVisible(true)}
             >
-              <FaIcon name="menu" size={22} color="#333" />
+              <FaIcon name="menu" size={22} color={theme.text} />
             </TouchableOpacity>
           )}
           {showProfile ? (
@@ -189,7 +196,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
               style={styles.profileButton}
               onPress={handleProfilePress}
             >
-              <FaIcon name="user" size={22} color="#007AFF" />
+              <FaIcon name="user" size={22} color={theme.accent} />
             </TouchableOpacity>
           ) : showMenu ? null : (
             <View style={styles.placeholder} />
@@ -213,7 +220,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                 style={styles.closeButton}
                 onPress={() => setMenuVisible(false)}
               >
-                <FaIcon name="close" size={22} color="#666" />
+                <FaIcon name="close" size={22} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -231,7 +238,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                   <FaIcon
                     name={item.icon}
                     size={20}
-                    color={route.name === item.name ? '#007AFF' : '#333'}
+                    color={route.name === item.name ? theme.accent : theme.text}
                   />
                 </View>
                   <Text
@@ -252,7 +259,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                   onPress={handleLogout}
                 >
                 <View style={styles.menuItemIcon}>
-                  <FaIcon name="logout" size={20} color="#dc3545" />
+                  <FaIcon name="logout" size={20} color={theme.danger} />
                 </View>
                   <Text style={[styles.menuItemText, styles.logoutText]}>
                     Déconnexion
@@ -267,11 +274,11 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   safeArea: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.chrome,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   header: {
     flexDirection: 'row',
@@ -279,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.chrome,
     minHeight: 56,
   },
   placeholder: {
@@ -295,24 +302,32 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   backIconDisabled: {
     opacity: 0.5,
   },
   logoButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     marginLeft: 6,
     marginRight: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoFrame: {
+    width: 54,
+    height: 54,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.logoRing,
+    overflow: 'hidden',
+    backgroundColor: '#000000',
+  },
   logo: {
     width: 50,
     height: 50,
-    borderRadius: 8,
   },
   titleContainer: {
     flex: 1,
@@ -322,7 +337,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     textAlign: 'center',
   },
   menuButton: {
@@ -331,12 +346,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
     borderRadius: 8,
   },
   menuIcon: {
     fontSize: 24,
-    color: '#333',
+    color: theme.text,
     fontWeight: '600',
   },
   rightButtons: {
@@ -354,15 +369,15 @@ const styles = StyleSheet.create({
   },
   profileIcon: {
     fontSize: 24,
-    color: '#007AFF',
+    color: theme.accent,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -374,12 +389,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   closeButton: {
     width: 32,
@@ -389,7 +404,7 @@ const styles = StyleSheet.create({
   },
   closeIcon: {
     fontSize: 24,
-    color: '#666',
+    color: theme.textMuted,
     fontWeight: '300',
   },
   menuList: {
@@ -401,10 +416,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.border,
   },
   menuItemActive: {
-    backgroundColor: '#f0f7ff',
+    backgroundColor: theme.accentMuted,
   },
   menuItemIcon: {
     marginRight: 16,
@@ -413,20 +428,20 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.text,
     flex: 1,
   },
   menuItemTextActive: {
-    color: '#007AFF',
+    color: theme.accent,
     fontWeight: '600',
   },
   logoutItem: {
     marginTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: theme.border,
   },
   logoutText: {
-    color: '#dc3545',
+    color: theme.danger,
     fontWeight: '600',
   },
 });

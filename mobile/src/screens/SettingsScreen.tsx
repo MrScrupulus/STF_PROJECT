@@ -9,6 +9,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
+import { useTheme, useThemeColors } from '../contexts/ThemeContext';
+import { palettes, type ThemeColors, type ThemeName } from '../theme';
 
 type SettingRow = {
   label: string;
@@ -38,7 +40,15 @@ const ROWS: SettingRow[] = [
   },
 ];
 
+const THEME_OPTIONS: { id: ThemeName; label: string; hint: string }[] = [
+  { id: 'anthracite', label: 'Anthracite', hint: 'Thème actuel, fond sombre' },
+  { id: 'light', label: 'Clair', hint: 'Ancien thème, fond blanc' },
+];
+
 export default function SettingsScreen() {
+  const theme = useThemeColors();
+  const { name, setThemeName } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
   const navigation = useNavigation();
 
   return (
@@ -46,9 +56,35 @@ export default function SettingsScreen() {
       <Header title="Réglages" showBack={true} showMenu={true} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.intro}>
-          Gérez vos notifications, e-mails et préférences. Le profil reste aussi
-          accessible depuis « Mon compte ».
+          Gérez l’apparence, vos notifications et vos préférences. Le profil reste
+          aussi accessible depuis « Mon compte ».
         </Text>
+
+        <Text style={styles.sectionTitle}>Apparence</Text>
+        <View style={styles.themeRow}>
+          {THEME_OPTIONS.map((opt) => {
+            const selected = name === opt.id;
+            const preview = palettes[opt.id];
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.themeCard, selected && styles.themeCardSelected]}
+                onPress={() => setThemeName(opt.id)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+              >
+                <View style={[styles.themeSwatch, { backgroundColor: preview.chrome }]}>
+                  <View style={[styles.themeSwatchBar, { backgroundColor: preview.accent }]} />
+                  <View style={[styles.themeSwatchPage, { backgroundColor: preview.bg }]} />
+                </View>
+                <Text style={styles.themeLabel}>{opt.label}</Text>
+                <Text style={styles.themeHint}>{opt.hint}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {ROWS.map((row) => (
           <TouchableOpacity
             key={row.screen}
@@ -57,7 +93,7 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.iconWrap}>
-              <FaIcon name={row.icon} size={20} color="#007AFF" />
+              <FaIcon name={row.icon} size={20} color={theme.accent} />
             </View>
             <View style={styles.rowText}>
               <Text style={styles.rowLabel}>{row.label}</Text>
@@ -71,10 +107,10 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 16,
@@ -82,14 +118,63 @@ const styles = StyleSheet.create({
   },
   intro: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textMuted,
     marginBottom: 16,
     lineHeight: 20,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 10,
+  },
+  themeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  themeCard: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 2,
+    borderColor: theme.border,
+  },
+  themeCardSelected: {
+    borderColor: theme.accent,
+  },
+  themeSwatch: {
+    height: 64,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  themeSwatchBar: {
+    height: 8,
+  },
+  themeSwatchPage: {
+    flex: 1,
+  },
+  themeLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 2,
+  },
+  themeHint: {
+    fontSize: 12,
+    color: theme.textMuted,
+    lineHeight: 16,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -106,16 +191,16 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 2,
   },
   rowHint: {
     fontSize: 13,
-    color: '#888',
+    color: theme.textMuted,
   },
   chevron: {
     fontSize: 22,
-    color: '#ccc',
+    color: theme.textMuted,
     fontWeight: '300',
   },
 });
