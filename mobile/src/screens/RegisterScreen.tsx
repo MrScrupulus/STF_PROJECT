@@ -10,8 +10,8 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { authService, RegisterData } from '../services/authService';
 import FaIcon from '../components/FaIcon';
@@ -77,7 +77,7 @@ export default function RegisterScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.headerSafeArea}>
+      <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}

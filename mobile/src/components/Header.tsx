@@ -6,9 +6,9 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  SafeAreaView,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
@@ -117,7 +117,8 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         {/* Bouton retour toujours visible à gauche */}
         {canGoBack ? (
@@ -195,6 +196,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
           )}
         </View>
       </View>
+    </SafeAreaView>
 
       {/* Menu Burger Modal */}
       <Modal
@@ -261,7 +263,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }
 

@@ -68,6 +68,7 @@ export default function HistoryScreen() {
   const [catchesPages, setCatchesPages] = useState(1);
   const [allCatches, setAllCatches] = useState<any[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [speciesFilterId, setSpeciesFilterId] = useState<number | null>(null);
 
   useEffect(() => {
     setActiveTab(normalizeInitialTab(initialTabParam));
@@ -147,6 +148,24 @@ export default function HistoryScreen() {
     (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  const speciesOptions = (() => {
+    const map = new Map<number, string>();
+    for (const s of stats.speciesStats || []) {
+      if (s?.id != null && s?.name) map.set(s.id, s.name);
+    }
+    for (const c of allCatches) {
+      if (c?.species?.id != null && c.species.name) map.set(c.species.id, c.species.name);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  })();
+
+  const displayedCatches =
+    speciesFilterId == null
+      ? sortedCatches
+      : sortedCatches.filter((c: any) => c.species?.id === speciesFilterId);
+
   const loadMoreCatches = async () => {
     if (catchesPage >= catchesPages || isLoadingMore || isLoadingMoreCatches) return;
     setIsLoadingMore(true);
@@ -195,7 +214,10 @@ export default function HistoryScreen() {
 
         {activeTab === 'catches' ? (
           <CatchesTab
-            catches={sortedCatches}
+            catches={displayedCatches}
+            speciesOptions={speciesOptions}
+            speciesFilterId={speciesFilterId}
+            onSpeciesFilterChange={setSpeciesFilterId}
             onImagePress={setSelectedImage}
             onLoadMore={catchesPage < catchesPages ? loadMoreCatches : undefined}
             isLoadingMore={isLoadingMore || isLoadingMoreCatches}
@@ -454,13 +476,64 @@ function CompetitionsTab({ grouped, orphanTeams, navigation }: any) {
   );
 }
 
-function CatchesTab({ catches, onImagePress, onLoadMore, isLoadingMore }: any) {
+function CatchesTab({
+  catches,
+  speciesOptions,
+  speciesFilterId,
+  onSpeciesFilterChange,
+  onImagePress,
+  onLoadMore,
+  isLoadingMore,
+}: any) {
   return (
     <FlatList
       style={styles.content}
       contentContainerStyle={styles.catchesTab}
       data={catches}
       keyExtractor={(item: any) => item.id.toString()}
+      ListHeaderComponent={
+        speciesOptions?.length > 0 ? (
+          <View style={styles.speciesFilter}>
+            <Text style={styles.speciesFilterLabel}>Espèce</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <TouchableOpacity
+                style={[styles.speciesChip, speciesFilterId == null && styles.speciesChipSelected]}
+                onPress={() => onSpeciesFilterChange(null)}
+              >
+                <Text
+                  style={[
+                    styles.speciesChipText,
+                    speciesFilterId == null && styles.speciesChipTextSelected,
+                  ]}
+                >
+                  Toutes
+                </Text>
+              </TouchableOpacity>
+              {speciesOptions.map((s: { id: number; name: string }) => (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[
+                    styles.speciesChip,
+                    styles.speciesChipNamed,
+                    speciesFilterId === s.id && styles.speciesChipSelected,
+                  ]}
+                  onPress={() => onSpeciesFilterChange(s.id)}
+                >
+                  <Text
+                    style={[
+                      styles.speciesChipText,
+                      speciesFilterId === s.id && styles.speciesChipTextSelected,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {s.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null
+      }
       renderItem={({ item: catchItem }: any) => (
         <View key={catchItem.id} style={styles.catchCard}>
           <View style={styles.catchHeader}>
@@ -526,7 +599,11 @@ function CatchesTab({ catches, onImagePress, onLoadMore, isLoadingMore }: any) {
       }
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Aucune prise dans votre historique</Text>
+          <Text style={styles.emptyText}>
+            {speciesFilterId != null
+              ? 'Aucune prise de cette espèce dans la liste chargée'
+              : 'Aucune prise dans votre historique'}
+          </Text>
         </View>
       }
     />
@@ -751,6 +828,47 @@ const styles = StyleSheet.create({
   },
   catchesTab: {
     padding: 16,
+  },
+  speciesFilter: {
+    marginBottom: 16,
+  },
+  speciesFilterLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+  speciesChip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginRight: 8,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1.5,
+    borderColor: '#eee',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speciesChipNamed: {
+    maxWidth: 132,
+    minWidth: 88,
+  },
+  speciesChipSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  speciesChipText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  speciesChipTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
   },
   catchCard: {
     backgroundColor: '#fff',

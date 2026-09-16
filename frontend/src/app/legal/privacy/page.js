@@ -4,8 +4,7 @@ import styles from "../../../styles/pages/legal.module.scss";
 
 export default function PrivacyPolicy() {
   return (
-    <div className={styles.legal}>
-      <div className={styles.legal__container}>
+    <>
         <h1 className={styles.legal__title}>Mentions légales et confidentialité</h1>
         <p>
           Street Fishing — application et site. Dernière mise à jour : 13 septembre 2026.
@@ -64,7 +63,6 @@ export default function PrivacyPolicy() {
             <Link href="/contact">Page contact</Link>
           </p>
         </section>
-      </div>
-    </div>
+    </>
   );
 }

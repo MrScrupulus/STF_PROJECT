@@ -3,8 +3,7 @@ import styles from "../../../styles/pages/legal.module.scss";
 
 export default function Terms() {
   return (
-    <div className={styles.legal}>
-      <div className={styles.legal__container}>
+    <>
         <h1 className={styles.legal__title}>
           Conditions Générales d'Utilisation
         </h1>
@@ -39,8 +38,6 @@ export default function Terms() {
           </ul>
         </section>
 
-        {/* Ajoutez d'autres sections selon vos besoins */}
-      </div>
-    </div>
+    </>
   );
 }

@@ -9,8 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService, LoginCredentials } from '../services/authService';
 import FaIcon from '../components/FaIcon';
 
@@ -66,7 +66,7 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
 
   return (
     <>
-      <SafeAreaView style={styles.headerSafeArea}>
+      <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
         <View style={styles.header}>
           <View style={styles.headerPlaceholder} />
           <View style={styles.headerTitleContainer}>

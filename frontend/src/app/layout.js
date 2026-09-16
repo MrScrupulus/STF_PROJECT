@@ -1,7 +1,5 @@
-import { Header } from "../components/layout/Header";
-import Footer from "../components/Footer";
-import BottomNavBar from "../components/layout/BottomNavBar";
 import ClientLayout from "../components/layout/ClientLayout";
+import AppShell from "../components/layout/AppShell";
 import "./globals.scss";
 import "../styles/theme.scss";
 import "../styles/components/layout/layout.module.scss";
@@ -44,12 +42,7 @@ export default function RootLayout({ children }) {
           Aller au contenu principal
         </a>
         <ClientLayout>
-          <Header />
-          <main role="main" aria-label="Contenu principal" style={{ paddingBottom: "80px" }}>
-            {children}
-          </main>
-          <Footer />
-          <BottomNavBar />
+          <AppShell>{children}</AppShell>
         </ClientLayout>
       </body>
     </html>

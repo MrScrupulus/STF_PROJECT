@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 import HelpButton from '../components/HelpButton';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
@@ -427,7 +428,7 @@ export default function CreateCompetitionScreen() {
 
   return (
     <>
-      <Header title="Créer une compétition" showBack={true} showMenu={false} />
+      <Header title="Créer une compétition" showBack={true} showMenu={true} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -438,6 +439,16 @@ export default function CreateCompetitionScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
+
+          <View style={styles.identityCard}>
+            <View style={styles.avatar}>
+              <FaIcon name="trophy" size={22} color="#fff" />
+            </View>
+            <View style={styles.identityText}>
+              <Text style={styles.displayName}>Nouvelle manche</Text>
+              <Text style={styles.identityHint}>Dates, espèces, règlement et jaquette</Text>
+            </View>
+          </View>
 
           {/* Nom */}
           <View style={styles.section}>
@@ -990,7 +1001,10 @@ export default function CreateCompetitionScreen() {
             {createMutation.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>Créer la compétition</Text>
+              <>
+                <FaIcon name="plus" size={16} color="#fff" />
+                <Text style={styles.submitButtonText}>Créer la compétition</Text>
+              </>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -1094,7 +1108,28 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 32,
   },
+  identityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  identityText: { flex: 1 },
+  displayName: { fontSize: 20, fontWeight: '700', color: '#111' },
+  identityHint: { fontSize: 14, color: '#666', marginTop: 4 },
   errorBox: {
     backgroundColor: '#fee2e2',
     borderColor: '#ef4444',
@@ -1108,7 +1143,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
   },
   label: {
     fontSize: 16,
@@ -1150,10 +1188,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f8f8',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#eee',
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
     color: '#333',
@@ -1414,8 +1452,11 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#007AFF',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 8,
     marginBottom: 24,
   },

@@ -27,6 +27,7 @@ import {
   sanitizeFishSizeInput,
 } from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 
 export default function AdminAddCatchScreen() {
   const navigation = useNavigation();
@@ -221,7 +222,7 @@ export default function AdminAddCatchScreen() {
   if (loadingCompetitions) {
     return (
       <>
-        <Header title="Ajouter une prise (Admin)" showBack={true} showMenu={true} />
+        <Header title="Saisie" showBack={true} showMenu={true} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
@@ -234,8 +235,17 @@ export default function AdminAddCatchScreen() {
 
   return (
     <>
-      <Header title="Ajouter une prise (Admin)" showBack={true} showMenu={true} />
+      <Header title="Saisie" showBack={true} showMenu={true} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <FaIcon name="camera" size={22} color="#fff" />
+          </View>
+          <View style={styles.identityText}>
+            <Text style={styles.displayName}>Saisie admin</Text>
+            <Text style={styles.identityHint}>Ajouter une prise validée pour une équipe</Text>
+          </View>
+        </View>
         {/* Sélection de la compétition */}
         <View style={styles.section}>
           <Text style={styles.label}>Compétition *</Text>
@@ -245,6 +255,7 @@ export default function AdminAddCatchScreen() {
                 key={comp.id}
                 style={[
                   styles.optionButton,
+                  styles.competitionChip,
                   selectedCompetition === comp.id && styles.optionButtonSelected,
                 ]}
                 onPress={() => setSelectedCompetition(comp.id)}
@@ -252,12 +263,23 @@ export default function AdminAddCatchScreen() {
                 <Text
                   style={[
                     styles.optionButtonText,
+                    styles.competitionChipText,
                     selectedCompetition === comp.id && styles.optionButtonTextSelected,
                   ]}
+                  numberOfLines={2}
                 >
                   {comp.name}
-                  {comp.isEnded ? ' (terminée)' : ''}
                 </Text>
+                {comp.isEnded ? (
+                  <Text
+                    style={[
+                      styles.competitionChipMeta,
+                      selectedCompetition === comp.id && styles.optionButtonTextSelected,
+                    ]}
+                  >
+                    Terminée
+                  </Text>
+                ) : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -421,10 +443,12 @@ export default function AdminAddCatchScreen() {
           <Text style={styles.label}>Photo *</Text>
           <View style={styles.photoButtonsContainer}>
             <TouchableOpacity style={[styles.photoButton, styles.photoButtonCamera]} onPress={takePhoto}>
-              <Text style={styles.photoButtonText}>📷 Prendre une photo</Text>
+              <FaIcon name="camera" size={18} color="#fff" />
+              <Text style={styles.photoButtonText}>Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.photoButton, styles.photoButtonGallery]} onPress={pickImage}>
-              <Text style={styles.photoButtonText}>🖼️ Importer depuis la galerie</Text>
+              <FaIcon name="image" size={18} color="#fff" />
+              <Text style={styles.photoButtonText}>Galerie</Text>
             </TouchableOpacity>
           </View>
           {photo && (
@@ -452,7 +476,10 @@ export default function AdminAddCatchScreen() {
           {createCatchMutation.isPending ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitButtonText}>Créer la prise</Text>
+            <>
+              <FaIcon name="circleCheck" size={18} color="#fff" />
+              <Text style={styles.submitButtonText}>Créer la prise</Text>
+            </>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -467,14 +494,38 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 32,
   },
+  identityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  identityText: { flex: 1 },
+  displayName: { fontSize: 20, fontWeight: '700', color: '#111' },
+  identityHint: { fontSize: 14, color: '#666', marginTop: 4 },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
   },
   label: {
     fontSize: 16,
@@ -484,12 +535,12 @@ const styles = StyleSheet.create({
   },
   optionButton: {
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
     marginRight: 8,
-    borderWidth: 2,
-    borderColor: '#ddd',
+    borderWidth: 1.5,
+    borderColor: '#eee',
   },
   optionButtonSelected: {
     backgroundColor: '#007AFF',
@@ -503,13 +554,29 @@ const styles = StyleSheet.create({
   optionButtonTextSelected: {
     color: '#fff',
   },
+  competitionChip: {
+    maxWidth: 132,
+    minWidth: 108,
+    alignItems: 'center',
+  },
+  competitionChipText: {
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  competitionChipMeta: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#888',
+    textAlign: 'center',
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#eee',
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f8f8',
   },
   textArea: {
     minHeight: 100,
@@ -521,9 +588,12 @@ const styles = StyleSheet.create({
   },
   photoButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
   photoButtonCamera: {
     backgroundColor: '#007AFF',
@@ -542,13 +612,13 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: 200,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 8,
   },
   removePhotoButton: {
     backgroundColor: '#FF3B30',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   removePhotoButtonText: {
@@ -559,8 +629,11 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#34C759',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 8,
   },
   submitButtonDisabled: {

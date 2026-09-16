@@ -279,7 +279,7 @@ class CompetitionController extends AbstractController
         $competition = $repository->find($id);
 
         if (!$competition) {
-            return $this->json([
+        return $this->json([
                 'success' => false,
                 'message' => 'Compétition non trouvée'
             ], 404);
@@ -474,7 +474,7 @@ class CompetitionController extends AbstractController
                 if ($useSnapshots) {
                     // Utiliser les données du snapshot (état figé)
                     $showScore = $rankingVisible;
-                    return [
+                return [
                         'id' => $teamOrSnapshot->getTeam()->getId(),
                         'name' => $teamOrSnapshot->getTeamName(),
                         'totalScore' => $showScore ? $teamOrSnapshot->getTotalScore() : null,

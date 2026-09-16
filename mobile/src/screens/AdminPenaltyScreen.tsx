@@ -15,6 +15,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 import { formatDateTimeLocal } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
 
@@ -189,19 +190,30 @@ export default function AdminPenaltyScreen() {
 
   return (
     <>
-      <Header title="Pénalités (score)" showBack={true} showMenu={true} />
+      <Header title="Pénalités" showBack={true} showMenu={true} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.help}>
-          Uniquement les équipes engagées en compétition (le journal personnel n&apos;apparaît pas). Choisissez la
-          compétition, puis saisissez une recherche : les équipes s&apos;affichent une fois au moins un caractère entré.
-          Les points sont retirés du score officiel de l&apos;équipe (plancher à 0).
-        </Text>
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <FaIcon name="flag" size={22} color="#fff" />
+          </View>
+          <View style={styles.identityText}>
+            <Text style={styles.displayName}>Pénalités</Text>
+            <Text style={styles.identityHint}>Retirer des points au score officiel d’une équipe</Text>
+          </View>
+        </View>
+        <View style={styles.helpCard}>
+          <Text style={styles.help}>
+            Uniquement les équipes engagées en compétition (le journal personnel n’apparaît pas). Choisissez la
+            compétition, puis recherchez une équipe. Les points sont retirés du score (plancher à 0).
+          </Text>
+        </View>
 
         {loadingHeader ? (
           <ActivityIndicator color="#007AFF" style={{ marginVertical: 16 }} />
         ) : (
           <>
-            <Text style={styles.label}>Compétition *</Text>
+            <Text style={styles.sectionTitle}>Compétition</Text>
+            <Text style={styles.label}>Manche *</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
               {competitions.map((c) => (
                 <TouchableOpacity
@@ -212,7 +224,10 @@ export default function AdminPenaltyScreen() {
                     resetTeamSelection();
                   }}
                 >
-                  <Text style={[styles.chipText, competitionId === c.id && styles.chipTextSelected]}>
+                  <Text
+                    style={[styles.chipText, competitionId === c.id && styles.chipTextSelected]}
+                    numberOfLines={2}
+                  >
                     {c.name ?? `Competition #${c.id}`}
                   </Text>
                 </TouchableOpacity>
@@ -265,8 +280,14 @@ export default function AdminPenaltyScreen() {
                             setCatchId(null);
                           }}
                         >
-                          <Text style={styles.teamRowName}>{t.name}</Text>
-                          {line.length > 0 ? <Text style={styles.teamRowMembers}>{line}</Text> : null}
+                          <Text style={[styles.teamRowName, teamId === t.id && styles.teamRowNameSel]}>
+                            {t.name}
+                          </Text>
+                          {line.length > 0 ? (
+                            <Text style={[styles.teamRowMembers, teamId === t.id && styles.teamRowMembersSel]}>
+                              {line}
+                            </Text>
+                          ) : null}
                         </TouchableOpacity>
                       );
                     })
@@ -437,41 +458,55 @@ export default function AdminPenaltyScreen() {
                   onPress={handleSubmit}
                   disabled={busy || (scope === 'catch' && catchId == null)}
                 >
+                  <FaIcon name="flag" size={16} color="#fff" />
                   <Text style={styles.submitText}>{busy ? 'Enregistrement…' : 'Enregistrer la pénalité'}</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.label}>Total pénalités : −{totalPen} pts</Text>
-                {penalties.map((pen: { id: number; points: number; speciesName?: string; reason?: string }) => (
-                  <View key={pen.id} style={styles.pItem}>
-                    <Text style={{ flex: 1 }}>
-                      −{pen.points} pts
-                      {pen.speciesName ? ` (${pen.speciesName})` : ''}{' '}
-                      {pen.reason ? ` — ${pen.reason}` : ''}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Alert.alert('Supprimer', 'Retirer cette pénalité du score ?', [
-                          { text: 'Annuler', style: 'cancel' },
-                          {
-                            text: 'Supprimer',
-                            style: 'destructive',
-                            onPress: async () => {
-                              try {
-                                await adminService.deleteTeamPenalty(teamId, pen.id);
-                                refetchPenalties();
-                              } catch (e: unknown) {
-                                const er = e as { response?: { data?: { message?: string } } };
-                                Alert.alert('Erreur', er.response?.data?.message || 'Erreur');
-                              }
-                            },
-                          },
-                        ]);
-                      }}
-                    >
-                      <Text style={styles.del}>Supprimer</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                <Text style={styles.sectionTitle}>Historique</Text>
+                <View style={styles.listCard}>
+                  <Text style={styles.totalPen}>Total pénalités : −{totalPen} pts</Text>
+                  {penalties.length === 0 ? (
+                    <Text style={styles.hintMuted}>Aucune pénalité pour cette équipe.</Text>
+                  ) : (
+                    penalties.map((pen: { id: number; points: number; speciesName?: string; reason?: string }, index: number) => (
+                      <View
+                        key={pen.id}
+                        style={[styles.pItem, index === penalties.length - 1 && styles.pItemLast]}
+                      >
+                        <View style={styles.pItemIcon}>
+                          <FaIcon name="circleXmark" size={16} color="#FF3B30" />
+                        </View>
+                        <Text style={styles.pItemText}>
+                          −{pen.points} pts
+                          {pen.speciesName ? ` (${pen.speciesName})` : ''}
+                          {pen.reason ? ` — ${pen.reason}` : ''}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            Alert.alert('Supprimer', 'Retirer cette pénalité du score ?', [
+                              { text: 'Annuler', style: 'cancel' },
+                              {
+                                text: 'Supprimer',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    await adminService.deleteTeamPenalty(teamId, pen.id);
+                                    refetchPenalties();
+                                  } catch (e: unknown) {
+                                    const er = e as { response?: { data?: { message?: string } } };
+                                    Alert.alert('Erreur', er.response?.data?.message || 'Erreur');
+                                  }
+                                },
+                              },
+                            ]);
+                          }}
+                        >
+                          <Text style={styles.del}>Supprimer</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))
+                  )}
+                </View>
               </>
             )}
           </>
@@ -502,43 +537,86 @@ export default function AdminPenaltyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   content: { padding: 16, paddingBottom: 40 },
-  help: { fontSize: 14, color: '#555', marginBottom: 16 },
+  identityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#d97706',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  identityText: { flex: 1 },
+  displayName: { fontSize: 20, fontWeight: '700', color: '#111' },
+  identityHint: { fontSize: 14, color: '#666', marginTop: 4 },
+  helpCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  help: { fontSize: 14, color: '#555', lineHeight: 20 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginTop: 8,
+    marginBottom: 10,
+    marginLeft: 4,
+  },
   hintMuted: { fontSize: 13, color: '#888', marginTop: 4, marginBottom: 8 },
   countHint: { fontSize: 12, color: '#666', marginBottom: 8 },
   label: { fontWeight: '600', marginTop: 12, marginBottom: 8 },
   chip: {
-    padding: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     marginRight: 8,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    maxWidth: 220,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1.5,
+    borderColor: '#eee',
+    maxWidth: 132,
+    minWidth: 108,
+    alignItems: 'center',
   },
-  chipSelected: { borderColor: '#007AFF', backgroundColor: '#e8f4ff' },
-  chipText: { fontSize: 13 },
-  chipTextSelected: { fontWeight: '700' },
+  chipSelected: { borderColor: '#007AFF', backgroundColor: '#007AFF' },
+  chipText: { fontSize: 14, color: '#333', fontWeight: '500', textAlign: 'center', lineHeight: 18 },
+  chipTextSelected: { color: '#fff', fontWeight: '600' },
   teamList: { maxHeight: 220, marginBottom: 4 },
   teamRow: {
     padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderWidth: 1.5,
+    borderColor: '#eee',
   },
-  teamRowSel: { borderColor: '#007AFF', backgroundColor: '#f0f8ff' },
+  teamRowSel: { borderColor: '#007AFF', backgroundColor: '#007AFF' },
   teamRowName: { fontSize: 15, fontWeight: '700', color: '#111' },
+  teamRowNameSel: { color: '#fff' },
   teamRowMembers: { fontSize: 13, color: '#555', marginTop: 4 },
+  teamRowMembersSel: { color: 'rgba(255,255,255,0.9)' },
   row: { flexDirection: 'row', gap: 8 },
   scopeBtn: {
     flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: '#eee',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#eee',
   },
-  scopeBtnSel: { backgroundColor: '#5856d6' },
+  scopeBtnSel: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
   scopeBtnText: { fontWeight: '600', color: '#333' },
   scopeBtnTextSel: { color: '#fff' },
   catchList: { maxHeight: 420, marginBottom: 8 },
@@ -639,13 +717,40 @@ const styles = StyleSheet.create({
   submit: {
     backgroundColor: '#d97706',
     padding: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 20,
     marginBottom: 20,
   },
   submitDisabled: { opacity: 0.6 },
   submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  pItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
+  listCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 8,
+  },
+  totalPen: { fontSize: 15, fontWeight: '700', color: '#111', marginBottom: 10 },
+  pItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    gap: 8,
+  },
+  pItemLast: {},
+  pItemIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FEECEC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pItemText: { flex: 1, fontSize: 14, color: '#333' },
   del: { color: '#c00', fontWeight: '600' },
 });
