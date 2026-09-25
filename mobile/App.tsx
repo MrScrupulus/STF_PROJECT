@@ -6,8 +6,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { setAuthSessionExpiredHandler } from './src/utils/authSessionEvents';
 
 // Screens
@@ -27,6 +28,8 @@ import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
 import AdminAddCatchScreen from './src/screens/AdminAddCatchScreen';
 import AdminPenaltyScreen from './src/screens/AdminPenaltyScreen';
 import AdminCatchValidationScreen from './src/screens/AdminCatchValidationScreen';
+import AdminCatchValidationListScreen from './src/screens/AdminCatchValidationListScreen';
+import CompetitionsScreen from './src/screens/CompetitionsScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import EditProfileScreen from './src/screens/EditProfileScreen';
 import ChangePasswordScreen from './src/screens/ChangePasswordScreen';
@@ -51,7 +54,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 15 * 1000,
+      refetchOnMount: 'always',
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: true,
     },
   },
 });
@@ -69,6 +75,21 @@ function getActiveRouteName(state: any): string | null {
     }
   }
   return route.name;
+}
+
+function QueryRefreshOnAppState() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        queryClient.invalidateQueries();
+      }
+    });
+    return () => sub.remove();
+  }, [queryClient]);
+
+  return null;
 }
 
 function SessionExpiredBridge() {
@@ -91,6 +112,17 @@ function AppNavigator() {
   const theme = useThemeColors();
   const linkingRef = useRef<any>(null);
   const [currentRoute, setCurrentRoute] = useState<string | null>(null);
+
+  useEffect(() => {
+    const lockPortrait = () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+    lockPortrait();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') lockPortrait();
+    });
+    return () => sub.remove();
+  }, []);
 
   // Configuration des deep links
   const linking = {
@@ -187,6 +219,7 @@ function AppNavigator() {
     >
       <View style={[styles.appShell, { backgroundColor: theme.bg }]}>
       <NotificationInitializer />
+      <QueryRefreshOnAppState />
       <StatusBar style={theme.statusBar} />
       <View style={styles.stackArea}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -226,6 +259,8 @@ function AppNavigator() {
             <Stack.Screen name="AdminAddCatch" component={AdminAddCatchScreen} />
             <Stack.Screen name="AdminPenalty" component={AdminPenaltyScreen} />
             <Stack.Screen name="AdminCatchValidation" component={AdminCatchValidationScreen} />
+            <Stack.Screen name="AdminCatchValidationList" component={AdminCatchValidationListScreen} />
+            <Stack.Screen name="CompetitionsList" component={CompetitionsScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />

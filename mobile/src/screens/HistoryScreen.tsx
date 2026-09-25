@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Modal,
   FlatList,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -17,6 +16,8 @@ import { competitionsService } from '../services/competitionsService';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
+import FaIcon from '../components/FaIcon';
 import CatchesMapView from '../components/competition/CatchesMapView';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
 import SpeciesPieChart from '../components/competition/SpeciesPieChart';
@@ -184,7 +185,7 @@ export default function HistoryScreen() {
 
   return (
     <>
-      <Header title="Historique & prises" showBack={true} showMenu={true} />
+      <Header title="Carnet de prises" showBack={true} showMenu={true} />
       <View style={styles.container}>
         <View style={styles.tabs}>
           <TouchableOpacity
@@ -250,25 +251,11 @@ export default function HistoryScreen() {
           </ScrollView>
         )}
 
-        <Modal
+        <ZoomablePhotoViewer
+          uri={selectedImage}
           visible={!!selectedImage}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSelectedImage(null)}
-        >
-          <View style={styles.imageModal}>
-            <TouchableOpacity style={styles.imageModalClose} onPress={() => setSelectedImage(null)}>
-              <Text style={styles.imageModalCloseText}>×</Text>
-            </TouchableOpacity>
-            {selectedImage && (
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.imageModalImage}
-                resizeMode="contain"
-              />
-            )}
-          </View>
-        </Modal>
+          onClose={() => setSelectedImage(null)}
+        />
       </View>
     </>
   );
@@ -587,14 +574,25 @@ function CatchesTab({
             </TouchableOpacity>
           )}
           {catchItem.rejectionReason ? (
-            <View style={styles.catchStatusRejected}>
-              <Text style={styles.catchStatusText}>❌ Rejetée: {catchItem.rejectionReason}</Text>
+            <View style={[styles.catchStatus, styles.catchStatusRejected]}>
+              <FaIcon name="circleXmark" size={16} color={theme.danger} />
+              <Text style={[styles.catchStatusText, { color: theme.danger, flex: 1 }]}>
+                Rejetée : {catchItem.rejectionReason}
+              </Text>
             </View>
           ) : !catchItem.isValidated ? (
-            <View style={styles.catchStatusPending}>
-              <Text style={styles.catchStatusText}>⏳ En attente de validation</Text>
+            <View style={[styles.catchStatus, styles.catchStatusPending]}>
+              <FaIcon name="hourglass" size={16} color={theme.accent} />
+              <Text style={[styles.catchStatusText, { color: theme.accent }]}>
+                En attente de validation
+              </Text>
             </View>
-          ) : null}
+          ) : (
+            <View style={[styles.catchStatus, styles.catchStatusValidated]}>
+              <FaIcon name="circleCheck" size={16} color={theme.success} />
+              <Text style={[styles.catchStatusText, { color: theme.success }]}>Validée</Text>
+            </View>
+          )}
         </View>
       )}
       onEndReached={() => {
@@ -915,27 +913,31 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 8,
   },
   catchImage: {
-    width: 150,
-    height: 150,
+    width: '100%',
+    aspectRatio: 16 / 9,
     borderRadius: 8,
+    backgroundColor: theme.surfaceRaised,
+  },
+  catchStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
   },
   catchStatusPending: {
-    backgroundColor: '#fff3cd',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
+    backgroundColor: theme.accentMuted,
   },
   catchStatusValidated: {
-    backgroundColor: '#d4edda',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
+    backgroundColor: theme.surfaceRaised,
+    borderWidth: 1,
+    borderColor: theme.success,
   },
   catchStatusRejected: {
-    backgroundColor: '#f8d7da',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
+    backgroundColor: theme.surfaceRaised,
+    borderWidth: 1,
+    borderColor: theme.danger,
   },
   catchStatusText: {
     fontSize: 14,

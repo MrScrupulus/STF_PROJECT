@@ -106,7 +106,7 @@ export default function EditProfileScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
             <View style={styles.formGroup}>
               <Text style={styles.label}>Prénom *</Text>
@@ -116,6 +116,7 @@ export default function EditProfileScreen() {
                 value={formData.firstname}
                 onChangeText={(text) => setFormData({ ...formData, firstname: text })}
                 editable={!loading}
+                placeholderTextColor={theme.textMuted}
               />
             </View>
 
@@ -127,6 +128,7 @@ export default function EditProfileScreen() {
                 value={formData.lastname}
                 onChangeText={(text) => setFormData({ ...formData, lastname: text })}
                 editable={!loading}
+                placeholderTextColor={theme.textMuted}
               />
             </View>
 
@@ -139,6 +141,7 @@ export default function EditProfileScreen() {
                 onChangeText={(text) => setFormData({ ...formData, phone_number: text })}
                 keyboardType="phone-pad"
                 editable={!loading}
+                placeholderTextColor={theme.textMuted}
               />
             </View>
 
@@ -193,6 +196,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: 16,
     fontSize: 16,
     backgroundColor: theme.surfaceRaised,
+    color: theme.text,
   },
   submitButton: {
     backgroundColor: theme.accent,

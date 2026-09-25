@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const appJson = require('./app.json');
 
 /**
@@ -19,8 +21,23 @@ module.exports = () => {
     // iOS : Apple Maps (react-native-maps 1.27 n’a plus le pod react-native-google-maps).
   }
 
+  const localGoogleServices = path.join(__dirname, 'google-services.json');
+  const googleServicesFile =
+    process.env.GOOGLE_SERVICES_JSON ||
+    (fs.existsSync(localGoogleServices) ? './google-services.json' : '');
+  if (googleServicesFile) {
+    expo.android = expo.android || {};
+    expo.android.googleServicesFile = googleServicesFile;
+  }
+
   expo.extra = {
     ...(expo.extra || {}),
+    eas: {
+      ...((expo.extra && expo.extra.eas) || {}),
+      projectId:
+        (expo.extra && expo.extra.eas && expo.extra.eas.projectId) ||
+        '7773bd56-c404-4652-9f8e-4b15cff939fe',
+    },
     googleMapsConfigured: Boolean(mapsKey),
   };
 

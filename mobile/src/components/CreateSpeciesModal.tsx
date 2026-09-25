@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  ScrollView,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
@@ -139,7 +140,11 @@ export default function CreateSpeciesModal({
         style={styles.overlay}
       >
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <View style={styles.sheet}>
+        <ScrollView
+          style={styles.sheet}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
           <Text style={styles.title}>Nouvelle espèce</Text>
           <Text style={styles.hint}>
             {variant === 'journal'
@@ -153,7 +158,7 @@ export default function CreateSpeciesModal({
             onChangeText={setName}
             placeholder="Ex. : Brochet, Sandre…"
             autoCapitalize="sentences"
-          />
+          placeholderTextColor={theme.textMuted} />
           {variant !== 'journal' && (
             <>
               <View style={styles.switchRow}>
@@ -173,6 +178,7 @@ export default function CreateSpeciesModal({
                     onChangeText={(t) => setCoefficient(t.replace(/[^0-9.,]/g, ''))}
                     placeholder="1.0"
                     keyboardType="decimal-pad"
+                    placeholderTextColor={theme.textMuted}
                   />
                   <Text style={styles.helpCoef}>
                     Référentiel et valeur par défaut sur la ligne compétition (modifiable après ajout).
@@ -187,6 +193,7 @@ export default function CreateSpeciesModal({
                     onChangeText={(t) => setBasePoints(t.replace(/[^0-9]/g, ''))}
                     placeholder="50"
                     keyboardType="number-pad"
+                    placeholderTextColor={theme.textMuted}
                   />
                   <Text style={styles.helpCoef}>
                     Points attribués par prise pour cette espèce bonus (équivalent web « Points bonus »).
@@ -207,7 +214,7 @@ export default function CreateSpeciesModal({
               )}
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -231,6 +238,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     zIndex: 1,
+    maxHeight: '85%',
   },
   title: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: theme.text },
   hint: { fontSize: 13, color: theme.textMuted, marginBottom: 16 },
@@ -243,6 +251,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
     backgroundColor: theme.bg,
+    color: theme.text,
   },
   helpCoef: { fontSize: 12, color: theme.textMuted, marginBottom: 16 },
   actions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end' },

@@ -65,7 +65,7 @@ export default function ForgotPasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <Text style={styles.title}>Mot de passe oublié</Text>
           <Text style={styles.subtitle}>
@@ -81,7 +81,7 @@ export default function ForgotPasswordScreen() {
             autoCapitalize="none"
             autoComplete="email"
             editable={!loading}
-          />
+          placeholderTextColor={theme.textMuted} />
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -143,6 +143,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     backgroundColor: theme.surfaceRaised,
+    color: theme.text,
   },
   button: {
     backgroundColor: theme.accent,

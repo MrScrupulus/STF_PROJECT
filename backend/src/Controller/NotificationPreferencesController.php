@@ -62,7 +62,10 @@ class NotificationPreferencesController extends AbstractController
 
         // Mettre à jour le token Expo si fourni
         if (isset($data['expoPushToken'])) {
-            $preferences->setExpoPushToken($data['expoPushToken']);
+            $token = is_string($data['expoPushToken']) ? trim($data['expoPushToken']) : '';
+            if ($token !== '') {
+                $preferences->addExpoPushToken($token);
+            }
         }
 
         // Mettre à jour les préférences de notifications

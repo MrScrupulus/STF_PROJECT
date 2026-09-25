@@ -1,5 +1,5 @@
 import apiClient from './api';
-import * as SecureStore from 'expo-secure-store';
+import { getSecureItem, setSecureItem, deleteSecureItem } from '../utils/secureStore';
 import { API_ENDPOINTS } from '../config/api';
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
@@ -57,10 +57,10 @@ export const authService = {
     const response = await apiClient.post(API_ENDPOINTS.auth.login, credentials);
     
     if (response.data.token) {
-      await SecureStore.setItemAsync('jwtToken', response.data.token);
+      await setSecureItem('jwtToken', response.data.token);
     }
     if (response.data.refresh_token) {
-      await SecureStore.setItemAsync('refreshToken', response.data.refresh_token);
+      await setSecureItem('refreshToken', response.data.refresh_token);
     }
     
     return response.data;
@@ -85,7 +85,7 @@ export const authService = {
   },
 
   async refreshToken() {
-    const refreshToken = await SecureStore.getItemAsync('refreshToken');
+    const refreshToken = await getSecureItem('refreshToken');
     if (!refreshToken) {
       throw new Error('No refresh token available');
     }
@@ -95,19 +95,19 @@ export const authService = {
     });
 
     if (response.data.token) {
-      await SecureStore.setItemAsync('jwtToken', response.data.token);
+      await setSecureItem('jwtToken', response.data.token);
     }
 
     return response.data;
   },
 
   async logout() {
-    await SecureStore.deleteItemAsync('jwtToken');
-    await SecureStore.deleteItemAsync('refreshToken');
+    await deleteSecureItem('jwtToken');
+    await deleteSecureItem('refreshToken');
   },
 
   async isAuthenticated(): Promise<boolean> {
-    const token = await SecureStore.getItemAsync('jwtToken');
+    const token = await getSecureItem('jwtToken');
     return !!token;
   },
 

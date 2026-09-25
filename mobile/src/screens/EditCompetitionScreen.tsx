@@ -14,6 +14,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Polygon, Marker, Polyline } from 'react-native-maps';
 import { getPreciseGpsPosition } from '../utils/deviceCapture';
@@ -31,6 +32,7 @@ import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
 import { scheduledPauseService, ScheduledPause } from '../services/scheduledPauseService';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
+import { formatLocalDateTimeForApi, datePickerThemeProps } from '../utils/datePickers';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -85,14 +87,7 @@ interface CompetitionSpeciesRow {
   quotaBonusPoints?: string | number | null;
 }
 
-const formatDateTime = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
+const formatDateTime = (date: Date): string => formatLocalDateTimeForApi(date);
 
 const parseApiDate = (dateStr: string): Date | null => {
   if (!dateStr) return null;
@@ -635,7 +630,11 @@ export default function EditCompetitionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
@@ -649,6 +648,7 @@ export default function EditCompetitionScreen() {
               value={formData.name}
               onChangeText={(t) => setFormData({ ...formData, name: t })}
               placeholder="Nom de la compétition"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -732,10 +732,10 @@ export default function EditCompetitionScreen() {
               </Text>
             </TouchableOpacity>
             {Platform.OS === 'android' && showStartDateOnly && (
-              <DateTimePicker value={formData.startDate} mode="date" display="default" onChange={handleStartDateChange} />
+              <DateTimePicker value={formData.startDate} mode="date" display="default" onChange={handleStartDateChange} {...datePickerThemeProps(theme)} />
             )}
             {Platform.OS === 'android' && showStartTimeOnly && (
-              <DateTimePicker value={formData.startDate} mode="time" display="default" onChange={handleStartDateChange} />
+              <DateTimePicker value={formData.startDate} mode="time" display="default" onChange={handleStartDateChange} {...datePickerThemeProps(theme)} />
             )}
             {Platform.OS === 'ios' && showStartDatePicker && (
               <DateTimePicker
@@ -743,6 +743,7 @@ export default function EditCompetitionScreen() {
                 mode="datetime"
                 display="spinner"
                 onChange={handleStartDateChange}
+                {...datePickerThemeProps(theme)}
               />
             )}
           </View>
@@ -764,13 +765,13 @@ export default function EditCompetitionScreen() {
               </Text>
             </TouchableOpacity>
             {Platform.OS === 'android' && showEndDateOnly && (
-              <DateTimePicker value={formData.endDate} mode="date" display="default" onChange={handleEndDateChange} minimumDate={formData.startDate} />
+              <DateTimePicker value={formData.endDate} mode="date" display="default" onChange={handleEndDateChange} minimumDate={formData.startDate} {...datePickerThemeProps(theme)} />
             )}
             {Platform.OS === 'android' && showEndTimeOnly && (
-              <DateTimePicker value={formData.endDate} mode="time" display="default" onChange={handleEndDateChange} />
+              <DateTimePicker value={formData.endDate} mode="time" display="default" onChange={handleEndDateChange} {...datePickerThemeProps(theme)} />
             )}
             {Platform.OS === 'ios' && showEndDatePicker && (
-              <DateTimePicker value={formData.endDate} mode="datetime" display="spinner" onChange={handleEndDateChange} minimumDate={formData.startDate} />
+              <DateTimePicker value={formData.endDate} mode="datetime" display="spinner" onChange={handleEndDateChange} minimumDate={formData.startDate} {...datePickerThemeProps(theme)} />
             )}
           </View>
 
@@ -822,6 +823,7 @@ export default function EditCompetitionScreen() {
               onChangeText={(t) => setFormData({ ...formData, maxFishCounted: t.replace(/[^0-9]/g, '') })}
               placeholder="Ex: 5, 10, 20 (vide = toutes)"
               keyboardType="number-pad"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -834,6 +836,7 @@ export default function EditCompetitionScreen() {
               placeholder="Description..."
               multiline
               numberOfLines={3}
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -849,6 +852,7 @@ export default function EditCompetitionScreen() {
               placeholder="Règlement de la compétition (règles, modalités...)..."
               multiline
               numberOfLines={5}
+              placeholderTextColor={theme.textMuted}
             />
             <Text style={styles.helpText}>Images du règlement (optionnel) :</Text>
             {reglementImageUrls.length > 0 && (
@@ -946,6 +950,7 @@ export default function EditCompetitionScreen() {
                   onChangeText={(t) => setFormData({ ...formData, newSpeciesBonusPoints: t.replace(/[^0-9]/g, '') })}
                   placeholder="Ex: 50"
                   keyboardType="number-pad"
+                  placeholderTextColor={theme.textMuted}
                 />
               </View>
             )}
@@ -973,21 +978,6 @@ export default function EditCompetitionScreen() {
           {/* Espèces */}
           <View style={styles.section}>
             <Text style={styles.label}>Espèces de la compétition *</Text>
-            <View style={styles.speciesHeaderButtons}>
-                <TouchableOpacity
-                  style={styles.newSpeciesButton}
-                  onPress={() => setShowCreateSpeciesModal(true)}
-                >
-                  <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addSpeciesButton}
-                  onPress={handleAddSpecies}
-                  disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
-                >
-                  <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
-                </TouchableOpacity>
-            </View>
             <Text style={styles.helpText}>
               Coefficients et quotas par espèce ; avec le bonus quota activé, chaque quota doit avoir son propre montant de bonus (points).
             </Text>
@@ -1037,6 +1027,7 @@ export default function EditCompetitionScreen() {
                         }}
                         keyboardType="decimal-pad"
                         placeholder="1.0"
+                        placeholderTextColor={theme.textMuted}
                       />
                     </View>
                     <View style={styles.speciesCoefficient}>
@@ -1050,6 +1041,7 @@ export default function EditCompetitionScreen() {
                         onChangeText={(text) => handleSpeciesChange(index, 'quota', text.replace(/[^0-9]/g, ''))}
                         keyboardType="number-pad"
                         placeholder="Illimité"
+                        placeholderTextColor={theme.textMuted}
                       />
                     </View>
                     <TouchableOpacity style={styles.removeSpeciesButton} onPress={() => handleRemoveSpecies(index)}>
@@ -1080,6 +1072,21 @@ export default function EditCompetitionScreen() {
                 </View>
               );
             })}
+            <View style={styles.speciesHeaderButtons}>
+              <TouchableOpacity
+                style={styles.newSpeciesButton}
+                onPress={() => setShowCreateSpeciesModal(true)}
+              >
+                <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addSpeciesButton}
+                onPress={handleAddSpecies}
+                disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
+              >
+                <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Pauses programmées */}
@@ -1173,6 +1180,7 @@ export default function EditCompetitionScreen() {
             )}
           </TouchableOpacity>
         </ScrollView>
+      </KeyboardAvoidingView>
 
         <ScheduledPauseFormModal
           visible={pauseModalVisible}
@@ -1232,7 +1240,7 @@ export default function EditCompetitionScreen() {
                   <Text style={styles.speciesModalCloseButtonText}>✕</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.speciesModalList}>
+              <ScrollView style={styles.speciesModalList} keyboardShouldPersistTaps="handled">
                 {availableSpecies?.map((s) => {
                   const current =
                     selectedSpeciesIndex !== null ? competitionSpecies[selectedSpeciesIndex] : null;
@@ -1264,7 +1272,11 @@ export default function EditCompetitionScreen() {
 
         {/* Modal dessin zone */}
         <Modal visible={showZoneModal} animationType="slide">
-          <View style={styles.modalContainer}>
+          <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right', 'bottom']}>
+            <KeyboardAvoidingView
+              style={styles.modalInner}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Dessiner une zone</Text>
               <TouchableOpacity
@@ -1371,9 +1383,9 @@ export default function EditCompetitionScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
         </Modal>
-      </KeyboardAvoidingView>
     </>
   );
 }
@@ -1386,7 +1398,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   errorBox: { backgroundColor: '#fee', padding: 12, borderRadius: 8, marginBottom: 16 },
   errorText: { color: '#c00', fontSize: 14 },
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8, color: theme.text },
   pauseRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1401,13 +1413,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   pauseRowMain: { flex: 1 },
   pauseRowDates: { fontSize: 14, color: theme.text, fontWeight: '600' },
   pauseRowReason: { fontSize: 13, color: theme.textMuted, marginTop: 4 },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 6, color: theme.text },
   labelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' },
   labelRowInSwitch: { flex: 1 },
-  input: { borderWidth: 1, borderColor: theme.border, borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: theme.surface },
+  input: { borderWidth: 1, borderColor: theme.border, borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: theme.surface, color: theme.text },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   dateButton: { borderWidth: 1, borderColor: theme.border, borderRadius: 8, padding: 12, backgroundColor: theme.surface },
-  dateText: { fontSize: 16 },
+  dateText: { fontSize: 16, color: theme.text },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   helpText: { fontSize: 12, color: theme.textMuted, marginBottom: 8 },
   chipsRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 8, marginTop: 8 },
@@ -1432,6 +1444,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     backgroundColor: theme.surface,
+    color: theme.text,
   },
   deleteButton: { padding: 8 },
   deleteButtonText: { color: '#c00', fontSize: 14 },
@@ -1451,9 +1464,10 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     backgroundColor: '#fef2f2',
   },
   deleteCompetitionButtonText: { color: '#b91c1c', fontSize: 16, fontWeight: '600' },
-  modalContainer: { flex: 1, padding: 16, paddingTop: 48 },
+  modalContainer: { flex: 1, padding: 16, backgroundColor: theme.bg },
+  modalInner: { flex: 1 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '600' },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: theme.text, flex: 1, marginRight: 12 },
   modalCloseText: { color: theme.accent, fontSize: 16 },
   modalHelp: { fontSize: 14, color: theme.textMuted, marginBottom: 12 },
   modalField: { marginBottom: 12 },
@@ -1466,8 +1480,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     backgroundColor: theme.surface,
+    color: theme.text,
   },
-  mapContainer: { height: 400, borderRadius: 8, overflow: 'hidden', marginBottom: 12 },
+  mapContainer: { height: 400, borderRadius: 8, overflow: Platform.OS === 'android' ? 'visible' : 'hidden', marginBottom: 12 },
   map: { flex: 1, width: '100%', height: '100%' },
   zoneVertexMarker: {
     width: 30,
@@ -1493,13 +1508,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginBottom: 12,
-    backgroundColor: '#f0f7ff',
+    backgroundColor: theme.accentMuted,
   },
   undoVertexButtonDisabled: { opacity: 0.45, borderColor: theme.border, backgroundColor: theme.bg },
   undoVertexButtonText: { color: theme.accent, fontSize: 15, fontWeight: '600' },
   modalActions: { flexDirection: 'row', gap: 12 },
   cancelZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: theme.surfaceRaised, borderRadius: 8 },
-  cancelZoneButtonText: { fontSize: 16 },
+  cancelZoneButtonText: { fontSize: 16, color: theme.text, fontWeight: '600' },
   saveZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: theme.accent, borderRadius: 8 },
   saveZoneButtonDisabled: { opacity: 0.5 },
   saveZoneButtonText: { color: theme.onAccent, fontSize: 16, fontWeight: '600' },
@@ -1514,7 +1529,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
+    marginTop: 12,
     marginBottom: 8,
   },
   newSpeciesButton: {
@@ -1619,7 +1634,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   speciesModalCloseButtonText: { fontSize: 18, color: theme.textMuted, fontWeight: 'bold' },
   speciesModalList: { maxHeight: 400 },
   speciesModalOption: { padding: 16, borderBottomWidth: 1, borderBottomColor: theme.border },
-  speciesModalOptionActive: { backgroundColor: '#f0f8ff' },
+  speciesModalOptionActive: { backgroundColor: theme.accentMuted },
   speciesModalOptionText: { fontSize: 16, color: theme.text },
   speciesModalOptionTextActive: { color: theme.accent, fontWeight: '600' },
 });

@@ -139,7 +139,7 @@ export default function ResetPasswordScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
             <Text style={styles.title}>Réinitialisation du mot de passe</Text>
             <Text style={styles.subtitle}>
@@ -157,12 +157,12 @@ export default function ResetPasswordScreen() {
                 style={styles.input}
                 placeholder="Nouveau mot de passe"
                 value={formData.password}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, password: text })
+                onChangeText={(text) => setFormData({ ...formData, password: text })
                 }
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 editable={!isLoading}
+                placeholderTextColor={theme.textMuted}
               />
               <TouchableOpacity
                 style={styles.eyeButton}
@@ -181,12 +181,12 @@ export default function ResetPasswordScreen() {
                 style={styles.input}
                 placeholder="Confirmer le mot de passe"
                 value={formData.confirmPassword}
-                onChangeText={(text) =>
-                  setFormData({ ...formData, confirmPassword: text })
+                onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })
                 }
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 editable={!isLoading}
+                placeholderTextColor={theme.textMuted}
               />
               <TouchableOpacity
                 style={styles.eyeButton}
@@ -267,6 +267,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     paddingRight: 50,
     fontSize: 16,
     backgroundColor: theme.surface,
+    color: theme.text,
   },
   eyeButton: {
     position: 'absolute',

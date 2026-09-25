@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { datePickerThemeProps } from '../utils/datePickers';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -72,13 +73,7 @@ export default function ScheduledPauseFormModal({
   const theme = useThemeColors();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
-  const iosPickerProps =
-    Platform.OS === 'ios'
-      ? {
-          themeVariant: theme.statusBar === 'light' ? ('dark' as const) : ('light' as const),
-          textColor: theme.text,
-        }
-      : {};
+  const pickerTheme = datePickerThemeProps(theme);
   const [startDate, setStartDate] = useState<Date>(() => competitionStart);
   const [endDate, setEndDate] = useState<Date>(() => competitionEnd);
   const [reason, setReason] = useState('');
@@ -254,6 +249,7 @@ export default function ScheduledPauseFormModal({
                 onChange={onAndroidStartChange}
                 minimumDate={cs}
                 maximumDate={ce}
+                {...datePickerThemeProps(theme)}
               />
             </View>
           )}
@@ -272,6 +268,7 @@ export default function ScheduledPauseFormModal({
                 onChange={onAndroidEndChange}
                 minimumDate={startDate}
                 maximumDate={ce}
+                {...pickerTheme}
               />
             </View>
           )}
@@ -285,7 +282,7 @@ export default function ScheduledPauseFormModal({
                 onChange={onIosStartChange}
                 minimumDate={cs}
                 maximumDate={ce}
-                {...iosPickerProps}
+                {...pickerTheme}
               />
               <TouchableOpacity style={styles.doneIos} onPress={() => setIosShowStartPicker(false)}>
                 <Text style={styles.doneIosText}>OK</Text>
@@ -301,7 +298,7 @@ export default function ScheduledPauseFormModal({
                 onChange={onIosEndChange}
                 minimumDate={startDate}
                 maximumDate={ce}
-                {...iosPickerProps}
+                {...pickerTheme}
               />
               <TouchableOpacity style={styles.doneIos} onPress={() => setIosShowEndPicker(false)}>
                 <Text style={styles.doneIosText}>OK</Text>

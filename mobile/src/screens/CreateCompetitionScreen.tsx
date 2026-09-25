@@ -26,6 +26,7 @@ import HelpButton from '../components/HelpButton';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import ScheduledPauseFormModal, { ScheduledPauseFormValues } from '../components/ScheduledPauseFormModal';
 import { COMPETITION_HELP } from '../constants/competitionHelpTexts';
+import { formatLocalDateTimeForApi, datePickerThemeProps } from '../utils/datePickers';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -256,14 +257,7 @@ export default function CreateCompetitionScreen() {
     setFormData({ ...formData, endDate: date });
   };
 
-  const formatDateTime = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+  const formatDateTime = (date: Date): string => formatLocalDateTimeForApi(date);
 
   const handleSubmit = () => {
     setError('');
@@ -438,7 +432,11 @@ export default function CreateCompetitionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           {error && (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
@@ -463,6 +461,7 @@ export default function CreateCompetitionScreen() {
               value={formData.name}
               onChangeText={(text) => setFormData({ ...formData, name: text })}
               placeholder="Nom de la compétition"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -534,6 +533,7 @@ export default function CreateCompetitionScreen() {
                 display="default"
                 onChange={handleStartDateChange}
                 minimumDate={new Date()}
+                {...datePickerThemeProps(theme)}
               />
             )}
             {Platform.OS === 'android' && showStartTimeOnly && (
@@ -543,6 +543,7 @@ export default function CreateCompetitionScreen() {
                 is24Hour={true}
                 display="default"
                 onChange={handleStartDateChange}
+                {...datePickerThemeProps(theme)}
               />
             )}
             {/* Sur iOS, utiliser le sélecteur datetime */}
@@ -554,6 +555,7 @@ export default function CreateCompetitionScreen() {
                 display="spinner"
                 onChange={handleStartDateChange}
                 minimumDate={new Date()}
+                {...datePickerThemeProps(theme)}
               />
             )}
             {Platform.OS === 'ios' && showStartDatePicker && (
@@ -601,6 +603,7 @@ export default function CreateCompetitionScreen() {
                 display="default"
                 onChange={handleEndDateChange}
                 minimumDate={formData.startDate}
+                {...datePickerThemeProps(theme)}
               />
             )}
             {Platform.OS === 'android' && showEndTimeOnly && (
@@ -610,6 +613,7 @@ export default function CreateCompetitionScreen() {
                 is24Hour={true}
                 display="default"
                 onChange={handleEndDateChange}
+                {...datePickerThemeProps(theme)}
               />
             )}
             {/* Sur iOS, utiliser le sélecteur datetime */}
@@ -621,6 +625,7 @@ export default function CreateCompetitionScreen() {
                 display="spinner"
                 onChange={handleEndDateChange}
                 minimumDate={formData.startDate}
+                {...datePickerThemeProps(theme)}
               />
             )}
             {Platform.OS === 'ios' && showEndDatePicker && (
@@ -644,6 +649,7 @@ export default function CreateCompetitionScreen() {
               onChangeText={(text) => setFormData({ ...formData, teamSize: text })}
               placeholder="2"
               keyboardType="number-pad"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -660,6 +666,7 @@ export default function CreateCompetitionScreen() {
               onChangeText={(text) => setFormData({ ...formData, maxFishCounted: text.replace(/[^0-9]/g, '') })}
               placeholder="Ex: 5, 10, 20 (vide = toutes)"
               keyboardType="number-pad"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -719,6 +726,7 @@ export default function CreateCompetitionScreen() {
                 onChangeText={(text) => setFormData({ ...formData, maxParticipants: text })}
                 placeholder="100"
                 keyboardType="number-pad"
+                placeholderTextColor={theme.textMuted}
               />
             </View>
           )}
@@ -734,6 +742,7 @@ export default function CreateCompetitionScreen() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -751,6 +760,7 @@ export default function CreateCompetitionScreen() {
               multiline
               numberOfLines={6}
               textAlignVertical="top"
+              placeholderTextColor={theme.textMuted}
             />
           </View>
 
@@ -799,6 +809,7 @@ export default function CreateCompetitionScreen() {
                   }
                   placeholder="Ex: 50"
                   keyboardType="number-pad"
+                  placeholderTextColor={theme.textMuted}
                 />
               </View>
             )}
@@ -831,21 +842,6 @@ export default function CreateCompetitionScreen() {
           {/* Espèces */}
           <View style={styles.section}>
             <Text style={styles.label}>Espèces de la compétition *</Text>
-            <View style={styles.speciesHeaderButtons}>
-                <TouchableOpacity
-                  style={styles.newSpeciesButton}
-                  onPress={() => setShowCreateSpeciesModal(true)}
-                >
-                  <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addSpeciesButton}
-                  onPress={handleAddSpecies}
-                  disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
-                >
-                  <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
-                </TouchableOpacity>
-            </View>
             <Text style={styles.helpText}>
               Définissez les espèces avec leurs coefficients et quotas. Si le bonus quota est activé, indiquez aussi le bonus sur chaque ligne qui a un quota.
             </Text>
@@ -898,6 +894,7 @@ export default function CreateCompetitionScreen() {
                         }}
                         keyboardType="decimal-pad"
                         placeholder="1.0"
+                        placeholderTextColor={theme.textMuted}
                       />
                     </View>
 
@@ -914,6 +911,7 @@ export default function CreateCompetitionScreen() {
                         }
                         keyboardType="number-pad"
                         placeholder="Illimité"
+                        placeholderTextColor={theme.textMuted}
                       />
                     </View>
 
@@ -950,6 +948,21 @@ export default function CreateCompetitionScreen() {
                 </View>
               );
             })}
+            <View style={styles.speciesHeaderButtons}>
+              <TouchableOpacity
+                style={styles.newSpeciesButton}
+                onPress={() => setShowCreateSpeciesModal(true)}
+              >
+                <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addSpeciesButton}
+                onPress={handleAddSpecies}
+                disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
+              >
+                <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Pauses programmées (optionnel) */}
@@ -997,6 +1010,10 @@ export default function CreateCompetitionScreen() {
             ))}
           </View>
 
+          <Text style={styles.zonesHint}>
+            Après la création, vous pourrez dessiner les zones de pêche autorisées depuis la page de modification de la compétition.
+          </Text>
+
           {/* Bouton submit */}
           <TouchableOpacity
             style={[styles.submitButton, createMutation.isPending && styles.submitButtonDisabled]}
@@ -1013,6 +1030,7 @@ export default function CreateCompetitionScreen() {
             )}
           </TouchableOpacity>
         </ScrollView>
+      </KeyboardAvoidingView>
 
         <ScheduledPauseFormModal
           visible={pauseModalVisible}
@@ -1062,7 +1080,7 @@ export default function CreateCompetitionScreen() {
                   <Text style={styles.modalCloseButtonText}>✕</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.modalList}>
+              <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
                 {availableSpecies?.map((s) => {
                   const currentSpecies = selectedSpeciesIndex !== null
                     ? competitionSpecies[selectedSpeciesIndex]
@@ -1098,7 +1116,6 @@ export default function CreateCompetitionScreen() {
             </View>
           </View>
         </Modal>
-      </KeyboardAvoidingView>
     </>
   );
 }
@@ -1274,7 +1291,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
+    marginTop: 12,
     marginBottom: 8,
   },
   newSpeciesButton: {
@@ -1377,7 +1394,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderBottomColor: theme.border,
   },
   modalOptionActive: {
-    backgroundColor: '#f0f8ff',
+    backgroundColor: theme.accentMuted,
   },
   modalOptionText: {
     fontSize: 16,
@@ -1453,6 +1470,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 13,
     color: theme.textMuted,
     marginTop: 4,
+  },
+  zonesHint: {
+    fontSize: 13,
+    color: theme.textMuted,
+    lineHeight: 18,
+    marginTop: 8,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   submitButton: {
     backgroundColor: theme.accent,

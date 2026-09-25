@@ -10,9 +10,10 @@ import {
   Image,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { competitionsService, Competition } from '../services/competitionsService';
 import { formatCompetitionDateRange } from '../utils/dateUtils';
+import { getCompetitionLifecycleStatus } from '../utils/competitionStatus';
 import Header from '../components/Header';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
@@ -32,12 +33,28 @@ export default function CompetitionsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const routeParams = route.params as { filter?: string } | undefined;
-  const [activeFilter, setActiveFilter] = useState(
-    routeParams?.filter === 'participated' ? FILTERS.PARTICIPATED : FILTERS.ALL
+  const [activeFilter, setActiveFilter] = useState(() => {
+    const f = routeParams?.filter;
+    if (f === FILTERS.PARTICIPATED) return FILTERS.PARTICIPATED;
+    if (f === FILTERS.ONGOING) return FILTERS.ONGOING;
+    if (f === FILTERS.UPCOMING) return FILTERS.UPCOMING;
+    if (f === FILTERS.ENDED) return FILTERS.ENDED;
+    return FILTERS.ALL;
+  });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const f = (route.params as { filter?: string } | undefined)?.filter;
+      if (f === FILTERS.PARTICIPATED) setActiveFilter(FILTERS.PARTICIPATED);
+      else if (f === FILTERS.ONGOING) setActiveFilter(FILTERS.ONGOING);
+      else if (f === FILTERS.UPCOMING) setActiveFilter(FILTERS.UPCOMING);
+      else if (f === FILTERS.ENDED) setActiveFilter(FILTERS.ENDED);
+    }, [route.params])
   );
   const { data, isLoading, error } = useQuery({
     queryKey: ['competitions'],
     queryFn: () => competitionsService.getAll(),
+    refetchInterval: 20000,
   });
 
   if (isLoading) {
@@ -56,18 +73,15 @@ export default function CompetitionsScreen() {
     );
   }
 
-  const getCompetitionStatus = (startDate: string, endDate: string) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (now < start) {
-      return { text: 'À venir', style: styles.statusUpcoming, sortOrder: 2, isEnded: false };
-    } else if (now >= start && now <= end) {
-      return { text: 'En cours', style: styles.statusOngoing, sortOrder: 1, isEnded: false };
-    } else {
-      return { text: 'Terminée', style: styles.statusEnded, sortOrder: 3, isEnded: true };
-    }
+  const getCompetitionStatus = (startDate: string, endDate: string, isPaused?: boolean) => {
+    const status = getCompetitionLifecycleStatus(startDate, endDate, isPaused);
+    const styleMap = {
+      upcoming: styles.statusUpcoming,
+      ongoing: styles.statusOngoing,
+      paused: styles.statusPaused,
+      ended: styles.statusEnded,
+    };
+    return { ...status, style: styleMap[status.key] };
   };
 
   // Filtrer les compétitions selon le filtre actif
@@ -77,8 +91,8 @@ export default function CompetitionsScreen() {
       // Afficher seulement les compétitions auxquelles l'utilisateur est inscrit ou a participé
       return competition.isRegistered === true;
     }
-    const status = getCompetitionStatus(competition.startDate, competition.endDate);
-    if (activeFilter === FILTERS.ONGOING) return status.text === 'En cours';
+    const status = getCompetitionStatus(competition.startDate, competition.endDate, competition.isPaused);
+    if (activeFilter === FILTERS.ONGOING) return status.key === 'ongoing' || status.key === 'paused';
     if (activeFilter === FILTERS.UPCOMING) return status.text === 'À venir';
     if (activeFilter === FILTERS.ENDED) return status.text === 'Terminée';
     return true;
@@ -86,7 +100,7 @@ export default function CompetitionsScreen() {
 
 
   const renderCompetition = ({ item }: { item: Competition }) => {
-    const status = getCompetitionStatus(item.startDate, item.endDate);
+    const status = getCompetitionStatus(item.startDate, item.endDate, item.isPaused);
     const isEnded = status.isEnded;
     const handlePress = () => {
       (navigation as any).navigate('CompetitionDetail', { id: item.id });
@@ -97,28 +111,27 @@ export default function CompetitionsScreen() {
         style={[
           styles.card,
           isEnded && styles.cardEnded,
-          item.coverImageUrl ? styles.cardWithCover : null,
         ]}
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        {item.coverImageUrl ? (
-          <View style={styles.coverWrap}>
-            <Image source={{ uri: item.coverImageUrl }} style={styles.cover} resizeMode="cover" />
-          </View>
-        ) : null}
-        <View style={[styles.cardBody, item.coverImageUrl ? styles.cardBodyWithCover : null]}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
+        <View style={styles.cardTop}>
+          {item.coverImageUrl ? (
+            <View style={styles.coverWrap}>
+              <Image source={{ uri: item.coverImageUrl }} style={styles.cover} resizeMode="cover" />
+            </View>
+          ) : null}
+          <View style={styles.cardTitleBlock}>
+            <Text style={styles.cardTitle} numberOfLines={2}>{item.name}</Text>
             <View style={styles.badgesContainer}>
               {item.isRegistered && !isEnded && (
                 <View style={styles.registeredBadge}>
-                  <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
+                  <Text style={styles.registeredBadgeText}>Inscrit</Text>
                 </View>
               )}
               {item.isRegistered && isEnded && (
                 <View style={styles.participatedBadge}>
-                  <Text style={styles.participatedBadgeText}>✓ Participé</Text>
+                  <Text style={styles.participatedBadgeText}>Participé</Text>
                 </View>
               )}
               <View style={[styles.statusBadge, status.style]}>
@@ -126,16 +139,16 @@ export default function CompetitionsScreen() {
               </View>
             </View>
           </View>
+        </View>
+        <View style={styles.cardMetaRow}>
           <Text style={styles.cardDate}>
             {formatCompetitionDateRange(item.startDate, item.endDate)}
           </Text>
-          {item.teams && item.teams.length > 0 && (
-            <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>
-          )}
-          <View style={styles.moreInfoContainer}>
-            <Text style={styles.moreInfoText}>+ d'infos</Text>
-          </View>
+          <Text style={styles.moreInfoText}>+ d'infos</Text>
         </View>
+        {item.teams && item.teams.length > 0 ? (
+          <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>
+        ) : null}
       </TouchableOpacity>
     );
   };
@@ -222,8 +235,8 @@ export default function CompetitionsScreen() {
         </View>
         <FlatList
           data={[...filteredData].sort((a, b) => {
-            const statusA = getCompetitionStatus(a.startDate, a.endDate);
-            const statusB = getCompetitionStatus(b.startDate, b.endDate);
+            const statusA = getCompetitionStatus(a.startDate, a.endDate, a.isPaused);
+            const statusB = getCompetitionStatus(b.startDate, b.endDate, b.isPaused);
             return statusA.sortOrder - statusB.sortOrder;
           })}
           renderItem={renderCompetition}
@@ -349,10 +362,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   cardEnded: {
     opacity: 0.7,
   },
-  cardWithCover: {
+  cardTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
+    alignItems: 'flex-start',
   },
   coverWrap: {
     width: 72,
@@ -366,23 +378,15 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     width: 72,
     height: 72,
   },
-  cardBody: {
+  cardTitleBlock: {
     flex: 1,
     minWidth: 0,
-  },
-  cardBodyWithCover: {
-    padding: 0,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    justifyContent: 'flex-start',
     gap: 8,
   },
   badgesContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     alignItems: 'center',
     flexWrap: 'wrap',
   },
@@ -390,13 +394,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: theme.text,
-    flex: 1,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   statusBadgeText: {
     fontSize: 11,
@@ -412,21 +414,26 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   statusEnded: {
     backgroundColor: '#f87171',
   },
+  statusPaused: {
+    backgroundColor: '#f59e0b',
+  },
   registeredBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: theme.accentMuted,
+    borderWidth: 1,
+    borderColor: theme.accent,
   },
   registeredBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#1e40af',
+    fontWeight: '700',
+    color: theme.accent,
   },
   participatedBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
     backgroundColor: '#fef3c7',
   },
   participatedBadgeText: {
@@ -434,25 +441,32 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     color: '#92400e',
   },
+  cardMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: 10,
+    columnGap: 8,
+    rowGap: 2,
+  },
   cardDate: {
     fontSize: 12,
     color: theme.textMuted,
-    marginBottom: 4,
+    flexShrink: 0,
+    maxWidth: '100%',
   },
   cardTeams: {
     fontSize: 12,
     color: theme.textMuted,
-    marginBottom: 8,
-  },
-  moreInfoContainer: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
+    marginTop: 4,
   },
   moreInfoText: {
     color: theme.accent,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
     textDecorationLine: 'underline',
+    flexShrink: 0,
+    marginLeft: 'auto',
   },
   center: {
     flex: 1,

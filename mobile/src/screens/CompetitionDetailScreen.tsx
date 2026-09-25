@@ -18,6 +18,7 @@ import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
 import { speciesService } from '../services/speciesService';
 import { formatDateTimeLocal, formatCompetitionDate, formatCompetitionDateRange, parseApiDate } from '../utils/dateUtils';
+import { getCompetitionLifecycleStatus } from '../utils/competitionStatus';
 import { API_BASE_URL } from '../config/api';
 import Header from '../components/Header';
 import FaIcon from '../components/FaIcon';
@@ -56,6 +57,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryKey: ['competition', competitionId],
     queryFn: () => competitionsService.getOne(competitionId),
     enabled: Number.isFinite(competitionId) && competitionId > 0,
+    refetchInterval: 20000,
   });
 
   const competition = (competitionResponse as any)?.success !== undefined
@@ -67,27 +69,6 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryFn: () => teamService.getMyTeams(),
   });
 
-  const personalStatsQueryEnabled =
-    !!competitionId &&
-    !!competition?.isRegistered &&
-    !!currentUser?.id &&
-    activeTab === 'info';
-
-  const { data: myStatsData, isLoading: loadingMyStats, isError: myStatsError } = useQuery({
-    queryKey: ['competition-my-stats', competitionId],
-    queryFn: () => competitionsService.getMyStats(competitionId),
-    enabled: personalStatsQueryEnabled,
-    retry: false,
-  });
-
-  const { data: myTeamStatsData, isLoading: loadingMyTeamStats, isError: myTeamStatsError } = useQuery({
-    queryKey: ['competition-my-team-stats', competitionId],
-    queryFn: () => competitionsService.getMyTeamStats(competitionId),
-    enabled: personalStatsQueryEnabled,
-    retry: false,
-  });
-
-  // Utiliser les espèces de la compétition si disponibles
   const speciesData = competition?.species && competition.species.length > 0
     ? competition.species
     : null;
@@ -167,8 +148,6 @@ export default function CompetitionDetailScreen({ route }: any) {
 
       // Invalider les requêtes pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
-      queryClient.invalidateQueries({ queryKey: ['competition-my-stats', competitionId] });
-      queryClient.invalidateQueries({ queryKey: ['competition-my-team-stats', competitionId] });
       
       // Recharger les stats seulement si on n'est pas déjà en train de charger
       if (!isLoadingRef.current) {
@@ -205,8 +184,6 @@ export default function CompetitionDetailScreen({ route }: any) {
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
-      queryClient.invalidateQueries({ queryKey: ['competition-my-stats', competitionId] });
-      queryClient.invalidateQueries({ queryKey: ['competition-my-team-stats', competitionId] });
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la désinscription. Veuillez réessayer.';
@@ -222,8 +199,6 @@ export default function CompetitionDetailScreen({ route }: any) {
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
       queryClient.invalidateQueries({ queryKey: ['my-teams'] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
-      queryClient.invalidateQueries({ queryKey: ['competition-my-stats', competitionId] });
-      queryClient.invalidateQueries({ queryKey: ['competition-my-team-stats', competitionId] });
       Alert.alert('Succès', 'Équipe inscrite à la compétition avec succès.');
       setShowRegisterForm(false);
       setSelectedTeamId(null);
@@ -411,17 +386,18 @@ export default function CompetitionDetailScreen({ route }: any) {
   
   // Fonction pour déterminer le statut de la compétition
   const getCompetitionStatus = () => {
-    const now = new Date();
-    const start = parseApiDate(competition.startDate) ?? now;
-    const end = parseApiDate(competition.endDate) ?? now;
-    
-    if (now < start) {
-      return { text: 'À venir', style: styles.statusUpcoming, isEnded: false };
-    } else if (now >= start && now <= end) {
-      return { text: 'En cours', style: styles.statusOngoing, isEnded: false };
-    } else {
-      return { text: 'Terminée', style: styles.statusEnded, isEnded: true };
-    }
+    const status = getCompetitionLifecycleStatus(
+      competition.startDate,
+      competition.endDate,
+      (competition as any).isPaused
+    );
+    const styleMap = {
+      upcoming: styles.statusUpcoming,
+      ongoing: styles.statusOngoing,
+      paused: styles.statusPaused,
+      ended: styles.statusEnded,
+    };
+    return { ...status, style: styleMap[status.key] };
   };
   
   const status = getCompetitionStatus();
@@ -451,7 +427,14 @@ export default function CompetitionDetailScreen({ route }: any) {
   const userTeamIndex = currentUser
     ? sortedTeams.findIndex((t: any) => t.members?.some((m: any) => m.id === currentUser.id))
     : -1;
+  const rankingVisible = competition.isRankingPublic || isAdmin;
   const displayedTeams = (() => {
+    if (!rankingVisible) {
+      if (userTeamIndex >= 0) {
+        return [{ team: sortedTeams[userTeamIndex], rank: userTeamIndex + 1 }];
+      }
+      return [];
+    }
     if (showAllRanking) return sortedTeams.map((t: any, i: number) => ({ team: t, rank: i + 1 }));
     const top5 = sortedTeams.slice(0, 5).map((t: any, i: number) => ({ team: t, rank: i + 1 }));
     const userInTop5 = userTeamIndex >= 0 && userTeamIndex < 5;
@@ -1013,19 +996,20 @@ export default function CompetitionDetailScreen({ route }: any) {
         {competition.teams && competition.teams.length > 0 && (
           <View style={styles.rankingSection}>
             <Text style={styles.sectionTitle}>
-              {isEnded && competition.isRankingPublic
+              {isEnded && rankingVisible
                 ? 'Classement final'
-                : competition.isRankingPublic
-                ? 'Classement'
-                : isAdmin
-                ? 'Classement (admin)'
+                : rankingVisible
+                ? isAdmin && !competition.isRankingPublic
+                  ? 'Classement (masqué aux participants)'
+                  : 'Classement'
                 : 'Votre équipe'}
             </Text>
 
             {!competition.isRankingPublic && !isAdmin && (
               <View style={styles.rankingInfo}>
+                <FaIcon name="lock" size={16} color={theme.accent} />
                 <Text style={styles.rankingInfoText}>
-                  🔒 Le classement n'a pas encore été publié par l'administrateur
+                  Le classement n'a pas encore été publié par l'administrateur
                 </Text>
               </View>
             )}
@@ -1042,7 +1026,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                   style={[styles.teamRow, isUserTeam && styles.teamRowUser]}
                   onPress={() => (navigation as any).navigate('TeamDetail', { id: team.id })}
                 >
-                  {isEnded && competition.isRankingPublic && (
+                  {(isEnded || rankingVisible) && rankingVisible && (
                     <Text style={styles.teamRank}>#{rank}</Text>
                   )}
                   <View style={styles.teamInfo}>
@@ -1062,7 +1046,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 </TouchableOpacity>
               );
             })}
-            {sortedTeams.length > 5 && (
+            {rankingVisible && sortedTeams.length > 5 && (
               <TouchableOpacity
                 style={styles.showMoreRanking}
                 onPress={() => setShowAllRanking(!showAllRanking)}
@@ -1077,142 +1061,8 @@ export default function CompetitionDetailScreen({ route }: any) {
         </View>
         )}
 
-        {/* Mes statistiques (prises validées) — inscrits, onglet Infos */}
-        {activeTab === 'info' && competition.isRegistered && currentUser && (
-          <View style={styles.myStatsSection}>
-            <Text style={styles.sectionTitle}>Mes statistiques</Text>
-            <Text style={styles.myStatsHint}>
-              Prises validées officiellement (comptent pour le classement).
-            </Text>
-
-            {(loadingMyStats || loadingMyTeamStats) && (
-              <ActivityIndicator size="small" color={theme.accent} style={{ marginVertical: 12 }} />
-            )}
-
-            {(myStatsError || myTeamStatsError) && !loadingMyStats && !loadingMyTeamStats && (
-              <Text style={styles.myStatsErrorText}>
-                Impossible de charger vos statistiques personnelles. Réessayez plus tard.
-              </Text>
-            )}
-
-            {!loadingMyStats && !myStatsError && myStatsData?.success && myStatsData.stats && (
-              <View style={styles.myStatsBlock}>
-                <Text style={styles.myStatsSubsectionTitle}>Moi</Text>
-                <View style={styles.myStatsKpis}>
-                  <View style={styles.myStatsKpi}>
-                    <Text style={styles.myStatsKpiLabel}>Points</Text>
-                    <Text style={styles.myStatsKpiValue}>{myStatsData.stats.totalPoints ?? 0}</Text>
-                  </View>
-                  <View style={styles.myStatsKpi}>
-                    <Text style={styles.myStatsKpiLabel}>Prises</Text>
-                    <Text style={styles.myStatsKpiValue}>{myStatsData.stats.totalCatches ?? 0}</Text>
-                  </View>
-                </View>
-                {myStatsData.stats.catchesForMap && myStatsData.stats.catchesForMap.length > 0 && (
-                  <View style={styles.myStatsViz}>
-                    <CatchesMapView
-                      catches={myStatsData.stats.catchesForMap}
-                      speciesStats={myStatsData.stats.speciesStats}
-                      height={240}
-                    />
-                    <CatchesTimelineChart
-                      catches={myStatsData.stats.catchesForMap}
-                      startDate={competition.startDate}
-                      endDate={competition.endDate}
-                      speciesStats={myStatsData.stats.speciesStats}
-                    />
-                  </View>
-                )}
-                {myStatsData.stats.timeline && myStatsData.stats.timeline.length > 0 && (
-                  <>
-                    <Text style={styles.myStatsTimelineTitle}>Chronologie (récent en premier)</Text>
-                    {[...myStatsData.stats.timeline].reverse().slice(0, 25).map((row: any) => (
-                      <View key={row.id} style={styles.myStatsTimelineRow}>
-                        <Text style={styles.myStatsTimelineDate}>{row.createdAt}</Text>
-                        <Text style={styles.myStatsTimelineBody}>
-                          {row.species?.name ?? '?'} — {row.size} cm — {row.points} pts
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                )}
-              </View>
-            )}
-
-            {!loadingMyTeamStats && !myTeamStatsError && myTeamStatsData?.success && myTeamStatsData.stats && (
-              <View style={[styles.myStatsBlock, styles.myStatsBlockTeam]}>
-                <Text style={styles.myStatsSubsectionTitle}>Mon équipe ({myTeamStatsData.team?.name ?? '—'})</Text>
-                <View style={styles.myStatsKpis}>
-                  <View style={styles.myStatsKpi}>
-                    <Text style={styles.myStatsKpiLabel}>Points</Text>
-                    <Text style={styles.myStatsKpiValue}>{myTeamStatsData.stats.totalPoints ?? 0}</Text>
-                  </View>
-                  <View style={styles.myStatsKpi}>
-                    <Text style={styles.myStatsKpiLabel}>Prises</Text>
-                    <Text style={styles.myStatsKpiValue}>{myTeamStatsData.stats.totalCatches ?? 0}</Text>
-                  </View>
-                </View>
-                {myTeamStatsData.stats.catchesForMap && myTeamStatsData.stats.catchesForMap.length > 0 && (
-                  <View style={styles.myStatsViz}>
-                    <CatchesMapView
-                      catches={myTeamStatsData.stats.catchesForMap.map((c: any) => ({
-                        ...c,
-                        team: myTeamStatsData.team?.name
-                          ? { name: myTeamStatsData.team.name }
-                          : undefined,
-                      }))}
-                      speciesStats={myTeamStatsData.stats.speciesStats}
-                      height={240}
-                    />
-                    <CatchesTimelineChart
-                      catches={myTeamStatsData.stats.catchesForMap.map((c: any) => ({
-                        ...c,
-                        team: myTeamStatsData.team?.name
-                          ? { name: myTeamStatsData.team.name }
-                          : undefined,
-                      }))}
-                      startDate={competition.startDate}
-                      endDate={competition.endDate}
-                      speciesStats={myTeamStatsData.stats.speciesStats}
-                    />
-                  </View>
-                )}
-                {myTeamStatsData.stats.byMember && myTeamStatsData.stats.byMember.length > 0 && (
-                  <View style={styles.byMemberRow}>
-                    <Text style={styles.byMemberTitle}>Par membre</Text>
-                    {myTeamStatsData.stats.byMember.map((m: any, idx: number) => (
-                      <Text key={m.userId ?? `n-${idx}`} style={styles.byMemberLine}>
-                        {(m.firstname ?? '') + ' ' + (m.lastname ?? '')}
-                        {m.userId == null ? ' (non attribué)' : ''}
-                        {' — '}
-                        {m.catchCount} prise(s), {m.points} pts
-                      </Text>
-                    ))}
-                  </View>
-                )}
-                {myTeamStatsData.stats.timeline && myTeamStatsData.stats.timeline.length > 0 && (
-                  <>
-                    <Text style={styles.myStatsTimelineTitle}>Prises de l&apos;équipe (récent en premier)</Text>
-                    {[...myTeamStatsData.stats.timeline].reverse().slice(0, 25).map((row: any) => (
-                      <View key={row.id} style={styles.myStatsTimelineRow}>
-                        <Text style={styles.myStatsTimelineDate}>{row.createdAt}</Text>
-                        <Text style={styles.myStatsTimelineBody}>
-                          {row.species?.name ?? '?'} — {row.size} cm — {row.points} pts
-                          {row.caughtBy
-                            ? ` — ${row.caughtBy.firstname} ${row.caughtBy.lastname}`
-                            : ''}
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                )}
-              </View>
-            )}
-          </View>
-        )}
-
         {/* Statistiques - uniquement dans l'onglet Infos */}
-        {activeTab === 'info' && competition.isRankingPublic && stats && (
+        {activeTab === 'info' && rankingVisible && stats && (
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Statistiques</Text>
             {loadingStats ? (
@@ -1368,12 +1218,14 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#dbeafe',
+    backgroundColor: theme.accentMuted,
+    borderWidth: 1,
+    borderColor: theme.accent,
   },
   registeredBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#1e40af',
+    fontWeight: '700',
+    color: theme.accent,
   },
   participatedBadge: {
     paddingHorizontal: 10,
@@ -1391,6 +1243,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   statusOngoing: {
     backgroundColor: '#34d399',
+  },
+  statusPaused: {
+    backgroundColor: '#f59e0b',
   },
   statusEnded: {
     backgroundColor: '#f87171',
@@ -1562,14 +1417,19 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     color: theme.text,
   },
   rankingInfo: {
-    backgroundColor: '#fff3cd',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: theme.accentMuted,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
   },
   rankingInfoText: {
-    color: '#856404',
+    flex: 1,
+    color: theme.text,
     fontSize: 14,
+    lineHeight: 20,
   },
   teamRow: {
     flexDirection: 'row',

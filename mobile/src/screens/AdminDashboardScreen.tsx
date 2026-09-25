@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { navigateToCompetitions } from '../navigation/rootNavigationRef';
 import { adminService } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
@@ -33,6 +32,7 @@ export default function AdminDashboardScreen() {
   const { data: pendingCatchesData, isLoading: loadingCatches } = useQuery({
     queryKey: ['admin-pending-catches', catchesPage],
     queryFn: () => adminService.getPendingCatches(catchesPage, 10),
+    refetchInterval: 15000,
   });
 
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function AdminDashboardScreen() {
       label: 'Compétitions',
       hint: 'Toutes les manches',
       icon: 'trophy',
-      onPress: navigateToCompetitions,
+      onPress: () => (navigation as any).navigate('CompetitionsList'),
     },
     {
       label: 'Créer',
@@ -162,27 +162,39 @@ export default function AdminDashboardScreen() {
         </View>
 
         <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.75}
+            onPress={() => (navigation as any).navigate('AdminCatchValidationList')}
+          >
             <View style={[styles.statIcon, styles.statIconPending]}>
               <FaIcon name="check" size={14} color={theme.success} />
             </View>
             <Text style={styles.statValue}>{pendingCount}</Text>
             <Text style={styles.statLabel}>En attente</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.75}
+            onPress={() => (navigation as any).navigate('CompetitionsList')}
+          >
             <View style={[styles.statIcon, styles.statIconComp]}>
               <FaIcon name="trophy" size={14} color={theme.accent} />
             </View>
             <Text style={styles.statValue}>{competitionsCount}</Text>
             <Text style={styles.statLabel}>Compétitions</Text>
-          </View>
-          <View style={styles.statCard}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.statCard}
+            activeOpacity={0.75}
+            onPress={() => (navigation as any).navigate('CompetitionsList', { filter: 'ongoing' })}
+          >
             <View style={[styles.statIcon, styles.statIconLive]}>
               <FaIcon name="play" size={14} color="#FF9500" />
             </View>
             <Text style={styles.statValue}>{activeCompetitions}</Text>
             <Text style={styles.statLabel}>En cours</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionTitle}>Actions</Text>

@@ -24,6 +24,10 @@ class NotificationPreferences
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $expoPushToken = null;
 
+    /** @var list<string>|null */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $expoPushTokens = null;
+
     // Notifications générales
     #[ORM\Column(type: 'boolean', options: ['default' => true])]
     private bool $catchValidated = true;
@@ -89,6 +93,58 @@ class NotificationPreferences
     public function setExpoPushToken(?string $expoPushToken): static
     {
         $this->expoPushToken = $expoPushToken;
+        $this->updatedAt = new \DateTime();
+        return $this;
+    }
+
+    /** @return list<string> */
+    public function getAllExpoPushTokens(): array
+    {
+        $list = is_array($this->expoPushTokens) ? $this->expoPushTokens : [];
+        if ($this->expoPushToken) {
+            $list[] = $this->expoPushToken;
+        }
+        $clean = [];
+        foreach ($list as $token) {
+            if (!is_string($token)) {
+                continue;
+            }
+            $token = trim($token);
+            if ($token === '' || in_array($token, $clean, true)) {
+                continue;
+            }
+            $clean[] = $token;
+        }
+        return $clean;
+    }
+
+    public function addExpoPushToken(string $token): static
+    {
+        $token = trim($token);
+        if ($token === '') {
+            return $this;
+        }
+        $list = $this->getAllExpoPushTokens();
+        if (!in_array($token, $list, true)) {
+            $list[] = $token;
+        }
+        if (count($list) > 12) {
+            $list = array_slice($list, -12);
+        }
+        $this->expoPushTokens = $list;
+        $this->expoPushToken = $token;
+        $this->updatedAt = new \DateTime();
+        return $this;
+    }
+
+    public function removeExpoPushToken(string $token): static
+    {
+        $list = array_values(array_filter(
+            $this->getAllExpoPushTokens(),
+            static fn (string $t) => $t !== $token
+        ));
+        $this->expoPushTokens = $list === [] ? null : $list;
+        $this->expoPushToken = $list[0] ?? null;
         $this->updatedAt = new \DateTime();
         return $this;
     }

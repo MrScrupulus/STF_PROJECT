@@ -27,6 +27,7 @@ import {
   sanitizeFishSizeInput,
 } from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
 import FaIcon from '../components/FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
@@ -44,6 +45,7 @@ export default function AdminAddCatchScreen() {
   const [size, setSize] = useState('');
   const [comment, setComment] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
 
   // Charger les compétitions (en cours + terminées, pour permettre l'ajout de prise en correction)
   const { data: competitions, isLoading: loadingCompetitions } = useQuery({
@@ -241,7 +243,7 @@ export default function AdminAddCatchScreen() {
   return (
     <>
       <Header title="Saisie" showBack={true} showMenu={true} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
             <FaIcon name="camera" size={22} color={theme.onAccent} />
@@ -254,7 +256,7 @@ export default function AdminAddCatchScreen() {
         {/* Sélection de la compétition */}
         <View style={styles.section}>
           <Text style={styles.label}>Compétition *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.optionGrid}>
             {(competitions || []).map((comp: any) => (
               <TouchableOpacity
                 key={comp.id}
@@ -287,7 +289,7 @@ export default function AdminAddCatchScreen() {
                 ) : null}
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         {/* Sélection de l'équipe */}
@@ -299,7 +301,7 @@ export default function AdminAddCatchScreen() {
             ) : teams.length === 0 ? (
               <Text style={styles.errorText}>Aucune équipe inscrite à cette compétition</Text>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.optionGrid}>
                 {teams.map((team: any) => (
                   <TouchableOpacity
                     key={team.id}
@@ -319,7 +321,7 @@ export default function AdminAddCatchScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
             )}
           </View>
         )}
@@ -333,7 +335,7 @@ export default function AdminAddCatchScreen() {
             ) : members.length === 0 ? (
               <Text style={styles.errorText}>Aucun membre dans cette équipe</Text>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.optionGrid}>
                 <TouchableOpacity
                   style={[
                     styles.optionButton,
@@ -369,7 +371,7 @@ export default function AdminAddCatchScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
             )}
           </View>
         )}
@@ -385,7 +387,7 @@ export default function AdminAddCatchScreen() {
                 Aucune espèce configurée pour cette compétition
               </Text>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.optionGrid}>
                 {species.map((spec: any) => {
                   // Gérer différentes structures : CompetitionSpecies ou Species direct
                   const specId = spec.id || spec.speciesId || spec.species?.id;
@@ -410,7 +412,7 @@ export default function AdminAddCatchScreen() {
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
             )}
           </View>
         )}
@@ -422,10 +424,9 @@ export default function AdminAddCatchScreen() {
             style={styles.input}
             placeholder="Ex : 25,5 ou 11.2"
             value={size}
-            onChangeText={(t) =>
-              setSize((prev) => sanitizeFishSizeInput(prev, t))
-            }
+            onChangeText={(t) => setSize((prev) => sanitizeFishSizeInput(prev, t))}
             keyboardType={fishSizeKeyboardType}
+            placeholderTextColor={theme.textMuted}
           />
         </View>
 
@@ -440,7 +441,7 @@ export default function AdminAddCatchScreen() {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
-          />
+          placeholderTextColor={theme.textMuted} />
         </View>
 
         {/* Photo */}
@@ -458,7 +459,9 @@ export default function AdminAddCatchScreen() {
           </View>
           {photo && (
             <View style={styles.photoContainer}>
-              <Image source={{ uri: photo }} style={styles.photoPreview} resizeMode="cover" />
+              <TouchableOpacity activeOpacity={0.9} onPress={() => setPhotoPreviewOpen(true)}>
+                <Image source={{ uri: photo }} style={styles.photoPreview} resizeMode="cover" />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.removePhotoButton}
                 onPress={() => setPhoto(null)}
@@ -488,6 +491,11 @@ export default function AdminAddCatchScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <ZoomablePhotoViewer
+        uri={photo}
+        visible={photoPreviewOpen && !!photo}
+        onClose={() => setPhotoPreviewOpen(false)}
+      />
     </>
   );
 }
@@ -538,12 +546,16 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     color: theme.text,
     marginBottom: 8,
   },
+  optionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   optionButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: theme.bg,
-    marginRight: 8,
     borderWidth: 1.5,
     borderColor: theme.border,
   },
@@ -582,6 +594,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: theme.surfaceRaised,
+    color: theme.text,
   },
   textArea: {
     minHeight: 100,
@@ -616,9 +629,10 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   photoPreview: {
     width: '100%',
-    height: 200,
+    aspectRatio: 16 / 9,
     borderRadius: 12,
     marginBottom: 8,
+    backgroundColor: theme.surfaceRaised,
   },
   removePhotoButton: {
     backgroundColor: theme.danger,

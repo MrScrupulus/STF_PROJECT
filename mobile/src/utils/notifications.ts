@@ -2,7 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
-import * as SecureStore from 'expo-secure-store';
+import { getSecureItem } from './secureStore';
 
 // Configuration des notifications
 Notifications.setNotificationHandler({
@@ -61,7 +61,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 }
 
 /**
- * Obtient le token Expo Push
+ * Obtient le token Expo Push (build store / TestFlight, pas Expo Go).
  */
 export async function getExpoPushToken(): Promise<string | null> {
   try {
@@ -70,26 +70,35 @@ export async function getExpoPushToken(): Promise<string | null> {
       return null;
     }
 
-    // Récupérer le Project ID depuis app.json (extra.eas.projectId) ou variable d'environnement
-    const projectId = 
-      Constants.expoConfig?.extra?.eas?.projectId || 
-      process.env.EXPO_PROJECT_ID || 
+    const projectId =
+      Constants.easConfig?.projectId ||
+      Constants.expoConfig?.extra?.eas?.projectId ||
+      process.env.EXPO_PUBLIC_PROJECT_ID ||
       null;
-    
-    if (!projectId) {
-      console.warn('EXPO_PROJECT_ID non configuré. Les notifications push peuvent ne pas fonctionner.');
-      // Essayer sans projectId (fonctionne en développement local)
-      const tokenData = await Notifications.getExpoPushTokenAsync();
-      return tokenData.data;
-    }
-    
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
 
-    return tokenData.data;
+    if (!projectId) {
+      console.warn('Project ID Expo manquant : impossible d’obtenir un token push production.');
+      return null;
+    }
+
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (Platform.OS === 'ios' && attempt > 0) {
+          await new Promise((r) => setTimeout(r, 1500 * attempt));
+        }
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+        if (tokenData?.data) {
+          return tokenData.data;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    console.warn('Erreur lors de la récupération du token Expo:', lastError);
+    return null;
   } catch (error) {
-    console.error('Erreur lors de la récupération du token Expo:', error);
+    console.warn('Erreur lors de la récupération du token Expo:', error);
     return null;
   }
 }
@@ -100,7 +109,7 @@ export async function getExpoPushToken(): Promise<string | null> {
 export async function registerPushToken(): Promise<void> {
   try {
     // Vérifier que l'utilisateur est authentifié avant d'enregistrer le token
-    const token = await SecureStore.getItemAsync('jwtToken');
+    const token = await getSecureItem('jwtToken');
     if (!token) {
       console.log('Token JWT non trouvé, enregistrement du token push reporté');
       return;

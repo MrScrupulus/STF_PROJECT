@@ -24,6 +24,11 @@ import {
   sanitizeFishSizeInput,
 } from '../utils/fishMeasurementInput';
 import Header from '../components/Header';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
+import FaIcon from '../components/FaIcon';
+import SpeciesPieChart from '../components/competition/SpeciesPieChart';
+import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
+import CatchesMapView from '../components/competition/CatchesMapView';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -65,6 +70,7 @@ export default function TeamDetailScreen({ route }: any) {
   const [showEditSizeModal, setShowEditSizeModal] = useState(false);
   const [selectedCatchForSizeEdit, setSelectedCatchForSizeEdit] = useState<any>(null);
   const [editSizeValue, setEditSizeValue] = useState('');
+  const [statsTab, setStatsTab] = useState<'team' | number>('team');
 
   const { data: teamData, isLoading, error } = useQuery({
     queryKey: ['team', teamIdNum],
@@ -398,6 +404,38 @@ export default function TeamDetailScreen({ route }: any) {
   const maxTeamSize = team.competition?.teamSize || 2;
   const canInvite = team.members && team.members.length < maxTeamSize;
 
+  const validatedOfficialCatches = (team.catches || []).filter(
+    (c: any) => c.isValidated && !c.rejectionReason
+  );
+  const speciesCountById = new Map<number, { id: number; name: string; count: number }>();
+  for (const c of validatedOfficialCatches) {
+    if (!c.species?.id) continue;
+    const prev = speciesCountById.get(c.species.id);
+    if (prev) {
+      prev.count += 1;
+    } else {
+      speciesCountById.set(c.species.id, {
+        id: c.species.id,
+        name: c.species.name,
+        count: 1,
+      });
+    }
+  }
+  const speciesStats = Array.from(speciesCountById.values());
+  const catchesForMap = validatedOfficialCatches.map((c: any) => ({
+    ...c,
+    team: team.name ? { name: team.name } : undefined,
+  }));
+  const memberScoreTabs = (team.members || []).map((m: any) => {
+    const mine = validatedOfficialCatches.filter((c: any) => c.caughtBy?.id === m.id);
+    return {
+      id: m.id as number,
+      shortName: (m.firstname || m.lastname || 'Membre') as string,
+      catchCount: mine.length,
+      points: mine.reduce((sum: number, c: any) => sum + (Number(c.points) || 0), 0),
+    };
+  });
+
   return (
     <>
       <Header title={team.name} showBack={true} showMenu={true} />
@@ -546,7 +584,7 @@ export default function TeamDetailScreen({ route }: any) {
                     onChangeText={setInviteEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                  />
+                  placeholderTextColor={theme.textMuted} />
                   <View style={styles.inviteActions}>
                     <TouchableOpacity
                       style={styles.inviteSubmitButton}
@@ -745,7 +783,7 @@ export default function TeamDetailScreen({ route }: any) {
               {rejectedCatches.length > 0 && (
                 <View style={styles.rejectedCatchesSection}>
                   <Text style={styles.rejectedCatchesTitle}>
-                    ❌ Prises refusées ({rejectedCatches.length})
+                    Prises refusées ({rejectedCatches.length})
                   </Text>
                   {rejectedCatches.map((catchItem: any) => (
                     <CatchCard
@@ -765,31 +803,102 @@ export default function TeamDetailScreen({ route }: any) {
             </>
           )}
         </View>
+
+        {team.competition && (
+          <View style={styles.teamStatsSection}>
+            <Text style={styles.sectionTitle}>Statistiques de l&apos;équipe</Text>
+            {validatedOfficialCatches.length === 0 ? (
+              <Text style={styles.emptySubtext}>
+                Les cartes, le camembert et la chronologie apparaissent dès qu’une prise est validée.
+              </Text>
+            ) : (
+              <>
+                {catchesForMap.length > 0 ? (
+                  <CatchesMapView
+                    catches={catchesForMap}
+                    speciesStats={speciesStats}
+                    height={240}
+                  />
+                ) : null}
+                {speciesStats.length > 0 ? (
+                  <SpeciesPieChart speciesStats={speciesStats} />
+                ) : null}
+                {catchesForMap.length > 0 ? (
+                  <CatchesTimelineChart
+                    catches={catchesForMap}
+                    startDate={team.competition.startDate}
+                    endDate={team.competition.endDate}
+                    speciesStats={speciesStats}
+                  />
+                ) : null}
+              </>
+            )}
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.statsTabs}
+              style={styles.statsTabsWrap}
+            >
+              <TouchableOpacity
+                style={[styles.statsTab, statsTab === 'team' && styles.statsTabActive]}
+                onPress={() => setStatsTab('team')}
+              >
+                <Text style={[styles.statsTabText, statsTab === 'team' && styles.statsTabTextActive]}>
+                  Équipe
+                </Text>
+              </TouchableOpacity>
+              {memberScoreTabs.map((m) => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[styles.statsTab, statsTab === m.id && styles.statsTabActive]}
+                  onPress={() => setStatsTab(m.id)}
+                >
+                  <Text style={[styles.statsTabText, statsTab === m.id && styles.statsTabTextActive]}>
+                    {m.shortName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {statsTab === 'team' ? (
+              <View style={styles.memberKpis}>
+                <View style={styles.memberKpi}>
+                  <Text style={styles.memberKpiLabel}>Points</Text>
+                  <Text style={styles.memberKpiValue}>{team.totalScore || 0}</Text>
+                </View>
+                <View style={styles.memberKpi}>
+                  <Text style={styles.memberKpiLabel}>Prises validées</Text>
+                  <Text style={styles.memberKpiValue}>{validatedOfficialCatches.length}</Text>
+                </View>
+              </View>
+            ) : (
+              (() => {
+                const member = memberScoreTabs.find((m) => m.id === statsTab);
+                if (!member) return null;
+                return (
+                  <View style={styles.memberKpis}>
+                    <View style={styles.memberKpi}>
+                      <Text style={styles.memberKpiLabel}>Points</Text>
+                      <Text style={styles.memberKpiValue}>{member.points}</Text>
+                    </View>
+                    <View style={styles.memberKpi}>
+                      <Text style={styles.memberKpiLabel}>Prises validées</Text>
+                      <Text style={styles.memberKpiValue}>{member.catchCount}</Text>
+                    </View>
+                  </View>
+                );
+              })()
+            )}
+          </View>
+        )}
       </View>
 
-      {/* Modal pour agrandir l'image */}
-      <Modal
+      <ZoomablePhotoViewer
+        uri={selectedImage}
         visible={!!selectedImage}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedImage(null)}
-      >
-        <View style={styles.imageModal}>
-          <TouchableOpacity
-            style={styles.imageModalClose}
-            onPress={() => setSelectedImage(null)}
-          >
-            <Text style={styles.imageModalCloseText}>×</Text>
-          </TouchableOpacity>
-          {selectedImage && (
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.imageModalImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
+        onClose={() => setSelectedImage(null)}
+      />
 
       {/* Modal pour rejeter une prise */}
       <Modal
@@ -824,7 +933,7 @@ export default function TeamDetailScreen({ route }: any) {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
-            />
+            placeholderTextColor={theme.textMuted} />
             <View style={styles.rejectModalActions}>
               <TouchableOpacity
                 style={[styles.rejectModalButton, styles.rejectModalCancelButton]}
@@ -877,9 +986,9 @@ export default function TeamDetailScreen({ route }: any) {
               placeholder="Ex : 42 ou 32,5"
               keyboardType={fishSizeKeyboardType}
               value={editSizeValue}
-              onChangeText={(t) =>
-                setEditSizeValue((prev) => sanitizeFishSizeInput(prev, t))
+              onChangeText={(t) => setEditSizeValue((prev) => sanitizeFishSizeInput(prev, t))
               }
+              placeholderTextColor={theme.textMuted}
             />
             <View style={styles.rejectModalActions}>
               <TouchableOpacity
@@ -987,17 +1096,22 @@ function CatchCard({
         </TouchableOpacity>
       )}
       {catchItem.rejectionReason ? (
-        <View style={styles.catchStatusRejected}>
-          <Text style={styles.catchStatusRejectedTitle}>❌ Motif de rejet :</Text>
-          <Text style={styles.catchStatusRejectedText}>{catchItem.rejectionReason}</Text>
+        <View style={[styles.catchStatus, styles.catchStatusRejected]}>
+          <FaIcon name="circleXmark" size={16} color={theme.danger} />
+          <View style={styles.catchStatusBody}>
+            <Text style={[styles.catchStatusText, { color: theme.danger }]}>Rejetée</Text>
+            <Text style={styles.catchStatusRejectedText}>{catchItem.rejectionReason}</Text>
+          </View>
         </View>
       ) : !catchItem.isValidated ? (
-        <View style={styles.catchStatusPending}>
-          <Text style={styles.catchStatusText}>⏳ En attente de validation</Text>
+        <View style={[styles.catchStatus, styles.catchStatusPending]}>
+          <FaIcon name="hourglass" size={16} color={theme.accent} />
+          <Text style={[styles.catchStatusText, { color: theme.accent }]}>En attente de validation</Text>
         </View>
       ) : (
-        <View style={styles.catchStatusValidated}>
-          <Text style={styles.catchStatusText}>✅ Validée</Text>
+        <View style={[styles.catchStatus, styles.catchStatusValidated]}>
+          <FaIcon name="circleCheck" size={16} color={theme.success} />
+          <Text style={[styles.catchStatusText, { color: theme.success }]}>Validée</Text>
         </View>
       )}
       {Array.isArray(catchItem.penalties) && catchItem.penalties.length > 0 && (
@@ -1081,6 +1195,61 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     color: theme.textMuted,
     marginTop: 4,
+  },
+  teamStatsSection: {
+    marginBottom: 24,
+  },
+  statsTabsWrap: {
+    marginTop: 12,
+    marginBottom: 8,
+    flexGrow: 0,
+  },
+  statsTabs: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  statsTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.surfaceRaised,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginRight: 8,
+  },
+  statsTabActive: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  statsTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textMuted,
+  },
+  statsTabTextActive: {
+    color: theme.onAccent,
+  },
+  memberKpis: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  memberKpi: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  memberKpiLabel: {
+    fontSize: 12,
+    color: theme.textMuted,
+    marginBottom: 4,
+  },
+  memberKpiValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.text,
   },
   scoreSummary: {
     flexDirection: 'row',
@@ -1378,37 +1547,41 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 8,
   },
   catchImage: {
-    width: 150,
-    height: 150,
+    width: '100%',
+    aspectRatio: 16 / 9,
     borderRadius: 8,
+    backgroundColor: theme.surfaceRaised,
+  },
+  catchStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  catchStatusBody: {
+    flex: 1,
+    minWidth: 0,
   },
   catchStatusPending: {
-    backgroundColor: '#fff3cd',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
+    backgroundColor: theme.accentMuted,
   },
   catchStatusValidated: {
-    backgroundColor: '#d4edda',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
+    backgroundColor: theme.surfaceRaised,
+    borderWidth: 1,
+    borderColor: theme.success,
   },
   catchStatusRejected: {
-    backgroundColor: '#f8d7da',
-    padding: 8,
-    borderRadius: 4,
-    marginTop: 8,
-  },
-  catchStatusRejectedTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#721c24',
-    marginBottom: 4,
+    backgroundColor: theme.surfaceRaised,
+    borderWidth: 1,
+    borderColor: theme.danger,
+    alignItems: 'flex-start',
   },
   catchStatusRejectedText: {
-    fontSize: 14,
-    color: '#721c24',
+    fontSize: 13,
+    color: theme.danger,
+    marginTop: 2,
   },
   catchPenalty: {
     backgroundColor: '#fff7ed',
@@ -1450,6 +1623,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: theme.textMuted,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: theme.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
   },
   errorText: {
     color: theme.danger,
@@ -1565,6 +1745,8 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     minHeight: 100,
     marginBottom: 16,
     textAlignVertical: 'top',
+    color: theme.text,
+    backgroundColor: theme.surface,
   },
   rejectModalActions: {
     flexDirection: 'row',

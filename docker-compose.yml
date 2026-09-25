@@ -70,6 +70,7 @@ services:
         echo 'Scheduler démarré. Exécution toutes les minutes...' &&
         while true; do
           php bin/console app:process-scheduled-pauses || true
+          php bin/console app:process-competition-lifecycle || true
           sleep 60
         done
       "

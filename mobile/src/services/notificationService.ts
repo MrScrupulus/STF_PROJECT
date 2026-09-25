@@ -31,8 +31,7 @@ export const notificationService = {
     try {
       const response = await apiClient.get(API_ENDPOINTS.notifications.count);
       return response.data.unreadCount || 0;
-    } catch (error) {
-      console.error('Error fetching notification count:', error);
+    } catch {
       return 0;
     }
   },

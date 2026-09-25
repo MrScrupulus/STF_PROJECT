@@ -7,3 +7,4 @@ cd /var/www/html
 
 # Exécuter la commande Symfony
 php bin/console app:process-scheduled-pauses
+php bin/console app:process-competition-lifecycle

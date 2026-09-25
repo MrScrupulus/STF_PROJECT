@@ -14,6 +14,7 @@ import { notificationService, Notification } from '../services/notificationServi
 import { formatRelativeTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
+import { navigateFromNotificationData } from '../utils/notificationNavigation';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -28,13 +29,14 @@ export default function NotificationsScreen() {
   const { data: notificationsData, isLoading, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationService.getAll(),
-    refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
+    refetchInterval: 15000,
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: number) => notificationService.markAsRead(notificationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
     },
   });
 
@@ -42,6 +44,7 @@ export default function NotificationsScreen() {
     mutationFn: () => notificationService.markAllAsRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
     },
   });
 
@@ -70,6 +73,10 @@ export default function NotificationsScreen() {
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
+    navigateFromNotificationData({
+      type: notification.type,
+      ...(notification.data || {}),
+    });
   };
 
   const notifications = notificationsData?.notifications || [];
@@ -82,7 +89,12 @@ export default function NotificationsScreen() {
         style={styles.container}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.accent}
+            colors={[theme.accent]}
+          />
         }
       >
         {isLoading ? (
@@ -189,6 +201,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     color: theme.textMuted,
   },
+  emptySubtext: {
+    fontSize: 14,
+    color: theme.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
   notificationsList: {
     gap: 12,
   },
@@ -198,7 +217,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#e5e7eb',
+    borderLeftColor: theme.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -206,8 +225,8 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     elevation: 2,
   },
   notificationItemUnread: {
-    backgroundColor: '#eff6ff',
-    borderLeftColor: '#3b82f6',
+    backgroundColor: theme.accentMuted,
+    borderLeftColor: theme.accent,
   },
   notificationIcon: {
     marginRight: 12,
@@ -236,7 +255,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#ef4444',
     alignSelf: 'center',
     marginLeft: 8,
   },

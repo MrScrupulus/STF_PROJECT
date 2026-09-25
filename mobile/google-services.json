@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "860759557410",
+    "project_id": "stf-mobile-f6701",
+    "storage_bucket": "stf-mobile-f6701.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860759557410:android:f766d8bd2c653143ee917b",
+        "android_client_info": {
+          "package_name": "com.stf.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3zYj2ERhYPk9NM7Q91jXBv6zTAYzfTUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

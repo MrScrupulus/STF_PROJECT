@@ -29,8 +29,7 @@ export async function captureJpegFromCamera(): Promise<{ dataUrl: string; uri: s
 
   const result = await ImagePicker.launchCameraAsync({
     mediaTypes: ['images'],
-    // Le recadrage natif Android casse souvent la caméra sur APK.
-    allowsEditing: Platform.OS === 'ios',
+    allowsEditing: false,
     quality: 0.7,
     exif: false,
     base64: false,

@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Competition\ScheduledPause;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Repository\Competition\CompetitionRepository;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -97,12 +98,8 @@ class ScheduledPauseController extends AbstractController
         try {
             // Les dates viennent du frontend en format local (Europe/Paris)
             // On doit les interpréter comme étant en Europe/Paris
-            $timezone = new \DateTimeZone('Europe/Paris');
-            $startDate = new \DateTime($data['startDate'], $timezone);
-            $endDate = new \DateTime($data['endDate'], $timezone);
-            // Convertir en UTC pour le stockage en base
-            $startDate->setTimezone(new \DateTimeZone('UTC'));
-            $endDate->setTimezone(new \DateTimeZone('UTC'));
+            $startDate = DateTimeHelper::parseParisToUtc((string) $data['startDate']);
+            $endDate = DateTimeHelper::parseParisToUtc((string) $data['endDate']);
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
@@ -169,10 +166,7 @@ class ScheduledPauseController extends AbstractController
         if (isset($data['startDate'])) {
             try {
                 // Les dates viennent du frontend en format local (Europe/Paris)
-                $timezone = new \DateTimeZone('Europe/Paris');
-                $startDate = new \DateTime($data['startDate'], $timezone);
-                // Convertir en UTC pour le stockage en base
-                $startDate->setTimezone(new \DateTimeZone('UTC'));
+                $startDate = DateTimeHelper::parseParisToUtc((string) $data['startDate']);
                 $pause->setStartDate($startDate);
             } catch (\Exception $e) {
                 return $this->json([
@@ -185,10 +179,7 @@ class ScheduledPauseController extends AbstractController
         if (isset($data['endDate'])) {
             try {
                 // Les dates viennent du frontend en format local (Europe/Paris)
-                $timezone = new \DateTimeZone('Europe/Paris');
-                $endDate = new \DateTime($data['endDate'], $timezone);
-                // Convertir en UTC pour le stockage en base
-                $endDate->setTimezone(new \DateTimeZone('UTC'));
+                $endDate = DateTimeHelper::parseParisToUtc((string) $data['endDate']);
                 $pause->setEndDate($endDate);
             } catch (\Exception $e) {
                 return $this->json([

@@ -147,7 +147,7 @@ export default function CreateTeamScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <Text style={styles.title}>Créer une équipe</Text>
 
@@ -195,6 +195,7 @@ export default function CreateTeamScreen() {
                 placeholder="Ex: Les Pêcheurs Pro"
                 value={formData.name}
                 onChangeText={(text) => setFormData({ ...formData, name: text })}
+                placeholderTextColor={theme.textMuted}
               />
             </View>
 
@@ -208,6 +209,7 @@ export default function CreateTeamScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
+                placeholderTextColor={theme.textMuted}
               />
               <Text style={styles.helpText}>
                 Vous pouvez créer l'équipe seul et inviter un membre plus tard.
@@ -339,6 +341,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: theme.border,
+    color: theme.text,
   },
   helpText: {
     fontSize: 12,

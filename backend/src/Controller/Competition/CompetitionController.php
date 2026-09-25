@@ -201,6 +201,7 @@ class CompetitionController extends AbstractController
                     'hasNoLimit' => $competition->getHasNoLimit(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'isRegistered' => $isRegistered,
+                    'isPaused' => $competition->getIsPaused(),
                     'coverImageUrl' => $this->coverImageUrl($competition),
                 ];
             }, $competitions);
@@ -527,16 +528,11 @@ class CompetitionController extends AbstractController
             if (isset($data['type'])) {
                 $competition->setType($data['type']);
             }
-            $timezoneParis = new \DateTimeZone('Europe/Paris');
-            $timezoneUtc = new \DateTimeZone('UTC');
             if (isset($data['startDate'])) {
-                $dt = new \DateTime($data['startDate'], $timezoneParis);
-                $dt->setTimezone($timezoneUtc);
-                $competition->setStartDate($dt);
+                $competition->setStartDate(DateTimeHelper::parseParisToUtc((string) $data['startDate']));
             }
             if (isset($data['endDate'])) {
-                $dt = new \DateTime($data['endDate'], $timezoneParis);
-                $dt->setTimezone($timezoneUtc);
+                $dt = DateTimeHelper::parseParisToUtc((string) $data['endDate']);
                 $competition->setEndDate($dt);
             }
             if (isset($data['description'])) {
@@ -886,17 +882,11 @@ class CompetitionController extends AbstractController
 
             $data = json_decode($request->getContent(), true);
 
-            $timezoneParis = new \DateTimeZone('Europe/Paris');
-            $timezoneUtc = new \DateTimeZone('UTC');
             $competition = new Competition();
             $competition->setName($data['name']);
             $competition->setType($data['type']);
-            $startDt = new \DateTime($data['startDate'], $timezoneParis);
-            $startDt->setTimezone($timezoneUtc);
-            $competition->setStartDate($startDt);
-            $endDt = new \DateTime($data['endDate'], $timezoneParis);
-            $endDt->setTimezone($timezoneUtc);
-            $competition->setEndDate($endDt);
+            $competition->setStartDate(DateTimeHelper::parseParisToUtc((string) $data['startDate']));
+            $competition->setEndDate(DateTimeHelper::parseParisToUtc((string) $data['endDate']));
             $competition->setDescription($data['description'] ?? null);
             $competition->setReglement($data['reglement'] ?? null);
             $competition->setTeamSize((int) $data['teamSize']);
@@ -1001,11 +991,8 @@ class CompetitionController extends AbstractController
                     }
 
                     try {
-                        // Interpréter les dates comme heure Europe/Paris (saisie utilisateur) puis convertir en UTC pour le stockage
-                        $startDate = new \DateTime($pauseData['startDate'], $timezoneParis);
-                        $endDate = new \DateTime($pauseData['endDate'], $timezoneParis);
-                        $startDate->setTimezone(new \DateTimeZone('UTC'));
-                        $endDate->setTimezone(new \DateTimeZone('UTC'));
+                        $startDate = DateTimeHelper::parseParisToUtc((string) $pauseData['startDate']);
+                        $endDate = DateTimeHelper::parseParisToUtc((string) $pauseData['endDate']);
 
                         // Vérifier que la pause est dans les dates de la compétition
                         if ($startDate < $competition->getStartDate() || $endDate > $competition->getEndDate()) {

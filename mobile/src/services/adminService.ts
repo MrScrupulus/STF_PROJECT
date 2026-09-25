@@ -1,5 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import * as SecureStore from 'expo-secure-store';
+import { getSecureItem } from '../utils/secureStore';
 import * as Sharing from 'expo-sharing';
 import apiClient from './api';
 import { API_BASE_URL } from '../config/api';
@@ -173,7 +173,7 @@ export const adminService = {
   },
 
   downloadCompetitionPdf: async (competitionId: number, competitionName: string): Promise<void> => {
-    const token = await SecureStore.getItemAsync('jwtToken');
+    const token = await getSecureItem('jwtToken');
     if (!token) {
       throw new Error('Session expirée. Veuillez vous reconnecter.');
     }

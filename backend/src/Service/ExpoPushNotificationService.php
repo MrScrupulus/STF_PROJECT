@@ -29,55 +29,74 @@ class ExpoPushNotificationService
         string $body,
         ?array $data = null
     ): bool {
-        if (!$preferences->getExpoPushToken()) {
+        $tokens = $preferences->getAllExpoPushTokens();
+        if ($tokens === []) {
             return false; // Pas de token, pas de notification push
         }
 
         try {
+            $messages = [];
+            foreach ($tokens as $token) {
+                $messages[] = [
+                    'to' => $token,
+                    'title' => $title,
+                    'body' => $body,
+                    'data' => $data ?? new \stdClass(),
+                    'sound' => 'default',
+                    'priority' => 'high',
+                    'channelId' => 'default',
+                    'badge' => 1,
+                    'ttl' => 86400,
+                    'android' => [
+                        'channelId' => 'default',
+                        'priority' => 'high',
+                    ],
+                ];
+            }
+
             $response = $this->httpClient->request('POST', self::EXPO_API_URL, [
                 'headers' => [
                     'Accept' => 'application/json',
                     'Accept-Encoding' => 'gzip, deflate',
                     'Content-Type' => 'application/json',
                 ],
-                'json' => [
-                    'to' => $preferences->getExpoPushToken(),
-                    'title' => $title,
-                    'body' => $body,
-                    'data' => $data,
-                    'sound' => 'default',
-                    'priority' => 'high',
-                    'channelId' => 'default', // Canal Android pour les notifications en background
-                ],
+                'json' => $messages,
             ]);
 
             $statusCode = $response->getStatusCode();
             $content = $response->toArray();
+            $tickets = $content['data'] ?? [];
+            $ok = false;
 
-            if ($statusCode === 200 && isset($content['data'][0]['status']) && $content['data'][0]['status'] === 'ok') {
-                return true;
-            }
-
-            // Gérer les erreurs Expo
-            if (isset($content['data'][0]['status']) && $content['data'][0]['status'] === 'error') {
-                $errorMessage = $content['data'][0]['message'] ?? 'Unknown error';
-                $this->logger->warning('Expo push notification error', [
-                    'token' => substr($preferences->getExpoPushToken(), 0, 20) . '...',
-                    'error' => $errorMessage,
-                ]);
-
-                // Si le token est invalide, le supprimer
-                if (str_contains($errorMessage, 'Invalid') || str_contains($errorMessage, 'DeviceNotRegistered')) {
-                    $preferences->setExpoPushToken(null);
+            if ($statusCode === 200 && is_array($tickets)) {
+                foreach ($tickets as $index => $ticket) {
+                    if (($ticket['status'] ?? '') === 'ok') {
+                        $ok = true;
+                        continue;
+                    }
+                    if (($ticket['status'] ?? '') !== 'error') {
+                        continue;
+                    }
+                    $errorMessage = $ticket['message'] ?? 'Unknown error';
+                    $this->logger->warning('Expo push notification error', [
+                        'token' => substr($tokens[$index] ?? '', 0, 20) . '...',
+                        'error' => $errorMessage,
+                    ]);
+                    if (str_contains($errorMessage, 'Invalid') || str_contains($errorMessage, 'DeviceNotRegistered')) {
+                        $preferences->removeExpoPushToken($tokens[$index] ?? '');
+                    }
+                }
+                if ($ok || $preferences->getAllExpoPushTokens() !== $tokens) {
                     $this->entityManager->flush();
                 }
+                return $ok;
             }
 
             return false;
         } catch (\Exception $e) {
             $this->logger->error('Error sending Expo push notification', [
                 'error' => $e->getMessage(),
-                'token' => substr($preferences->getExpoPushToken() ?? '', 0, 20) . '...',
+                'token' => substr($tokens[0] ?? '', 0, 20) . '...',
             ]);
             return false;
         }

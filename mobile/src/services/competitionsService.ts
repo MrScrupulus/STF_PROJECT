@@ -37,13 +37,19 @@ export interface Team {
 
 export const competitionsService = {
   getAll: async (): Promise<Competition[]> => {
-    const response = await apiClient.get(API_ENDPOINTS.competitions.list);
-    // Le backend retourne { success: true, competitions: [...], pagination: {...} }
-    if (response.data && response.data.competitions) {
-      return response.data.competitions;
-    }
-    // Fallback si la structure est différente
-    return response.data || [];
+    const collected: Competition[] = [];
+    let page = 1;
+    let pages = 1;
+    do {
+      const response = await apiClient.get(API_ENDPOINTS.competitions.list, {
+        params: { page, limit: 50 },
+      });
+      const batch = response.data?.competitions ?? (Array.isArray(response.data) ? response.data : []);
+      collected.push(...batch);
+      pages = response.data?.pagination?.pages ?? 1;
+      page += 1;
+    } while (page <= pages);
+    return collected;
   },
 
   getOne: async (id: number): Promise<Competition> => {

@@ -24,6 +24,7 @@ import {
   openAppSettings,
 } from '../utils/deviceCapture';
 import Header from '../components/Header';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
 import FaIcon from '../components/FaIcon';
 import CreateSpeciesModal from '../components/CreateSpeciesModal';
 import {
@@ -43,6 +44,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
   const [size, setSize] = useState('');
   const [comment, setComment] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedCompetition, setSelectedCompetition] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<number | null>(null);
@@ -492,7 +494,11 @@ export default function AddCatchScreen({ navigation, route }: any) {
     return (
       <>
         <Header title="Ajouter une prise" showBack={true} showMenu={true} />
-        <ScrollView style={styles.container} contentContainerStyle={[styles.content, styles.cameraStepContent]}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[styles.content, styles.cameraStepContent]}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.subtitle}>
             {journalMode
               ? 'Journal personnel (hors compétition)'
@@ -515,7 +521,11 @@ export default function AddCatchScreen({ navigation, route }: any) {
   return (
     <>
       <Header title="Ajouter une prise" showBack={true} showMenu={true} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
       <Text style={styles.subtitle}>
         {journalMode
           ? 'Journal personnel — prise hors compétition'
@@ -528,7 +538,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
         {loadingSpecies ? (
           <ActivityIndicator color={theme.accent} />
         ) : species && species.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.speciesGrid}>
             {(Array.isArray(species) ? species : []).map((spec: any) => (
               <TouchableOpacity
                 key={spec.id}
@@ -548,7 +558,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
                 </Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         ) : (
           <Text style={styles.errorText}>
             {journalMode ? 'Aucune espèce dans le référentiel — créez-en une ci-dessous.' : 'Aucune espèce configurée pour cette compétition'}
@@ -568,10 +578,9 @@ export default function AddCatchScreen({ navigation, route }: any) {
           style={styles.input}
           placeholder="Ex : 25,5 ou 11.2"
           value={size}
-          onChangeText={(t) =>
-            setSize((prev) => sanitizeFishSizeInput(prev, t))
-          }
+          onChangeText={(t) => setSize((prev) => sanitizeFishSizeInput(prev, t))}
           keyboardType={fishSizeKeyboardType}
+          placeholderTextColor={theme.textMuted}
         />
       </View>
 
@@ -606,7 +615,9 @@ export default function AddCatchScreen({ navigation, route }: any) {
         <Text style={styles.label}>Photo *</Text>
         {photo ? (
           <View style={styles.photoContainer}>
-            <Image source={{ uri: photo }} style={styles.photo} />
+            <TouchableOpacity activeOpacity={0.9} onPress={() => setPhotoPreviewOpen(true)}>
+              <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.retakeButton}
               onPress={takePhoto}
@@ -709,7 +720,7 @@ export default function AddCatchScreen({ navigation, route }: any) {
           onChangeText={setComment}
           multiline
           numberOfLines={4}
-        />
+        placeholderTextColor={theme.textMuted} />
       </View>
 
       {/* Bouton de soumission */}
@@ -736,6 +747,11 @@ export default function AddCatchScreen({ navigation, route }: any) {
           setSelectedSpecies(payload.speciesId);
           queryClient.invalidateQueries({ queryKey: ['species'] });
         }}
+      />
+      <ZoomablePhotoViewer
+        uri={photo}
+        visible={photoPreviewOpen && !!photo}
+        onClose={() => setPhotoPreviewOpen(false)}
       />
     </>
   );
@@ -811,17 +827,22 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: theme.border,
+    color: theme.text,
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
   },
+  speciesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   speciesButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: theme.surface,
-    marginRight: 8,
     borderWidth: 1,
     borderColor: theme.border,
   },
@@ -876,9 +897,10 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   photo: {
     width: '100%',
-    height: 300,
+    aspectRatio: 16 / 9,
     borderRadius: 8,
     marginBottom: 12,
+    backgroundColor: theme.surfaceRaised,
   },
   retakeButton: {
     backgroundColor: theme.danger,
@@ -951,6 +973,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+    color: theme.text,
     backgroundColor: theme.surfaceRaised,
   },
   locationStatusInZone: {

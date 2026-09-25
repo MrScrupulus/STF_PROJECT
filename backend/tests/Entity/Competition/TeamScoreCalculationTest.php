@@ -244,4 +244,40 @@ class TeamScoreCalculationTest extends TestCase
         $this->assertEquals(700, $team->getTotalScore());
         $this->assertTrue($team->getHasBonus());
     }
+
+    public function testNewSpeciesBonusWhenSpeciesIsOutsideMaxFishCounted(): void
+    {
+        $competition = new \App\Entity\Competition\Competition();
+        $competition->setName('Test');
+        $competition->setStartDate(new \DateTime());
+        $competition->setEndDate((new \DateTime())->modify('+1 day'));
+        $competition->setTeamSize(2);
+        $competition->setType('duo');
+        $competition->setNewSpeciesBonusEnabled(true);
+        $competition->setNewSpeciesBonusPoints(50);
+        $competition->setMaxFishCounted(1);
+
+        $idProp = (new \ReflectionClass($competition))->getProperty('id');
+        $idProp->setAccessible(true);
+        $idProp->setValue($competition, 99);
+
+        $team = new Team();
+        $team->setName('Test Team');
+        $team->setCompetition($competition);
+
+        $brochet = $this->createSpecies('Brochet', 1.0);
+        $perche = $this->createSpecies('Perche', 2.0);
+
+        $high = $this->createCatch($team, $brochet, 80.0);
+        $low = $this->createCatch($team, $perche, 10.0);
+        $high->setCompetition($competition);
+        $low->setCompetition($competition);
+        $team->addCatch($high);
+        $team->addCatch($low);
+
+        $this->assertEquals(130, $team->getScoreForCompetition($competition));
+        $breakdown = $team->getScoreBreakdownForCompetition($competition);
+        $this->assertSame(50, $breakdown['newSpeciesBonus']);
+        $this->assertSame(80, $breakdown['baseScore']);
+    }
 }

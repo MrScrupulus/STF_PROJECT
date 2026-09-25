@@ -9,19 +9,16 @@ import {
   Alert,
   ActivityIndicator,
   Image,
-  Modal,
-  Dimensions,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '../services/adminService';
 import Header from '../components/Header';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
 import FaIcon from '../components/FaIcon';
 import { formatDateTimeLocal } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
-
-const PHOTO_PREVIEW_H = Math.round(Dimensions.get('window').height * 0.72);
 
 function normalizeForSearch(str: unknown): string {
   return String(str ?? '')
@@ -196,7 +193,7 @@ export default function AdminPenaltyScreen() {
   return (
     <>
       <Header title="Pénalités" showBack={true} showMenu={true} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
             <FaIcon name="flag" size={22} color={theme.onAccent} />
@@ -218,8 +215,8 @@ export default function AdminPenaltyScreen() {
         ) : (
           <>
             <Text style={styles.sectionTitle}>Compétition</Text>
-            <Text style={styles.label}>Manche *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+            <Text style={styles.label}>Choisir une compétition *</Text>
+            <View style={styles.chipWrap}>
               {competitions.map((c) => (
                 <TouchableOpacity
                   key={c.id}
@@ -237,7 +234,7 @@ export default function AdminPenaltyScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
             {!competitionId ? (
               <Text style={styles.hintMuted}>Sélectionnez une compétition pour afficher les équipes.</Text>
             ) : eligibleTeams.length === 0 ? (
@@ -252,7 +249,7 @@ export default function AdminPenaltyScreen() {
                   placeholder="Nom d'équipe, prénom, nom ou pseudo…"
                   autoCapitalize="none"
                   autoCorrect={false}
-                />
+                placeholderTextColor={theme.textMuted} />
                 <Text style={styles.countHint}>
                   {!searchQueryTrimmed
                     ? `Saisissez du texte pour afficher les équipes (${eligibleTeams.length} dans cette compétition).`
@@ -419,6 +416,7 @@ export default function AdminPenaltyScreen() {
                           value={points}
                           onChangeText={(v) => setPoints(v.replace(/[^\d]/g, ''))}
                           editable={catchId != null}
+                          placeholderTextColor={theme.textMuted}
                         />
                         <Text style={[styles.label, styles.labelInCard]}>Motif (optionnel)</Text>
                         <TextInput
@@ -428,7 +426,7 @@ export default function AdminPenaltyScreen() {
                           multiline
                           placeholder="Motif"
                           editable={catchId != null}
-                        />
+                        placeholderTextColor={theme.textMuted} />
                       </View>
                     )}
                   </>
@@ -443,6 +441,7 @@ export default function AdminPenaltyScreen() {
                       placeholder="Ex. 50"
                       value={points}
                       onChangeText={(v) => setPoints(v.replace(/[^\d]/g, ''))}
+                      placeholderTextColor={theme.textMuted}
                     />
                     <Text style={styles.label}>Motif (optionnel)</Text>
                     <TextInput
@@ -451,7 +450,7 @@ export default function AdminPenaltyScreen() {
                       onChangeText={setReason}
                       multiline
                       placeholder="Motif"
-                    />
+                    placeholderTextColor={theme.textMuted} />
                   </>
                 )}
 
@@ -518,23 +517,7 @@ export default function AdminPenaltyScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={previewUri != null} transparent animationType="fade" onRequestClose={() => setPreviewUri(null)}>
-        <View style={styles.photoModalBackdrop}>
-          <TouchableOpacity style={styles.photoModalCloseTap} activeOpacity={1} onPress={() => setPreviewUri(null)}>
-            <Text style={styles.photoModalCloseText}>✕</Text>
-          </TouchableOpacity>
-          {previewUri ? (
-            <Image
-              source={{ uri: previewUri }}
-              style={[styles.photoModalImage, { height: PHOTO_PREVIEW_H }]}
-              resizeMode="contain"
-            />
-          ) : null}
-          <TouchableOpacity style={styles.photoModalDoneButton} onPress={() => setPreviewUri(null)}>
-            <Text style={styles.photoModalDoneText}>Fermer</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      <ZoomablePhotoViewer uri={previewUri} visible={previewUri != null} onClose={() => setPreviewUri(null)} />
     </>
   );
 }
@@ -581,16 +564,21 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   hintMuted: { fontSize: 13, color: theme.textMuted, marginTop: 4, marginBottom: 8 },
   countHint: { fontSize: 12, color: theme.textMuted, marginBottom: 8 },
-  label: { fontWeight: '600', marginTop: 12, marginBottom: 8 },
+  label: { fontWeight: '600', marginTop: 12, marginBottom: 8, color: theme.text },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
   chip: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginRight: 8,
     backgroundColor: theme.bg,
     borderWidth: 1.5,
     borderColor: theme.border,
-    maxWidth: 132,
+    maxWidth: '48%',
     minWidth: 108,
     alignItems: 'center',
   },
@@ -644,11 +632,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderColor: theme.border,
     backgroundColor: theme.surfaceRaised,
   },
-  catchThumbImg: { width: 92, height: 92 },
+  catchThumbImg: { width: 128, height: 72 },
   catchThumbPlaceholder: {
-    width: 92,
-    height: 92,
-    backgroundColor: '#ececec',
+    width: 128,
+    height: 72,
+    backgroundColor: theme.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -684,7 +672,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   penaltyFormCardTitle: { fontSize: 16, fontWeight: '700', color: theme.text, marginBottom: 10 },
   hintMutedCompact: { fontSize: 12, color: theme.textMuted, marginBottom: 10, lineHeight: 18 },
   labelInCard: { marginTop: 6 },
-  selectedCatchSummary: { fontSize: 13, color: '#0c4a6e', marginBottom: 6, fontWeight: '700' },
+  selectedCatchSummary: { fontSize: 13, color: theme.text, marginBottom: 6, fontWeight: '700' },
   photoModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.93)',
@@ -717,6 +705,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     backgroundColor: theme.surface,
+    color: theme.text,
   },
   area: { minHeight: 70, textAlignVertical: 'top' },
   submit: {

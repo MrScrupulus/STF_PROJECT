@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../services/authService';
+import { notificationService } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
 import { rootNavigationRef } from '../navigation/rootNavigationRef';
 import FaIcon, { type AppIconName } from './FaIcon';
@@ -61,7 +62,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         { name: 'Home', label: 'Accueil', icon: 'home' },
         { name: 'Profile', label: 'Mon compte', icon: 'user' },
         { name: 'Competitions', label: 'Compétitions', icon: 'trophy' },
-        { name: 'History', label: 'Historique & prises', icon: 'history' },
+        { name: 'History', label: 'Carnet de prises', icon: 'history' },
         { name: 'Notifications', label: 'Notifications', icon: 'bell' },
         { name: 'Invitations', label: 'Mes Invitations', icon: 'envelope' },
         { name: 'Settings', label: 'Réglages', icon: 'gear' },
@@ -107,6 +108,14 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
   };
 
   const queryClient = useQueryClient();
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: () => notificationService.getUnreadCount(),
+    enabled: isAuthenticated === true,
+    refetchInterval: 20000,
+    refetchIntervalInBackground: false,
+    retry: false,
+  });
 
   const handleLogout = async () => {
     setMenuVisible(false);
@@ -187,8 +196,10 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
             <TouchableOpacity
               style={styles.menuButton}
               onPress={() => setMenuVisible(true)}
+              accessibilityLabel="Menu"
             >
               <FaIcon name="menu" size={22} color={theme.text} />
+              {unreadCount > 0 && <View style={styles.menuDot} />}
             </TouchableOpacity>
           )}
           {showProfile ? (
@@ -249,6 +260,13 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
                   >
                     {item.label}
                   </Text>
+                  {item.name === 'Notifications' && unreadCount > 0 && (
+                    <View style={styles.menuCountBadge}>
+                      <Text style={styles.menuCountBadgeText}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               ))}
 
@@ -348,6 +366,32 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 8,
+    position: 'relative',
+  },
+  menuDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#ef4444',
+    borderWidth: 1.5,
+    borderColor: theme.chrome,
+  },
+  menuCountBadge: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuCountBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
   },
   menuIcon: {
     fontSize: 24,

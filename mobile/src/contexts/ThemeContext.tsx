@@ -7,7 +7,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { getSecureItem, setSecureItem } from '../utils/secureStore';
 import {
   DEFAULT_THEME_NAME,
   THEME_STORAGE_KEY,
@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const stored = await SecureStore.getItemAsync(THEME_STORAGE_KEY);
+        const stored = await getSecureItem(THEME_STORAGE_KEY);
         if (!cancelled && isThemeName(stored)) {
           setName(stored);
         }
@@ -50,7 +50,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setThemeName = useCallback((next: ThemeName) => {
     setName(next);
-    SecureStore.setItemAsync(THEME_STORAGE_KEY, next).catch(() => {});
+    setSecureItem(THEME_STORAGE_KEY, next).catch(() => {});
   }, []);
 
   const value = useMemo<ThemeContextValue>(

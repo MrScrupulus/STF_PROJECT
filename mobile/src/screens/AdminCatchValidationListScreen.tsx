@@ -31,6 +31,7 @@ export default function AdminCatchValidationListScreen() {
   const { data: pendingCatchesData, isLoading: loadingCatches } = useQuery({
     queryKey: ['admin-pending-catches', catchesPage],
     queryFn: () => adminService.getPendingCatches(catchesPage, 10),
+    refetchInterval: 15000,
   });
 
   // Mettre à jour les prises

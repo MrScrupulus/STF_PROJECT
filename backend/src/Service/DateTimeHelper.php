@@ -24,4 +24,37 @@ final class DateTimeHelper
 
         return self::formatParis($date);
     }
+
+    /**
+     * Parse une date saisie (mobile/web) comme heure de Paris, secondes à 0, puis UTC.
+     */
+    public static function parseParisToUtc(string $value): \DateTime
+    {
+        $value = trim($value);
+        $tzParis = new \DateTimeZone('Europe/Paris');
+        $tzUtc = new \DateTimeZone('UTC');
+        $formats = [
+            \DateTimeInterface::ATOM,
+            'Y-m-d\TH:i:sP',
+            'Y-m-d\TH:i:s',
+            'Y-m-d\TH:i',
+            'Y-m-d H:i:s',
+            'Y-m-d H:i',
+        ];
+        $dt = null;
+        foreach ($formats as $fmt) {
+            $parsed = \DateTime::createFromFormat($fmt, $value, $tzParis);
+            if ($parsed instanceof \DateTime) {
+                $dt = $parsed;
+                break;
+            }
+        }
+        if (!$dt instanceof \DateTime) {
+            $dt = new \DateTime($value, $tzParis);
+        }
+        $dt->setTime((int) $dt->format('H'), (int) $dt->format('i'), 0);
+        $dt->setTimezone($tzUtc);
+
+        return $dt;
+    }
 }

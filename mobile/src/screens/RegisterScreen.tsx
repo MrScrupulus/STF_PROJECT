@@ -100,7 +100,7 @@ export default function RegisterScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
             <Text style={styles.title}>Street Fishing</Text>
             <Text style={styles.subtitle}>Créer un compte</Text>
@@ -112,6 +112,7 @@ export default function RegisterScreen() {
               onChangeText={(text) => setFormData({ ...formData, username: text })}
               autoCapitalize="none"
               autoCorrect={false}
+              placeholderTextColor={theme.textMuted}
             />
             {/* <Text style={styles.optionalHint}>
               Si laissé vide : prénom + initiale du nom (ex. Marie Dupont → Marie_D).
@@ -123,6 +124,7 @@ export default function RegisterScreen() {
               value={formData.firstName}
               onChangeText={(text) => setFormData({ ...formData, firstName: text })}
               autoCapitalize="words"
+              placeholderTextColor={theme.textMuted}
             />
 
             <TextInput
@@ -131,6 +133,7 @@ export default function RegisterScreen() {
               value={formData.lastName}
               onChangeText={(text) => setFormData({ ...formData, lastName: text })}
               autoCapitalize="words"
+              placeholderTextColor={theme.textMuted}
             />
 
             <TextInput
@@ -141,6 +144,7 @@ export default function RegisterScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              placeholderTextColor={theme.textMuted}
             />
 
             <View style={styles.passwordContainer}>
@@ -151,6 +155,7 @@ export default function RegisterScreen() {
                 onChangeText={(text) => setFormData({ ...formData, password: text })}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                placeholderTextColor={theme.textMuted}
               />
               <TouchableOpacity
                 style={styles.eyeIcon}
@@ -168,7 +173,7 @@ export default function RegisterScreen() {
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
-              />
+              placeholderTextColor={theme.textMuted} />
               <TouchableOpacity
                 style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -187,6 +192,7 @@ export default function RegisterScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.countryCodesScroll}
+                keyboardShouldPersistTaps="handled"
               >
                 {COUNTRY_CODES.map((code) => (
                   <TouchableOpacity
@@ -214,7 +220,7 @@ export default function RegisterScreen() {
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 keyboardType="phone-pad"
-              />
+              placeholderTextColor={theme.textMuted} />
             </View>
 
             <TouchableOpacity
@@ -316,6 +322,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: theme.border,
+    color: theme.text,
   },
   optionalLabel: {
     fontSize: 14,

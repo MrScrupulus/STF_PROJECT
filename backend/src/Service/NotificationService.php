@@ -39,7 +39,7 @@ class NotificationService
 
         // Envoyer une push notification si les préférences l'autorisent
         $preferences = $this->preferencesRepository->findOrCreateForUser($user);
-        if ($preferences->isNotificationEnabled($type) && $preferences->getExpoPushToken()) {
+        if ($preferences->isNotificationEnabled($type) && $preferences->getAllExpoPushTokens() !== []) {
             $this->expoPushService->sendPushNotification(
                 $preferences,
                 'STF Competition',

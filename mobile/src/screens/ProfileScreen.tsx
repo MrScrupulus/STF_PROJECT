@@ -116,7 +116,7 @@ export default function ProfileScreen() {
       onPress: () => go('ChangePassword'),
     },
     {
-      label: 'Historique',
+      label: 'Carnet de prises',
       hint: 'Prises & stats',
       icon: 'history',
       onPress: () => go('History', { initialTab: 'stats' }),

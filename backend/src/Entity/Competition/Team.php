@@ -376,12 +376,22 @@ class Team
             $baseScore += $item['points'];
         }
 
+        // Bonus nouvelle espèce : toutes les espèces validées, même si la prise
+        // n’entre pas dans le plafond (top N / quotas) du score de base.
         if ($competition->getNewSpeciesBonusEnabled() && ($pts = $competition->getNewSpeciesBonusPoints()) !== null && $pts > 0) {
-            $uniqueInSelected = array_unique(array_column($selected, 'speciesId'));
-            $nSpecies = count($uniqueInSelected);
-            $hasGobiOnly = $nSpecies === 1 && count($selected) > 0
-                && $selected[0]['catch']->getSpecies()->getCoefficient() == 0;
-            if (!$hasGobiOnly && $nSpecies >= 2) {
+            $uniqueAll = [];
+            $gobiOnly = true;
+            foreach ($validatedCatches as $c) {
+                if (!$c->getSpecies()) {
+                    continue;
+                }
+                $uniqueAll[$c->getSpecies()->getId()] = true;
+                if ($c->getSpecies()->getCoefficient() != 0) {
+                    $gobiOnly = false;
+                }
+            }
+            $nSpecies = count($uniqueAll);
+            if (!$gobiOnly && $nSpecies >= 2) {
                 $newSpeciesBonus = $pts * ($nSpecies - 1);
             }
         }

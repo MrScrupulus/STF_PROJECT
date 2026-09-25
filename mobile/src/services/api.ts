@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { getSecureItem, deleteSecureItem } from '../utils/secureStore';
 import { API_BASE_URL } from '../config/api';
 import { triggerAuthSessionExpired } from '../utils/authSessionEvents';
 
@@ -48,7 +48,7 @@ function shouldAttachAuthBearer(method: string | undefined, url: string | undefi
 // Intercepteur pour ajouter le token à chaque requête
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync('jwtToken');
+    const token = await getSecureItem('jwtToken');
     if (token && shouldAttachAuthBearer(config.method, config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {
@@ -84,8 +84,8 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     if (error.response?.status === 401 && !isAuthAttempt401(error)) {
-      await SecureStore.deleteItemAsync('jwtToken');
-      await SecureStore.deleteItemAsync('refreshToken');
+      await deleteSecureItem('jwtToken');
+      await deleteSecureItem('refreshToken');
       triggerAuthSessionExpired();
     }
     return Promise.reject(error);

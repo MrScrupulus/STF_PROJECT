@@ -70,6 +70,16 @@ export default function PerimeterMapView({ perimeters, height = 250 }: Perimeter
             initialRegion={region}
             mapType="standard"
             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            customMapStyle={
+              Platform.OS === 'android'
+                ? [
+                    { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+                    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
+                  ]
+                : undefined
+            }
+            userInterfaceStyle="light"
+            loadingBackgroundColor="#e5e7eb"
             pitchEnabled={false}
             rotateEnabled={false}
           >
@@ -101,7 +111,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 24,
   },
   toggleButton: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.accentMuted,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
@@ -116,7 +126,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   mapWrapper: {
     marginTop: 12,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: Platform.OS === 'android' ? 'visible' : 'hidden',
     borderWidth: 1,
     borderColor: theme.border,
   },

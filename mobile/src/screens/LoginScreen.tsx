@@ -85,7 +85,7 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <Text style={styles.title}>Street Fishing</Text>
           <Text style={styles.subtitle}>Connectez-vous</Text>
@@ -93,6 +93,7 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
           <TextInput
             style={styles.input}
             placeholder="Email"
+            placeholderTextColor={theme.textMuted}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -104,6 +105,7 @@ export default function LoginScreen({ navigation, onLogin, route }: any) {
             <TextInput
               style={styles.passwordInput}
               placeholder="Mot de passe"
+              placeholderTextColor={theme.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}

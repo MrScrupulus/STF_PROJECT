@@ -102,7 +102,7 @@ export default function ChangePasswordScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
             <View style={styles.formGroup}>
               <Text style={styles.label}>Mot de passe actuel *</Text>
@@ -114,6 +114,7 @@ export default function ChangePasswordScreen() {
                   onChangeText={(text) => setFormData({ ...formData, currentPassword: text })}
                   secureTextEntry={!showCurrentPassword}
                   editable={!loading}
+                  placeholderTextColor={theme.textMuted}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
@@ -134,6 +135,7 @@ export default function ChangePasswordScreen() {
                   onChangeText={(text) => setFormData({ ...formData, newPassword: text })}
                   secureTextEntry={!showNewPassword}
                   editable={!loading}
+                  placeholderTextColor={theme.textMuted}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
@@ -164,6 +166,7 @@ export default function ChangePasswordScreen() {
                   onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
                   secureTextEntry={!showConfirmPassword}
                   editable={!loading}
+                  placeholderTextColor={theme.textMuted}
                 />
                 <TouchableOpacity
                   style={styles.eyeIcon}
@@ -235,6 +238,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
+    color: theme.text,
   },
   eyeIcon: {
     padding: 16,

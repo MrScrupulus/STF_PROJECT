@@ -157,7 +157,7 @@ export default function EditTeamScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {isInActiveCompetition && (
             <View style={styles.warningBox}>
               <Text style={styles.warningText}>
@@ -174,7 +174,7 @@ export default function EditTeamScreen() {
               onChangeText={setTeamName}
               placeholder="Nom de l'équipe"
               editable={!isInActiveCompetition}
-            />
+            placeholderTextColor={theme.textMuted} />
           </View>
 
           <View style={styles.section}>

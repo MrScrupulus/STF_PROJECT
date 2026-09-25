@@ -2,8 +2,19 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { getSpeciesColor, getPinColorForAndroid } from '../../utils/speciesColors';
+import { androidStandaloneMapsMissingKey } from '../../utils/mapsConfig';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import { type ThemeColors } from '../../theme';
+
+const LIGHT_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
+];
 
 const PIN_SIZE = 14;
 
@@ -69,18 +80,37 @@ export default function CatchesMapView({
   }
 
   const mapHeight = height - 40;
+  const mapsMissingKey = androidStandaloneMapsMissingKey();
 
   return (
     <View style={[styles.container, { height }]}>
       <Text style={styles.title}>
         🗺️ Carte des prises ({withCoords.length} localisation{withCoords.length > 1 ? 's' : ''})
       </Text>
-      <View style={[styles.mapWrap, { height: mapHeight }]} collapsable={false}>
+      {mapsMissingKey ? (
+        <View style={[styles.mapPlaceholder, { height: mapHeight }]}>
+          <Text style={styles.emptyText}>
+            Carte indisponible : la clé Google Maps n’est pas configurée pour cet APK.
+          </Text>
+        </View>
+      ) : (
+      <View
+        style={[
+          styles.mapWrap,
+          { height: mapHeight },
+          Platform.OS === 'android' ? styles.mapWrapAndroid : null,
+        ]}
+        collapsable={false}
+      >
       <MapView
         style={styles.map}
         initialRegion={region}
         mapType="standard"
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        customMapStyle={Platform.OS === 'android' ? LIGHT_MAP_STYLE : undefined}
+        userInterfaceStyle="light"
+        loadingBackgroundColor="#e5e7eb"
+        loadingEnabled
         pitchEnabled={false}
         rotateEnabled={false}
       >
@@ -126,6 +156,7 @@ export default function CatchesMapView({
         })}
       </MapView>
       </View>
+      )}
     </View>
   );
 }
@@ -145,6 +176,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     width: '100%',
     borderRadius: 8,
     overflow: 'hidden',
+  },
+  mapWrapAndroid: {
+    overflow: 'visible',
   },
   map: {
     width: '100%',

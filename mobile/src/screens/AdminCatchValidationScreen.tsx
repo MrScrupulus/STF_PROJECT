@@ -9,7 +9,6 @@ import {
   Alert,
   TextInput,
   Image,
-  Modal,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -17,6 +16,7 @@ import { adminService, PendingCatch } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -208,7 +208,7 @@ export default function AdminCatchValidationScreen() {
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
-              />
+              placeholderTextColor={theme.textMuted} />
             </View>
           )}
 
@@ -268,29 +268,11 @@ export default function AdminCatchValidationScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal pour la photo */}
-      <Modal
+      <ZoomablePhotoViewer
+        uri={catchData.photoUrl ? resolvePhotoUri(catchData.photoUrl) : null}
         visible={showImageModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowImageModal(false)}
-      >
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity
-            style={styles.imageModalClose}
-            onPress={() => setShowImageModal(false)}
-          >
-            <Text style={styles.imageModalCloseText}>✕</Text>
-          </TouchableOpacity>
-          {catchData.photoUrl && (
-            <Image
-              source={{ uri: resolvePhotoUri(catchData.photoUrl) ?? '' }}
-              style={styles.fullImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
+        onClose={() => setShowImageModal(false)}
+      />
     </>
   );
 }
@@ -332,9 +314,10 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   thumbnail: {
     width: '100%',
-    height: 200,
+    aspectRatio: 16 / 9,
     borderRadius: 8,
     marginTop: 8,
+    backgroundColor: theme.surfaceRaised,
   },
   textInput: {
     borderWidth: 1,
@@ -344,6 +327,8 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     minHeight: 100,
     marginTop: 8,
+    color: theme.text,
+    backgroundColor: theme.surfaceRaised,
   },
   actions: {
     flexDirection: 'row',
