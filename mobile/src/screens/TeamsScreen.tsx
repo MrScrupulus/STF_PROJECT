@@ -85,7 +85,7 @@ export default function TeamsScreen() {
     );
   }
 
-  const teams = teamsData?.teams || [];
+  const teams = (teamsData?.teams || []).filter((t) => !t.isPersonalJournal);
 
   const renderTeam = ({ item }: { item: Team }) => (
     <TouchableOpacity
@@ -115,7 +115,7 @@ export default function TeamsScreen() {
         <Text style={styles.cardScore}>Score: {item.totalScore} pts</Text>
       )}
 
-      {item.isActive === false && (
+      {item.isActive === false && !item.competition && (
         <TouchableOpacity
           style={styles.reactivateButton}
           onPress={() => handleReactivate(item.id)}

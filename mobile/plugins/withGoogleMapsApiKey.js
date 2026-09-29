@@ -1,13 +1,30 @@
 /**
  * Injecte GOOGLE_MAPS_API_KEY pendant le prebuild EAS.
- * Les variables « secret » ne sont pas lues par app.config.js en local,
- * mais elles sont disponibles sur le builder au moment des plugins.
+ * Fallback : clé Android de google-services.json (même projet Firebase).
  */
+const fs = require('fs');
+const path = require('path');
 const { AndroidConfig } = require('expo/config-plugins');
+
+function readMapsKeyFromGoogleServices() {
+  try {
+    const gsPath = path.join(__dirname, '..', 'google-services.json');
+    if (!fs.existsSync(gsPath)) {
+      return '';
+    }
+    const gs = JSON.parse(fs.readFileSync(gsPath, 'utf8'));
+    return String(gs?.client?.[0]?.api_key?.[0]?.current_key || '').trim();
+  } catch {
+    return '';
+  }
+}
 
 module.exports = function withGoogleMapsApiKey(config) {
   const apiKey = String(
-    process.env.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+    process.env.GOOGLE_MAPS_API_KEY ||
+      process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
+      readMapsKeyFromGoogleServices() ||
+      ''
   ).trim();
 
   if (apiKey) {

@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import { competitionsService } from '../services/competitionsService';
-import { formatDateTime } from '../utils/dateUtils';
+import { formatCompetitionDateRange, formatDateTime } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
 import Header from '../components/Header';
 import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
@@ -440,9 +440,9 @@ function CompetitionsTab({ grouped, orphanTeams, navigation }: any) {
             <Text style={styles.competitionTitle}>{competition.name}</Text>
             {(competition.startDate || competition.endDate) && (
               <Text style={styles.competitionDates}>
-                {competition.startDate ? formatDateTime(competition.startDate) : '—'}
-                {' → '}
-                {competition.endDate ? formatDateTime(competition.endDate) : '—'}
+                {competition.startDate && competition.endDate
+                  ? formatCompetitionDateRange(competition.startDate, competition.endDate)
+                  : formatDateTime(competition.startDate || competition.endDate)}
               </Text>
             )}
             {teamsReminder && <Text style={styles.competitionTeamsReminder}>{teamsReminder}</Text>}

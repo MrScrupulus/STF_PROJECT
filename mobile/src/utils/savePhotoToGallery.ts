@@ -1,4 +1,4 @@
-import * as MediaLibrary from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { Platform } from 'react-native';
 
 const ALBUM_NAME = 'Street Fishing';
@@ -9,17 +9,33 @@ export async function savePhotoToGallery(uri: string): Promise<boolean> {
   }
 
   try {
-    let permission = await MediaLibrary.getPermissionsAsync();
-    if (permission.status !== 'granted') {
+    let permission = await MediaLibrary.getPermissionsAsync(true);
+    if (permission.status !== 'granted' && permission.status !== 'limited') {
       permission = await MediaLibrary.requestPermissionsAsync(true);
     }
+    if (permission.status !== 'granted' && permission.status !== 'limited') {
+      permission = await MediaLibrary.requestPermissionsAsync();
+    }
 
-    if (permission.status !== 'granted') {
+    if (permission.status !== 'granted' && permission.status !== 'limited') {
       return false;
     }
 
-    const asset = await MediaLibrary.createAssetAsync(uri);
+    const localUri = uri.startsWith('file:') || uri.startsWith('content:') || uri.startsWith('ph:')
+      ? uri
+      : uri.startsWith('/')
+        ? `file://${uri}`
+        : uri;
 
+    const mediaLibrary = MediaLibrary as typeof MediaLibrary & {
+      saveToLibraryAsync?: (localUri: string) => Promise<void>;
+    };
+    if (typeof mediaLibrary.saveToLibraryAsync === 'function') {
+      await mediaLibrary.saveToLibraryAsync(localUri);
+      return true;
+    }
+
+    const asset = await MediaLibrary.createAssetAsync(localUri);
     try {
       const album = await MediaLibrary.getAlbumAsync(ALBUM_NAME);
       if (album) {
@@ -27,9 +43,8 @@ export async function savePhotoToGallery(uri: string): Promise<boolean> {
       } else {
         await MediaLibrary.createAlbumAsync(ALBUM_NAME, asset, false);
       }
-    } catch (albumError) {
-      // L'asset est déjà dans la galerie ; l'album est un confort, pas bloquant.
-      console.warn('Album galerie impossible:', albumError);
+    } catch {
+      // L’asset est déjà dans la galerie.
     }
 
     return true;

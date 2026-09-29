@@ -3,8 +3,10 @@
 namespace App\Service;
 
 use App\Entity\Competition\Competition;
+use App\Entity\Competition\FishCatch;
 use App\Entity\Competition\Team;
 use App\Entity\CompetitionTeamSnapshot;
+use App\Entity\Security\User;
 use App\Repository\CompetitionTeamSnapshotRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -17,32 +19,82 @@ final class CompetitionSnapshotService
     }
 
     /**
+     * Roster figé : membres actuels ∪ snapshot précédent ∪ auteurs de prises de cette manche.
+     *
+     * @param array<int, array<string, mixed>> $previousMembers
+     * @return list<array{id: int, firstname: string, lastname: string}>
+     */
+    public function collectMembers(Team $team, Competition $competition, array $previousMembers = []): array
+    {
+        $byId = [];
+
+        foreach ($previousMembers as $member) {
+            $id = (int) ($member['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $byId[$id] = [
+                'id' => $id,
+                'firstname' => (string) ($member['firstname'] ?? ''),
+                'lastname' => (string) ($member['lastname'] ?? ''),
+            ];
+        }
+
+        foreach ($team->getMembers() as $member) {
+            $byId[$member->getId()] = [
+                'id' => $member->getId(),
+                'firstname' => (string) $member->getFirstname(),
+                'lastname' => (string) $member->getLastname(),
+            ];
+        }
+
+        foreach ($team->getCatches() as $catch) {
+            $catchCompetition = $catch->getCompetition();
+            if ($catchCompetition !== null && $catchCompetition->getId() !== $competition->getId()) {
+                continue;
+            }
+            $caughtBy = $catch->getCaughtBy();
+            if ($caughtBy === null) {
+                continue;
+            }
+            $byId[$caughtBy->getId()] = [
+                'id' => $caughtBy->getId(),
+                'firstname' => (string) $caughtBy->getFirstname(),
+                'lastname' => (string) $caughtBy->getLastname(),
+            ];
+        }
+
+        return array_values($byId);
+    }
+
+    /**
      * Crée les snapshots pour toutes les équipes d'une compétition terminée
      */
     public function createSnapshotsForCompetition(Competition $competition, bool $force = false): void
     {
-        // Vérifier si les snapshots existent déjà
-        if (!$force) {
-            $existingSnapshots = $this->snapshotRepository->findBy(['competition' => $competition]);
-            if (!empty($existingSnapshots)) {
-                // Les snapshots existent déjà, ne pas les recréer
-                return;
+        $existingSnapshots = $this->snapshotRepository->findBy(['competition' => $competition]);
+        $previousByTeamId = [];
+        foreach ($existingSnapshots as $snapshot) {
+            $teamId = $snapshot->getTeam()?->getId();
+            if ($teamId) {
+                $previousByTeamId[$teamId] = $snapshot->getMembers();
             }
-        } else {
-            // Supprimer les snapshots existants si on force la recréation
-            $existingSnapshots = $this->snapshotRepository->findBy(['competition' => $competition]);
+        }
+
+        if (!$force && $existingSnapshots !== []) {
+            return;
+        }
+
+        if ($force) {
             foreach ($existingSnapshots as $snapshot) {
                 $this->entityManager->remove($snapshot);
             }
             $this->entityManager->flush();
         }
 
-        // Récupérer toutes les équipes de la compétition (actives et inactives)
-        // Utiliser une requête DQL pour s'assurer de récupérer toutes les équipes avec leurs membres
-        // IMPORTANT : Ne pas filtrer par isActive pour inclure toutes les équipes qui ont participé
         $qb = $this->entityManager->createQueryBuilder();
         $teams = $qb->select('t', 'm')
-            ->from(\App\Entity\Competition\Team::class, 't')
+            ->from(Team::class, 't')
             ->leftJoin('t.members', 'm')
             ->where('t.competition = :competitionId')
             ->setParameter('competitionId', $competition->getId())
@@ -50,48 +102,17 @@ final class CompetitionSnapshotService
             ->getResult();
 
         foreach ($teams as $team) {
-            // Créer un snapshot pour cette équipe
             $snapshot = new CompetitionTeamSnapshot();
             $snapshot->setCompetition($competition);
             $snapshot->setTeam($team);
             $snapshot->setTeamName($team->getName());
             $snapshot->setRegistrationNumber($team->getRegistrationNumber());
             $snapshot->setTotalScore($team->getScoreForCompetition($competition));
-            
-            // Stocker les membres dans un tableau JSON
-            // Important : récupérer les membres depuis la collection qui a été chargée
-            // Si l'équipe a été supprimée et que tous les membres ont quitté, 
-            // on doit quand même créer le snapshot avec les membres vides
-            // MAIS on devrait récupérer les membres depuis les prises (caughtBy) si possible
-            $membersData = [];
-            
-            // D'abord, essayer de récupérer les membres depuis la collection
-            foreach ($team->getMembers() as $member) {
-                $membersData[] = [
-                    'id' => $member->getId(),
-                    'firstname' => $member->getFirstname(),
-                    'lastname' => $member->getLastname(),
-                ];
-            }
-            
-            // Si aucun membre trouvé, essayer de les récupérer depuis les prises
-            if (empty($membersData)) {
-                $catches = $team->getCatches();
-                $foundMembers = [];
-                foreach ($catches as $catch) {
-                    $caughtBy = $catch->getCaughtBy();
-                    if ($caughtBy && !isset($foundMembers[$caughtBy->getId()])) {
-                        $foundMembers[$caughtBy->getId()] = true;
-                        $membersData[] = [
-                            'id' => $caughtBy->getId(),
-                            'firstname' => $caughtBy->getFirstname(),
-                            'lastname' => $caughtBy->getLastname(),
-                        ];
-                    }
-                }
-            }
-            
-            $snapshot->setMembers($membersData);
+            $snapshot->setMembers($this->collectMembers(
+                $team,
+                $competition,
+                $previousByTeamId[$team->getId()] ?? []
+            ));
             $snapshot->setSnapshotDate(new \DateTime());
 
             $this->entityManager->persist($snapshot);
@@ -101,7 +122,39 @@ final class CompetitionSnapshotService
     }
 
     /**
-     * Récupère les snapshots d'une compétition
+     * Met à jour (ou crée) le snapshot d'une équipe avant un départ, pour ne pas perdre le roster.
+     */
+    public function freezeTeamParticipation(Team $team): void
+    {
+        $competition = $team->getCompetition();
+        if ($competition === null) {
+            return;
+        }
+
+        $existing = $this->snapshotRepository->findOneBy([
+            'competition' => $competition,
+            'team' => $team,
+        ]);
+        $previous = $existing?->getMembers() ?? [];
+        $members = $this->collectMembers($team, $competition, $previous);
+
+        if ($existing === null) {
+            $existing = new CompetitionTeamSnapshot();
+            $existing->setCompetition($competition);
+            $existing->setTeam($team);
+            $this->entityManager->persist($existing);
+        }
+
+        $existing->setTeamName($team->getName());
+        $existing->setRegistrationNumber($team->getRegistrationNumber());
+        $existing->setTotalScore($team->getScoreForCompetition($competition));
+        $existing->setMembers($members);
+        $existing->setSnapshotDate(new \DateTime());
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @return CompetitionTeamSnapshot[]
      */
     public function getSnapshotsForCompetition(Competition $competition): array
     {
@@ -111,11 +164,52 @@ final class CompetitionSnapshotService
         );
     }
 
-    /**
-     * Vérifie si des snapshots existent pour une compétition
-     */
     public function hasSnapshots(Competition $competition): bool
     {
         return $this->snapshotRepository->count(['competition' => $competition]) > 0;
+    }
+
+    public function findSnapshotForTeam(Competition $competition, Team $team): ?CompetitionTeamSnapshot
+    {
+        return $this->snapshotRepository->findOneBy([
+            'competition' => $competition,
+            'team' => $team,
+        ]);
+    }
+
+    /**
+     * Équipe de l'utilisateur pour cette manche : membre actuel, snapshot, ou prises.
+     */
+    public function findTeamIdForUser(Competition $competition, User $user): ?int
+    {
+        foreach ($competition->getTeams() as $team) {
+            if ($team->isPersonalJournal()) {
+                continue;
+            }
+            if ($team->getMembers()->contains($user)) {
+                return $team->getId();
+            }
+        }
+
+        foreach ($this->getSnapshotsForCompetition($competition) as $snapshot) {
+            foreach ($snapshot->getMembers() as $member) {
+                if ((int) ($member['id'] ?? 0) === $user->getId()) {
+                    return $snapshot->getTeam()?->getId();
+                }
+            }
+        }
+
+        $catch = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(FishCatch::class, 'c')
+            ->where('c.caughtBy = :user')
+            ->andWhere('c.competition = :competition')
+            ->setParameter('user', $user)
+            ->setParameter('competition', $competition)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $catch?->getTeam()?->getId();
     }
 }

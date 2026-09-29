@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { getSpeciesColor } from '../../utils/speciesColors';
-import { buildTimeTicks, parseCatchDate, parseTimeBounds } from '../../utils/timelineScale';
+import { buildTimeTicks, parseCatchDate, parseTimeBounds, tightenBoundsToCatches } from '../../utils/timelineScale';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import { type ThemeColors } from '../../theme';
 
@@ -35,10 +35,13 @@ export default function CatchesTimelineChart({
   const theme = useThemeColors();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
-  const { start, durationMs } = useMemo(
-    () => parseTimeBounds(startDate, endDate),
-    [startDate, endDate]
-  );
+  const { start, durationMs } = useMemo(() => {
+    const base = parseTimeBounds(startDate, endDate);
+    const catchDates = catches
+      .map((c) => parseCatchDate(c.createdAt))
+      .filter((d): d is Date => d != null);
+    return tightenBoundsToCatches(base.start, base.durationMs, catchDates);
+  }, [startDate, endDate, catches]);
 
   const { points, uniqueSpecies } = useMemo(() => {
     const pts: Array<{ x: number; y: number; color: string; speciesName: string; size?: number }> = [];

@@ -1,27 +1,17 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import { getSpeciesColor, getPinColorForAndroid } from '../../utils/speciesColors';
-import { androidStandaloneMapsMissingKey } from '../../utils/mapsConfig';
+import { androidGoogleMapProps, androidStandaloneMapsMissingKey } from '../../utils/mapsConfig';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import { type ThemeColors } from '../../theme';
-
-const LIGHT_MAP_STYLE = [
-  { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
-  { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
-];
 
 const PIN_SIZE = 14;
 
 interface CatchItem {
   id?: number;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | string;
+  longitude?: number | string;
   size?: number;
   species?: { id: number; name: string };
   team?: { name: string };
@@ -43,7 +33,12 @@ export default function CatchesMapView({
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const withCoords = useMemo(
-    () => catches.filter((c) => c.latitude != null && c.longitude != null),
+    () =>
+      catches.filter((c) => {
+        const lat = typeof c.latitude === 'string' ? parseFloat(c.latitude) : Number(c.latitude);
+        const lng = typeof c.longitude === 'string' ? parseFloat(c.longitude) : Number(c.longitude);
+        return Number.isFinite(lat) && Number.isFinite(lng);
+      }),
     [catches]
   );
 
@@ -103,16 +98,11 @@ export default function CatchesMapView({
         collapsable={false}
       >
       <MapView
-        style={styles.map}
+        style={[styles.map, { height: mapHeight }]}
         initialRegion={region}
         mapType="standard"
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        customMapStyle={Platform.OS === 'android' ? LIGHT_MAP_STYLE : undefined}
-        userInterfaceStyle="light"
-        loadingBackgroundColor="#e5e7eb"
-        loadingEnabled
-        pitchEnabled={false}
-        rotateEnabled={false}
+        {...androidGoogleMapProps()}
+        liteMode={Platform.OS === 'android'}
       >
         {withCoords.map((c, idx) => {
           const color = getSpeciesColor(c.species?.id, speciesStats);

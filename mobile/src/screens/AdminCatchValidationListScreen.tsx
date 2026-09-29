@@ -6,9 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { adminService } from '../services/adminService';
 import { formatDateTime } from '../utils/dateUtils';
@@ -21,7 +20,6 @@ export default function AdminCatchValidationListScreen() {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const navigation = useNavigation();
-  const queryClient = useQueryClient();
   const [catchesPage, setCatchesPage] = useState(1);
   const [catchesPages, setCatchesPages] = useState(1);
   const [allCatches, setAllCatches] = useState<any[]>([]);
@@ -58,42 +56,6 @@ export default function AdminCatchValidationListScreen() {
     }
   };
 
-  const validateMutation = useMutation({
-    mutationFn: (catchId: number) => adminService.validateCatch(catchId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
-      Alert.alert('Succès', 'Prise validée avec succès.');
-    },
-    onError: (error: any) => {
-      const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
-      Alert.alert('Erreur', message);
-    },
-  });
-
-  const handleValidate = (catchId: number) => {
-    Alert.alert(
-      'Valider la prise',
-      'Êtes-vous sûr de vouloir valider cette prise ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Valider',
-          onPress: () => validateMutation.mutate(catchId),
-        },
-      ]
-    );
-  };
-
-  const handleReject = (catchId: number) => {
-    // Naviguer vers AdminCatchValidation dans le Stack Navigator parent
-    const parent = navigation.getParent();
-    if (parent) {
-      (parent as any).navigate('AdminCatchValidation', { catchId, action: 'reject' });
-    } else {
-      (navigation as any).navigate('AdminCatchValidation', { catchId, action: 'reject' });
-    }
-  };
-
   const handleViewCatch = (catchId: number) => {
     // Naviguer vers AdminCatchValidation dans le Stack Navigator parent
     const parent = navigation.getParent();
@@ -107,7 +69,7 @@ export default function AdminCatchValidationListScreen() {
   if (loadingCatches && catchesPage === 1) {
     return (
       <>
-        <Header title="Validation de prises" showBack={false} showMenu={true}  />
+        <Header title="Prises à valider" showBack={false} showMenu={true}  />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
@@ -119,7 +81,7 @@ export default function AdminCatchValidationListScreen() {
 
   return (
     <>
-      <Header title="Validation de prises" showBack={false} showMenu={true}  />
+        <Header title="Prises à valider" showBack={false} showMenu={true}  />
       <View style={styles.container}>
         {pendingCount === 0 ? (
           <View style={styles.emptyContainer}>
@@ -155,28 +117,6 @@ export default function AdminCatchValidationListScreen() {
                 <Text style={styles.catchDate}>
                   {formatDateTime(catchItem.createdAt)}
                 </Text>
-                <View style={styles.catchActions}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.validateButton]}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleValidate(catchItem.id);
-                    }}
-                    disabled={validateMutation.isPending}
-                  >
-                    <Text style={styles.actionButtonText}>✓ Valider</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.rejectButton]}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleReject(catchItem.id);
-                    }}
-                    disabled={validateMutation.isPending}
-                  >
-                    <Text style={styles.actionButtonText}>✗ Rejeter</Text>
-                  </TouchableOpacity>
-                </View>
               </TouchableOpacity>
             )}
             onEndReached={loadMoreCatches}

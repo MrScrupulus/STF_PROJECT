@@ -122,20 +122,31 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
         {/* Deuxième onglet : Mon équipe ou Validation */}
         {(() => {
           // Si non connecté, afficher "Mon équipe" par défaut
-          const tabName = isAuthenticated ? (isAdmin ? 'AdminCatchValidation' : 'Teams') : 'Teams';
-          const route = state.routes.find((r: any) => r.name === tabName);
-          if (!route) return null;
-          
-          const isFocused = state.index === state.routes.findIndex((r: any) => r.name === tabName);
-          
+          const tabName = isAuthenticated && isAdmin ? 'AdminCatchValidation' : 'History';
+          const isTabInState = !!state.routes.find((r: any) => r.name === tabName);
+          const isFocused = isTabInState
+            ? state.index === state.routes.findIndex((r: any) => r.name === tabName)
+            : false;
+
           return (
             <TouchableOpacity
               style={styles.tab}
-              onPress={() => handleNavigation(tabName)}
+              onPress={() => {
+                if (tabName === 'History') {
+                  const parent = navigation.getParent();
+                  if (parent) {
+                    parent.navigate('History' as never);
+                  } else {
+                    nav.navigate('History' as never);
+                  }
+                  return;
+                }
+                handleNavigation(tabName);
+              }}
               activeOpacity={0.7}
             >
               <FaIcon
-                name={isAuthenticated && isAdmin ? 'check' : 'users'}
+                name={isAuthenticated && isAdmin ? 'check' : 'history'}
                 size={22}
                 color={
                   isAuthenticated && isAdmin
@@ -147,8 +158,11 @@ export default function BottomTabBar({ state, descriptors, navigation }: BottomT
                       : theme.textMuted
                 }
               />
-              <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
-                {isAuthenticated && isAdmin ? 'Validation' : 'Mon équipe'}
+              <Text
+                style={[styles.tabLabel, isFocused && styles.tabLabelActive]}
+                numberOfLines={2}
+              >
+                {isAuthenticated && isAdmin ? 'Prises à valider' : 'Carnet de prises'}
               </Text>
             </TouchableOpacity>
           );
@@ -183,9 +197,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 4,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.textMuted,
     fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
   tabLabelActive: {
     color: theme.accent,

@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Polygon, Marker, Polyline } from 'react-native-maps';
+import { androidGoogleMapProps } from '../utils/mapsConfig';
 import { getPreciseGpsPosition } from '../utils/deviceCapture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -1308,6 +1309,8 @@ export default function EditCompetitionScreen() {
                 style={styles.map}
                 initialRegion={mapRegion}
                 onPress={handleMapPress}
+                mapType="standard"
+                {...androidGoogleMapProps()}
               >
                 {perimeters
                   .filter((p: any) => Array.isArray(p.coordinates) && p.coordinates.length >= 3)

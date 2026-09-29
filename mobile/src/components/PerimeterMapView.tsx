@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import MapView, { Polygon, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Polygon } from 'react-native-maps';
+import { androidGoogleMapProps } from '../utils/mapsConfig';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -66,22 +67,11 @@ export default function PerimeterMapView({ perimeters, height = 250 }: Perimeter
       {expanded && (
         <View style={[styles.mapWrapper, { height }]}>
           <MapView
-            style={styles.map}
+            style={[styles.map, { height }]}
             initialRegion={region}
             mapType="standard"
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-            customMapStyle={
-              Platform.OS === 'android'
-                ? [
-                    { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
-                    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
-                  ]
-                : undefined
-            }
-            userInterfaceStyle="light"
-            loadingBackgroundColor="#e5e7eb"
-            pitchEnabled={false}
-            rotateEnabled={false}
+            {...androidGoogleMapProps()}
+            liteMode={Platform.OS === 'android'}
           >
             {perimeters.map((perimeter, index) => {
               const coords = perimeter.coordinates.map((c) => ({

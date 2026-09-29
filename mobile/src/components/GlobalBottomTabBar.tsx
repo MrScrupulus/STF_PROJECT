@@ -60,6 +60,8 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
     
     if (screenName === 'Competitions' || screenName === 'Teams' || screenName === 'AdminCatchValidation') {
       nav.navigate('MainTabs', { screen: screenName });
+    } else if (screenName === 'History') {
+      nav.navigate('History');
     } else {
       nav.navigate('MainTabs');
     }
@@ -78,15 +80,13 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
 
   // Déterminer quel onglet est actif
   const isCompetitionsActive = currentRoute === 'Competitions' || currentRoute === 'CompetitionDetail';
-  const isTeamsActive = currentRoute === 'Teams' || currentRoute === 'TeamDetail' || currentRoute === 'CreateTeam' || currentRoute === 'EditTeam' || currentRoute === 'Invitations';
+  const isHistoryActive = currentRoute === 'History';
   const isAdminValidationActive = currentRoute === 'AdminCatchValidation' || currentRoute === 'AdminDashboard';
-  const isHomeActive = currentRoute === 'Home' || currentRoute === 'MainTabs';
 
-  // Déterminer quel onglet afficher (Teams ou AdminCatchValidation)
-  const teamsTabName = isAuthenticated && isAdmin ? 'AdminCatchValidation' : 'Teams';
-  const teamsTabLabel = isAuthenticated && isAdmin ? 'Validation' : 'Mon équipe';
-  const teamsTabIcon: 'check' | 'users' = isAuthenticated && isAdmin ? 'check' : 'users';
-  const teamsTabActive = isAuthenticated && isAdmin ? isAdminValidationActive : isTeamsActive;
+  const teamsTabName = isAuthenticated && isAdmin ? 'AdminCatchValidation' : 'History';
+  const teamsTabLabel = isAuthenticated && isAdmin ? 'Prises à valider' : 'Carnet de prises';
+  const teamsTabIcon: 'check' | 'history' = isAuthenticated && isAdmin ? 'check' : 'history';
+  const teamsTabActive = isAuthenticated && isAdmin ? isAdminValidationActive : isHistoryActive;
 
   return (
     <View style={styles.safeArea}>
@@ -139,6 +139,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
               teamsTabActive && styles.tabLabelActive,
               isAuthenticated && isAdmin && styles.tabLabelAdmin,
             ]}
+            numberOfLines={2}
           >
             {teamsTabLabel}
           </Text>
@@ -173,9 +174,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 4,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.textMuted,
     fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
   tabLabelActive: {
     color: theme.accent,

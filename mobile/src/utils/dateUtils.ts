@@ -48,16 +48,17 @@ export function formatDateTime(dateString: string | null | undefined): string {
   }
 
   try {
-    // Si la date n'a pas de fuseau horaire, on suppose qu'elle est en UTC
-    // et on la convertit en heure locale
-    const date = new Date(dateString + 'Z'); // Ajouter 'Z' pour indiquer UTC
+    const date = parseApiDate(dateString);
+    if (!date) {
+      return 'Date invalide';
+    }
     return date.toLocaleString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'Europe/Paris', // Forcer le fuseau horaire français
+      timeZone: 'Europe/Paris',
     });
   } catch (error) {
     console.error('Erreur lors du formatage de la date:', error);

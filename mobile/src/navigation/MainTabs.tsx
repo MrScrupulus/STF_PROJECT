@@ -40,7 +40,7 @@ export default function MainTabs() {
       <Tab.Screen 
         name="AdminCatchValidation" 
         component={AdminCatchValidationListScreen}
-        options={{ tabBarLabel: 'Validation' }}
+        options={{ tabBarLabel: 'Prises à valider' }}
       />
     </Tab.Navigator>
   );

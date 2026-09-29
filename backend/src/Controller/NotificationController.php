@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Security\User;
 use App\Repository\NotificationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,7 +16,7 @@ class NotificationController extends AbstractController
     public function getNotifications(NotificationRepository $repository): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non connecté'
@@ -47,7 +48,7 @@ class NotificationController extends AbstractController
     public function getUnreadNotifications(NotificationRepository $repository): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non connecté'
@@ -79,7 +80,7 @@ class NotificationController extends AbstractController
     public function markAsRead(int $id, NotificationRepository $repository, EntityManagerInterface $em): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non connecté'
@@ -115,7 +116,7 @@ class NotificationController extends AbstractController
     public function markAllAsRead(NotificationRepository $repository, EntityManagerInterface $em): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non connecté'
@@ -140,7 +141,7 @@ class NotificationController extends AbstractController
     public function getNotificationCount(NotificationRepository $repository): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+        if (!$user instanceof User) {
             return $this->json([
                 'success' => false,
                 'message' => 'Utilisateur non connecté'
@@ -152,6 +153,58 @@ class NotificationController extends AbstractController
         return $this->json([
             'success' => true,
             'unreadCount' => $unreadCount,
+        ]);
+    }
+
+    #[Route('', name: 'delete_all_notifications', methods: ['DELETE'])]
+    public function deleteAll(NotificationRepository $repository): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non connecté',
+            ], 401);
+        }
+
+        $count = $repository->deleteAllByUser($user);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Toutes les notifications ont été supprimées',
+            'count' => $count,
+        ]);
+    }
+
+    #[Route('/{id}', name: 'delete_notification', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    public function deleteOne(int $id, NotificationRepository $repository): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Utilisateur non connecté',
+            ], 401);
+        }
+
+        $notification = $repository->find($id);
+        if (!$notification) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Notification non trouvée',
+            ], 404);
+        }
+
+        if (!$repository->deleteOneForUser($notification, $user)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Accès non autorisé',
+            ], 403);
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Notification supprimée',
         ]);
     }
 }

@@ -2,8 +2,8 @@
   "expo": {
     "name": "Street Fishing",
     "slug": "stfproject",
-    "version": "1.0.5",
-    "orientation": "portrait",
+    "version": "1.0.7",
+    "orientation": "default",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "splash": {

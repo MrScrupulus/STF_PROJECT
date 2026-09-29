@@ -45,4 +45,14 @@ export const notificationService = {
     const response = await apiClient.put(API_ENDPOINTS.notifications.markAllRead);
     return response.data;
   },
+
+  deleteOne: async (notificationId: number): Promise<any> => {
+    const response = await apiClient.delete(API_ENDPOINTS.notifications.deleteOne(notificationId));
+    return response.data;
+  },
+
+  deleteAll: async (): Promise<any> => {
+    const response = await apiClient.delete(API_ENDPOINTS.notifications.deleteAll);
+    return response.data;
+  },
 };

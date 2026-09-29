@@ -63,4 +63,25 @@ class NotificationRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    public function deleteOneForUser(Notification $notification, User $user): bool
+    {
+        if ($notification->getUser()->getId() !== $user->getId()) {
+            return false;
+        }
+        $this->getEntityManager()->remove($notification);
+        $this->getEntityManager()->flush();
+
+        return true;
+    }
+
+    public function deleteAllByUser(User $user): int
+    {
+        return (int) $this->createQueryBuilder('n')
+            ->delete()
+            ->where('n.user = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->execute();
+    }
 }

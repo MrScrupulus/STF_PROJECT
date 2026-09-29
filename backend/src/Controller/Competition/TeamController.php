@@ -21,6 +21,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use App\Service\DateTimeHelper;
 use App\Service\EmailService;
 use App\Service\NotificationService;
+use App\Service\CompetitionSnapshotService;
 
 #[Route('/api/teams', name: 'team_')]
 class TeamController extends AbstractController
@@ -30,7 +31,8 @@ class TeamController extends AbstractController
         private EntityManagerInterface $entityManager,
         private SerializerInterface $serializer,
         private EmailService $emailService,
-        private NotificationService $notificationService
+        private NotificationService $notificationService,
+        private CompetitionSnapshotService $snapshotService
     ) {}
 
     private function isTeamMember(Team $team): bool
@@ -51,7 +53,7 @@ class TeamController extends AbstractController
                 ], 401);
             }
 
-            $teams = $repository->findTeamsByMember($user);
+            $teams = $repository->findTeamsByMember($user, true, true);
             
             // Retourner toutes les équipes de l'utilisateur (avec ou sans compétition)
             // Transformer manuellement les données pour éviter les références circulaires et réduire la taille
@@ -704,6 +706,10 @@ class TeamController extends AbstractController
                         'email' => $member->getEmail(),
                     ];
                 }, $team->getMembers()->toArray()),
+                'archivedMembers' => $team->getCompetition()
+                    ? ($this->snapshotService->findSnapshotForTeam($team->getCompetition(), $team)?->getMembers()
+                        ?: $this->snapshotService->collectMembers($team, $team->getCompetition()))
+                    : [],
                 'competition' => $team->getCompetition() ? [
                     'id' => $team->getCompetition()->getId(),
                     'name' => $team->getCompetition()->getName(),
@@ -742,6 +748,8 @@ class TeamController extends AbstractController
                         'rejectionReason' => $catch->getRejectionReason(),
                         'penalties' => $penaltiesByCatchId[$catch->getId()] ?? [],
                         'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
+                        'latitude' => $catch->getLatitude(),
+                        'longitude' => $catch->getLongitude(),
                         'caughtBy' => $catch->getCaughtBy() ? [
                             'id' => $catch->getCaughtBy()->getId(),
                             'firstname' => $catch->getCaughtBy()->getFirstname(),
@@ -935,37 +943,23 @@ class TeamController extends AbstractController
                 ], 403);
             }
 
-            // Retirer l'utilisateur de l'équipe
+            $competition = $team->getCompetition();
+            if ($competition) {
+                $now = new \DateTime();
+                if ($competition->getStartDate() <= $now && $competition->getEndDate() >= $now) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Vous ne pouvez pas quitter une équipe pendant une compétition en cours.'
+                    ], 400);
+                }
+                $this->snapshotService->freezeTeamParticipation($team);
+            }
+
+            // Retirer l'utilisateur de l'équipe (l'archive de la manche est conservée)
             $team->removeMember($user);
 
-            // Si l'équipe n'a plus de membres, la marquer comme inactive (pour conserver l'historique)
             if ($team->getMembers()->isEmpty()) {
-                // Marquer l'équipe comme inactive au lieu de la supprimer
                 $team->setIsActive(false);
-                
-                // Ne pas retirer la compétition si elle est terminée (pour préserver l'historique)
-                if ($team->getCompetition()) {
-                    $now = new \DateTime();
-                    $competitionEnded = $team->getCompetition()->getEndDate() < $now;
-                    
-                    // Si la compétition est terminée, garder la référence pour l'historique
-                    if (!$competitionEnded) {
-                        $team->setCompetition(null);
-                        $team->setRegistrationNumber(null);
-                    }
-                }
-            } else {
-                // Si l'équipe avait une compétition et qu'elle n'est pas terminée, la désinscrire
-                if ($team->getCompetition()) {
-                    $now = new \DateTime();
-                    $competitionEnded = $team->getCompetition()->getEndDate() < $now;
-                    
-                    // Si la compétition est terminée, garder la référence pour l'historique
-                    if (!$competitionEnded) {
-                        $team->setCompetition(null);
-                        $team->setRegistrationNumber(null);
-                    }
-                }
             }
 
             $this->entityManager->flush();
@@ -1006,6 +1000,13 @@ class TeamController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => 'Cette équipe est déjà active'
+                ], 400);
+            }
+
+            if ($team->getCompetition()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette équipe est archivée dans une compétition. Créez une nouvelle équipe pour une autre manche.'
                 ], 400);
             }
 

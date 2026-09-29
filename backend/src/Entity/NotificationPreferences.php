@@ -295,6 +295,7 @@ class NotificationPreferences
             'competition_paused' => $this->competitionPaused,
             'competition_resumed' => $this->competitionResumed,
             'catch_pending' => $this->catchPending,
+            'ranking_published' => $this->competitionEnded,
             default => true, // Par défaut, activé
         };
     }

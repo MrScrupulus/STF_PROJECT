@@ -76,22 +76,59 @@ function formatMonth(date: Date) {
 
 export type TimeTick = { offsetMs: number; label: string };
 
-/**
- * 6–8 graduations selon la durée réelle (minutes → mois).
- */
-export function buildTimeTicks(start: Date, durationMs: number, maxTicks = 7): TimeTick[] {
-  const MIN = 60 * 1000;
-  const HOUR = 60 * MIN;
-  const DAY = 24 * HOUR;
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
 
+/**
+ * Si une large partie de la compétition n’a aucune prise (ex. 2ᵉ jour vide),
+ * on cadre l’axe sur la période utile.
+ */
+export function tightenBoundsToCatches(
+  start: Date,
+  durationMs: number,
+  catchDates: Date[]
+): { start: Date; durationMs: number } {
+  if (!catchDates.length) {
+    return { start, durationMs };
+  }
+  const startMs = start.getTime();
+  const endMs = startMs + durationMs;
+  const minC = Math.min(...catchDates.map((d) => d.getTime()));
+  const maxC = Math.max(...catchDates.map((d) => d.getTime()));
+  const span = Math.max(HOUR, maxC - minC);
+  const pad = Math.min(2 * HOUR, Math.max(20 * MIN, span * 0.08));
+  const emptyHead = minC - startMs;
+  const emptyTail = endMs - maxC;
+  let displayStart = startMs;
+  let displayEnd = endMs;
+  if (emptyHead > 6 * HOUR && emptyHead > durationMs * 0.2) {
+    displayStart = Math.max(startMs, minC - pad);
+  }
+  if (emptyTail > 6 * HOUR && emptyTail > durationMs * 0.2) {
+    displayEnd = Math.min(endMs, maxC + pad);
+  }
+  return {
+    start: new Date(displayStart),
+    durationMs: Math.max(HOUR, displayEnd - displayStart),
+  };
+}
+
+/**
+ * Graduations selon la durée affichée (journée courte → 1 h, journée cadrée → 2 h).
+ */
+export function buildTimeTicks(start: Date, durationMs: number, maxTicks = 10): TimeTick[] {
   let step: number;
   let labelFn: (d: Date) => string;
 
   if (durationMs <= 2 * HOUR) {
     step = 15 * MIN;
     labelFn = formatClock;
-  } else if (durationMs <= 8 * HOUR) {
+  } else if (durationMs <= 10 * HOUR) {
     step = HOUR;
+    labelFn = (d) => `${pad2(d.getHours())}h`;
+  } else if (durationMs <= 22 * HOUR) {
+    step = 2 * HOUR;
     labelFn = (d) => `${pad2(d.getHours())}h`;
   } else if (durationMs <= 36 * HOUR) {
     step = 3 * HOUR;
@@ -111,11 +148,11 @@ export function buildTimeTicks(start: Date, durationMs: number, maxTicks = 7): T
   const startMs = start.getTime();
   ticks.push({ offsetMs: 0, label: labelFn(start) });
 
-  let t = Math.ceil((startMs + step * 0.4) / step) * step;
+  let t = Math.ceil((startMs + step * 0.35) / step) * step;
   const endMs = startMs + durationMs;
-  while (t < endMs - step * 0.25 && ticks.length < maxTicks - 1) {
+  while (t < endMs - step * 0.2 && ticks.length < maxTicks - 1) {
     const offsetMs = t - startMs;
-    if (offsetMs > durationMs * 0.06) {
+    if (offsetMs > durationMs * 0.04) {
       ticks.push({ offsetMs, label: labelFn(new Date(t)) });
     }
     t += step;

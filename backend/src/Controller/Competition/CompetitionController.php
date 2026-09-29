@@ -345,13 +345,27 @@ class CompetitionController extends AbstractController
                 $teamsToReturn = $allTeams;
             }
         } else {
-            // Classement non visible : utilisateur normal voit uniquement son équipe
+            // Classement non visible : uniquement l'équipe de l'utilisateur (membre actuel ou archive figée)
             if ($user) {
-                $userTeams = $teamRepository->findTeamsByMember($user);
-                foreach ($userTeams as $team) {
-                    if ($team->getCompetition() && $team->getCompetition()->getId() === $competition->getId()) {
-                        $teamsToReturn[] = $team;
-                        break; // Un utilisateur ne peut avoir qu'une équipe par compétition
+                $userTeamId = $snapshotService->findTeamIdForUser($competition, $user);
+                if ($userTeamId) {
+                    if ($isEnded) {
+                        if (!$snapshotService->hasSnapshots($competition)) {
+                            $snapshotService->createSnapshotsForCompetition($competition);
+                        }
+                        foreach ($snapshotService->getSnapshotsForCompetition($competition) as $snapshot) {
+                            if ($snapshot->getTeam()?->getId() === $userTeamId) {
+                                $teamsToReturn[] = $snapshot;
+                                $useSnapshots = true;
+                                break;
+                            }
+                        }
+                    }
+                    if ($teamsToReturn === []) {
+                        $userTeam = $teamRepository->find($userTeamId);
+                        if ($userTeam) {
+                            $teamsToReturn[] = $userTeam;
+                        }
                     }
                 }
             }
@@ -400,45 +414,8 @@ class CompetitionController extends AbstractController
             ];
         }, $competitionSpecies->toArray());
         
-        // Déterminer si l'utilisateur est inscrit à cette compétition ou y a participé
-        $isRegistered = false;
-        if ($user) {
-            // Vérifier via les équipes actives
-            $userTeams = $teamRepository->findTeamsByMember($user);
-            foreach ($userTeams as $team) {
-                if ($team->getCompetition() && $team->getCompetition()->getId() === $competition->getId()) {
-                    $isRegistered = true;
-                    break;
-                }
-            }
-            
-            // Si la compétition est terminée et que l'utilisateur n'est pas inscrit via une équipe active,
-            // vérifier via les équipes historiques et les prises
-            if (!$isRegistered && $isEnded) {
-                $allUserTeams = $teamRepository->findUserHistory($user);
-                $teamIds = array_map(function($team) {
-                    return $team->getId();
-                }, $allUserTeams);
-                
-                // Vérifier si l'utilisateur a des prises pour cette compétition
-                if (!empty($teamIds)) {
-                    $userCatches = $catchRepository->createQueryBuilder('c')
-                        ->join('c.team', 't')
-                        ->where('(c.caughtBy = :user OR t.id IN (:teamIds))')
-                        ->andWhere('c.competition = :competitionId')
-                        ->setParameter('user', $user)
-                        ->setParameter('teamIds', $teamIds)
-                        ->setParameter('competitionId', $competition->getId())
-                        ->setMaxResults(1)
-                        ->getQuery()
-                        ->getResult();
-                    
-                    if (!empty($userCatches)) {
-                        $isRegistered = true;
-                    }
-                }
-            }
-        }
+        $myTeamId = $user ? $snapshotService->findTeamIdForUser($competition, $user) : null;
+        $isRegistered = $myTeamId !== null;
         
         return $this->json([
             'success' => true,
@@ -467,6 +444,12 @@ class CompetitionController extends AbstractController
             'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
             'maxFishCounted' => $competition->getMaxFishCounted(),
             'isRegistered' => $isRegistered,
+            'myTeamId' => $myTeamId,
+            'enrolledTeamsCount' => ($isEnded && $snapshotService->hasSnapshots($competition))
+                ? count($snapshotService->getSnapshotsForCompetition($competition))
+                : $competition->getTeams()->filter(
+                    static fn ($team) => $team->getIsActive() && !$team->isPersonalJournal()
+                )->count(),
             'scheduledPauses' => $scheduledPausesData,
             'perimeters' => $perimetersData,
             'species' => $speciesData,
@@ -507,7 +490,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'app_competition_update', methods: ['PUT'])]
-    public function update(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager, CompetitionSnapshotService $snapshotService): JsonResponse
+    public function update(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager, CompetitionSnapshotService $snapshotService, NotificationService $notificationService): JsonResponse
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -550,13 +533,17 @@ class CompetitionController extends AbstractController
             if (isset($data['maxParticipants']) && !($data['hasNoLimit'] ?? false)) {
                 $competition->setMaxParticipants((int) $data['maxParticipants']);
             }
+            $rankingJustPublished = false;
             if (isset($data['isRankingPublic'])) {
-                $competition->setIsRankingPublic((bool) $data['isRankingPublic']);
-                
+                $wasPublic = $competition->getIsRankingPublic();
+                $nowPublic = (bool) $data['isRankingPublic'];
+                $competition->setIsRankingPublic($nowPublic);
+                $rankingJustPublished = $nowPublic && !$wasPublic;
+
                 // Si on publie le classement d'une compétition terminée, créer les snapshots
                 $now = new \DateTime();
                 $isEnded = $competition->getEndDate() < $now;
-                if ($data['isRankingPublic'] && $isEnded) {
+                if ($nowPublic && $isEnded) {
                     $snapshotService->createSnapshotsForCompetition($competition);
                 }
             }
@@ -661,6 +648,25 @@ class CompetitionController extends AbstractController
             }
 
             $entityManager->flush();
+
+            if (!empty($rankingJustPublished)) {
+                foreach ($competition->getTeams() as $team) {
+                    if ($team->isPersonalJournal()) {
+                        continue;
+                    }
+                    foreach ($team->getMembers() as $member) {
+                        try {
+                            $notificationService->notifyRankingPublished(
+                                $member,
+                                $competition->getName(),
+                                $competition->getId()
+                            );
+                        } catch (\Exception $e) {
+                            error_log('Erreur lors de la notification de classement public: ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
 
             return $this->json([
                 'success' => true,
@@ -1126,29 +1132,25 @@ class CompetitionController extends AbstractController
                 ], 403);
             }
 
-            // Vérifier que l'équipe n'est pas déjà inscrite à une compétition EN COURS ou À VENIR
-            // Si l'équipe est inscrite à une compétition terminée, on peut s'inscrire à la nouvelle
-            // IMPORTANT: On ne désinscrit PAS de l'ancienne compétition pour préserver l'historique
-            // Les snapshots et les prises restent liés à l'équipe et à l'ancienne compétition
             if ($team->getCompetition()) {
-                $oldCompetition = $team->getCompetition();
-                
-                // Si la compétition précédente est terminée, on peut s'inscrire à la nouvelle
-                if ($oldCompetition->getEndDate() < $now) {
-                    // Permettre l'inscription à la nouvelle compétition
-                    // Note: Avec la structure ManyToOne actuelle, on change la compétition "active" de l'équipe
-                    // L'historique est préservé via:
-                    // 1. Les snapshots (CompetitionTeamSnapshot) créés à la fin de l'ancienne compétition
-                    // 2. Les prises (FishCatch) qui restent liées à l'équipe (même si team.competition change)
-                    // 3. Les prises peuvent être filtrées par date de création pour retrouver celles de l'ancienne compétition
-                    // 
-                    // Pour l'instant, on change la compétition active, mais l'historique reste accessible
-                    // via les snapshots et les prises filtrées par date
-                } else {
-                    // La compétition précédente est encore en cours ou à venir
+                $oldName = $team->getCompetition()->getName();
+                return $this->json([
+                    'success' => false,
+                    'message' => "Cette équipe est figée sur la compétition « {$oldName} ». Créez une nouvelle équipe pour une autre manche."
+                ], 400);
+            }
+
+            $liveTeams = $teamRepo->findTeamsByMember($user, true, true);
+            foreach ($liveTeams as $liveTeam) {
+                $liveCompetition = $liveTeam->getCompetition();
+                if (
+                    $liveCompetition
+                    && $liveCompetition->getId() !== $competition->getId()
+                    && $liveCompetition->getEndDate() >= $now
+                ) {
                     return $this->json([
                         'success' => false,
-                        'message' => 'Cette équipe est déjà inscrite à une compétition en cours ou à venir'
+                        'message' => 'Vous êtes déjà inscrit à une compétition en cours ou à venir. Un membre ne peut participer qu’à une manche à la fois.'
                     ], 400);
                 }
             }

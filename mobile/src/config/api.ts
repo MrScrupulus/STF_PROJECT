@@ -86,6 +86,8 @@ export const API_ENDPOINTS = {
     count: '/api/notifications/count',
     markRead: (id: number) => `/api/notifications/${id}/read`,
     markAllRead: '/api/notifications/read-all',
+    deleteOne: (id: number) => `/api/notifications/${id}`,
+    deleteAll: '/api/notifications',
   },
   notificationPreferences: {
     get: '/api/notification-preferences',

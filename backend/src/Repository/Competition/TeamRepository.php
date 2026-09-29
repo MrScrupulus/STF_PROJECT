@@ -125,11 +125,55 @@ class TeamRepository extends ServiceEntityRepository
     }
 
     /**
-     * Récupère toutes les équipes d'un utilisateur (actives et inactives) pour l'historique
+     * Historique : équipes dont l'utilisateur est (ou a été) membre,
+     * plus celles où il a des prises (caughtBy), hors journal personnel.
      */
     public function findUserHistory(User $user): array
     {
-        return $this->findTeamsByMember($user, false);
+        $memberRows = $this->createQueryBuilder('t')
+            ->select('DISTINCT t.id')
+            ->innerJoin('t.members', 'm')
+            ->where('m = :user')
+            ->andWhere('t.isPersonalJournal = :notPj')
+            ->setParameter('user', $user)
+            ->setParameter('notPj', false)
+            ->getQuery()
+            ->getScalarResult();
+        $memberIds = array_map(static fn ($row) => (int) $row['id'], $memberRows);
+
+        $catchRows = $this->getEntityManager()->createQueryBuilder()
+            ->select('DISTINCT IDENTITY(c.team) AS tid')
+            ->from(\App\Entity\Competition\FishCatch::class, 'c')
+            ->where('c.caughtBy = :user')
+            ->andWhere('c.team IS NOT NULL')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getScalarResult();
+        $catchTeamIds = [];
+        foreach ($catchRows as $row) {
+            $id = (int) ($row['tid'] ?? 0);
+            if ($id > 0) {
+                $catchTeamIds[] = $id;
+            }
+        }
+
+        $teamIds = array_values(array_unique(array_merge($memberIds, $catchTeamIds)));
+        if ($teamIds === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('t')
+            ->select('t', 'm', 'comp')
+            ->leftJoin('t.members', 'm')
+            ->leftJoin('t.competition', 'comp')
+            ->where('t.id IN (:teamIds)')
+            ->andWhere('t.isPersonalJournal = :notPj')
+            ->setParameter('teamIds', $teamIds)
+            ->setParameter('notPj', false)
+            ->orderBy('t.isActive', 'DESC')
+            ->addOrderBy('t.id', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 
     public function findPersonalJournalTeam(User $user): ?Team

@@ -23,6 +23,8 @@ export interface Competition {
   scheduledPauses?: ScheduledPause[];
   perimeters?: Perimeter[];
   isRankingPublic?: boolean;
+  enrolledTeamsCount?: number;
+  myTeamId?: number | null;
   isPaused?: boolean;
   description?: string;
   isRegistered?: boolean;

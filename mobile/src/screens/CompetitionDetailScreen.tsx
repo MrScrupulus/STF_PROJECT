@@ -16,8 +16,7 @@ import { competitionsService } from '../services/competitionsService';
 import { teamService } from '../services/teamService';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
-import { speciesService } from '../services/speciesService';
-import { formatDateTimeLocal, formatCompetitionDate, formatCompetitionDateRange, parseApiDate } from '../utils/dateUtils';
+import { formatDateTimeLocal, formatDateTime, formatCompetitionDateRange, parseApiDate } from '../utils/dateUtils';
 import { getCompetitionLifecycleStatus } from '../utils/competitionStatus';
 import { API_BASE_URL } from '../config/api';
 import Header from '../components/Header';
@@ -27,6 +26,8 @@ import SpeciesPieChart from '../components/competition/SpeciesPieChart';
 import CatchesTimelineChart from '../components/competition/CatchesTimelineChart';
 import CatchesMapView from '../components/competition/CatchesMapView';
 import ImageView from 'react-native-image-viewing';
+import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
+import { resolvePhotoUri } from '../utils/photoUrl';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -45,13 +46,15 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'species' | 'reglement'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'myTeam' | 'reglement'>('info');
+  const [showPauses, setShowPauses] = useState(false);
   const [showAllRanking, setShowAllRanking] = useState(false);
   const [showMoreStats, setShowMoreStats] = useState(false);
   const [showTop3, setShowTop3] = useState(false);
   const [reglementImageViewerVisible, setReglementImageViewerVisible] = useState(false);
   const [reglementImageViewerIndex, setReglementImageViewerIndex] = useState(0);
   const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [myTeamPhoto, setMyTeamPhoto] = useState<string | null>(null);
 
   const { data: competitionResponse, isLoading, isError, error } = useQuery({
     queryKey: ['competition', competitionId],
@@ -69,10 +72,28 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryFn: () => teamService.getMyTeams(),
   });
 
+  const myCompetitionTeamId = React.useMemo(() => {
+    const fromApi = (competition as any)?.myTeamId;
+    if (fromApi) return fromApi;
+    const uid = currentUser?.id;
+    const teams = (competition as any)?.teams;
+    if (!uid || !Array.isArray(teams)) return null;
+    const t = teams.find((team: any) =>
+      (team.members || team.archivedMembers)?.some((m: any) => m.id === uid)
+    );
+    return t?.id ?? null;
+  }, [(competition as any)?.myTeamId, (competition as any)?.teams, currentUser?.id]);
+
+  const { data: myTeamResponse, isLoading: loadingMyTeam } = useQuery({
+    queryKey: ['team', myCompetitionTeamId],
+    queryFn: () => teamService.getOne(myCompetitionTeamId as number),
+    enabled: !!myCompetitionTeamId,
+  });
+  const myTeamDetail = myTeamResponse?.team;
+
   const speciesData = competition?.species && competition.species.length > 0
     ? competition.species
     : null;
-  const loadingSpecies = false; // Les espèces sont déjà dans les données de la compétition
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -332,14 +353,9 @@ export default function CompetitionDetailScreen({ route }: any) {
   // Date actuelle pour les comparaisons
   const now = new Date();
   
-  // Filtrer les équipes disponibles (sans compétition ou avec compétition terminée)
+  // Équipes encore libres (une équipe figée reste collée à sa manche)
   
-  const availableTeams = myTeams.filter((team: any) => {
-    if (!team.competition) return true;
-    const teamCompetitionEndDate = parseApiDate(team.competition.endDate);
-    if (!teamCompetitionEndDate) return false;
-    return teamCompetitionEndDate < now;
-  });
+  const availableTeams = myTeams.filter((team: any) => !team.competition);
   
   // Vérifier si déjà inscrit à cette compétition spécifique (et que la compétition est active)
   const isAlreadyRegistered = myTeams.some((team: any) => {
@@ -484,11 +500,11 @@ export default function CompetitionDetailScreen({ route }: any) {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'species' && styles.tabActive]}
-            onPress={() => setActiveTab('species')}
+            style={[styles.tab, activeTab === 'myTeam' && styles.tabActive]}
+            onPress={() => setActiveTab('myTeam')}
           >
-            <Text style={[styles.tabText, activeTab === 'species' && styles.tabTextActive]}>
-              Espèces
+            <Text style={[styles.tabText, activeTab === 'myTeam' && styles.tabTextActive]}>
+              Mon équipe
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -632,38 +648,140 @@ export default function CompetitionDetailScreen({ route }: any) {
               );
             })()}
           </View>
-        ) : activeTab === 'species' ? (
+        ) : activeTab === 'myTeam' ? (
           <View style={styles.speciesTabContent}>
-            {loadingSpecies ? (
+            {!myCompetitionTeamId ? (
+              <Text style={styles.emptyText}>
+                Vous n&apos;êtes pas inscrit à cette compétition. Inscrivez votre équipe depuis l&apos;onglet Infos.
+              </Text>
+            ) : loadingMyTeam ? (
               <ActivityIndicator size="large" color={theme.accent} style={{ marginTop: 32 }} />
-            ) : speciesData && speciesData.length > 0 ? (
+            ) : myTeamDetail ? (
+              (() => {
+                const validatedOfficialCatches = (myTeamDetail.catches || []).filter(
+                  (c: any) => c.isValidated && !c.rejectionReason
+                );
+                const speciesCountById = new Map<number, { id: number; name: string; count: number }>();
+                for (const c of validatedOfficialCatches) {
+                  if (!c.species?.id) continue;
+                  const prev = speciesCountById.get(c.species.id);
+                  if (prev) prev.count += 1;
+                  else speciesCountById.set(c.species.id, { id: c.species.id, name: c.species.name, count: 1 });
+                }
+                const speciesStats = Array.from(speciesCountById.values());
+                const catchesForMap = validatedOfficialCatches.map((c: any) => ({
+                  ...c,
+                  team: myTeamDetail.name ? { name: myTeamDetail.name } : undefined,
+                }));
+                const roster =
+                  (myTeamDetail.archivedMembers && myTeamDetail.archivedMembers.length > 0)
+                    ? myTeamDetail.archivedMembers
+                    : (myTeamDetail.members || []);
+                const memberScores = roster.map((m: any) => {
+                  const mine = validatedOfficialCatches.filter((c: any) => c.caughtBy?.id === m.id);
+                  return {
+                    id: m.id,
+                    name: `${m.firstname || ''} ${m.lastname || ''}`.trim() || 'Membre',
+                    catchCount: mine.length,
+                    points: mine.reduce((sum: number, c: any) => sum + (Number(c.points) || 0), 0),
+                  };
+                });
+                return (
               <>
-                <Text style={styles.sectionTitle}>Espèces disponibles</Text>
-                {speciesData.map((compSpecies: any) => (
-                  <View key={compSpecies.id} style={styles.speciesCard}>
-                    <View style={styles.speciesHeader}>
-                      <Text style={styles.speciesCardName}>{compSpecies.name}</Text>
-                      {compSpecies.isBonusEnabled && (
-                        <View style={styles.bonusBadge}>
-                          <Text style={styles.bonusText}>Bonus</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.speciesInfo}>
-                      <Text style={styles.speciesCoefficient}>
-                        Coefficient: {compSpecies.coefficient}
-                      </Text>
-                      {compSpecies.basePoints !== undefined && compSpecies.basePoints !== null && (
-                        <Text style={styles.speciesBasePoints}>
-                          Points bonus: {compSpecies.basePoints}
-                        </Text>
-                      )}
-                    </View>
+                <Text style={styles.sectionTitle}>{myTeamDetail.name}</Text>
+                {myTeamDetail.registrationNumber ? (
+                  <Text style={styles.infoText}>N° {myTeamDetail.registrationNumber}</Text>
+                ) : null}
+                <View style={styles.myTeamScoreRow}>
+                  <View style={styles.myTeamScoreCard}>
+                    <Text style={styles.myTeamScoreLabel}>Score équipe</Text>
+                    <Text style={styles.myTeamScoreValue}>{myTeamDetail.totalScore || 0} pts</Text>
                   </View>
-                ))}
+                  <View style={styles.myTeamScoreCard}>
+                    <Text style={styles.myTeamScoreLabel}>Prises validées</Text>
+                    <Text style={styles.myTeamScoreValue}>{validatedOfficialCatches.length}</Text>
+                  </View>
+                </View>
+                {memberScores.length > 0 ? (
+                  <View style={styles.myTeamMembersBlock}>
+                    {memberScores.map((m: any) => (
+                      <View key={m.id} style={styles.myTeamMemberRow}>
+                        <Text style={styles.myTeamMemberName}>{m.name}</Text>
+                        <Text style={styles.myTeamMemberMeta}>
+                          {m.points} pts · {m.catchCount} prise{m.catchCount > 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
+                <Text style={styles.sectionTitle}>Statistiques de l&apos;équipe</Text>
+                {validatedOfficialCatches.length === 0 ? (
+                  <Text style={styles.emptyText}>
+                    Les cartes, le camembert et la chronologie apparaissent dès qu’une prise est validée.
+                  </Text>
+                ) : (
+                  <>
+                    {catchesForMap.length > 0 ? (
+                      <CatchesMapView
+                        catches={catchesForMap}
+                        speciesStats={speciesStats}
+                        height={280}
+                      />
+                    ) : null}
+                    {speciesStats.length > 0 ? (
+                      <SpeciesPieChart speciesStats={speciesStats} />
+                    ) : null}
+                    {catchesForMap.length > 0 ? (
+                      <CatchesTimelineChart
+                        catches={catchesForMap}
+                        startDate={myTeamDetail.competition?.startDate || competition.startDate}
+                        endDate={myTeamDetail.competition?.endDate || competition.endDate}
+                        speciesStats={speciesStats}
+                      />
+                    ) : null}
+                  </>
+                )}
+
+                <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Prises</Text>
+                {(myTeamDetail.catches || []).length === 0 ? (
+                  <Text style={styles.emptyText}>Aucune prise pour le moment.</Text>
+                ) : (
+                  (myTeamDetail.catches || []).map((c: any) => (
+                    <View key={c.id} style={styles.myTeamCatchRow}>
+                      {c.photoUrl ? (
+                        <TouchableOpacity
+                          onPress={() => setMyTeamPhoto(resolvePhotoUri(c.photoUrl))}
+                        >
+                          <Image
+                            source={{ uri: resolvePhotoUri(c.photoUrl) ?? '' }}
+                            style={styles.myTeamCatchPhoto}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      ) : null}
+                      <Text style={styles.myTeamCatchName}>{c.species?.name || 'Prise'}</Text>
+                      <Text style={styles.myTeamCatchMeta}>
+                        {c.size != null ? `${c.size} cm` : ''}
+                        {c.points != null ? ` · ${c.points} pts` : ''}
+                        {c.caughtBy ? ` · ${c.caughtBy.firstname}` : ''}
+                      </Text>
+                      {c.createdAt ? (
+                        <Text style={styles.myTeamCatchMeta}>{formatDateTime(c.createdAt)}</Text>
+                      ) : null}
+                    </View>
+                  ))
+                )}
+                <ZoomablePhotoViewer
+                  uri={myTeamPhoto}
+                  visible={!!myTeamPhoto}
+                  onClose={() => setMyTeamPhoto(null)}
+                />
               </>
+                );
+              })()
             ) : (
-              <Text style={styles.emptyText}>Aucune espèce configurée pour cette compétition</Text>
+              <Text style={styles.emptyText}>Impossible de charger votre équipe.</Text>
             )}
           </View>
         ) : (
@@ -673,11 +791,13 @@ export default function CompetitionDetailScreen({ route }: any) {
             Taille d'équipe: {(competition as any).teamSize} membre(s)
           </Text>
           <Text style={styles.infoText}>
-            Équipes inscrites: {competition.teams?.length || 0}
+            Équipes inscrites:{' '}
+            {(competition as any).enrolledTeamsCount ?? competition.teams?.length ?? 0}
           </Text>
           {(competition as any).isPaused && (
             <View style={styles.pausedBadge}>
-              <Text style={styles.pausedText}>⏸️ Compétition en pause</Text>
+              <FaIcon name="pause" size={16} color={theme.onAccent} />
+              <Text style={styles.pausedText}>Compétition en pause</Text>
             </View>
           )}
         </View>
@@ -780,8 +900,18 @@ export default function CompetitionDetailScreen({ route }: any) {
         {/* Pauses programmées - masqué si compétition terminée */}
         {!isEnded && (competition as any).scheduledPauses && (competition as any).scheduledPauses.length > 0 && (
           <View style={styles.scheduledPausesSection}>
-            <Text style={styles.sectionTitle}>⏰ Pauses programmées</Text>
-            {(competition as any).scheduledPauses.map((pause: any) => {
+            <TouchableOpacity
+              style={styles.pauseToggleButton}
+              onPress={() => setShowPauses(!showPauses)}
+              activeOpacity={0.7}
+            >
+              <FaIcon name="clock" size={16} color={theme.text} />
+              <Text style={styles.pauseToggleButtonText}>
+                {showPauses ? 'Masquer les pauses' : 'Afficher les pauses'}
+              </Text>
+            </TouchableOpacity>
+            {showPauses &&
+              (competition as any).scheduledPauses.map((pause: any) => {
               const now = new Date();
               const startDate = new Date(pause.startDate.replace(' ', 'T'));
               const endDate = new Date(pause.endDate.replace(' ', 'T'));
@@ -993,7 +1123,7 @@ export default function CompetitionDetailScreen({ route }: any) {
         )}
 
         {/* Classement */}
-        {competition.teams && competition.teams.length > 0 && (
+        {(!rankingVisible || (competition.teams && competition.teams.length > 0)) && (
           <View style={styles.rankingSection}>
             <Text style={styles.sectionTitle}>
               {isEnded && rankingVisible
@@ -1004,6 +1134,16 @@ export default function CompetitionDetailScreen({ route }: any) {
                   : 'Classement'
                 : 'Votre équipe'}
             </Text>
+
+            {!rankingVisible && (
+              <Text style={styles.enrolledCountText}>
+                {(() => {
+                  const n =
+                    (competition as any).enrolledTeamsCount ?? teamsToShow.length ?? 0;
+                  return `${n} équipe${n > 1 ? 's' : ''} inscrite${n > 1 ? 's' : ''}`;
+                })()}
+              </Text>
+            )}
 
             {!competition.isRankingPublic && !isAdmin && (
               <View style={styles.rankingInfo}>
@@ -1030,7 +1170,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                     <Text style={styles.teamRank}>#{rank}</Text>
                   )}
                   <View style={styles.teamInfo}>
-                    <Text style={styles.teamName}>{team.name}</Text>
+                    <Text style={[styles.teamName, isUserTeam && styles.teamNameUser]}>{team.name}</Text>
                     {team.registrationNumber && (
                       <Text style={styles.teamNumber}>N° {team.registrationNumber}</Text>
                     )}
@@ -1431,6 +1571,12 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  enrolledCountText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+    marginBottom: 10,
+  },
   teamRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1440,7 +1586,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 8,
   },
   teamRowUser: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: theme.accentMuted,
     borderLeftWidth: 4,
     borderLeftColor: theme.accent,
   },
@@ -1471,6 +1617,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     color: theme.text,
     marginBottom: 4,
+  },
+  teamNameUser: {
+    color: theme.text,
   },
   teamNumber: {
     fontSize: 12,
@@ -1617,11 +1766,13 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 16,
   },
   pausedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#FF9500',
     padding: 8,
     borderRadius: 6,
     marginTop: 8,
-    alignItems: 'center',
   },
   pausedText: {
     color: theme.onAccent,
@@ -1667,6 +1818,24 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   scheduledPausesSection: {
     marginBottom: 24,
+  },
+  pauseToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginBottom: 12,
+  },
+  pauseToggleButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
   },
   pauseCard: {
     backgroundColor: theme.surface,
@@ -1737,6 +1906,81 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   speciesTabContent: {
     marginTop: 16,
+  },
+  myTeamScoreRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  myTeamScoreCard: {
+    flex: 1,
+    backgroundColor: theme.surface,
+    borderRadius: 8,
+    padding: 12,
+  },
+  myTeamScoreLabel: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginBottom: 4,
+  },
+  myTeamScoreValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.text,
+  },
+  myTeamMembersBlock: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  myTeamMemberRow: {
+    backgroundColor: theme.surface,
+    borderRadius: 8,
+    padding: 12,
+  },
+  myTeamMemberName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  myTeamMemberMeta: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginTop: 2,
+  },
+  myTeamCatchPhoto: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: theme.surfaceRaised,
+  },
+  myTeamCatchRow: {
+    backgroundColor: theme.surface,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  myTeamCatchName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  myTeamCatchMeta: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginTop: 2,
+  },
+  myTeamOpenButton: {
+    marginTop: 8,
+    backgroundColor: theme.accent,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  myTeamOpenButtonText: {
+    color: theme.onAccent,
+    fontSize: 15,
+    fontWeight: '600',
   },
   speciesCard: {
     backgroundColor: theme.surface,

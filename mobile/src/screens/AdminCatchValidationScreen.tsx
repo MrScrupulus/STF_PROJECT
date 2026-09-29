@@ -140,6 +140,18 @@ export default function AdminCatchValidationScreen() {
       <Header title="Détail de la prise" showBack={true} showMenu={true} />
       <ScrollView style={styles.container}>
         <View style={styles.content}>
+          {catchData.photoUrl ? (
+            <View style={styles.card}>
+              <TouchableOpacity onPress={() => setShowImageModal(true)}>
+                <Image
+                  source={{ uri: resolvePhotoUri(catchData.photoUrl) ?? '' }}
+                  style={styles.thumbnail}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           {/* Informations principales */}
           <View style={styles.card}>
             <Text style={styles.label}>Espèce</Text>
@@ -181,20 +193,6 @@ export default function AdminCatchValidationScreen() {
               </>
             )}
           </View>
-
-          {/* Photo */}
-          {catchData.photoUrl && (
-            <View style={styles.card}>
-              <Text style={styles.label}>Photo</Text>
-              <TouchableOpacity onPress={() => setShowImageModal(true)}>
-                <Image
-                  source={{ uri: resolvePhotoUri(catchData.photoUrl) ?? '' }}
-                  style={styles.thumbnail}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Formulaire de rejet */}
           {currentAction === 'reject' && (
@@ -316,7 +314,6 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     borderRadius: 8,
-    marginTop: 8,
     backgroundColor: theme.surfaceRaised,
   },
   textInput: {

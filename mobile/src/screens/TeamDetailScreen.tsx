@@ -273,7 +273,9 @@ export default function TeamDetailScreen({ route }: any) {
     
     Alert.alert(
       'Quitter l\'équipe',
-      'Êtes-vous sûr de vouloir quitter cette équipe ? Cette action est irréversible.',
+      team?.competition
+        ? 'Vous pourrez rejoindre une autre équipe pour une nouvelle manche. Votre participation à cette compétition restera dans l’archive.'
+        : 'Êtes-vous sûr de vouloir quitter cette équipe ? Cette action est irréversible.',
       [
         {
           text: 'Annuler',
@@ -817,7 +819,7 @@ export default function TeamDetailScreen({ route }: any) {
                   <CatchesMapView
                     catches={catchesForMap}
                     speciesStats={speciesStats}
-                    height={240}
+                    height={280}
                   />
                 ) : null}
                 {speciesStats.length > 0 ? (

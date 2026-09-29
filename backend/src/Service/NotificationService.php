@@ -185,8 +185,21 @@ class NotificationService
     }
 
     /**
-     * Notifie tous les admins qu'une nouvelle prise est en attente de validation
+     * Notifie que le classement a été rendu public
      */
+    public function notifyRankingPublished(User $user, string $competitionName, int $competitionId): void
+    {
+        $this->createNotification(
+            $user,
+            'ranking_published',
+            "Le classement de {$competitionName} est maintenant public",
+            [
+                'competitionId' => $competitionId,
+                'competitionName' => $competitionName,
+            ]
+        );
+    }
+
     public function notifyAdminsPendingCatch(int $catchId, string $teamName, string $speciesName, float $size, string $caughtByName): void
     {
         $admins = $this->userRepository->findByRole('ROLE_ADMIN');

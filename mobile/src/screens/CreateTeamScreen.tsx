@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import Header from '../components/Header';
+import { rootNavigationRef } from '../navigation/rootNavigationRef';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -47,7 +48,7 @@ export default function CreateTeamScreen() {
       Alert.alert('Succès', 'Équipe créée avec succès.', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Teams' as never),
+          onPress: () => goToMyTeams(),
         },
       ]);
     },
@@ -64,7 +65,7 @@ export default function CreateTeamScreen() {
       Alert.alert('Succès', 'Équipe réactivée avec succès.', [
         {
           text: 'OK',
-          onPress: () => navigation.navigate('Teams' as never),
+          onPress: () => goToMyTeams(),
         },
       ]);
     },
@@ -74,8 +75,12 @@ export default function CreateTeamScreen() {
     },
   });
 
-  const activeTeams = teamsData?.teams?.filter((t: any) => t.isActive !== false) || [];
-  const inactiveTeams = historyData?.teams?.filter((t: any) => t.isActive === false) || [];
+  const activeTeams = (teamsData?.teams || []).filter(
+    (t: any) => t.isActive !== false && !t.isPersonalJournal
+  );
+  const inactiveTeams = (historyData?.teams || []).filter(
+    (t: any) => t.isActive === false && !t.isPersonalJournal && !t.competition
+  );
 
   const handleSubmit = () => {
     if (!formData.name.trim()) {
@@ -101,6 +106,19 @@ export default function CreateTeamScreen() {
         },
       ]
     );
+  };
+
+  const goToMyTeams = () => {
+    if (rootNavigationRef.isReady()) {
+      rootNavigationRef.navigate('MainTabs' as never, { screen: 'Teams' } as never);
+      return;
+    }
+    const parent = navigation.getParent();
+    if (parent) {
+      (parent as any).navigate('MainTabs', { screen: 'Teams' });
+      return;
+    }
+    navigation.navigate('Teams' as never);
   };
 
   if (checkingTeam) {
@@ -130,7 +148,7 @@ export default function CreateTeamScreen() {
           </Text>
           <TouchableOpacity
             style={styles.button}
-            onPress={() => navigation.navigate('Teams' as never)}
+            onPress={() => goToMyTeams()}
           >
             <Text style={styles.buttonText}>Retour à mon équipe</Text>
           </TouchableOpacity>

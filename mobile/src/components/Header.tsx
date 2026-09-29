@@ -62,6 +62,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         { name: 'Home', label: 'Accueil', icon: 'home' },
         { name: 'Profile', label: 'Mon compte', icon: 'user' },
         { name: 'Competitions', label: 'Compétitions', icon: 'trophy' },
+        { name: 'Teams', label: 'Mon équipe', icon: 'users' },
         { name: 'History', label: 'Carnet de prises', icon: 'history' },
         { name: 'Notifications', label: 'Notifications', icon: 'bell' },
         { name: 'Invitations', label: 'Mes Invitations', icon: 'envelope' },
