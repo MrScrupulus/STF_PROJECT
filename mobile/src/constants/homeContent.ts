@@ -1,68 +1,69 @@
 import type { AppIconName } from '../icons';
 
-/** Textes de l’écran Accueil (app mobile). Modifier ici, puis recharger l’app. */
+/** Textes de l’écran Accueil (app mobile). */
 
 export const homeContent = {
   title: 'Street Fishing',
-  subtitle: "L'application de compétition de pêche",
+  subtitle: 'Carnet de prises et compétitions',
 
-  aboutTitle: 'À propos de l’application',
-  about:
-    'Street Fishing est une application dédiée aux compétitions de pêche. Participez à des compétitions, enregistrez vos prises, formez des équipes et suivez vos statistiques en temps réel. Vous pouvez également vous créer votre propore journal de prises.',
+  intro:
+    'Le bouton bleu photographie une prise. Les onglets du bas mènent aux compétitions et à votre équipe.',
 
-  featuresTitle: 'Fonctionnalités principales',
-  features: [
-    {
-      icon: 'trophy' as AppIconName,
-      title: 'Compétitions',
-      description:
-        'Consultez les compétitions en cours, à venir ou terminées. Inscrivez-vous avec votre équipe et suivez le classement en direct.',
-    },
-    {
-      icon: 'camera' as AppIconName,
-      title: 'Enregistrement de prises',
-      description:
-        'Photographiez et enregistrez vos prises directement depuis l’application. Géolocalisation automatique et validation par les commissaires.',
-    },
-    {
-      icon: 'users' as AppIconName,
-      title: 'Gestion d’équipe',
-      description:
-        'Créez ou rejoignez une équipe, invitez vos amis et participez ensemble aux compétitions. Suivez les performances de votre équipe.',
-    },
-    {
-      icon: 'chart' as AppIconName,
-      title: 'Statistiques',
-      description:
-        'Consultez votre historique de prises, le nombre de compétitions auxquelles vous avez participé et vos statistiques par espèce de poisson.',
-    },
-  ],
-
-  tutorialTitle: 'Guide rapide',
-  catchTutorialTitle: 'Comment enregistrer une prise ?',
+  catchTutorialTitle: 'Enregistrer une prise',
   catchTutorialSteps: [
-    'Cliquez sur le bouton central bleu en bas de l’écran',
-    'Prenez une photo de votre prise ou sélectionnez une photo existante',
-    'Sélectionnez l’espèce de poisson capturé',
-    'Indiquez la taille (en cm) et ajoutez un commentaire si vous le souhaitez',
-    'Si vous participez à une compétition, sélectionnez-la ainsi que votre équipe',
-    'Autorisez la géolocalisation pour valider votre position',
-    'Validez ! Votre prise sera soumise à validation par un administrateur',
+    'Appuyez sur le bouton bleu au centre de la barre du bas',
+    'Prenez une photo (ou choisissez-en une dans la galerie)',
+    'Indiquez l’espèce et la taille en cm',
+    'En compétition : sélectionnez la manche et votre équipe',
+    'La géolocalisation doit être autorisée pour valider la position',
   ],
-  catchTutorialButton: 'Ajouter une prise maintenant',
+  catchTutorialButton: 'Ajouter une prise',
 
-  competitionTutorialTitle: 'Comment créer une compétition ?',
-  adminBadge: 'Admin uniquement',
+  competitionTutorialTitle: 'Participer à une manche',
   competitionTutorialSteps: [
-    'Accédez au Dashboard Admin depuis le menu burger',
-    'Cliquez sur « Créer une compétition »',
-    'Remplissez les informations : nom, dates de début et fin, taille d’équipe',
-    'Ajoutez les espèces autorisées avec leurs coefficients de points',
-    'Configurez les options : nombre max de participants, classement public, bonus',
-    'Ajoutez une description pour expliquer les règles de la compétition',
-    'Validez la création. La compétition apparaîtra dans la liste des compétitions',
+    'Créez une équipe ou acceptez une invitation',
+    'Ouvrez Compétitions et inscrivez votre équipe',
+    'Pendant la manche, enregistrez chaque prise avec le bouton bleu',
+    'Un commissaire valide ou refuse la prise',
   ],
 
-  footer:
-    'Utilisez la barre de navigation en bas pour accéder rapidement aux compétitions et à votre équipe. Le bouton central permet d’ajouter une prise rapidement.',
+  adminTutorialTitle: 'Créer une compétition',
+  adminBadge: 'Admin',
+  competitionAdminSteps: [
+    'Menu burger → Dashboard Admin → Créer une compétition',
+    'Renseignez nom, dates, taille d’équipe et espèces',
+    'Ajoutez zones, pauses et options de classement si besoin',
+  ],
 };
+
+export const homeActions: {
+  icon: AppIconName;
+  title: string;
+  hint: string;
+  screen: string;
+}[] = [
+  {
+    icon: 'camera',
+    title: 'Enregistrer une prise',
+    hint: 'Photo, espèce, taille — carnet ou compétition',
+    screen: 'AddCatch',
+  },
+  {
+    icon: 'trophy',
+    title: 'Compétitions',
+    hint: 'Inscription, classement et manches',
+    screen: 'Competitions',
+  },
+  {
+    icon: 'users',
+    title: 'Mon équipe',
+    hint: 'Créer, rejoindre ou gérer les membres',
+    screen: 'Teams',
+  },
+  {
+    icon: 'gear',
+    title: 'Réglages',
+    hint: 'Thème, notifications et compte',
+    screen: 'Settings',
+  },
+];

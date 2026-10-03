@@ -85,6 +85,21 @@ export default function SettingsScreen() {
           })}
         </View>
 
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => navigation.navigate('Onboarding' as never, { replay: true } as never)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.iconWrap}>
+            <FaIcon name="help" size={20} color={theme.accent} />
+          </View>
+          <View style={styles.rowText}>
+            <Text style={styles.rowLabel}>Revoir l’intro</Text>
+            <Text style={styles.rowHint}>Carnet, équipe, compétition et permissions</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+
         {ROWS.map((row) => (
           <TouchableOpacity
             key={row.screen}

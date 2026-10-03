@@ -12,8 +12,14 @@ export function parseApiDate(dateString: string | null | undefined): Date | null
   try {
     const s = dateString.trim();
     const hasTz = /[+-]\d{2}:\d{2}$/.test(s) || s.endsWith('Z');
-    const toParse = hasTz ? s : s.replace(' ', 'T');
-    const date = new Date(toParse);
+    if (hasTz) {
+      const date = new Date(s);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    // Doctrine envoie souvent Y-m-d H:i:s en UTC, sans fuseau.
+    // Sans « Z », JS le lit comme heure locale → 1 h ou 2 h de trop en France.
+    const iso = s.includes('T') ? s : s.replace(' ', 'T');
+    const date = new Date(`${iso}Z`);
     return isNaN(date.getTime()) ? null : date;
   } catch {
     return null;
@@ -38,9 +44,9 @@ function extractTimeFromApiDate(dateString: string | null | undefined): string |
 }
 
 /**
- * Formate une date en tenant compte du fuseau horaire
- * Le backend envoie les dates au format 'Y-m-d H:i:s' (probablement en UTC)
- * Cette fonction les convertit en heure locale
+ * Formate une date en heure de Paris.
+ * ISO avec fuseau (compétitions) : tel quel.
+ * Y-m-d H:i:s sans fuseau (prises) : UTC côté API.
  */
 export function formatDateTime(dateString: string | null | undefined): string {
   if (!dateString) {
@@ -75,7 +81,8 @@ export function formatDate(dateString: string | null | undefined): string {
   }
 
   try {
-    const date = new Date(dateString + 'Z');
+    const date = parseApiDate(dateString);
+    if (!date) return 'Date invalide';
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -97,9 +104,9 @@ export function isDatePast(dateString: string | null | undefined): boolean {
   }
 
   try {
-    const date = new Date(dateString + 'Z');
+    const date = parseApiDate(dateString);
     const now = new Date();
-    return date < now;
+    return !!date && date < now;
   } catch (error) {
     console.error('Erreur lors de la vérification de la date:', error);
     return false;
@@ -115,9 +122,9 @@ export function isDateFuture(dateString: string | null | undefined): boolean {
   }
 
   try {
-    const date = new Date(dateString + 'Z');
+    const date = parseApiDate(dateString);
     const now = new Date();
-    return date > now;
+    return !!date && date > now;
   } catch (error) {
     console.error('Erreur lors de la vérification de la date:', error);
     return false;
@@ -136,10 +143,10 @@ export function isDateBetween(
   }
 
   try {
-    const start = new Date(startDate + 'Z');
-    const end = new Date(endDate + 'Z');
+    const start = parseApiDate(startDate);
+    const end = parseApiDate(endDate);
     const now = new Date();
-    return now >= start && now <= end;
+    return !!start && !!end && now >= start && now <= end;
   } catch (error) {
     console.error('Erreur lors de la vérification de la date:', error);
     return false;
@@ -183,7 +190,8 @@ export function formatRelativeTime(dateString: string | null | undefined): strin
   }
 
   try {
-    const date = new Date(dateString + 'Z');
+    const date = parseApiDate(dateString);
+    if (!date) return 'Date inconnue';
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffSeconds = Math.floor(diffMs / 1000);

@@ -1367,6 +1367,8 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 12,
+    color: theme.text,
+    backgroundColor: theme.surfaceRaised,
   },
   inviteActions: {
     flexDirection: 'row',

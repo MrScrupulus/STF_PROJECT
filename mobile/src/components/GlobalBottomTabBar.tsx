@@ -5,14 +5,16 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { authService } from '../services/authService';
+import { adminService } from '../services/adminService';
 import { useAuth } from '../contexts/AuthContext';
 import FaIcon from './FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
 // Routes où la barre de navigation ne doit pas être affichée
-const HIDDEN_ROUTES = ['Login', 'Register'];
+const HIDDEN_ROUTES = ['Login', 'Register', 'Onboarding'];
 
 interface GlobalBottomTabBarProps {
   navigationRef: React.RefObject<any>;
@@ -43,8 +45,16 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
     }
   }, [isAuthenticated]);
 
-  // Ne pas afficher la barre sur Login et Register uniquement
-  // Si currentRoute est null, afficher quand même la barre (cas du démarrage sur Home)
+  const { data: pendingToValidate = 0 } = useQuery({
+    queryKey: ['admin-pending-catches', 'tab-count'],
+    queryFn: () => adminService.getPendingCatches(1, 1),
+    select: (d) => Number(d?.total) || 0,
+    enabled: isAuthenticated && isAdmin,
+    refetchInterval: 20000,
+    retry: false,
+  });
+
+  // Ne pas afficher la barre sur Login, Register et l’intro
   if (currentRoute && HIDDEN_ROUTES.includes(currentRoute)) {
     return null;
   }
@@ -97,7 +107,9 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
           onPress={() => handleNavigation('Competitions')}
           activeOpacity={0.7}
         >
-          <FaIcon name="trophy" size={22} color={isCompetitionsActive ? theme.accent : theme.textMuted} />
+          <View style={styles.tabIconWrap}>
+            <FaIcon name="trophy" size={22} color={isCompetitionsActive ? theme.accent : theme.textMuted} />
+          </View>
           <Text style={[styles.tabLabel, isCompetitionsActive && styles.tabLabelActive]}>
             Compétitions
           </Text>
@@ -120,19 +132,28 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
           onPress={() => handleNavigation(teamsTabName)}
           activeOpacity={0.7}
         >
-          <FaIcon
-            name={teamsTabIcon}
-            size={22}
-            color={
-              isAuthenticated && isAdmin
-                ? teamsTabActive
-                  ? theme.successDim
-                  : theme.success
-                : teamsTabActive
-                  ? theme.accent
-                  : theme.textMuted
-            }
-          />
+          <View style={styles.tabIconWrap}>
+            <FaIcon
+              name={teamsTabIcon}
+              size={22}
+              color={
+                isAuthenticated && isAdmin
+                  ? teamsTabActive
+                    ? theme.successDim
+                    : theme.success
+                  : teamsTabActive
+                    ? theme.accent
+                    : theme.textMuted
+              }
+            />
+            {isAuthenticated && isAdmin && pendingToValidate > 0 ? (
+              <View style={styles.countBadge} pointerEvents="none">
+                <Text style={styles.countBadgeText}>
+                  {pendingToValidate > 99 ? '99+' : pendingToValidate}
+                </Text>
+              </View>
+            ) : null}
+          </View>
           <Text
             style={[
               styles.tabLabel,
@@ -168,6 +189,27 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+  },
+  tabIconWrap: {
+    position: 'relative',
+    marginBottom: 4,
+  },
+  countBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -12,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: theme.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBadgeText: {
+    color: theme.onAccent,
+    fontSize: 10,
+    fontWeight: '700',
   },
   tabIcon: {
     fontSize: 24,

@@ -43,6 +43,8 @@ import NotificationInitializer from './src/components/NotificationInitializer';
 import GlobalBottomTabBar from './src/components/GlobalBottomTabBar';
 import Footer from './src/components/Footer';
 import SettingsScreen from './src/screens/SettingsScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import { hasCompletedOnboarding } from './src/utils/onboardingStorage';
 import { ThemeProvider, useThemeColors } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainTabs from './src/navigation/MainTabs';
@@ -112,6 +114,7 @@ function AppNavigator() {
   const theme = useThemeColors();
   const linkingRef = useRef<any>(null);
   const [currentRoute, setCurrentRoute] = useState<string | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
     const lockPortrait = () => {
@@ -199,8 +202,30 @@ function AppNavigator() {
     }
   };
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setNeedsOnboarding(null);
+      return;
+    }
+    let cancelled = false;
+    hasCompletedOnboarding()
+      .then((done) => {
+        if (!cancelled) setNeedsOnboarding(!done);
+      })
+      .catch(() => {
+        if (!cancelled) setNeedsOnboarding(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
   if (isAuthenticated === null) {
     return null; // Splash screen is showing
+  }
+
+  if (isAuthenticated && needsOnboarding === null) {
+    return null;
   }
 
   return (
@@ -218,11 +243,16 @@ function AppNavigator() {
       }}
     >
       <View style={[styles.appShell, { backgroundColor: theme.bg }]}>
-      <NotificationInitializer />
+      {!needsOnboarding ? <NotificationInitializer /> : null}
       <QueryRefreshOnAppState />
       <StatusBar style={theme.statusBar} />
       <View style={styles.stackArea}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false }}
+        initialRouteName={
+          !isAuthenticated ? 'Login' : needsOnboarding ? 'Onboarding' : 'MainTabs'
+        }
+      >
         {!isAuthenticated ? (
           <>
             {/* Connexion obligatoire : Login en premier, pas d'accès au contenu */}
@@ -241,6 +271,17 @@ function AppNavigator() {
         ) : (
           <>
             {/* Tab Navigator pour les écrans principaux (inclut Home mais caché dans la barre) - DOIT ÊTRE EN PREMIER */}
+            <Stack.Screen
+              name="Onboarding"
+              options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }}
+            >
+              {(props) => (
+                <OnboardingScreen
+                  {...props}
+                  onFinished={() => setNeedsOnboarding(false)}
+                />
+              )}
+            </Stack.Screen>
             <Stack.Screen 
               name="MainTabs" 
               component={MainTabs}
@@ -277,7 +318,7 @@ function AppNavigator() {
       </View>
       {/* Barre de navigation puis bandeau copyright, visibles partout sauf Login/Register pour la barre */}
       <GlobalBottomTabBar navigationRef={rootNavigationRef} currentRoute={currentRoute} />
-      <Footer />
+      {currentRoute !== 'Onboarding' ? <Footer /> : null}
       </View>
     </NavigationContainer>
   );

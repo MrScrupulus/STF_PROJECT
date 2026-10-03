@@ -403,6 +403,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
+    color: theme.text,
   },
   eyeIcon: {
     padding: 16,

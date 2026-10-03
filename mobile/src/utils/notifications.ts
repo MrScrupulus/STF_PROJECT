@@ -9,7 +9,7 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: true,
+    shouldSetBadge: false,
     shouldShowBanner: true,
     shouldShowList: true,
   }),
@@ -165,4 +165,14 @@ export function setupNotificationListeners(
     receivedListener.remove();
     responseListener.remove();
   };
+}
+
+/** Aligne la puce de l’icône iOS/Android avec le vrai nombre de notifs non lues. */
+export async function syncAppIconBadge(unreadCount: number): Promise<void> {
+  try {
+    const n = Math.max(0, Math.floor(unreadCount) || 0);
+    await Notifications.setBadgeCountAsync(n);
+  } catch {
+    // Expo Go / simulateur : ignorer
+  }
 }

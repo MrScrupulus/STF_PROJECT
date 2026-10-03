@@ -1,18 +1,7 @@
+import { parseApiDate } from './dateUtils';
+
 export function parseCatchDate(createdAt: string | undefined | null): Date | null {
-  if (!createdAt) return null;
-  const str = String(createdAt);
-  const match = str.match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
-  if (match) {
-    const date = new Date(
-      parseInt(match[1], 10),
-      parseInt(match[2], 10) - 1,
-      parseInt(match[3], 10)
-    );
-    date.setHours(parseInt(match[4], 10), parseInt(match[5], 10) || 0, 0, 0);
-    return date;
-  }
-  const d = new Date(str);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return parseApiDate(createdAt);
 }
 
 function pad2(n: number) {

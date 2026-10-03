@@ -62,12 +62,12 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         { name: 'Home', label: 'Accueil', icon: 'home' },
         { name: 'Profile', label: 'Mon compte', icon: 'user' },
         { name: 'Competitions', label: 'Compétitions', icon: 'trophy' },
+        ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: 'key' as const }] : []),
         { name: 'Teams', label: 'Mon équipe', icon: 'users' },
         { name: 'History', label: 'Carnet de prises', icon: 'history' },
         { name: 'Notifications', label: 'Notifications', icon: 'bell' },
         { name: 'Invitations', label: 'Mes Invitations', icon: 'envelope' },
         { name: 'Settings', label: 'Réglages', icon: 'gear' },
-        ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: 'key' as const }] : []),
         { name: 'LegalNotice', label: 'Mentions légales', icon: 'file' },
       ]
     : [

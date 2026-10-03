@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\NotificationPreferences;
 use App\Repository\NotificationPreferencesRepository;
+use App\Repository\NotificationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -15,6 +16,7 @@ class ExpoPushNotificationService
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly NotificationPreferencesRepository $preferencesRepository,
+        private readonly NotificationRepository $notificationRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly LoggerInterface $logger
     ) {
@@ -35,6 +37,9 @@ class ExpoPushNotificationService
         }
 
         try {
+            $user = $preferences->getUser();
+            $badge = $user ? (int) $this->notificationRepository->countUnreadByUser($user) : 0;
+
             $messages = [];
             foreach ($tokens as $token) {
                 $messages[] = [
@@ -45,7 +50,7 @@ class ExpoPushNotificationService
                     'sound' => 'default',
                     'priority' => 'high',
                     'channelId' => 'default',
-                    'badge' => 1,
+                    'badge' => $badge,
                     'ttl' => 86400,
                     'android' => [
                         'channelId' => 'default',
