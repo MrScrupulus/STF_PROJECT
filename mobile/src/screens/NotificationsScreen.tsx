@@ -169,6 +169,7 @@ export default function NotificationsScreen() {
       catch_rejected: 'circleXmark',
       catch_pending: 'hourglass',
       team_invitation: 'userPlus',
+      competition_created: 'calendar',
       competition_registered: 'flag',
       competition_started: 'rocket',
       competition_ended: 'flagCheckered',

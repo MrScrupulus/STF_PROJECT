@@ -152,6 +152,23 @@ export default function NotificationPreferencesPage() {
 
             <div className={styles.preferences__item}>
               <div className={styles.preferences__item_info}>
+                <label className={styles.preferences__item_label}>Nouvelle compétition</label>
+                <p className={styles.preferences__item_description}>
+                  Recevoir une notification quand une nouvelle compétition est ouverte
+                </p>
+              </div>
+              <label className={styles.preferences__switch}>
+                <input
+                  type="checkbox"
+                  checked={preferences.competitionCreated ?? true}
+                  onChange={() => handleToggle("competitionCreated")}
+                />
+                <span className={styles.preferences__slider}></span>
+              </label>
+            </div>
+
+            <div className={styles.preferences__item}>
+              <div className={styles.preferences__item_info}>
                 <label className={styles.preferences__item_label}>Inscription compétition</label>
                 <p className={styles.preferences__item_description}>
                   Recevoir une notification quand votre équipe s'inscrit à une compétition

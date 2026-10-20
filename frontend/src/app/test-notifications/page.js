@@ -7,6 +7,7 @@ const NOTIFICATION_TYPES = [
     { value: 'catch_validated', label: 'Prise validée', color: '#10b981' },
     { value: 'catch_rejected', label: 'Prise rejetée', color: '#ef4444' },
     { value: 'team_invitation', label: 'Invitation d\'équipe', color: '#3b82f6' },
+    { value: 'competition_created', label: 'Nouvelle compétition ouverte', color: '#2563eb' },
     { value: 'competition_registered', label: 'Inscription compétition', color: '#8b5cf6' },
     { value: 'competition_started', label: 'Compétition démarrée', color: '#f59e0b' },
     { value: 'competition_ended', label: 'Compétition terminée', color: '#6b7280' },

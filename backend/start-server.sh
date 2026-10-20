@@ -23,6 +23,12 @@ while ! nc -z database 3306; do
 done
 echo "Base de données prête!"
 
+if [ "${APP_ENV:-prod}" = "prod" ]; then
+  echo "Warmup du cache Symfony (prod)..."
+  php bin/console cache:warmup --env=prod --no-debug || true
+  chown -R www-data:www-data var/cache var/log 2>/dev/null || true
+fi
+
 # Démarrer PHP-FPM en arrière-plan
 php-fpm -D
 

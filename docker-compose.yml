@@ -37,7 +37,8 @@ services:
       - /var/www/html/var/log
       - ${APP_UPLOADS_PATH:-./backend/data/uploads}:/var/www/uploads
     environment:
-      - APP_ENV=${APP_ENV:-dev}
+      - APP_ENV=${APP_ENV:-prod}
+      - APP_DEBUG=${APP_DEBUG:-0}
       - APP_UPLOADS_PATH=/var/www/uploads
       - DATABASE_URL=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@database:3306/${MARIADB_DATABASE:-stf_db}?serverVersion=mariadb-10.11.0
       - APP_SECRET=${APP_SECRET}
@@ -62,7 +63,8 @@ services:
       - /var/www/html/var/cache
       - /var/www/html/var/log
     environment:
-      - APP_ENV=${APP_ENV:-dev}
+      - APP_ENV=${APP_ENV:-prod}
+      - APP_DEBUG=${APP_DEBUG:-0}
       - DATABASE_URL=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@database:3306/${MARIADB_DATABASE:-stf_db}?serverVersion=mariadb-10.11.0
       - APP_SECRET=${APP_SECRET}
     command: >

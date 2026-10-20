@@ -14,6 +14,16 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+COPY docker/php/stf.ini /usr/local/etc/php/conf.d/zz-stf.ini
+RUN sed -i \
+    -e 's/^pm.max_children = .*/pm.max_children = 25/' \
+    -e 's/^pm.start_servers = .*/pm.start_servers = 5/' \
+    -e 's/^pm.min_spare_servers = .*/pm.min_spare_servers = 3/' \
+    -e 's/^pm.max_spare_servers = .*/pm.max_spare_servers = 10/' \
+    -e 's/^;pm.max_requests = .*/pm.max_requests = 500/' \
+    -e 's/^;clear_env = no/clear_env = no/' \
+    /usr/local/etc/php-fpm.d/www.conf
+
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

@@ -24,6 +24,7 @@ use App\Repository\Species\SpeciesRepository;
 use App\Entity\Competition\CompetitionSpecies;
 use App\Repository\Competition\CompetitionSpeciesRepository;
 use App\Service\ReglementImageStorageService;
+use App\Repository\CompetitionTeamSnapshotRepository;
 use Psr\Log\LoggerInterface;
 
 #[Route('/api')]
@@ -32,6 +33,8 @@ class CompetitionController extends AbstractController
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly ReglementImageStorageService $reglementStorage,
+        private readonly CompetitionTeamSnapshotRepository $snapshotRepository,
+        private readonly CompetitionSnapshotService $snapshotService,
     ) {
     }
 
@@ -115,8 +118,12 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions', name: 'competition_list', methods: ['GET'])]
-    public function list(CompetitionRepository $repository, TeamRepository $teamRepository, FishCatchRepository $catchRepository, Request $request): JsonResponse
-    {
+    public function list(
+        CompetitionRepository $repository,
+        TeamRepository $teamRepository,
+        FishCatchRepository $catchRepository,
+        Request $request
+    ): JsonResponse {
         try {
             $user = $this->getUser();
             
@@ -161,6 +168,19 @@ class CompetitionController extends AbstractController
                             if ($competition->getEndDate() < $now && !in_array($competitionId, $userParticipatedCompetitionIds)) {
                                 $userParticipatedCompetitionIds[] = $competitionId;
                             }
+                        }
+                    }
+
+                    $snapshots = $this->snapshotRepository->createQueryBuilder('s')
+                        ->innerJoin('s.team', 'st')
+                        ->andWhere('st.id IN (:teamIds)')
+                        ->setParameter('teamIds', $teamIds)
+                        ->getQuery()
+                        ->getResult();
+                    foreach ($snapshots as $snapshot) {
+                        $cid = $snapshot->getCompetition()?->getId();
+                        if ($cid && !in_array($cid, $userParticipatedCompetitionIds, true)) {
+                            $userParticipatedCompetitionIds[] = $cid;
                         }
                     }
                 }
@@ -217,7 +237,7 @@ class CompetitionController extends AbstractController
                     'count' => count($data),
                 ]
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Erreur lors de la récupération des compétitions', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -881,7 +901,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/admin/competitions', name: 'app_admin_competition_create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function create(Request $request, EntityManagerInterface $entityManager, NotificationService $notificationService): JsonResponse
     {
         try {
             $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -1025,6 +1045,18 @@ class CompetitionController extends AbstractController
                 $entityManager->flush();
             }
 
+            try {
+                $notificationService->notifyCompetitionCreated(
+                    $competition->getName(),
+                    (int) $competition->getId()
+                );
+            } catch (\Throwable $e) {
+                $this->logger->error('Erreur lors de la notification de nouvelle compétition', [
+                    'competitionId' => $competition->getId(),
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return $this->json([
                 'message' => 'Compétition créée avec succès',
                 'competition' => [
@@ -1132,12 +1164,22 @@ class CompetitionController extends AbstractController
                 ], 403);
             }
 
-            if ($team->getCompetition()) {
-                $oldName = $team->getCompetition()->getName();
-                return $this->json([
-                    'success' => false,
-                    'message' => "Cette équipe est figée sur la compétition « {$oldName} ». Créez une nouvelle équipe pour une autre manche."
-                ], 400);
+            $currentCompetition = $team->getCompetition();
+            if ($currentCompetition) {
+                if ($currentCompetition->getId() === $competition->getId()) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Cette équipe est déjà inscrite à cette compétition'
+                    ], 400);
+                }
+                if ($currentCompetition->getEndDate() >= $now) {
+                    $oldName = $currentCompetition->getName();
+                    return $this->json([
+                        'success' => false,
+                        'message' => "Cette équipe est déjà inscrite à « {$oldName} ». Un membre ne peut participer qu’à une manche à la fois."
+                    ], 400);
+                }
+                $this->snapshotService->createSnapshotsForCompetition($currentCompetition);
             }
 
             $liveTeams = $teamRepo->findTeamsByMember($user, true, true);

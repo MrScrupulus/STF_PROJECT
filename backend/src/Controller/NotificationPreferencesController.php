@@ -32,6 +32,7 @@ class NotificationPreferencesController extends AbstractController
                 'catchValidated' => $preferences->isCatchValidated(),
                 'catchRejected' => $preferences->isCatchRejected(),
                 'teamInvitation' => $preferences->isTeamInvitation(),
+                'competitionCreated' => $preferences->isCompetitionCreated(),
                 'competitionRegistered' => $preferences->isCompetitionRegistered(),
                 'competitionStarted' => $preferences->isCompetitionStarted(),
                 'competitionEnded' => $preferences->isCompetitionEnded(),
@@ -78,6 +79,9 @@ class NotificationPreferencesController extends AbstractController
         if (isset($data['teamInvitation'])) {
             $preferences->setTeamInvitation((bool) $data['teamInvitation']);
         }
+        if (isset($data['competitionCreated'])) {
+            $preferences->setCompetitionCreated((bool) $data['competitionCreated']);
+        }
         if (isset($data['competitionRegistered'])) {
             $preferences->setCompetitionRegistered((bool) $data['competitionRegistered']);
         }
@@ -113,6 +117,7 @@ class NotificationPreferencesController extends AbstractController
                 'catchValidated' => $preferences->isCatchValidated(),
                 'catchRejected' => $preferences->isCatchRejected(),
                 'teamInvitation' => $preferences->isTeamInvitation(),
+                'competitionCreated' => $preferences->isCompetitionCreated(),
                 'competitionRegistered' => $preferences->isCompetitionRegistered(),
                 'competitionStarted' => $preferences->isCompetitionStarted(),
                 'competitionEnded' => $preferences->isCompetitionEnded(),

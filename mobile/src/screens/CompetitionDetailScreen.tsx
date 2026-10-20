@@ -353,9 +353,12 @@ export default function CompetitionDetailScreen({ route }: any) {
   // Date actuelle pour les comparaisons
   const now = new Date();
   
-  // Équipes encore libres (une équipe figée reste collée à sa manche)
-  
-  const availableTeams = myTeams.filter((team: any) => !team.competition);
+  // Équipes libres, ou dont la manche précédente est terminée (réutilisables)
+  const availableTeams = myTeams.filter((team: any) => {
+    if (!team.competition) return true;
+    const end = parseApiDate(team.competition.endDate);
+    return end !== null && end < now;
+  });
   
   // Vérifier si déjà inscrit à cette compétition spécifique (et que la compétition est active)
   const isAlreadyRegistered = myTeams.some((team: any) => {
@@ -520,7 +523,53 @@ export default function CompetitionDetailScreen({ route }: any) {
         {/* Contenu selon l'onglet actif */}
         {activeTab === 'reglement' ? (
           <View style={styles.speciesTabContent}>
-            <Text style={styles.sectionTitle}>Règles et barème</Text>
+            {(() => {
+              const imageUrls = ((competition as any).reglementImageUrls?.length > 0)
+                ? (competition as any).reglementImageUrls
+                : (competition as any).reglementImageUrl
+                  ? [(competition as any).reglementImageUrl]
+                  : [];
+              const imageSources = imageUrls.map((url: string) => ({ uri: url }));
+              const hasReglementText = Boolean((competition as any).reglement);
+              if (imageUrls.length === 0 && !hasReglementText) {
+                return null;
+              }
+              return (
+                <>
+                  <Text style={styles.sectionTitle}>Règlement</Text>
+                  {imageUrls.length > 0 ? (
+                    <>
+                      {imageUrls.map((url: string, idx: number) => (
+                        <TouchableOpacity
+                          key={idx}
+                          activeOpacity={0.9}
+                          onPress={() => {
+                            setReglementImageViewerIndex(idx);
+                            setReglementImageViewerVisible(true);
+                          }}
+                        >
+                          <Image
+                            source={{ uri: url }}
+                            style={{ width: '100%', height: 300, resizeMode: 'contain', marginBottom: 16 }}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                      <ImageView
+                        images={imageSources}
+                        imageIndex={reglementImageViewerIndex}
+                        visible={reglementImageViewerVisible}
+                        onRequestClose={() => setReglementImageViewerVisible(false)}
+                      />
+                    </>
+                  ) : null}
+                  {hasReglementText ? (
+                    <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
+                  ) : null}
+                </>
+              );
+            })()}
+
+            <Text style={[styles.sectionTitle, styles.rulesSubTitle]}>Règles et barème</Text>
             <Text style={styles.rulesIntro}>
               Paramètres définis par l&apos;organisateur (système de score et options de la compétition).
             </Text>
@@ -601,52 +650,6 @@ export default function CompetitionDetailScreen({ route }: any) {
               </>
             ) : null}
 
-            <Text style={[styles.sectionTitle, styles.rulesSubTitle]}>Règlement complémentaire</Text>
-            <Text style={styles.rulesIntro}>
-              Texte libre et éventuelles images ajoutés par l&apos;organisateur.
-            </Text>
-            {(() => {
-              const imageUrls = ((competition as any).reglementImageUrls?.length > 0)
-                ? (competition as any).reglementImageUrls
-                : (competition as any).reglementImageUrl
-                  ? [(competition as any).reglementImageUrl]
-                  : [];
-              const imageSources = imageUrls.map((url: string) => ({ uri: url }));
-              return imageUrls.length > 0 ? (
-                <>
-                  {imageUrls.map((url: string, idx: number) => (
-                    <TouchableOpacity
-                      key={idx}
-                      activeOpacity={0.9}
-                      onPress={() => {
-                        setReglementImageViewerIndex(idx);
-                        setReglementImageViewerVisible(true);
-                      }}
-                    >
-                      <Image
-                        source={{ uri: url }}
-                        style={{ width: '100%', height: 300, resizeMode: 'contain', marginBottom: 16 }}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                  <ImageView
-                    images={imageSources}
-                    imageIndex={reglementImageViewerIndex}
-                    visible={reglementImageViewerVisible}
-                    onRequestClose={() => setReglementImageViewerVisible(false)}
-                  />
-                  {(competition as any).reglement ? (
-                    <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
-                  ) : null}
-                </>
-              ) : (competition as any).reglement ? (
-                <Text style={styles.reglementText}>{(competition as any).reglement}</Text>
-              ) : (
-                <Text style={styles.emptyText}>
-                  Aucun texte ni image complémentaire — les règles officielles figurent ci-dessus.
-                </Text>
-              );
-            })()}
           </View>
         ) : activeTab === 'myTeam' ? (
           <View style={styles.speciesTabContent}>

@@ -41,6 +41,26 @@ class TeamController extends AbstractController
         return $user && $team->getMembers()->contains($user);
     }
 
+    /** Compétition encore à venir / en cours, sinon null (équipe réutilisable). */
+    private function liveCompetitionPayload(Team $team): ?array
+    {
+        $competition = $team->getCompetition();
+        if (!$competition) {
+            return null;
+        }
+        $now = new \DateTime();
+        if ($competition->getEndDate() < $now) {
+            return null;
+        }
+
+        return [
+            'id' => $competition->getId(),
+            'name' => $competition->getName(),
+            'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+            'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
+        ];
+    }
+
     #[Route('/my-teams', name: 'my_teams', methods: ['GET'])]
     public function getMyTeams(TeamRepository $repository): JsonResponse
     {
@@ -72,12 +92,7 @@ class TeamController extends AbstractController
                             'email' => $member->getEmail(),
                         ];
                     }, $team->getMembers()->toArray()),
-                    'competition' => $team->getCompetition() ? [
-                        'id' => $team->getCompetition()->getId(),
-                        'name' => $team->getCompetition()->getName(),
-                        'startDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getStartDate()),
-                        'endDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getEndDate()),
-                    ] : null,
+                    'competition' => $this->liveCompetitionPayload($team),
                     'isActive' => $team->getIsActive(),
                     'isPersonalJournal' => $team->isPersonalJournal(),
                 ];

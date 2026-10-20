@@ -36,6 +36,7 @@ class NotificationTestController extends AbstractController
                 'catch_validated' => 'Prise validée',
                 'catch_rejected' => 'Prise rejetée',
                 'team_invitation' => 'Invitation d\'équipe',
+                'competition_created' => 'Nouvelle compétition ouverte',
                 'competition_registered' => 'Inscription compétition',
                 'competition_started' => 'Compétition démarrée',
                 'competition_ended' => 'Compétition terminée',
@@ -127,6 +128,7 @@ class NotificationTestController extends AbstractController
             'catch_validated',
             'catch_rejected',
             'team_invitation',
+            'competition_created',
             'competition_registered',
             'competition_started',
             'competition_ended',
@@ -173,6 +175,10 @@ class NotificationTestController extends AbstractController
 
             case 'team_invitation':
                 $this->notificationService->notifyTeamInvitation($user, 'Équipe Test', 999);
+                break;
+
+            case 'competition_created':
+                $this->notificationService->notifyCompetitionCreatedForUser($user, 'Compétition Test', 999);
                 break;
 
             case 'competition_registered':

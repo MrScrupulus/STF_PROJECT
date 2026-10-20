@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\Notification;
+use App\Entity\NotificationPreferences;
 use App\Entity\Security\User;
 use App\Repository\NotificationPreferencesRepository;
 use App\Repository\Security\UserRepository;
@@ -102,6 +103,68 @@ class NotificationService
                 'teamName' => $teamName,
             ]
         );
+    }
+
+    public function notifyCompetitionCreatedForUser(User $user, string $competitionName, int $competitionId): void
+    {
+        $this->createNotification(
+            $user,
+            'competition_created',
+            "Une nouvelle compétition est ouverte : {$competitionName}",
+            [
+                'competitionId' => $competitionId,
+                'competitionName' => $competitionName,
+            ]
+        );
+    }
+
+    /**
+     * Informe tous les utilisateurs actifs qu'une nouvelle compétition est ouverte.
+     */
+    public function notifyCompetitionCreated(string $competitionName, int $competitionId): void
+    {
+        $message = "Une nouvelle compétition est ouverte : {$competitionName}";
+        $data = [
+            'competitionId' => $competitionId,
+            'competitionName' => $competitionName,
+        ];
+        $users = $this->userRepository->findAllActive();
+        $pendingPush = [];
+
+        foreach ($users as $user) {
+            $notification = new Notification();
+            $notification->setUser($user);
+            $notification->setType('competition_created');
+            $notification->setMessage($message);
+            $notification->setData($data);
+            $notification->setIsRead(false);
+            $this->entityManager->persist($notification);
+
+            $preferences = $this->preferencesRepository->findByUser($user);
+            if (!$preferences) {
+                $preferences = new NotificationPreferences();
+                $preferences->setUser($user);
+                $this->entityManager->persist($preferences);
+            }
+            if ($preferences->isNotificationEnabled('competition_created') && $preferences->getAllExpoPushTokens() !== []) {
+                $pendingPush[] = [$preferences, $notification];
+            }
+        }
+
+        $this->entityManager->flush();
+
+        foreach ($pendingPush as [$preferences, $notification]) {
+            try {
+                $this->expoPushService->sendPushNotification(
+                    $preferences,
+                    'STF Competition',
+                    $message,
+                    array_merge($data, ['type' => 'competition_created', 'notificationId' => $notification->getId()])
+                );
+            } catch (\Throwable $e) {
+                // La compétition est déjà créée : un échec push ne doit pas bloquer.
+            }
+        }
     }
 
     /**

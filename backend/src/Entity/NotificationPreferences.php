@@ -39,6 +39,9 @@ class NotificationPreferences
     private bool $teamInvitation = true;
 
     #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    private bool $competitionCreated = true;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
     private bool $competitionRegistered = true;
 
     #[ORM\Column(type: 'boolean', options: ['default' => true])]
@@ -185,6 +188,18 @@ class NotificationPreferences
         return $this;
     }
 
+    public function isCompetitionCreated(): bool
+    {
+        return $this->competitionCreated;
+    }
+
+    public function setCompetitionCreated(bool $competitionCreated): static
+    {
+        $this->competitionCreated = $competitionCreated;
+        $this->updatedAt = new \DateTime();
+        return $this;
+    }
+
     public function isCompetitionRegistered(): bool
     {
         return $this->competitionRegistered;
@@ -289,6 +304,7 @@ class NotificationPreferences
             'catch_validated' => $this->catchValidated,
             'catch_rejected' => $this->catchRejected,
             'team_invitation' => $this->teamInvitation,
+            'competition_created' => $this->competitionCreated,
             'competition_registered' => $this->competitionRegistered,
             'competition_started' => $this->competitionStarted,
             'competition_ended' => $this->competitionEnded,

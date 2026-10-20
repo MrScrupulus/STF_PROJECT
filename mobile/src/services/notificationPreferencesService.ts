@@ -6,6 +6,7 @@ export interface NotificationPreferences {
   catchValidated: boolean;
   catchRejected: boolean;
   teamInvitation: boolean;
+  competitionCreated: boolean;
   competitionRegistered: boolean;
   competitionStarted: boolean;
   competitionEnded: boolean;

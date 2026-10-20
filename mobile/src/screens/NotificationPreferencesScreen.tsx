@@ -147,6 +147,19 @@ export default function NotificationPreferencesScreen() {
 
           <View style={styles.preferenceItem}>
             <View style={styles.preferenceInfo}>
+              <Text style={styles.preferenceLabel}>Nouvelle compétition</Text>
+              <Text style={styles.preferenceDescription}>
+                Recevoir une notification quand une nouvelle compétition est ouverte
+              </Text>
+            </View>
+            <Switch
+              value={preferences.competitionCreated ?? true}
+              onValueChange={() => handleToggle('competitionCreated')}
+            />
+          </View>
+
+          <View style={styles.preferenceItem}>
+            <View style={styles.preferenceInfo}>
               <Text style={styles.preferenceLabel}>Inscription compétition</Text>
               <Text style={styles.preferenceDescription}>
                 Recevoir une notification quand votre équipe s'inscrit à une compétition
