@@ -45,6 +45,23 @@ class UserRepository extends ServiceEntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    public function findActiveByEmail(string $email): ?User
+    {
+        $normalized = mb_strtolower(trim($email));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('u')
+            ->andWhere('LOWER(u.email) = :email')
+            ->andWhere('u.isDeleted = :false')
+            ->setParameter('email', $normalized)
+            ->setParameter('false', false)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /** Utilisateurs non supprimés (pour liste admin, etc.) */
     public function findAllActive(): array
     {

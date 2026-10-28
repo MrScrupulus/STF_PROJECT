@@ -31,6 +31,9 @@ class CompetitionTeamSnapshot
     #[ORM\Column]
     private ?int $totalScore = 0;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isDisqualified = false;
+
     #[ORM\Column(type: 'json')]
     private array $members = [];
 
@@ -94,6 +97,17 @@ class CompetitionTeamSnapshot
     public function setTotalScore(int $totalScore): static
     {
         $this->totalScore = $totalScore;
+        return $this;
+    }
+
+    public function isDisqualified(): bool
+    {
+        return $this->isDisqualified;
+    }
+
+    public function setIsDisqualified(bool $isDisqualified): static
+    {
+        $this->isDisqualified = $isDisqualified;
         return $this;
     }
 

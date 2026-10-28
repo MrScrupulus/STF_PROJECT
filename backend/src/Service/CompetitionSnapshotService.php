@@ -108,6 +108,7 @@ final class CompetitionSnapshotService
             $snapshot->setTeamName($team->getName());
             $snapshot->setRegistrationNumber($team->getRegistrationNumber());
             $snapshot->setTotalScore($team->getScoreForCompetition($competition));
+            $snapshot->setIsDisqualified($team->isDisqualified());
             $snapshot->setMembers($this->collectMembers(
                 $team,
                 $competition,
@@ -148,6 +149,7 @@ final class CompetitionSnapshotService
         $existing->setTeamName($team->getName());
         $existing->setRegistrationNumber($team->getRegistrationNumber());
         $existing->setTotalScore($team->getScoreForCompetition($competition));
+        $existing->setIsDisqualified($team->isDisqualified());
         $existing->setMembers($members);
         $existing->setSnapshotDate(new \DateTime());
         $this->entityManager->flush();
@@ -158,10 +160,21 @@ final class CompetitionSnapshotService
      */
     public function getSnapshotsForCompetition(Competition $competition): array
     {
-        return $this->snapshotRepository->findBy(
+        $snapshots = $this->snapshotRepository->findBy(
             ['competition' => $competition],
             ['totalScore' => 'DESC']
         );
+        usort($snapshots, static function (CompetitionTeamSnapshot $a, CompetitionTeamSnapshot $b): int {
+            $dqA = $a->isDisqualified() ? 1 : 0;
+            $dqB = $b->isDisqualified() ? 1 : 0;
+            if ($dqA !== $dqB) {
+                return $dqA <=> $dqB;
+            }
+
+            return ($b->getTotalScore() ?? 0) <=> ($a->getTotalScore() ?? 0);
+        });
+
+        return $snapshots;
     }
 
     public function hasSnapshots(Competition $competition): bool

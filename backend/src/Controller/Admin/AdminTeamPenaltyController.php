@@ -5,8 +5,10 @@ namespace App\Controller\Admin;
 use App\Entity\Competition\FishCatch;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\TeamPenalty;
+use App\Entity\Security\User;
 use App\Service\CompetitionAccessService;
 use App\Service\CompetitionSnapshotService;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -120,6 +122,7 @@ class AdminTeamPenaltyController extends AbstractController
             'success' => true,
             'penalties' => $items,
             'totalPenaltyPoints' => $team->getTotalPenaltyPoints(),
+            ...$this->disqualificationPayload($team),
         ]);
     }
 
@@ -203,5 +206,76 @@ class AdminTeamPenaltyController extends AbstractController
             'totalPenaltyPoints' => $team->getTotalPenaltyPoints(),
             'totalScore' => $team->getTotalScore(),
         ]);
+    }
+
+    #[Route('/{id}/disqualify', name: 'admin_team_disqualify', methods: ['POST'])]
+    public function disqualify(Team $team, Request $request): JsonResponse
+    {
+        $this->access->denyUnlessManageTeam($this->getUser(), $team);
+        if ($team->isPersonalJournal()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Le journal personnel ne peut pas être disqualifié.',
+            ], 400);
+        }
+        if ($team->isDisqualified()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Cette équipe est déjà disqualifiée.',
+            ], 400);
+        }
+
+        $data = json_decode($request->getContent(), true) ?: [];
+        $reason = isset($data['reason']) && \is_string($data['reason']) ? trim($data['reason']) : null;
+        $user = $this->getUser() instanceof User ? $this->getUser() : null;
+        $team->disqualify($user, $reason);
+        $this->em->flush();
+        $this->refreshSnapshotIfEnded($team);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Équipe disqualifiée.',
+            ...$this->disqualificationPayload($team),
+        ]);
+    }
+
+    #[Route('/{id}/disqualify', name: 'admin_team_reinstate', methods: ['DELETE'])]
+    public function reinstate(Team $team): JsonResponse
+    {
+        $this->access->denyUnlessManageTeam($this->getUser(), $team);
+        if (!$team->isDisqualified()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Cette équipe n’est pas disqualifiée.',
+            ], 400);
+        }
+
+        $team->reinstate();
+        $this->em->flush();
+        $this->refreshSnapshotIfEnded($team);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Disqualification annulée.',
+            ...$this->disqualificationPayload($team),
+        ]);
+    }
+
+    /** @return array{isDisqualified: bool, disqualificationReason: ?string, disqualifiedAt: ?string} */
+    private function disqualificationPayload(Team $team): array
+    {
+        return [
+            'isDisqualified' => $team->isDisqualified(),
+            'disqualificationReason' => $team->getDisqualificationReason(),
+            'disqualifiedAt' => DateTimeHelper::formatParisOrNull($team->getDisqualifiedAt()),
+        ];
+    }
+
+    private function refreshSnapshotIfEnded(Team $team): void
+    {
+        $competition = $team->getCompetition();
+        if ($competition && $competition->getEndDate() && $competition->getEndDate() < new \DateTime()) {
+            $this->snapshotService->createSnapshotsForCompetition($competition, true);
+        }
     }
 }

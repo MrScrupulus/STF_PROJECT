@@ -7,6 +7,7 @@ use App\Entity\Competition\FishCatch;
 use App\Entity\Security\User;
 use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\CompetitionStaffRepository;
+use App\Repository\Competition\CreationCreditRepository;
 use App\Security\AppRoles;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -16,6 +17,7 @@ class CompetitionAccessService
     public function __construct(
         private readonly CompetitionStaffRepository $staffRepository,
         private readonly CompetitionRepository $competitionRepository,
+        private readonly CreationCreditRepository $creationCredits,
     ) {
     }
 
@@ -41,7 +43,14 @@ class CompetitionAccessService
 
     public function canCreateCompetition(?UserInterface $user): bool
     {
-        return $this->isOrganizer($user);
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+        if (!$user instanceof User) {
+            return false;
+        }
+
+        return $this->creationCredits->findAvailable($user) !== [];
     }
 
     public function canManageCompetition(?UserInterface $user, Competition $competition): bool
@@ -111,7 +120,9 @@ class CompetitionAccessService
     public function denyUnlessCreate(?UserInterface $user): void
     {
         if (!$this->canCreateCompetition($user)) {
-            throw new AccessDeniedHttpException('Vous ne pouvez pas créer de compétition.');
+            throw new AccessDeniedHttpException(
+                'Vous n’avez pas de crédit de création valide. Un administrateur doit vous en attribuer un.'
+            );
         }
     }
 

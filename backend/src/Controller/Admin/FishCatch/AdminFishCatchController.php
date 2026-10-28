@@ -454,6 +454,13 @@ class AdminFishCatchController extends AbstractController
                 ], 400);
             }
 
+            if ($team->isDisqualified()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Cette équipe est disqualifiée. Impossible d’ajouter une prise.',
+                ], 400);
+            }
+
             // Vérifier que l'espèce existe
             $species = $speciesRepository->find($data['speciesId']);
             if (!$species) {

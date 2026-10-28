@@ -17,6 +17,7 @@ use App\Service\DateTimeHelper;
 use App\Service\EmailService;
 use App\Service\CompetitionSnapshotService;
 use App\Service\CompetitionAccessService;
+use App\Service\CreationCreditService;
 use App\Service\NotificationService;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Entity\Competition\ScheduledPause;
@@ -38,6 +39,7 @@ class CompetitionController extends AbstractController
         private readonly CompetitionTeamSnapshotRepository $snapshotRepository,
         private readonly CompetitionSnapshotService $snapshotService,
         private readonly CompetitionAccessService $competitionAccess,
+        private readonly CreationCreditService $creationCredits,
     ) {
     }
 
@@ -367,9 +369,14 @@ class CompetitionController extends AbstractController
                 
                 // Trier par score décroissant en utilisant le score filtré par compétition
                 usort($allTeams, function($a, $b) use ($competition) {
+                    $dqA = $a->isDisqualified() ? 1 : 0;
+                    $dqB = $b->isDisqualified() ? 1 : 0;
+                    if ($dqA !== $dqB) {
+                        return $dqA <=> $dqB;
+                    }
                     $scoreA = $a->getScoreForCompetition($competition);
                     $scoreB = $b->getScoreForCompetition($competition);
-                    return $scoreB - $scoreA;
+                    return $scoreB <=> $scoreA;
                 });
                 $teamsToReturn = $allTeams;
             }
@@ -495,6 +502,7 @@ class CompetitionController extends AbstractController
                         'name' => $teamOrSnapshot->getTeamName(),
                         'totalScore' => $showScore ? $teamOrSnapshot->getTotalScore() : null,
                         'registrationNumber' => $teamOrSnapshot->getRegistrationNumber(),
+                        'isDisqualified' => $teamOrSnapshot->isDisqualified(),
                         'members' => $teamOrSnapshot->getMembers(), // Déjà au format JSON
                     ];
                 } else {
@@ -508,6 +516,7 @@ class CompetitionController extends AbstractController
                         'totalScore' => $teamScore,
                         'registrationNumber' => $teamOrSnapshot->getRegistrationNumber(),
                         'isActive' => $teamOrSnapshot->getIsActive(),
+                        'isDisqualified' => $teamOrSnapshot->isDisqualified(),
                         'members' => array_map(function ($member) {
                 return [
                                 'id' => $member->getId(),
@@ -914,9 +923,9 @@ class CompetitionController extends AbstractController
             $this->competitionAccess->denyUnlessCreate($this->getUser());
 
             $data = json_decode($request->getContent(), true);
+            $creator = $this->getUser();
 
             $competition = new Competition();
-            $creator = $this->getUser();
             if ($creator instanceof \App\Entity\Security\User) {
                 $competition->setCreatedBy($creator);
             }
@@ -968,6 +977,16 @@ class CompetitionController extends AbstractController
 
             $entityManager->persist($competition);
             $entityManager->flush();
+
+            if ($creator instanceof \App\Entity\Security\User && !$this->competitionAccess->isAdmin($creator)) {
+                try {
+                    $this->creationCredits->consume($creator, $competition);
+                } catch (AccessDeniedHttpException $e) {
+                    $entityManager->remove($competition);
+                    $entityManager->flush();
+                    throw $e;
+                }
+            }
 
             // Créer les espèces associées à la compétition si elles sont fournies
             if (isset($data['species']) && is_array($data['species'])) {
@@ -1090,6 +1109,8 @@ class CompetitionController extends AbstractController
                     'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
                 ]
             ], 201);
+        } catch (AccessDeniedHttpException $e) {
+            throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la création de la compétition', [
                 'error' => $e->getMessage(),

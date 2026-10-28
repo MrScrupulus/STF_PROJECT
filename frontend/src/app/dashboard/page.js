@@ -40,6 +40,7 @@ const TABLE_HEADERS = {
     { id: "firstname", label: "Prénom" },
     { id: "email", label: "Email" },
     { id: "role", label: "Rôle" },
+    { id: "credits", label: "Crédit création", desktopOnly: true },
     { id: "verified", label: "Statut Email", desktopOnly: true },
   ],
   competitions: [
@@ -114,7 +115,10 @@ export default function Dashboard() {
   const [penaltySubmitBusy, setPenaltySubmitBusy] = useState(false);
   const [penaltyCompetitionId, setPenaltyCompetitionId] = useState("");
   const [penaltyTeamSearch, setPenaltyTeamSearch] = useState("");
+  const [penaltyTeamDisqualified, setPenaltyTeamDisqualified] = useState(false);
+  const [penaltyDqReason, setPenaltyDqReason] = useState("");
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [canCreateCompetition, setCanCreateCompetition] = useState(false);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -146,6 +150,7 @@ export default function Dashboard() {
       const roles = me?.user?.roles || [];
       const admin = isPlatformAdmin(roles);
       setIsAdminUser(admin);
+      setCanCreateCompetition(!!me?.user?.creationRights?.canCreate);
       const [usersData, competitionsData, speciesData, teamsData, pendingCatchesData] =
         await Promise.all([
           admin ? adminService.getUsers() : Promise.resolve([]),
@@ -201,8 +206,8 @@ export default function Dashboard() {
       setIsProcessing(true);
       const nextPage = pendingCatchesPage + 1;
       if (nextPage > pendingCatchesPages) {
-        return;
-      }
+          return;
+        }
 
       logger.debug('Chargement page suivante:', { nextPage, currentPage: pendingCatchesPage, totalPages: pendingCatchesPages });
 
@@ -488,11 +493,23 @@ export default function Dashboard() {
       }
     };
 
+    const rights = user.creationRights || {};
+    const unused = rights.credits || [];
+    const creditLabel = isPlatformAdmin(user.roles)
+      ? "Admin : création sans crédit"
+      : unused.length
+        ? `${unused.length} disponible${unused.length > 1 ? "s" : ""}${
+            rights.nextExpiresAt
+              ? ` · expire ${formatCompetitionDateTime(rights.nextExpiresAt)}`
+              : ""
+          }`
+        : "Aucun crédit disponible";
     const userFields = [
       { label: "Prénom", value: user.firstname },
       { label: "Nom", value: user.lastname },
       { label: "Email", value: user.email },
       { label: "Rôles", value: formatRoleLabels(user.roles) },
+      { label: "Crédit de création", value: creditLabel },
       { label: "Téléphone", value: user.phoneNumber },
       { label: "Statut", value: user.isVerified ? "Vérifié" : "Non vérifié" },
     ];
@@ -551,6 +568,44 @@ export default function Dashboard() {
             },
             "Modifier les rôles"
           ),
+          !isPlatformAdmin(user.roles)
+            ? createElement(
+                "button",
+                {
+                  onClick: async () => {
+                    try {
+                      await adminService.grantCreationCredit(user.id, { days: 90 });
+                      toast.success("Crédit de 90 jours attribué.");
+                      onClose();
+                      fetchData();
+                    } catch (err) {
+                      toast.error(err.message || "Impossible d’attribuer le crédit.");
+                    }
+                  },
+                  className: `${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`,
+                },
+                "Attribuer 1 crédit (90 jours)"
+              )
+            : null,
+          unused[0]
+            ? createElement(
+                "button",
+                {
+                  onClick: async () => {
+                    try {
+                      await adminService.cancelCreationCredit(unused[0].id);
+                      toast.success("Crédit annulé.");
+                      onClose();
+                      fetchData();
+                    } catch (err) {
+                      toast.error(err.message || "Impossible d’annuler le crédit.");
+                    }
+                  },
+                  className: `${modalStyles.modal__button} ${modalStyles["modal__button--danger"]}`,
+                },
+                "Annuler le crédit non utilisé"
+              )
+            : null,
           createElement(
             "div",
             { className: modalStyles.modal__buttons },
@@ -789,10 +844,10 @@ export default function Dashboard() {
                         },
                       },
                       "Bonus"
-                    )
-                  ),
-                  createElement(
-                    "div",
+          )
+        ),
+        createElement(
+          "div",
                     { style: { fontSize: "14px", color: "#666" } },
                     `Coefficient: ${compSpecies.coefficient}`,
                     compSpecies.basePoints !== null && compSpecies.basePoints !== undefined &&
@@ -1391,6 +1446,17 @@ export default function Dashboard() {
               )
         );
       }
+      case "credits": {
+        if (isPlatformAdmin(item.roles)) {
+          return "Illimité (admin)";
+        }
+        const n = item.creationRights?.unusedCount ?? 0;
+        if (!n) return "0";
+        const exp = item.creationRights?.nextExpiresAt
+          ? formatCompetitionDateTime(item.creationRights.nextExpiresAt)
+          : "";
+        return n + (exp ? ` · ${exp}` : "");
+      }
       case "verified":
         return item.isVerified ? (
           <span className={styles.verified}>Vérifié ✓</span>
@@ -1559,6 +1625,8 @@ export default function Dashboard() {
       if (penRes?.success) {
         setPenaltyList(penRes.penalties || []);
         setPenaltyTotal(penRes.totalPenaltyPoints ?? 0);
+        setPenaltyTeamDisqualified(!!penRes.isDisqualified);
+        setPenaltyDqReason(penRes.disqualificationReason || "");
       }
     } catch (e) {
       toast.error(e.message || "Erreur chargement équipe / pénalités");
@@ -1577,6 +1645,8 @@ export default function Dashboard() {
     setPenaltyCatchOptions([]);
     setPenaltyList([]);
     setPenaltyTotal(0);
+    setPenaltyTeamDisqualified(false);
+    setPenaltyDqReason("");
     setPenaltyScope("global");
     setShowPenaltyModal(true);
   };
@@ -1587,7 +1657,7 @@ export default function Dashboard() {
 
   return (
     <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
-      <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
+    <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
       <div className={styles.dashboard__container}>
         <div className={styles.dashboard__header}>
           <div className={styles.dashboard__header_content}>
@@ -1653,12 +1723,18 @@ export default function Dashboard() {
           >
             <div className={styles.dashboard__section_header}>
               <h2 className={styles.dashboard__section_title}>Compétitions</h2>
+              {canCreateCompetition ? (
               <button
                 className={styles.dashboard__create_button}
                 onClick={() => router.push("/dashboard/competitions/create")}
               >
                 Créer une compétition
               </button>
+              ) : (
+                <span className={styles.dashboard__catch_info}>
+                  Aucun crédit de création. Un admin peut vous en attribuer un.
+                </span>
+              )}
               <button
                 className={styles.dashboard__create_button}
                 onClick={() => router.push("/dashboard/species/create")}
@@ -2020,7 +2096,7 @@ export default function Dashboard() {
                     </option>
                   ))}
                 </select>
-              </div>
+      </div>
 
               {penaltyCompetitionId ? (
                 <>
@@ -2039,7 +2115,7 @@ export default function Dashboard() {
                       {penaltyTeamsSearchResults.length > 1 ? "s" : ""} dans cette compétition
                       {penaltyTeamSearch.trim() ? " (filtrées)" : ""}.
                     </p>
-                  </div>
+    </div>
                   <div className={modalStyles.modal__form_group}>
                     <span style={{ display: "block", marginBottom: 8 }}>Équipe *</span>
                     <div className={styles.dashboard__penalty_team_list}>
@@ -2177,6 +2253,76 @@ export default function Dashboard() {
                   className={modalStyles.modal__textarea}
                 />
               </div>
+
+              {penaltyTeamId ? (
+                <div
+                  style={{
+                    marginBottom: 16,
+                    padding: 12,
+                    borderRadius: 8,
+                    border: "1px solid #fecaca",
+                    background: "#fef2f2",
+                  }}
+                >
+                  <strong>Disqualification</strong>
+                  <p style={{ fontSize: 14, margin: "6px 0 10px" }}>
+                    {penaltyTeamDisqualified
+                      ? `Équipe DSQ${penaltyDqReason ? ` — ${penaltyDqReason}` : "."}`
+                      : "Sortir l’équipe du classement (solo, duo ou plus)."}
+                  </p>
+                  {penaltyTeamDisqualified ? (
+                    <button
+                      type="button"
+                      className={`${modalStyles.modal__button} ${modalStyles["modal__button--cancel"]}`}
+                      disabled={penaltySubmitBusy}
+                      onClick={async () => {
+                        if (!window.confirm("Réintégrer cette équipe ?")) return;
+                        setPenaltySubmitBusy(true);
+                        try {
+                          await adminService.reinstateTeam(parseInt(penaltyTeamId, 10));
+                          toast.success("Disqualification annulée.");
+                          reloadPenaltyModalData(penaltyTeamId);
+                          fetchData();
+                        } catch (err) {
+                          toast.error(err.message || "Impossible d’annuler.");
+                        } finally {
+                          setPenaltySubmitBusy(false);
+                        }
+                      }}
+                    >
+                      Réintégrer
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`}
+                      style={{ background: "#dc2626" }}
+                      disabled={penaltySubmitBusy}
+                      onClick={async () => {
+                        const motif = window.prompt("Motif de disqualification (optionnel) :", "");
+                        if (motif === null) return;
+                        if (!window.confirm("Disqualifier cette équipe ?")) return;
+                        setPenaltySubmitBusy(true);
+                        try {
+                          await adminService.disqualifyTeam(
+                            parseInt(penaltyTeamId, 10),
+                            motif.trim()
+                          );
+                          toast.success("Équipe disqualifiée.");
+                          reloadPenaltyModalData(penaltyTeamId);
+                          fetchData();
+                        } catch (err) {
+                          toast.error(err.message || "Impossible de disqualifier.");
+                        } finally {
+                          setPenaltySubmitBusy(false);
+                        }
+                      }}
+                    >
+                      Disqualifier
+                    </button>
+                  )}
+                </div>
+              ) : null}
 
               {penaltyTeamId ? (
                 <div style={{ marginBottom: 16 }}>

@@ -918,23 +918,35 @@ export default function CompetitionDetailPage() {
                 </thead>
                 <tbody>
                   {(() => {
-                    const teamsToShow = [...(competition.teams || [])].sort((a, b) =>
-                      (b.totalScore || 0) - (a.totalScore || 0)
-                    );
+                    const teamsToShow = [...(competition.teams || [])].sort((a, b) => {
+                      const dqA = a.isDisqualified ? 1 : 0;
+                      const dqB = b.isDisqualified ? 1 : 0;
+                      if (dqA !== dqB) return dqA - dqB;
+                      return (b.totalScore || 0) - (a.totalScore || 0);
+                    });
                     const userTeamIndex = currentUser
                       ? teamsToShow.findIndex((t) => t.members?.some((m) => m.id === currentUser.id))
                       : -1;
 
                     let displayedEntries;
+                    const rankLabel = (index) => {
+                      const row = teamsToShow[index];
+                      if (row?.isDisqualified) return "DSQ";
+                      let r = 0;
+                      for (let i = 0; i <= index; i += 1) {
+                        if (!teamsToShow[i].isDisqualified) r += 1;
+                      }
+                      return `#${r}`;
+                    };
                     if (showAllRanking) {
-                      displayedEntries = teamsToShow.map((team, i) => ({ team, rank: i + 1 }));
+                      displayedEntries = teamsToShow.map((team, i) => ({ team, rank: rankLabel(i) }));
                     } else {
-                      const top5 = teamsToShow.slice(0, 5).map((team, i) => ({ team, rank: i + 1 }));
+                      const top5 = teamsToShow.slice(0, 5).map((team, i) => ({ team, rank: rankLabel(i) }));
                       const userInTop5 = userTeamIndex >= 0 && userTeamIndex < 5;
                       if (userInTop5) {
                         displayedEntries = top5;
                       } else if (userTeamIndex >= 0) {
-                        displayedEntries = [...top5, { team: teamsToShow[userTeamIndex], rank: userTeamIndex + 1 }];
+                          displayedEntries = [...top5, { team: teamsToShow[userTeamIndex], rank: rankLabel(userTeamIndex) }];
                       } else {
                         displayedEntries = top5;
                       }
@@ -954,11 +966,11 @@ export default function CompetitionDetailPage() {
                             >
                               {competition.isRankingPublic && (
                                 <td className={styles.competitions__table_rank}>
-                                  <span className={styles.competitions__rank_badge}>#{rank}</span>
+                                  <span className={styles.competitions__rank_badge}>{rank}</span>
                                 </td>
                               )}
                               <td className={styles.competitions__table_name}>
-                                <strong>{team.name}</strong>
+                                <strong>{team.name}{team.isDisqualified ? " (DSQ)" : ""}</strong>
                               </td>
                               <td className={styles.competitions__table_number}>
                                 {team.registrationNumber || "-"}

@@ -309,6 +309,25 @@ export default function TeamDetailPage() {
           <h1 className={styles.teams__title}>{team.name}</h1>
         </div>
 
+        {team.isDisqualified ? (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: 12,
+              borderRadius: 8,
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              color: "#991b1b",
+            }}
+          >
+            <strong>Équipe disqualifiée</strong>
+            <p style={{ margin: "6px 0 0" }}>
+              {team.disqualificationReason ||
+                "Hors classement (DSQ). Les prises déjà validées restent visibles."}
+            </p>
+          </div>
+        ) : null}
+
         {team.competition && (
           <div className={styles.teams__competition_info}>
             <strong>Compétition :</strong>

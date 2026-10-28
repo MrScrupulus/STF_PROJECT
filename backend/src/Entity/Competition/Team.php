@@ -60,6 +60,20 @@ class Team
     #[Groups(['team:read'])]
     private bool $isPersonalJournal = false;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[Groups(['team:read'])]
+    private bool $isDisqualified = false;
+
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $disqualifiedAt = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $disqualificationReason = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $disqualifiedBy = null;
+
     #[ORM\OneToMany(mappedBy: 'team', targetEntity: TeamInvitation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $invitations;
 
@@ -76,6 +90,7 @@ class Team
         $this->hasBonus = false;
         $this->isActive = true;
         $this->isPersonalJournal = false;
+        $this->isDisqualified = false;
     }
 
     public function getId(): ?int
@@ -644,6 +659,47 @@ class Team
     public function setPersonalJournal(bool $isPersonalJournal): self
     {
         $this->isPersonalJournal = $isPersonalJournal;
+
+        return $this;
+    }
+
+    public function isDisqualified(): bool
+    {
+        return $this->isDisqualified;
+    }
+
+    public function getDisqualifiedAt(): ?\DateTimeInterface
+    {
+        return $this->disqualifiedAt;
+    }
+
+    public function getDisqualificationReason(): ?string
+    {
+        return $this->disqualificationReason;
+    }
+
+    public function getDisqualifiedBy(): ?User
+    {
+        return $this->disqualifiedBy;
+    }
+
+    public function disqualify(?User $by, ?string $reason): static
+    {
+        $this->isDisqualified = true;
+        $this->disqualifiedAt = new \DateTimeImmutable();
+        $trimmed = $reason !== null ? trim($reason) : '';
+        $this->disqualificationReason = $trimmed !== '' ? $trimmed : null;
+        $this->disqualifiedBy = $by;
+
+        return $this;
+    }
+
+    public function reinstate(): static
+    {
+        $this->isDisqualified = false;
+        $this->disqualifiedAt = null;
+        $this->disqualificationReason = null;
+        $this->disqualifiedBy = null;
 
         return $this;
     }

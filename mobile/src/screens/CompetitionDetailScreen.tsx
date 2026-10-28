@@ -31,6 +31,7 @@ import { resolvePhotoUri } from '../utils/photoUrl';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { setCatchReviewActive } from '../navigation/catchReviewNav';
 import { recordedByLine } from '../utils/recordedBy';
+import { rankingLabel, sortTeamsForRanking } from '../utils/ranking';
 import { type ThemeColors } from '../theme';
 
 export default function CompetitionDetailScreen({ route }: any) {
@@ -479,9 +480,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   };
 
   const teamsToShow = competition.teams || [];
-  const sortedTeams = [...teamsToShow].sort((a: any, b: any) =>
-    (b.totalScore || 0) - (a.totalScore || 0)
-  );
+  const sortedTeams = sortTeamsForRanking(teamsToShow);
   const userTeamIndex = currentUser
     ? sortedTeams.findIndex((t: any) => t.members?.some((m: any) => m.id === currentUser.id))
     : -1;
@@ -1276,10 +1275,15 @@ export default function CompetitionDetailScreen({ route }: any) {
                   onPress={() => (navigation as any).navigate('TeamDetail', { id: team.id })}
                 >
                   {(isEnded || rankingVisible) && rankingVisible && (
-                    <Text style={styles.teamRank}>#{rank}</Text>
+                    <Text style={[styles.teamRank, team.isDisqualified && styles.teamRankDsq]}>
+                      {rankingLabel(sortedTeams, sortedTeams.findIndex((t: any) => t.id === team.id))}
+                    </Text>
                   )}
                   <View style={styles.teamInfo}>
-                    <Text style={[styles.teamName, isUserTeam && styles.teamNameUser]}>{team.name}</Text>
+                    <Text style={[styles.teamName, isUserTeam && styles.teamNameUser]}>
+                      {team.name}
+                      {team.isDisqualified ? ' (DSQ)' : ''}
+                    </Text>
                     {team.registrationNumber && (
                       <Text style={styles.teamNumber}>N° {team.registrationNumber}</Text>
                     )}
@@ -1719,7 +1723,11 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.accent,
     marginRight: 12,
-    width: 40,
+    minWidth: 40,
+  },
+  teamRankDsq: {
+    color: theme.danger,
+    fontSize: 14,
   },
   teamInfo: {
     flex: 1,

@@ -713,6 +713,8 @@ class TeamController extends AbstractController
                 'baseScore' => $scoreBreakdown['baseScore'],
                 'penaltyPoints' => $scoreBreakdown['penaltyPoints'] ?? 0,
                 'penalties' => $penaltiesPayload,
+                'isDisqualified' => $team->isDisqualified(),
+                'disqualificationReason' => $team->getDisqualificationReason(),
                 'registrationNumber' => $team->getRegistrationNumber(),
                 'members' => array_map(function ($member) {
                     return [

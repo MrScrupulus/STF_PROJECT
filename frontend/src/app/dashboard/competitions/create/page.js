@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { competitionsService } from "../../../../services/competitions";
+import { authService } from "../../../../services/authService";
 import { speciesService } from "../../../../services/speciesService";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "../../../../components/auth/ProtectedRoute";
@@ -46,6 +47,10 @@ export default function CreateCompetition() {
     const fetchSpecies = async () => {
       setLoadingSpecies(true);
       try {
+        const me = await authService.getCurrentUser();
+        if (!me?.user?.creationRights?.canCreate) {
+          setError("Vous n’avez pas de crédit de création valide. Un administrateur doit vous en attribuer un.");
+        }
         const response = await speciesService.getAll();
         setAvailableSpecies(response || []);
       } catch (error) {

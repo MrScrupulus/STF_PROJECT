@@ -23,12 +23,14 @@ export default function HomeScreen() {
   const { isAuthenticated } = useAuth();
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [canCreateCompetition, setCanCreateCompetition] = React.useState(false);
+  const [canManageCompetitions, setCanManageCompetitions] = React.useState(false);
   const [openGuide, setOpenGuide] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!isAuthenticated) {
       setIsAdmin(false);
       setCanCreateCompetition(false);
+      setCanManageCompetitions(false);
       return;
     }
     let cancelled = false;
@@ -39,13 +41,17 @@ export default function HomeScreen() {
         if (!cancelled) {
           const roles = user.roles || [];
           setIsAdmin(isPlatformAdmin(roles));
-          setCanCreateCompetition(canOrganizeEvents(roles));
+          setCanCreateCompetition(!!user.creationRights?.canCreate);
+          setCanManageCompetitions(
+            !!user.creationRights?.canManage || canOrganizeEvents(roles)
+          );
         }
       })
       .catch(() => {
         if (!cancelled) {
           setIsAdmin(false);
           setCanCreateCompetition(false);
+          setCanManageCompetitions(false);
         }
       });
     return () => {
@@ -98,13 +104,30 @@ export default function HomeScreen() {
             </View>
             <View style={styles.actionText}>
               <Text style={styles.actionTitle}>Créer une compétition</Text>
-              <Text style={styles.actionHint}>Réservé aux créateurs et admins</Text>
+              <Text style={styles.actionHint}>Un crédit de création est consommé</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         ) : null}
 
-        {canCreateCompetition ? (
+        {isAdmin ? (
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => go('Dashboard')}
+            activeOpacity={0.75}
+          >
+            <View style={styles.actionIcon}>
+              <FaIcon name="key" size={22} color={theme.accent} />
+            </View>
+            <View style={styles.actionText}>
+              <Text style={styles.actionTitle}>Dashboard</Text>
+              <Text style={styles.actionHint}>Crédits de création, comptes</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {canManageCompetitions ? (
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => go('AdminDashboard')}
@@ -156,7 +179,7 @@ export default function HomeScreen() {
           title={homeContent.competitionTutorialTitle}
           steps={homeContent.competitionTutorialSteps}
         />
-        {canCreateCompetition ? (
+        {canManageCompetitions ? (
           <GuideBlock
             styles={styles}
             theme={theme}

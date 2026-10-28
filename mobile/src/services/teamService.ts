@@ -40,6 +40,8 @@ export interface Team {
   newSpeciesBonus?: number;
   quotaBonus?: number;
   penaltyPoints?: number;
+  isDisqualified?: boolean;
+  disqualificationReason?: string | null;
   penalties?: Array<{
     id: number;
     points: number;

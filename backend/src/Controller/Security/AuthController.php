@@ -21,6 +21,8 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use App\Repository\Security\UserRepository;
 use App\Service\UserAnonymizerService;
+use App\Service\CreationCreditService;
+use App\Service\CompetitionAccessService;
 use Symfony\Component\HttpFoundation\Response;
 
 #[Route('/api/auth', name: 'app_auth_')]
@@ -34,6 +36,8 @@ final class AuthController extends AbstractController
         private readonly UserRepository $userRepository,
         private readonly JWTTokenManagerInterface $jwtManager,
         private readonly UserAnonymizerService $userAnonymizerService,
+        private readonly CreationCreditService $creationCredits,
+        private readonly CompetitionAccessService $competitionAccess,
     ) {}
 
     #[Route('/register', name: 'auth_register', methods: ['POST'])]
@@ -264,6 +268,14 @@ final class AuthController extends AbstractController
                 ], 404);
             }
 
+            $creationRights = null;
+            if ($user instanceof User) {
+                $creationRights = $this->creationCredits->rightsFor(
+                    $user,
+                    $this->competitionAccess->isAdmin($user)
+                );
+            }
+
             return $this->json([
                 'success' => true,
                 'user' => [
@@ -274,6 +286,7 @@ final class AuthController extends AbstractController
                     'firstname' => $user->getFirstname(),
                     'lastname' => $user->getLastname(),
                     'phone_number' => $user->getPhoneNumber() ?? null,
+                    'creationRights' => $creationRights,
                 ]
             ]);
         } catch (\Throwable $e) {

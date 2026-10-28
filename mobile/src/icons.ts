@@ -28,6 +28,7 @@ import {
   faUser,
 } from '@fortawesome/free-regular-svg-icons';
 import {
+  faBan,
   faBars,
   faBell as faBellSolid,
   faBookOpen,
@@ -83,6 +84,7 @@ library.add(
   faRectangleList,
   faStar,
   faUser,
+  faBan,
   faBars,
   faBellSolid,
   faBookOpen,
@@ -144,6 +146,7 @@ export const appIcons = {
   hourglass: faHourglass,
   rocket: faRocket,
   flag: faFlag,
+  ban: faBan,
   flagCheckered: faFlagCheckered,
   map: faMap,
   image: faImage,

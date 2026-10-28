@@ -25,6 +25,7 @@ import TeamDetailScreen from './src/screens/TeamDetailScreen';
 import CreateTeamScreen from './src/screens/CreateTeamScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import AdminDashboardScreen from './src/screens/AdminDashboardScreen';
+import PlatformDashboardScreen from './src/screens/PlatformDashboardScreen';
 import AdminAddCatchScreen from './src/screens/AdminAddCatchScreen';
 import AdminPenaltyScreen from './src/screens/AdminPenaltyScreen';
 import AdminCatchValidationScreen from './src/screens/AdminCatchValidationScreen';
@@ -140,6 +141,7 @@ function AppNavigator() {
         TeamDetail: 'teams/:id',
         CompetitionDetail: 'competitions/:id',
         Login: 'login',
+        CreateCompetition: 'create-competition',
       },
     },
   };
@@ -201,6 +203,12 @@ function AppNavigator() {
       const id = Number(url.replace('stf://competitions/', '').split('?')[0]);
       if (id && rootNavigationRef.isReady()) {
         rootNavigationRef.navigate('CompetitionDetail' as never, { id } as never);
+      }
+    }
+
+    if (url.startsWith('stf://create-competition')) {
+      if (isAuthenticatedRef.current && rootNavigationRef.isReady()) {
+        rootNavigationRef.navigate('CreateCompetition' as never);
       }
     }
 
@@ -338,6 +346,7 @@ function AppNavigator() {
             <Stack.Screen name="CreateTeam" component={CreateTeamScreen} />
             <Stack.Screen name="History" component={HistoryScreen} />
             <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+            <Stack.Screen name="Dashboard" component={PlatformDashboardScreen} />
             <Stack.Screen name="AdminAddCatch" component={AdminAddCatchScreen} />
             <Stack.Screen name="AdminPenalty" component={AdminPenaltyScreen} />
             <Stack.Screen name="AdminCatchValidation" component={AdminCatchValidationScreen} />

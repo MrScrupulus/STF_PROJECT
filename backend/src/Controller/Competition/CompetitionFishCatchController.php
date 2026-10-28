@@ -144,6 +144,13 @@ class CompetitionFishCatchController extends AbstractController
                 ], 403);
             }
 
+            if ($team->isDisqualified()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Votre équipe est disqualifiée. Impossible d’ajouter une prise.',
+                ], 403);
+            }
+
             // Validation des données
             if (!isset($data['speciesId']) || !isset($data['size'])) {
                 return $this->json([

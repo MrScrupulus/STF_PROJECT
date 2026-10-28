@@ -13,6 +13,7 @@ use App\Entity\Security\User;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionStaffInvitation;
+use App\Entity\Competition\CreationCredit;
 use App\Repository\NotificationPreferencesRepository;
 use Psr\Log\LoggerInterface;
 
@@ -39,6 +40,26 @@ final class EmailService
         return new Address($this->fromEmail, 'Street Fishing');
     }
 
+    private function appRedirect(string $path): string
+    {
+        return rtrim($this->backendUrl, '/') . '/redirect/' . ltrim($path, '/');
+    }
+
+    private function hello(User $user): string
+    {
+        $first = htmlspecialchars(trim((string) $user->getFirstname()));
+
+        return $first !== '' ? "Bonjour {$first}," : 'Bonjour,';
+    }
+
+    private function cta(string $url, string $label): string
+    {
+        $href = htmlspecialchars($url, \ENT_QUOTES, 'UTF-8');
+        $text = htmlspecialchars($label, \ENT_QUOTES, 'UTF-8');
+
+        return "<p style=\"margin:22px 0;text-align:center\"><a href=\"{$href}\" style=\"display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600\">{$text}</a></p>";
+    }
+
     private function wrapEmailHtml(string $innerHtml): string
     {
         $logoUrl = htmlspecialchars(rtrim($this->frontendUrl, '/') . '/logo-email.png?v=2', \ENT_QUOTES, 'UTF-8');
@@ -47,17 +68,17 @@ final class EmailService
 <!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f5;padding:24px 12px;">
+<body style="margin:0;padding:0;background:#eee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:16px 8px;">
     <tr><td align="center">
-      <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
+      <table role="presentation" width="480" cellspacing="0" cellpadding="0" style="max-width:480px;width:100%;background:#fff;border-radius:10px;">
         <tr>
-          <td style="background:#000000;text-align:center;padding:20px;">
-            <img src="{$logoUrl}" width="80" height="80" alt="Street Fishing" style="display:block;margin:0 auto;border:0;border-radius:16px;" />
+          <td style="background:#000;text-align:center;padding:14px;">
+            <img src="{$logoUrl}" width="56" height="56" alt="Street Fishing" style="display:block;margin:0 auto;border:0;border-radius:12px;" />
           </td>
         </tr>
         <tr>
-          <td style="padding:24px;color:#333;font-size:16px;line-height:1.5;">
+          <td style="padding:18px 20px 8px;color:#333;font-size:15px;line-height:1.45;">
             {$innerHtml}
           </td>
         </tr>
@@ -81,38 +102,18 @@ HTML;
 
     public function sendVerificationEmail(User $user): void
     {
-        error_log("Construction du lien de vérification pour: " . $user->getEmail());
-        error_log("Avec le token: " . $user->getVerificationToken());
-
-        $verificationUrl = rtrim($this->frontendUrl, '/') . "/verify-email/" . $user->getVerificationToken();
-        // Lien universel qui redirige automatiquement vers mobile ou web
-        $universalLink = rtrim($this->backendUrl, '/') . "/redirect/verify-email/" . $user->getVerificationToken();
-        error_log("URL complète (web): " . $verificationUrl);
-        error_log("Lien universel (redirection): " . $universalLink);
+        $link = $this->appRedirect('verify-email/' . rawurlencode((string) $user->getVerificationToken()));
 
         try {
-            error_log("Tentative d'envoi d'email à: " . $user->getEmail());
-            error_log("Email expéditeur: " . $this->fromEmail);
-            
             $email = (new Email())
                 ->from($this->brandedFrom())
                 ->to($user->getEmail())
-                ->subject('Vérification de votre compte Street Fishing')
+                ->subject('Vérifiez votre compte Street Fishing')
                 ->html($this->wrapEmailHtml(
-                    "<h1>Vérification de votre adresse email</h1>
-                    <p>Pour confirmer votre inscription, cliquez sur le lien ci-dessous :</p>
-                    
-                    <div style='margin: 20px 0; padding: 15px; background-color: #f0f0f0; border-radius: 5px; text-align: center;'>
-                        <p style='margin: 10px 0;'>
-                            <a href='{$universalLink}' style='display: inline-block; padding: 12px 24px; background-color: #007AFF; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;'>Vérifier mon email</a>
-                        </p>
-                        <p style='font-size: 12px; color: #666; margin-top: 10px;'>
-                            Ce lien fonctionne sur mobile et web. Si le lien ne fonctionne pas, copiez cette URL dans votre navigateur : <code style='background-color: #e0e0e0; padding: 2px 6px; border-radius: 3px;'>{$universalLink}</code>
-                        </p>
-                    </div>
-                    
-                    <p><strong>Ce lien est valable pendant 24 heures.</strong></p>
-                    <p>Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.</p>"
+                    "<h1>Confirmez votre email</h1>
+                    <p>{$this->hello($user)}</p>
+                    <p>Ouvrez l’application pour activer votre compte. Lien valable 24 h.</p>
+                    {$this->cta($link, 'Ouvrir l’application')}"
                 ));
 
             try {
@@ -141,31 +142,18 @@ HTML;
 
     public function sendPasswordResetEmail(User $user, string $token): void
     {
-        $resetUrl = rtrim($this->frontendUrl, '/') . "/reset-password/{$token}";
-        // Lien universel qui redirige automatiquement vers mobile ou web
-        $universalLink = rtrim($this->backendUrl, '/') . "/redirect/reset-password/{$token}";
+        $link = $this->appRedirect('reset-password/' . rawurlencode($token));
 
         try {
             $email = (new Email())
                 ->from($this->brandedFrom())
                 ->to($user->getEmail())
-                ->subject('Réinitialisation de votre mot de passe Street Fishing')
+                ->subject('Nouveau mot de passe Street Fishing')
                 ->html($this->wrapEmailHtml(
-                    "<h1>Réinitialisation de votre mot de passe</h1>
-                    <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.</p>
-                    <p>Pour définir un nouveau mot de passe, cliquez sur le lien ci-dessous :</p>
-                    
-                    <div style='margin: 20px 0; padding: 15px; background-color: #f0f0f0; border-radius: 5px; text-align: center;'>
-                        <p style='margin: 10px 0;'>
-                            <a href='{$universalLink}' style='display: inline-block; padding: 12px 24px; background-color: #007AFF; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;'>Réinitialiser mon mot de passe</a>
-                        </p>
-                        <p style='font-size: 12px; color: #666; margin-top: 10px;'>
-                            Ce lien fonctionne sur mobile et web. Si le lien ne fonctionne pas, copiez cette URL dans votre navigateur : <code style='background-color: #e0e0e0; padding: 2px 6px; border-radius: 3px;'>{$universalLink}</code>
-                        </p>
-                    </div>
-                    
-                    <p><strong>Ce lien est valable pendant 1 heure.</strong></p>
-                    <p>Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email.</p>"
+                    "<h1>Réinitialisation</h1>
+                    <p>{$this->hello($user)}</p>
+                    <p>Ouvrez l’application pour choisir un nouveau mot de passe. Lien valable 1 h.</p>
+                    {$this->cta($link, 'Ouvrir l’application')}"
                 ));
 
             $this->mailer->send($email);
@@ -181,17 +169,9 @@ HTML;
     public function sendTeamCreationEmail(Team $team): void
     {
         $teamName = htmlspecialchars($team->getName());
-        $membersList = [];
-        
-        foreach ($team->getMembers() as $member) {
-            $membersList[] = htmlspecialchars($member->getFirstname() . ' ' . $member->getLastname());
-        }
-        $membersHtml = '<ul><li>' . implode('</li><li>', $membersList) . '</li></ul>';
-        
-        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $team->getId();
+        $teamUrl = $this->appRedirect('teams/' . $team->getId());
 
         try {
-            // Envoyer l'email à tous les membres de l'équipe
             foreach ($team->getMembers() as $member) {
                 if (!$this->shouldSendNotificationEmail($member)) {
                     continue;
@@ -200,24 +180,12 @@ HTML;
                 $email = (new Email())
                     ->from($this->brandedFrom())
                     ->to($member->getEmail())
-                    ->subject("Votre équipe '{$teamName}' a été créée - Street Fishing")
+                    ->subject("Équipe « {$teamName} » créée")
                     ->html($this->wrapEmailHtml(
-                        "<h1>Félicitations ! Votre équipe a été créée</h1>
-                        <p>Bonjour " . htmlspecialchars($member->getFirstname()) . ",</p>
-                        <p>Votre équipe <strong>{$teamName}</strong> a été créée avec succès.</p>
-                        
-                        <h2>Composition de l'équipe :</h2>
-                        {$membersHtml}
-                        
-                        <p>Vous pouvez maintenant :</p>
-                        <ul>
-                            <li>Consulter les détails de votre équipe : <a href='{$teamUrl}'>Voir mon équipe</a></li>
-                            <li>Vous inscrire à une compétition</li>
-                            <li>Enregistrer vos prises de pêche</li>
-                        </ul>
-                        
-                        <p>Bonne chance pour vos prochaines compétitions !</p>
-                        <p>L'équipe Street Fishing</p>"
+                        "<h1>Équipe créée</h1>
+                        <p>{$this->hello($member)}</p>
+                        <p>L’équipe <strong>{$teamName}</strong> est prête.</p>
+                        {$this->cta($teamUrl, 'Ouvrir l’application')}"
                     ));
 
                 try {
@@ -242,15 +210,15 @@ HTML;
         $teamName = htmlspecialchars($team->getName());
         $competitionName = htmlspecialchars($competition->getName());
         $registrationNumber = $team->getRegistrationNumber();
-        $startDate = $competition->getStartDate()->format('d/m/Y à H:i');
-        $endDate = $competition->getEndDate()->format('d/m/Y à H:i');
-        $description = $competition->getDescription() ? nl2br(htmlspecialchars($competition->getDescription())) : 'Aucune description disponible.';
-        
-        $competitionUrl = rtrim($this->backendUrl, '/') . '/redirect/competitions/' . $competition->getId();
-        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $team->getId();
+        $start = $competition->getStartDate();
+        $startDate = '';
+        if ($start) {
+            $startParis = \DateTime::createFromInterface($start)->setTimezone(new \DateTimeZone('Europe/Paris'));
+            $startDate = $startParis->format('d/m/Y à H\\hi');
+        }
+        $competitionUrl = $this->appRedirect('competitions/' . $competition->getId());
 
         try {
-            // Envoyer l'email à tous les membres de l'équipe
             foreach ($team->getMembers() as $member) {
                 if (!$this->shouldSendNotificationEmail($member)) {
                     continue;
@@ -259,32 +227,15 @@ HTML;
                 $email = (new Email())
                     ->from($this->brandedFrom())
                     ->to($member->getEmail())
-                    ->subject("Votre équipe '{$teamName}' est inscrite à la compétition '{$competitionName}' - Street Fishing")
+                    ->subject("Inscrit à « {$competitionName} »")
                     ->html($this->wrapEmailHtml(
-                        "<h1>Inscription confirmée !</h1>
-                        <p>Bonjour " . htmlspecialchars($member->getFirstname()) . ",</p>
-                        <p>Votre équipe <strong>{$teamName}</strong> a été inscrite avec succès à la compétition <strong>{$competitionName}</strong>.</p>
-                        
-                        <h2>Détails de la compétition :</h2>
-                        <ul>
-                            <li><strong>Nom :</strong> {$competitionName}</li>
-                            <li><strong>Date de début :</strong> {$startDate}</li>
-                            <li><strong>Date de fin :</strong> {$endDate}</li>
-                            <li><strong>Numéro d'inscription :</strong> #{$registrationNumber}</li>
-                        </ul>
-                        
-                        <h3>Description :</h3>
-                        <p>{$description}</p>
-                        
-                        <h2>Prochaines étapes :</h2>
-                        <ul>
-                            <li>Consulter les détails de la compétition : <a href='{$competitionUrl}'>Voir la compétition</a></li>
-                            <li>Consulter votre équipe : <a href='{$teamUrl}'>Voir mon équipe</a></li>
-                            <li>Enregistrer vos prises de pêche pendant la compétition</li>
-                        </ul>
-                        
-                        <p>Bonne chance pour la compétition !</p>
-                        <p>L'équipe Street Fishing</p>"
+                        "<h1>Inscription confirmée</h1>
+                        <p>{$this->hello($member)}</p>
+                        <p><strong>{$teamName}</strong> est inscrite à <strong>{$competitionName}</strong>"
+                        . ($registrationNumber ? " (n° {$registrationNumber})" : '')
+                        . ($startDate ? ", le {$startDate}." : '.')
+                        . '</p>'
+                        . $this->cta($competitionUrl, 'Ouvrir l’application')
                     ));
 
                 try {
@@ -307,19 +258,7 @@ HTML;
     public function sendTeamInvitationEmail(Team $team, User $invitedUser): void
     {
         $teamName = htmlspecialchars($team->getName());
-        $inviterName = '';
-        $membersList = [];
-        
-        foreach ($team->getMembers() as $member) {
-            $membersList[] = htmlspecialchars($member->getFirstname() . ' ' . $member->getLastname());
-            // Prendre le premier membre comme invitant (généralement celui qui invite)
-            if (empty($inviterName)) {
-                $inviterName = htmlspecialchars($member->getFirstname() . ' ' . $member->getLastname());
-            }
-        }
-        $membersHtml = '<ul><li>' . implode('</li><li>', $membersList) . '</li></ul>';
-        
-        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $team->getId();
+        $teamUrl = $this->appRedirect('teams/' . $team->getId());
 
         try {
             if (!$this->shouldSendNotificationEmail($invitedUser)) {
@@ -329,24 +268,12 @@ HTML;
             $email = (new Email())
                 ->from($this->brandedFrom())
                 ->to($invitedUser->getEmail())
-                ->subject("Invitation à rejoindre l'équipe '{$teamName}' - Street Fishing")
+                ->subject("Invitation — équipe « {$teamName} »")
                 ->html($this->wrapEmailHtml(
-                    "<h1>Invitation à rejoindre une équipe</h1>
-                    <p>Bonjour " . htmlspecialchars($invitedUser->getFirstname()) . ",</p>
-                    <p><strong>{$inviterName}</strong> vous invite à rejoindre l'équipe <strong>{$teamName}</strong>.</p>
-                    
-                    <h2>Composition actuelle de l'équipe :</h2>
-                    {$membersHtml}
-                    
-                    <p>Vous avez été ajouté à cette équipe. Vous pouvez maintenant :</p>
-                    <ul>
-                        <li>Consulter les détails de l'équipe : <a href='{$teamUrl}'>Voir l'équipe</a></li>
-                        <li>Vous inscrire à une compétition avec cette équipe</li>
-                        <li>Enregistrer vos prises de pêche</li>
-                    </ul>
-                    
-                    <p>Bonne chance pour vos prochaines compétitions !</p>
-                    <p>L'équipe Street Fishing</p>"
+                    "<h1>Invitation d’équipe</h1>
+                    <p>{$this->hello($invitedUser)}</p>
+                    <p>Vous êtes invité à rejoindre <strong>{$teamName}</strong>.</p>
+                    {$this->cta($teamUrl, 'Ouvrir l’application')}"
                 ));
 
             try {
@@ -372,28 +299,22 @@ HTML;
         $inviter = $invitation->getInvitedBy();
         $inviterName = htmlspecialchars(trim(($inviter?->getFirstname() ?? '') . ' ' . ($inviter?->getLastname() ?? '')) ?: 'Un organisateur');
         $token = rawurlencode($invitation->getToken());
-        $redirectBase = rtrim($this->backendUrl, '/') . '/redirect/staff-invitations/' . $token;
-        $acceptUrl = htmlspecialchars($redirectBase . '/accept', \ENT_QUOTES, 'UTF-8');
-        $rejectUrl = htmlspecialchars($redirectBase . '/reject', \ENT_QUOTES, 'UTF-8');
-        $firstName = htmlspecialchars($invitation->getInvitedUser()?->getFirstname() ?? '');
-        $hello = $firstName !== '' ? "Bonjour {$firstName}," : 'Bonjour,';
+        $acceptUrl = $this->appRedirect('staff-invitations/' . $token . '/accept');
+        $rejectUrl = $this->appRedirect('staff-invitations/' . $token . '/reject');
+        $invitee = $invitation->getInvitedUser();
+        $hello = $invitee ? $this->hello($invitee) : 'Bonjour,';
 
         try {
-            // Mail transactionnel : toujours envoyé (pas de préférence « notifications par email »).
             $email = (new Email())
                 ->from($this->brandedFrom())
                 ->to($to)
-                ->subject("Invitation commissaire — {$competitionName}")
+                ->subject("Commissaire — {$competitionName}")
                 ->html($this->wrapEmailHtml(
                     "<h1>Invitation commissaire</h1>
                     <p>{$hello}</p>
-                    <p><strong>{$inviterName}</strong> vous invite comme <strong>commissaire</strong> sur la compétition <strong>{$competitionName}</strong>.</p>
-                    <p style=\"margin:24px 0;\">
-                      <a href=\"{$acceptUrl}\" style=\"display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;margin-right:8px;\">Accepter</a>
-                      <a href=\"{$rejectUrl}\" style=\"display:inline-block;background:#e5e7eb;color:#111;text-decoration:none;padding:12px 18px;border-radius:8px;\">Refuser</a>
-                    </p>
-                    <p>Le clic sur Accepter ou Refuser enregistre votre choix tout de suite. Ouvrez ensuite l’application Street Fishing avec le compte <strong>{$to}</strong>.</p>
-                    <p>L'équipe Street Fishing</p>"
+                    <p><strong>{$inviterName}</strong> vous invite comme commissaire sur <strong>{$competitionName}</strong>.</p>
+                    {$this->cta($acceptUrl, 'Accepter dans l’application')}
+                    <p style=\"text-align:center;font-size:14px\"><a href=\"" . htmlspecialchars($rejectUrl, \ENT_QUOTES, 'UTF-8') . "\" style=\"color:#666\">Refuser</a></p>"
                 ));
             $this->mailer->send($email);
             $this->logger->info('Email invitation commissaire envoyé', ['to' => $to]);
@@ -404,6 +325,31 @@ HTML;
             ]);
             throw $e;
         }
+    }
+
+    public function sendCreationCreditGrantedEmail(CreationCredit $credit): void
+    {
+        $user = $credit->getUser();
+        if (!$user || !$user->getEmail()) {
+            return;
+        }
+
+        $expires = \DateTime::createFromInterface($credit->getExpiresAt())->setTimezone(new \DateTimeZone('Europe/Paris'));
+        $expiresLabel = htmlspecialchars($expires->format('d/m/Y à H\\hi'));
+        $createUrl = $this->appRedirect('create-competition');
+
+        $email = (new Email())
+            ->from($this->brandedFrom())
+            ->to($user->getEmail())
+            ->subject('Crédit pour créer une compétition')
+            ->html($this->wrapEmailHtml(
+                "<h1>Crédit de création</h1>
+                <p>{$this->hello($user)}</p>
+                <p><strong>1 crédit</strong> jusqu’au <strong>{$expiresLabel}</strong> (Paris). Une création le consomme.</p>
+                {$this->cta($createUrl, 'Ouvrir l’application')}"
+            ));
+        $this->mailer->send($email);
+        $this->logger->info('Email crédit de création envoyé', ['to' => $user->getEmail()]);
     }
 
     public function sendCatchValidationEmail(\App\Entity\Competition\FishCatch $catch, bool $validated, ?string $rejectionReason = null): void
@@ -421,7 +367,7 @@ HTML;
             ? htmlspecialchars($catch->getTeam()->getCompetition()->getName())
             : 'Compétition';
         
-        $teamUrl = rtrim($this->backendUrl, '/') . '/redirect/teams/' . $catch->getTeam()->getId();
+        $teamUrl = $this->appRedirect('teams/' . $catch->getTeam()->getId());
 
         try {
             if ($validated) {
@@ -433,26 +379,14 @@ HTML;
                 $email = (new Email())
                     ->from($this->brandedFrom())
                     ->to($user->getEmail())
-                    ->subject("Votre prise a été validée - Street Fishing")
+                    ->subject('Prise validée')
                     ->html($this->wrapEmailHtml(
-                        "<h1>Prise validée !</h1>
-                        <p>Bonjour " . htmlspecialchars($user->getFirstname()) . ",</p>
-                        <p>Votre prise a été <strong>validée</strong> par un administrateur.</p>
-                        
-                        <h2>Détails de la prise :</h2>
-                        <ul>
-                            <li><strong>Espèce :</strong> {$speciesName}</li>
-                            <li><strong>Taille :</strong> {$size} cm</li>
-                            <li><strong>Points :</strong> {$points} pts</li>
-                            <li><strong>Équipe :</strong> {$teamName}</li>
-                            <li><strong>Compétition :</strong> {$competitionName}</li>
-                        </ul>
-                        
-                        <p>Cette prise est maintenant comptabilisée dans le score de votre équipe.</p>
-                        <p><a href='{$teamUrl}'>Voir mon équipe</a></p>
-                        
-                        <p>Bonne continuation !</p>
-                        <p>L'équipe Street Fishing</p>"
+                        "<h1>Prise validée</h1>
+                        <p>{$this->hello($user)}</p>
+                        <p><strong>{$speciesName}</strong> — {$size} cm ({$points} pts), équipe {$teamName}"
+                        . ($competitionName ? ", {$competitionName}" : '')
+                        . ".</p>"
+                        . $this->cta($teamUrl, 'Ouvrir l’application')
                     ));
             } else {
                 // Email de rejet
@@ -465,30 +399,13 @@ HTML;
                 $email = (new Email())
                     ->from($this->brandedFrom())
                     ->to($user->getEmail())
-                    ->subject("Votre prise a été rejetée - Street Fishing")
+                    ->subject('Prise refusée')
                     ->html($this->wrapEmailHtml(
-                        "<h1>Prise rejetée</h1>
-                        <p>Bonjour " . htmlspecialchars($user->getFirstname()) . ",</p>
-                        <p>Votre prise a été <strong>rejetée</strong> par un administrateur.</p>
-                        
-                        <h2>Détails de la prise :</h2>
-                        <ul>
-                            <li><strong>Espèce :</strong> {$speciesName}</li>
-                            <li><strong>Taille :</strong> {$size} cm</li>
-                            <li><strong>Points :</strong> {$points} pts</li>
-                            <li><strong>Équipe :</strong> {$teamName}</li>
-                            <li><strong>Compétition :</strong> {$competitionName}</li>
-                        </ul>
-                        
-                        <h2>Motif du rejet :</h2>
-                        <p>{$rejectionReasonHtml}</p>
-                        
-                        <p>Cette prise n'est pas comptabilisée dans le score de votre équipe.</p>
-                        <p>Si vous pensez qu'il s'agit d'une erreur, vous pouvez contacter l'administrateur.</p>
-                        <p><a href='{$teamUrl}'>Voir mon équipe</a></p>
-                        
-                        <p>Cordialement,</p>
-                        <p>L'équipe Street Fishing</p>"
+                        "<h1>Prise refusée</h1>
+                        <p>{$this->hello($user)}</p>
+                        <p><strong>{$speciesName}</strong> — {$size} cm, équipe {$teamName}.</p>
+                        <p><strong>Motif :</strong> {$rejectionReasonHtml}</p>
+                        {$this->cta($teamUrl, 'Ouvrir l’application')}"
                     ));
             }
 

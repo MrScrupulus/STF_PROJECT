@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { adminService } from '../services/adminService';
+import { authService } from '../services/authService';
 import { speciesService } from '../services/speciesService';
 import Header from '../components/Header';
 import FaIcon from '../components/FaIcon';
@@ -88,6 +89,26 @@ export default function CreateCompetitionScreen() {
     queryKey: ['species'],
     queryFn: () => speciesService.getAll(),
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    authService
+      .getCurrentUser()
+      .then((response) => {
+        const user = response.user || response;
+        if (!cancelled && !user?.creationRights?.canCreate) {
+          Alert.alert(
+            'Crédit requis',
+            'Vous n’avez pas de crédit de création valide. Un administrateur doit vous en attribuer un.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }]
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {

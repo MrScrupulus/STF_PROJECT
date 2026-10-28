@@ -10,7 +10,6 @@ use App\Service\CompetitionStaffInvitationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -31,26 +30,13 @@ final class RedirectController extends AbstractController
     #[Route('/redirect/verify-email/{token}', name: 'redirect_verify_email', methods: ['GET'])]
     public function redirectVerifyEmail(string $token, Request $request): Response
     {
-        $userAgent = $request->headers->get('User-Agent', '');
-        $isMobile = $this->isMobileDevice($userAgent);
-        $backendUrl = rtrim($this->params->get('app.backend_url'), '/');
         $tokenEncoded = rawurlencode($token);
-        $deepLink = 'stf://verify-email/' . $tokenEncoded;
-        $webUrl = $backendUrl . '/redirect/verify-email/' . $tokenEncoded . '/confirm';
 
-        if ($isMobile) {
-            return $this->mobileRedirectPage(
-                'Vérification de votre email',
-                'Ouvrez Street Fishing pour valider votre compte, ou continuez dans le navigateur.',
-                $deepLink,
-                $webUrl,
-                'Ouvrir l’application',
-                'Valider dans le navigateur'
-            );
-        }
-
-        $frontendUrl = rtrim($this->params->get('app.frontend_url'), '/');
-        return new RedirectResponse($frontendUrl . '/verify-email/' . $tokenEncoded);
+        return $this->openAppPage(
+            'Vérification de votre email',
+            'Ouvrez Street Fishing pour activer votre compte.',
+            'stf://verify-email/' . $tokenEncoded
+        );
     }
 
     /**
@@ -177,65 +163,33 @@ HTML;
     #[Route('/redirect/reset-password/{token}', name: 'redirect_reset_password', methods: ['GET'])]
     public function redirectResetPassword(string $token, Request $request): Response
     {
-        $userAgent = $request->headers->get('User-Agent', '');
-        $isMobile = $this->isMobileDevice($userAgent);
         $tokenEncoded = rawurlencode($token);
-        $deepLink = 'stf://reset-password/' . $tokenEncoded;
-        $backendUrl = rtrim($this->params->get('app.backend_url'), '/');
-        $browserFormUrl = $backendUrl . '/redirect/reset-password/' . $tokenEncoded . '/form';
-        $frontendUrl = rtrim($this->params->get('app.frontend_url'), '/');
-        $frontendResetUrl = $frontendUrl . '/reset-password/' . $tokenEncoded;
 
-        if ($isMobile) {
-            return $this->mobileRedirectPage(
-                'Réinitialisation du mot de passe',
-                'Ouvrez Street Fishing pour définir un nouveau mot de passe, ou continuez dans le navigateur.',
-                $deepLink,
-                $browserFormUrl,
-                'Ouvrir l’application',
-                'Continuer dans le navigateur'
-            );
-        }
-
-        return new RedirectResponse($frontendResetUrl);
+        return $this->openAppPage(
+            'Réinitialisation du mot de passe',
+            'Ouvrez Street Fishing pour choisir un nouveau mot de passe.',
+            'stf://reset-password/' . $tokenEncoded
+        );
     }
 
     #[Route('/redirect/teams/{id}', name: 'redirect_team', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function redirectTeam(int $id, Request $request): Response
     {
-        $frontendUrl = rtrim($this->params->get('app.frontend_url'), '/') . '/teams/' . $id;
-        $deepLink = 'stf://teams/' . $id;
-        if ($this->isMobileDevice($request->headers->get('User-Agent', ''))) {
-            return $this->mobileRedirectPage(
-                'Ouvrir l’équipe',
-                'Continuez dans Street Fishing si l’application est installée.',
-                $deepLink,
-                $frontendUrl,
-                'Ouvrir l’application',
-                'Voir sur le site'
-            );
-        }
-
-        return new RedirectResponse($frontendUrl);
+        return $this->openAppPage(
+            'Ouvrir l’équipe',
+            'Ouvrez Street Fishing pour voir l’équipe.',
+            'stf://teams/' . $id
+        );
     }
 
     #[Route('/redirect/competitions/{id}', name: 'redirect_competition', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function redirectCompetition(int $id, Request $request): Response
     {
-        $frontendUrl = rtrim($this->params->get('app.frontend_url'), '/') . '/competitions/' . $id;
-        $deepLink = 'stf://competitions/' . $id;
-        if ($this->isMobileDevice($request->headers->get('User-Agent', ''))) {
-            return $this->mobileRedirectPage(
-                'Ouvrir la compétition',
-                'Continuez dans Street Fishing si l’application est installée.',
-                $deepLink,
-                $frontendUrl,
-                'Ouvrir l’application',
-                'Voir sur le site'
-            );
-        }
-
-        return new RedirectResponse($frontendUrl);
+        return $this->openAppPage(
+            'Ouvrir la compétition',
+            'Ouvrez Street Fishing pour voir la compétition.',
+            'stf://competitions/' . $id
+        );
     }
 
     #[Route('/redirect/staff-invitations/{token}/accept', name: 'redirect_staff_invitation_accept', methods: ['GET'])]
@@ -262,22 +216,37 @@ HTML;
             ? ($action === 'reject' ? 'Invitation refusée' : 'Vous êtes commissaire')
             : 'Invitation commissaire';
 
-        if ($this->isMobileDevice($request->headers->get('User-Agent', ''))) {
-            return $this->mobileRedirectPage(
-                $title,
-                $result['message'] . ($result['ok'] ? ' Ouvrez l’application Street Fishing pour continuer.' : ''),
-                $deepLink,
-                '',
-                'Ouvrir l’application',
-                ''
-            );
-        }
+        return $this->openAppPage(
+            $title,
+            $result['message'] . ($result['ok'] ? ' Ouvrez Street Fishing pour continuer.' : ''),
+            $deepLink
+        );
+    }
 
-        return $this->htmlResponse($title, $result['message'], $result['ok']);
+    #[Route('/redirect/create-competition', name: 'redirect_create_competition', methods: ['GET'])]
+    public function redirectCreateCompetition(): Response
+    {
+        return $this->openAppPage(
+            'Créer une compétition',
+            'Ouvrez Street Fishing pour utiliser votre crédit de création.',
+            'stf://create-competition'
+        );
+    }
+
+    private function openAppPage(string $title, string $message, string $deepLink): Response
+    {
+        return $this->mobileRedirectPage(
+            $title,
+            $message,
+            $deepLink,
+            '',
+            'Ouvrir l’application',
+            ''
+        );
     }
 
     /**
-     * Page HTML pour mobile : ouvre l’app (stf://) + repli navigateur.
+     * Page HTML : ouvre l’app (stf://).
      */
     private function mobileRedirectPage(
         string $title,
@@ -294,9 +263,7 @@ HTML;
         $messageEsc = htmlspecialchars($message, \ENT_QUOTES, 'UTF-8');
         $linkWebEsc = htmlspecialchars($linkWeb, \ENT_QUOTES, 'UTF-8');
         $webHiddenClass = $webUrl === '' ? ' hidden' : '';
-        $autoOpenScript = $webUrl === ''
-            ? ''
-            : '<script>setTimeout(function () { window.location.href = ' . json_encode($deepLink, \JSON_UNESCAPED_SLASHES | \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_THROW_ON_ERROR) . '; }, 400);</script>';
+        $autoOpenScript = '<script>setTimeout(function () { window.location.href = ' . json_encode($deepLink, \JSON_UNESCAPED_SLASHES | \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_THROW_ON_ERROR) . '; }, 300);</script>';
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -361,33 +328,5 @@ HTML;
 HTML;
 
         return new Response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);
-    }
-
-    /**
-     * Détecte si le User-Agent correspond à un appareil mobile
-     */
-    private function isMobileDevice(string $userAgent): bool
-    {
-        $mobileKeywords = [
-            'Mobile',
-            'Android',
-            'iPhone',
-            'iPad',
-            'iPod',
-            'BlackBerry',
-            'Windows Phone',
-            'Opera Mini',
-            'IEMobile',
-        ];
-
-        $userAgentLower = strtolower($userAgent);
-        
-        foreach ($mobileKeywords as $keyword) {
-            if (stripos($userAgentLower, strtolower($keyword)) !== false) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

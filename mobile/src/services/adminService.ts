@@ -53,6 +53,18 @@ export const adminService = {
     return response.data;
   },
 
+  disqualifyTeam: async (teamId: number, reason?: string): Promise<any> => {
+    const response = await apiClient.post(`/admin/teams/${teamId}/disqualify`, {
+      reason: reason?.trim() || undefined,
+    });
+    return response.data;
+  },
+
+  reinstateTeam: async (teamId: number): Promise<any> => {
+    const response = await apiClient.delete(`/admin/teams/${teamId}/disqualify`);
+    return response.data;
+  },
+
   createTeamPenalty: async (
     teamId: number,
     payload: { points: number; reason?: string; fishCatchId?: number }
@@ -78,9 +90,27 @@ export const adminService = {
     return response.data;
   },
 
-  getUsers: async (): Promise<any[]> => {
-    const response = await apiClient.get('/api/admin/users');
+  getUsers: async (email?: string): Promise<any[]> => {
+    const response = await apiClient.get('/admin/users', {
+      params: email ? { email: email.trim() } : undefined,
+    });
     return response.data?.users || response.data || [];
+  },
+
+  grantCreationCredit: async (
+    userId: number,
+    { days = 90, complimentary = true }: { days?: number; complimentary?: boolean } = {}
+  ): Promise<any> => {
+    const response = await apiClient.post(`/admin/users/${userId}/creation-credits`, {
+      days,
+      complimentary,
+    });
+    return response.data;
+  },
+
+  cancelCreationCredit: async (creditId: number): Promise<any> => {
+    const response = await apiClient.delete(`/admin/creation-credits/${creditId}`);
+    return response.data;
   },
 
   getTeams: async (): Promise<any[]> => {

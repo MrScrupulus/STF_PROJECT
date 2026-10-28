@@ -41,6 +41,7 @@ type AdminPenaltyTeam = {
   members?: AdminPenaltyMember[];
   /** Hors compétition (journal perso), exclu des pénalités */
   isPersonalJournal?: boolean;
+  isDisqualified?: boolean;
 };
 
 type PenaltyCatchRow = {
@@ -65,6 +66,8 @@ export default function AdminPenaltyScreen() {
   const [catchId, setCatchId] = useState<number | null>(null);
   const [points, setPoints] = useState('');
   const [reason, setReason] = useState('');
+  const [dqReason, setDqReason] = useState('');
+  const [mode, setMode] = useState<'penalty' | 'dq'>('penalty');
   const [busy, setBusy] = useState(false);
 
   const { data: competitionsRaw, isLoading: loadingCompetitions } = useQuery({
@@ -137,6 +140,10 @@ export default function AdminPenaltyScreen() {
 
   const penalties = penaltiesRes?.penalties ?? [];
   const totalPen = penaltiesRes?.totalPenaltyPoints ?? 0;
+  const teamIsDisqualified = penaltiesRes?.isDisqualified === true;
+  const savedDqReason = typeof penaltiesRes?.disqualificationReason === 'string'
+    ? penaltiesRes.disqualificationReason
+    : '';
 
   const penaltyEligibleCatches =
     penaltyCatchesRes?.success === true && Array.isArray(penaltyCatchesRes.catches)
@@ -190,6 +197,64 @@ export default function AdminPenaltyScreen() {
     }
   };
 
+  const handleDisqualify = () => {
+    if (!teamId) {
+      Alert.alert('Erreur', 'Choisissez une équipe.');
+      return;
+    }
+    Alert.alert(
+      'Disqualifier l’équipe',
+      'L’équipe sort du classement (DSQ). Plus aucune prise ne pourra être ajoutée. Le score reste visible pour l’audit.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Disqualifier',
+          style: 'destructive',
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await adminService.disqualifyTeam(teamId, dqReason);
+              Alert.alert('Équipe disqualifiée', 'Elle apparaît en DSQ au classement.');
+              setDqReason('');
+              refetchPenalties();
+              await queryClient.invalidateQueries({ queryKey: ['admin-teams-penalty'] });
+            } catch (e: unknown) {
+              const err = e as { response?: { data?: { message?: string } }; message?: string };
+              Alert.alert('Erreur', err.response?.data?.message || err.message || 'Erreur');
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReinstate = () => {
+    if (!teamId) {
+      return;
+    }
+    Alert.alert('Annuler la disqualification', 'L’équipe réintègre le classement.', [
+      { text: 'Non', style: 'cancel' },
+      {
+        text: 'Réintégrer',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            await adminService.reinstateTeam(teamId);
+            refetchPenalties();
+            await queryClient.invalidateQueries({ queryKey: ['admin-teams-penalty'] });
+          } catch (e: unknown) {
+            const err = e as { response?: { data?: { message?: string } }; message?: string };
+            Alert.alert('Erreur', err.response?.data?.message || err.message || 'Erreur');
+          } finally {
+            setBusy(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <>
       <Header title="Pénalités" showBack={true} showMenu={true} />
@@ -200,13 +265,38 @@ export default function AdminPenaltyScreen() {
           </View>
           <View style={styles.identityText}>
             <Text style={styles.displayName}>Pénalités</Text>
-            <Text style={styles.identityHint}>Retirer des points au score officiel d’une équipe</Text>
+            <Text style={styles.identityHint}>Points retirés ou disqualification d’équipe</Text>
           </View>
+        </View>
+        <View style={styles.modeGrid}>
+          <TouchableOpacity
+            style={[styles.modeTile, mode === 'penalty' && styles.modeTileSel]}
+            onPress={() => setMode('penalty')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.modeIcon, styles.modeIconPenalty]}>
+              <FaIcon name="flag" size={18} color={theme.onAccent} />
+            </View>
+            <Text style={styles.modeLabel}>Pénalité</Text>
+            <Text style={styles.modeHint}>Retirer des points</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeTile, mode === 'dq' && styles.modeTileSel]}
+            onPress={() => setMode('dq')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.modeIcon, styles.modeIconDq]}>
+              <FaIcon name="ban" size={18} color={theme.onAccent} />
+            </View>
+            <Text style={styles.modeLabel}>Disqualification</Text>
+            <Text style={styles.modeHint}>Sortir du classement</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.helpCard}>
           <Text style={styles.help}>
-            Uniquement les équipes engagées en compétition (le journal personnel n’apparaît pas). Choisissez la
-            compétition, puis recherchez une équipe. Les points sont retirés du score (plancher à 0).
+            {mode === 'dq'
+              ? 'La disqualification concerne toute l’équipe (solo, duo ou plus). Elle reste listée en DSQ, sans nouvelles prises. Vous pouvez l’annuler.'
+              : 'Uniquement les équipes engagées en compétition (le journal personnel n’apparaît pas). Les points sont retirés du score (plancher à 0).'}
           </Text>
         </View>
 
@@ -284,6 +374,7 @@ export default function AdminPenaltyScreen() {
                         >
                           <Text style={[styles.teamRowName, teamId === t.id && styles.teamRowNameSel]}>
                             {t.name}
+                            {t.isDisqualified ? ' · DSQ' : ''}
                           </Text>
                           {line.length > 0 ? (
                             <Text style={[styles.teamRowMembers, teamId === t.id && styles.teamRowMembersSel]}>
@@ -298,7 +389,57 @@ export default function AdminPenaltyScreen() {
               </>
             )}
 
-            {teamId != null && (
+            {teamId != null && mode === 'dq' ? (
+              <View style={styles.dqCard}>
+                <View style={styles.dqCardHeader}>
+                  <View style={[styles.modeIcon, styles.modeIconDq]}>
+                    <FaIcon name="ban" size={18} color={theme.onAccent} />
+                  </View>
+                  <Text style={styles.dqCardTitle}>
+                    {teamIsDisqualified ? 'Équipe disqualifiée' : 'Disqualifier cette équipe'}
+                  </Text>
+                </View>
+                {teamIsDisqualified ? (
+                  <>
+                    {savedDqReason ? (
+                      <Text style={styles.hintMuted}>Motif : {savedDqReason}</Text>
+                    ) : (
+                      <Text style={styles.hintMuted}>Aucun motif renseigné.</Text>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.submit, styles.submitDq, busy && styles.submitDisabled]}
+                      onPress={handleReinstate}
+                      disabled={busy}
+                    >
+                      <FaIcon name="rotate" size={16} color={theme.onAccent} />
+                      <Text style={styles.submitText}>{busy ? '…' : 'Réintégrer l’équipe'}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.label}>Motif (optionnel)</Text>
+                    <TextInput
+                      style={[styles.input, styles.area]}
+                      value={dqReason}
+                      onChangeText={setDqReason}
+                      multiline
+                      placeholder="Règlement, comportement…"
+                      placeholderTextColor={theme.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={[styles.submit, styles.submitDq, busy && styles.submitDisabled]}
+                      onPress={handleDisqualify}
+                      disabled={busy}
+                    >
+                      <FaIcon name="ban" size={16} color={theme.onAccent} />
+                      <Text style={styles.submitText}>{busy ? '…' : 'Disqualifier l’équipe'}</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            ) : null}
+
+            {teamId != null && mode === 'penalty' && (
               <>
                 <Text style={styles.label}>Portée</Text>
                 <View style={styles.row}>
@@ -545,6 +686,46 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   identityText: { flex: 1 },
   displayName: { fontSize: 20, fontWeight: '700', color: theme.text },
   identityHint: { fontSize: 14, color: theme.textMuted, marginTop: 4 },
+  modeGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  modeTile: {
+    width: '48.5%',
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  modeTileSel: { borderColor: theme.accent },
+  modeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  modeIconPenalty: { backgroundColor: '#d97706' },
+  modeIconDq: { backgroundColor: theme.danger },
+  modeLabel: { fontSize: 14, fontWeight: '700', color: theme.text, textAlign: 'center' },
+  modeHint: { fontSize: 12, color: theme.textMuted, marginTop: 2, textAlign: 'center' },
+  dqCard: {
+    backgroundColor: theme.surface,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  dqCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  dqCardTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: theme.text },
+  submitDq: { backgroundColor: theme.danger },
   helpCard: {
     backgroundColor: theme.surface,
     borderRadius: 16,

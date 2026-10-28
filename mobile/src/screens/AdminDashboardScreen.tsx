@@ -12,6 +12,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { adminService } from '../services/adminService';
+import { authService } from '../services/authService';
 import { formatDateTime } from '../utils/dateUtils';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
@@ -28,6 +29,17 @@ export default function AdminDashboardScreen() {
   const [catchesPages, setCatchesPages] = useState(1);
   const [allCatches, setAllCatches] = useState<any[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [canCreateCompetition, setCanCreateCompetition] = useState(false);
+
+  useEffect(() => {
+    authService
+      .getCurrentUser()
+      .then((response) => {
+        const user = response.user || response;
+        setCanCreateCompetition(!!user?.creationRights?.canCreate);
+      })
+      .catch(() => setCanCreateCompetition(false));
+  }, []);
 
   const { data: pendingCatchesData, isLoading: loadingCatches } = useQuery({
     queryKey: ['admin-pending-catches', catchesPage],
@@ -127,12 +139,16 @@ export default function AdminDashboardScreen() {
       icon: 'trophy',
       onPress: () => (navigation as any).navigate('CompetitionsList'),
     },
-    {
-      label: 'Créer',
-      hint: 'Nouvelle manche',
-      icon: 'plus',
-      onPress: () => (navigation as any).navigate('CreateCompetition'),
-    },
+    ...(canCreateCompetition
+      ? [
+          {
+            label: 'Créer',
+            hint: 'Nouvelle manche',
+            icon: 'plus' as AppIconName,
+            onPress: () => (navigation as any).navigate('CreateCompetition'),
+          },
+        ]
+      : []),
     {
       label: 'Saisie',
       hint: 'Ajouter une prise',
@@ -141,7 +157,7 @@ export default function AdminDashboardScreen() {
     },
     {
       label: 'Pénalités',
-      hint: 'Points & motifs',
+      hint: 'Points & DSQ',
       icon: 'flag',
       onPress: () => (navigation as any).navigate('AdminPenalty'),
     },

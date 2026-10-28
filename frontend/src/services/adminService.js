@@ -49,6 +49,14 @@ export const adminService = {
     return response;
   },
 
+  grantCreationCredit: async (userId, { days = 90, complimentary = true } = {}) => {
+    return api.post(`/admin/users/${userId}/creation-credits`, { days, complimentary });
+  },
+
+  cancelCreationCredit: async (creditId) => {
+    return api.delete(`/admin/creation-credits/${creditId}`);
+  },
+
   deleteUser: async (userId) => {
     try {
       const response = await api.delete(`/admin/users/${userId}`);
@@ -132,6 +140,14 @@ export const adminService = {
   deleteTeamPenalty: async (teamId, penaltyId) => {
     const response = await api.delete(`/admin/teams/${teamId}/penalties/${penaltyId}`);
     return response;
+  },
+
+  disqualifyTeam: async (teamId, reason) => {
+    return api.post(`/admin/teams/${teamId}/disqualify`, { reason: reason || undefined });
+  },
+
+  reinstateTeam: async (teamId) => {
+    return api.delete(`/admin/teams/${teamId}/disqualify`);
   },
 
   createCatch: async (data) => {

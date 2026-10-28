@@ -445,6 +445,20 @@ export default function TeamDetailScreen({ route }: any) {
       <ScrollView style={styles.container}>
         <View style={styles.content}>
 
+        {team.isDisqualified ? (
+          <View style={styles.dqBanner}>
+            <FaIcon name="ban" size={18} color={theme.danger} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dqBannerTitle}>Équipe disqualifiée</Text>
+              <Text style={styles.dqBannerText}>
+                {team.disqualificationReason
+                  ? team.disqualificationReason
+                  : 'Hors classement (DSQ). Les prises déjà validées restent visibles.'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {team.competition && (
           <View style={styles.competitionInfo}>
             <Text style={styles.competitionLabel}>Compétition :</Text>
@@ -1183,6 +1197,28 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
     color: theme.text,
+  },
+  dqBanner: {
+    backgroundColor: theme.surface,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: theme.danger,
+  },
+  dqBannerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.danger,
+    marginBottom: 4,
+  },
+  dqBannerText: {
+    fontSize: 14,
+    color: theme.text,
+    lineHeight: 20,
   },
   competitionInfo: {
     backgroundColor: theme.surface,

@@ -58,6 +58,7 @@ class CompetitionPdfController extends AbstractController
                 $teamData->name = $snapshot->getTeamName();
                 $teamData->totalScore = $snapshot->getTotalScore();
                 $teamData->registrationNumber = $snapshot->getRegistrationNumber();
+                $teamData->isDisqualified = $snapshot->isDisqualified();
                 
                 // Convertir le tableau JSON en objets pour le template
                 $members = [];
@@ -79,8 +80,42 @@ class CompetitionPdfController extends AbstractController
             })->toArray();
             
             usort($teams, function($a, $b) {
-                return ($b->getTotalScore() ?? 0) - ($a->getTotalScore() ?? 0);
+                $dqA = $a->isDisqualified() ? 1 : 0;
+                $dqB = $b->isDisqualified() ? 1 : 0;
+                if ($dqA !== $dqB) {
+                    return $dqA <=> $dqB;
+                }
+
+                return ($b->getTotalScore() ?? 0) <=> ($a->getTotalScore() ?? 0);
             });
+            $teams = array_map(static function ($team) {
+                $teamData = new \stdClass();
+                $teamData->id = $team->getId();
+                $teamData->name = $team->getName();
+                $teamData->totalScore = $team->getTotalScore();
+                $teamData->registrationNumber = $team->getRegistrationNumber();
+                $teamData->isDisqualified = $team->isDisqualified();
+                $members = [];
+                foreach ($team->getMembers() as $member) {
+                    $row = new \stdClass();
+                    $row->id = $member->getId();
+                    $row->firstname = $member->getFirstname();
+                    $row->lastname = $member->getLastname();
+                    $members[] = $row;
+                }
+                $teamData->members = $members;
+
+                return $teamData;
+            }, $teams);
+        }
+
+        $rank = 0;
+        foreach ($teams as $teamData) {
+            $disqualified = !empty($teamData->isDisqualified);
+            if (!$disqualified) {
+                ++$rank;
+            }
+            $teamData->rankLabel = $disqualified ? 'DSQ' : '#' . $rank;
         }
 
         // Récupérer toutes les prises validées

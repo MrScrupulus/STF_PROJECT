@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
-import { canOrganizeEvents } from '../utils/roles';
+import { canOrganizeEvents, isPlatformAdmin } from '../utils/roles';
 import { type ThemeColors } from '../theme';
 
 export default function ProfileScreen() {
@@ -128,6 +128,16 @@ export default function ProfileScreen() {
       icon: 'envelope',
       onPress: () => go('Invitations'),
     },
+    ...(isPlatformAdmin(user?.roles)
+      ? [
+          {
+            label: 'Dashboard',
+            hint: 'Crédits de création',
+            icon: 'key' as const,
+            onPress: () => go('Dashboard'),
+          },
+        ]
+      : []),
     ...(canOrganizeEvents(user?.roles)
       ? [
           {

@@ -13,6 +13,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\Competition\Team;
 use App\Service\UserAnonymizerService;
 use App\Service\CompetitionAccessService;
+use App\Service\CreationCreditService;
+use App\Entity\Competition\CreationCredit;
 
 #[Route('/admin')]
 class AdminController extends AbstractController
@@ -22,24 +24,21 @@ class AdminController extends AbstractController
         private UserRepository $userRepository,
         private UserAnonymizerService $userAnonymizerService,
         private CompetitionAccessService $competitionAccess,
+        private CreationCreditService $creationCredits,
     ) {}
 
     #[Route('/users', name: 'admin_users_list', methods: ['GET'])]
-    public function listUsers(): JsonResponse
+    public function listUsers(Request $request): JsonResponse
     {
-        $users = $this->userRepository->findAllActive();
-        $usersData = array_map(function ($user) {
-            return [
-                'id' => $user->getId(),
-                'username' => $user->getUsername(),
-                'email' => $user->getEmail(),
-                'roles' => $user->getRoles(),
-                'firstname' => $user->getFirstname(),
-                'lastname' => $user->getLastname(),
-                'phoneNumber' => $user->getPhoneNumber(),
-                'isVerified' => $user->isVerified(),
-            ];
-        }, $users);
+        $email = trim((string) $request->query->get('email', ''));
+        if ($email !== '') {
+            $found = $this->userRepository->findActiveByEmail($email);
+            $users = $found ? [$found] : [];
+        } else {
+            $users = $this->userRepository->findAllActive();
+        }
+
+        $usersData = array_map(fn (User $user) => $this->serializeAdminUser($user), $users);
 
         return $this->json(['users' => $usersData]);
     }
@@ -79,6 +78,46 @@ class AdminController extends AbstractController
         return $this->json([
             'message' => 'Rôles mis à jour avec succès',
             'roles' => $user->getRoles(),
+        ]);
+    }
+
+    #[Route('/users/{id}/creation-credits', name: 'admin_grant_creation_credit', methods: ['POST'])]
+    public function grantCreationCredit(Request $request, User $user): JsonResponse
+    {
+        if (\in_array(AppRoles::ADMIN, $user->getRoles(), true)) {
+            return $this->json(['message' => 'Un administrateur n’a pas besoin de crédit de création.'], 400);
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $days = isset($data['days']) ? (int) $data['days'] : CreationCreditService::DEFAULT_DAYS;
+        $complimentary = !array_key_exists('complimentary', $data) || (bool) $data['complimentary'];
+        $granter = $this->getUser() instanceof User ? $this->getUser() : null;
+        $credit = $this->creationCredits->grant($user, $granter, $days, $complimentary);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Crédit de création attribué. Un e-mail a été envoyé au créateur.',
+            'credit' => $this->creationCredits->serialize($credit),
+            'creationRights' => $this->creationCredits->rightsFor(
+                $user,
+                \in_array(AppRoles::ADMIN, $user->getRoles(), true)
+            ),
+        ], 201);
+    }
+
+    #[Route('/creation-credits/{id}', name: 'admin_cancel_creation_credit', methods: ['DELETE'])]
+    public function cancelCreationCredit(CreationCredit $credit): JsonResponse
+    {
+        $user = $credit->getUser();
+        $this->creationCredits->cancel($credit);
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Crédit annulé.',
+            'creationRights' => $user ? $this->creationCredits->rightsFor(
+                $user,
+                \in_array(AppRoles::ADMIN, $user->getRoles(), true)
+            ) : null,
         ]);
     }
 
@@ -212,9 +251,29 @@ class AdminController extends AbstractController
                     'name' => $team->getCompetition()->getName(),
                 ] : null,
                 'isPersonalJournal' => $team->isPersonalJournal(),
+                'isDisqualified' => $team->isDisqualified(),
+                'disqualificationReason' => $team->getDisqualificationReason(),
             ];
         }, $teams);
 
         return $this->json(['teams' => $teamsData]);
+    }
+
+    /** @return array<string, mixed> */
+    private function serializeAdminUser(User $user): array
+    {
+        $isAdmin = \in_array(AppRoles::ADMIN, $user->getRoles(), true);
+
+        return [
+            'id' => $user->getId(),
+            'username' => $user->getUsername(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
+            'firstname' => $user->getFirstname(),
+            'lastname' => $user->getLastname(),
+            'phoneNumber' => $user->getPhoneNumber(),
+            'isVerified' => $user->isVerified(),
+            'creationRights' => $this->creationCredits->rightsFor($user, $isAdmin),
+        ];
     }
 }

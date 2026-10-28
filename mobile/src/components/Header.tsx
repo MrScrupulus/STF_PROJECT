@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { rootNavigationRef } from '../navigation/rootNavigationRef';
 import FaIcon, { type AppIconName } from './FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
-import { canOrganizeEvents } from '../utils/roles';
+import { canOrganizeEvents, isPlatformAdmin } from '../utils/roles';
 import { type ThemeColors } from '../theme';
 
 interface HeaderProps {
@@ -35,6 +35,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
   const route = useRoute();
   const [menuVisible, setMenuVisible] = useState(false);
   const [canOrganize, setCanOrganize] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { setIsAuthenticated, isAuthenticated } = useAuth();
 
   const canGoBack = navigation.canGoBack();
@@ -47,13 +48,16 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
           const response = await authService.getCurrentUser();
           const user = response.user || response;
           setCanOrganize(canOrganizeEvents(user.roles));
+          setIsAdmin(isPlatformAdmin(user.roles));
         } catch (error) {
           setCanOrganize(false);
+          setIsAdmin(false);
         }
       };
       checkAdmin();
     } else {
       setCanOrganize(false);
+      setIsAdmin(false);
     }
   }, [isAuthenticated]);
 
@@ -63,6 +67,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         { name: 'Home', label: 'Accueil', icon: 'home' },
         { name: 'Profile', label: 'Mon compte', icon: 'user' },
         { name: 'Competitions', label: 'Compétitions', icon: 'trophy' },
+        ...(isAdmin ? [{ name: 'Dashboard', label: 'Dashboard', icon: 'key' as const }] : []),
         ...(canOrganize ? [{ name: 'AdminDashboard', label: 'Gestion des compétitions', icon: 'flag' as const }] : []),
         { name: 'Teams', label: 'Mon équipe', icon: 'users' },
         { name: 'History', label: 'Carnet de prises', icon: 'history' },
