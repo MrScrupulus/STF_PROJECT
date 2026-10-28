@@ -46,7 +46,7 @@ export default function CreateSpecies() {
   };
 
   return (
-    <ProtectedRoute requiredRole="ROLE_ADMIN">
+    <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
       <main className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
         <div className={styles["species-create__container"]}>
           <h1 className={styles["species-create__title"]}>Ajouter une espèce</h1>

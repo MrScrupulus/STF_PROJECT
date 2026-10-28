@@ -2,18 +2,77 @@ function pad2(n) {
   return n < 10 ? `0${n}` : String(n);
 }
 
+function wall(date) {
+  try {
+    const parts = new Intl.DateTimeFormat("fr-FR", {
+      timeZone: "Europe/Paris",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(date);
+    const g = (t) => parts.find((p) => p.type === t)?.value ?? "";
+    const hourRaw = g("hour");
+    if (hourRaw === "" || hourRaw == null) {
+      throw new Error("hour");
+    }
+    let hour = Number(hourRaw);
+    if (hour === 24) hour = 0;
+    if (!Number.isFinite(hour)) {
+      throw new Error("hour");
+    }
+    const day = g("day");
+    const monthNum = g("month");
+    const year = g("year");
+    const monthLabel = date.toLocaleDateString("fr-FR", {
+      timeZone: "Europe/Paris",
+      month: "short",
+      year: "2-digit",
+    });
+    const dayLabel = date.toLocaleDateString("fr-FR", {
+      timeZone: "Europe/Paris",
+      day: "numeric",
+      month: "short",
+    });
+    return {
+      hour,
+      minute: Number(g("minute") || 0),
+      dayKey: `${year}-${monthNum}-${day}`,
+      dayLabel,
+      monthLabel,
+    };
+  } catch {
+    return {
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+      dayKey: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
+      dayLabel: date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }),
+      monthLabel: date.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }),
+    };
+  }
+}
+
 export function parseCatchDate(createdAt) {
   if (!createdAt) return null;
-  const str = String(createdAt);
+  const str = String(createdAt).trim();
+  const hasTz = /[+-]\d{2}:\d{2}$/.test(str) || str.endsWith("Z");
+  if (hasTz) {
+    const d = new Date(str);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
   const match = str.match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{1,2}):(\d{2})/);
   if (match) {
-    const date = new Date(
-      parseInt(match[1], 10),
-      parseInt(match[2], 10) - 1,
-      parseInt(match[3], 10)
-    );
-    date.setHours(parseInt(match[4], 10), parseInt(match[5], 10) || 0, 0, 0);
-    return date;
+    const iso = `${match[1]}-${match[2]}-${match[3]}T${String(match[4]).padStart(2, "0")}:${match[5]}:00`;
+    const asUtc = Date.parse(`${iso}Z`);
+    if (!Number.isNaN(asUtc)) {
+      const probe = new Date(asUtc);
+      const ph = wall(probe).hour;
+      const pm = wall(probe).minute;
+      const deltaMin = (Number(match[4]) - ph) * 60 + (Number(match[5]) - pm);
+      return new Date(asUtc + deltaMin * 60 * 1000);
+    }
   }
   const d = new Date(str);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -53,60 +112,69 @@ export function boundsFromCatchTimes(dates) {
   };
 }
 
+function formatHour(date) {
+  return `${pad2(wall(date).hour)}h`;
+}
+
 function formatClock(date) {
-  return `${pad2(date.getHours())}h${date.getMinutes() ? pad2(date.getMinutes()) : ""}`;
+  const w = wall(date);
+  return `${pad2(w.hour)}h${w.minute ? pad2(w.minute) : ""}`;
 }
 
-function formatDay(date) {
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+
+function chooseStep(durationMs) {
+  if (durationMs <= 2 * HOUR) return 15 * MIN;
+  if (durationMs <= 10 * HOUR) return HOUR;
+  if (durationMs <= 22 * HOUR) return 2 * HOUR;
+  if (durationMs <= 3 * DAY) return 3 * HOUR;
+  if (durationMs <= 10 * DAY) return 6 * HOUR;
+  if (durationMs <= 60 * DAY) return 7 * DAY;
+  return 30 * DAY;
 }
 
-function formatMonth(date) {
-  return date.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-}
-
-export function buildTimeTicks(start, durationMs, maxTicks = 7) {
-  const MIN = 60 * 1000;
-  const HOUR = 60 * MIN;
-  const DAY = 24 * HOUR;
-
-  let step;
-  let labelFn;
-  if (durationMs <= 2 * HOUR) {
-    step = 15 * MIN;
-    labelFn = formatClock;
-  } else if (durationMs <= 8 * HOUR) {
-    step = HOUR;
-    labelFn = (d) => `${pad2(d.getHours())}h`;
-  } else if (durationMs <= 36 * HOUR) {
-    step = 3 * HOUR;
-    labelFn = (d) => `${formatDay(d)} ${pad2(d.getHours())}h`;
-  } else if (durationMs <= 10 * DAY) {
-    step = DAY;
-    labelFn = formatDay;
-  } else if (durationMs <= 60 * DAY) {
-    step = 7 * DAY;
-    labelFn = formatDay;
-  } else {
-    step = 30 * DAY;
-    labelFn = formatMonth;
+function labelFor(date, prevDayKey, showDays, step) {
+  if (step >= DAY) {
+    const w = wall(date);
+    return step >= 20 * DAY ? w.monthLabel : w.dayLabel;
   }
+  const w = wall(date);
+  const hour = step < HOUR ? formatClock(date) : formatHour(date);
+  if (showDays && w.dayKey !== prevDayKey) {
+    return `${w.dayLabel} ${hour}`;
+  }
+  return hour;
+}
 
+export function buildTimeTicks(start, durationMs, maxTicks = 8) {
+  const step = chooseStep(durationMs);
+  const showDays = durationMs > 20 * HOUR && step < DAY;
   const ticks = [];
   const startMs = start.getTime();
-  ticks.push({ offsetMs: 0, label: labelFn(start) });
+  const endMs = startMs + durationMs;
+  let prevDay = null;
+
+  const pushTick = (offsetMs, date) => {
+    const label = labelFor(date, prevDay, showDays, step);
+    prevDay = wall(date).dayKey;
+    ticks.push({ offsetMs, label });
+  };
+
+  pushTick(0, start);
 
   let t = Math.ceil((startMs + step * 0.4) / step) * step;
-  const endMs = startMs + durationMs;
   while (t < endMs - step * 0.25 && ticks.length < maxTicks - 1) {
     const offsetMs = t - startMs;
     if (offsetMs > durationMs * 0.06) {
-      ticks.push({ offsetMs, label: labelFn(new Date(t)) });
+      pushTick(offsetMs, new Date(t));
     }
     t += step;
   }
 
-  const endLabel = labelFn(new Date(endMs));
+  const endDate = new Date(endMs);
+  const endLabel = labelFor(endDate, prevDay, showDays, step);
   const last = ticks[ticks.length - 1];
   if (!last || last.label !== endLabel) {
     ticks.push({ offsetMs: durationMs, label: endLabel });

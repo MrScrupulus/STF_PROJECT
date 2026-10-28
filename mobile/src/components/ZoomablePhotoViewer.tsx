@@ -65,46 +65,109 @@ function pinchDistance(touches: readonly { pageX: number; pageY: number }[]) {
   return Math.hypot(dx, dy);
 }
 
+function clampPan(x: number, y: number, sc: number, winW: number, winH: number) {
+  if (sc <= 1) {
+    return { x: 0, y: 0 };
+  }
+  const maxX = (winW * (sc - 1)) / 2;
+  const maxY = (winH * (sc - 1)) / 2;
+  return {
+    x: Math.max(-maxX, Math.min(maxX, x)),
+    y: Math.max(-maxY, Math.min(maxY, y)),
+  };
+}
+
 export default function ZoomablePhotoViewer({ uri, visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { width: winW, height: winH } = useWindowDimensions();
+  const winWRef = useRef(winW);
+  const winHRef = useRef(winH);
+  winWRef.current = winW;
+  winHRef.current = winH;
+
   const [saving, setSaving] = useState(false);
   const [turns, setTurns] = useState(0);
   const scale = useRef(new Animated.Value(1)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
   const scaleValue = useRef(1);
+  const tx = useRef(0);
+  const ty = useRef(0);
   const pinchStart = useRef(1);
   const pinchStartDist = useRef(0);
+  const panStartX = useRef(0);
+  const panStartY = useRef(0);
   const lastTap = useRef(0);
+
+  const applyPan = (x: number, y: number) => {
+    const c = clampPan(x, y, scaleValue.current, winWRef.current, winHRef.current);
+    tx.current = c.x;
+    ty.current = c.y;
+    translateX.setValue(c.x);
+    translateY.setValue(c.y);
+  };
+
+  const resetView = () => {
+    scale.setValue(1);
+    scaleValue.current = 1;
+    applyPan(0, 0);
+  };
 
   useEffect(() => {
     if (!visible) {
       setTurns(0);
-      scale.setValue(1);
-      scaleValue.current = 1;
+      resetView();
     }
-  }, [visible, scale]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const pan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponderCapture: (e) => (e.nativeEvent.touches?.length ?? 0) >= 2,
-      onMoveShouldSetPanResponder: (e) => (e.nativeEvent.touches?.length ?? 0) >= 2,
+      onMoveShouldSetPanResponderCapture: (e, g) => {
+        const n = e.nativeEvent.touches?.length ?? 0;
+        if (n >= 2) return true;
+        return scaleValue.current > 1.05 && (Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4);
+      },
+      onMoveShouldSetPanResponder: (e, g) => {
+        const n = e.nativeEvent.touches?.length ?? 0;
+        if (n >= 2) return true;
+        return scaleValue.current > 1.05 && (Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4);
+      },
       onPanResponderGrant: (e) => {
         const touches = e.nativeEvent.touches ?? [];
         if (touches.length >= 2) {
           pinchStartDist.current = pinchDistance(touches);
           pinchStart.current = scaleValue.current;
+        } else {
+          panStartX.current = tx.current;
+          panStartY.current = ty.current;
         }
       },
-      onPanResponderMove: (e) => {
+      onPanResponderMove: (e, g) => {
         const touches = e.nativeEvent.touches ?? [];
-        if (touches.length < 2 || pinchStartDist.current < 8) return;
-        const ratio = pinchDistance(touches) / pinchStartDist.current;
-        const next = Math.min(4, Math.max(1, pinchStart.current * ratio));
-        scaleValue.current = next;
-        scale.setValue(next);
+        if (touches.length >= 2) {
+          if (pinchStartDist.current < 8) {
+            pinchStartDist.current = pinchDistance(touches);
+            pinchStart.current = scaleValue.current;
+          }
+          const ratio = pinchDistance(touches) / pinchStartDist.current;
+          const next = Math.min(4, Math.max(1, pinchStart.current * ratio));
+          scaleValue.current = next;
+          scale.setValue(next);
+          applyPan(tx.current, ty.current);
+          return;
+        }
+        if (scaleValue.current > 1.05) {
+          applyPan(panStartX.current + g.dx, panStartY.current + g.dy);
+        }
       },
       onPanResponderRelease: () => {
         pinchStartDist.current = 0;
+        if (scaleValue.current <= 1.05) {
+          scaleValue.current = 1;
+          scale.setValue(1);
+          applyPan(0, 0);
+        }
       },
       onPanResponderTerminationRequest: () => false,
     })
@@ -116,14 +179,16 @@ export default function ZoomablePhotoViewer({ uri, visible, onClose }: Props) {
       const next = scaleValue.current > 1.2 ? 1 : 2.4;
       scaleValue.current = next;
       Animated.spring(scale, { toValue: next, useNativeDriver: true, bounciness: 0 }).start();
+      if (next <= 1) {
+        applyPan(0, 0);
+      }
     }
     lastTap.current = now;
   };
 
   const handleRotate = () => {
     setTurns((n) => (n + 1) % 4);
-    scale.setValue(1);
-    scaleValue.current = 1;
+    resetView();
   };
 
   const handleSave = async () => {
@@ -203,7 +268,12 @@ export default function ZoomablePhotoViewer({ uri, visible, onClose }: Props) {
             style={{
               width: imgW,
               height: imgH,
-              transform: [{ rotate: `${rotateDeg}deg` }, { scale }],
+              transform: [
+                { translateX },
+                { translateY },
+                { rotate: `${rotateDeg}deg` },
+                { scale },
+              ],
             }}
           >
             <Pressable onPress={handleDoubleTap}>

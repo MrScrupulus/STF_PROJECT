@@ -20,7 +20,7 @@ export function navigateFromNotificationData(raw: NotifData | null | undefined):
   const catchId = toInt(raw.catchId);
   const competitionId = toInt(raw.competitionId);
 
-  if (type === 'team_invitation') {
+  if (type === 'team_invitation' || type === 'staff_invitation') {
     rootNavigationRef.navigate('Invitations' as never);
     return;
   }

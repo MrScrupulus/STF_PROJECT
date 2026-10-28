@@ -7,6 +7,7 @@ import styles from "../../styles/components/layout/Header.module.scss";
 import floatingStyles from "../../styles/components/FloatingMenu.module.scss";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { usePathname } from "next/navigation";
+import { canOrganizeEvents } from "../../utils/roles";
 import Link from "next/link";
 
 export function Header() {
@@ -53,7 +54,7 @@ export function Header() {
       { path: "/teams", label: "Équipe", color: "#f59e0b", icon: "👥" },
       ...(user
         ? [
-            ...(user?.roles?.includes("ROLE_ADMIN") ? [{ path: "/catch/add", label: "Ajouter une prise", color: "#10b981", icon: "🐟" }] : []),
+            ...(canOrganizeEvents(user?.roles) ? [{ path: "/catch/add", label: "Ajouter une prise", color: "#10b981", icon: "🐟" }] : []),
             { path: "/account", label: "Profil", color: "#8b5cf6", icon: "👤" },
             {
               label: "Déconnexion",
@@ -76,11 +77,11 @@ export function Header() {
               icon: "✍️",
             },
           ]),
-      ...(user?.roles?.includes("ROLE_ADMIN")
+      ...(canOrganizeEvents(user?.roles)
         ? [
             {
               path: "/dashboard",
-              label: "Bureau de l'ombre",
+              label: "Gestion des compétitions",
               color: "#6b7280",
               icon: "🕶️",
             },
@@ -212,11 +213,11 @@ export function Header() {
             { path: "/", label: "Accueil" },
             { path: "/competitions", label: "Compétitions" },
             { path: "/teams", label: "Équipe" },
-            ...(user?.roles?.includes("ROLE_ADMIN") ? [{ path: "/catch/add", label: "Ajouter une prise" }] : []),
+            ...(canOrganizeEvents(user?.roles) ? [{ path: "/catch/add", label: "Ajouter une prise" }] : []),
             ...(!user ? [{ path: "/register", label: "Inscription" }] : []),
             ...(user ? [{ path: "/account", label: "Profil" }] : []),
-            ...(user?.roles?.includes("ROLE_ADMIN")
-              ? [{ path: "/dashboard", label: "Bureau de l'ombre" }]
+            ...(canOrganizeEvents(user?.roles)
+              ? [{ path: "/dashboard", label: "Gestion des compétitions" }]
               : []),
           ];
 

@@ -51,16 +51,24 @@ export function boundsFromCatchTimes(
   };
 }
 
+/** Heure / jour locaux : Intl+timeZone renvoie souvent 00h sur React Native. */
+function wall(date: Date) {
+  return {
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+    dayKey: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
+    dayLabel: date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+    monthLabel: date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+  };
+}
+
+function formatHour(date: Date) {
+  return `${pad2(wall(date).hour)}h`;
+}
+
 function formatClock(date: Date) {
-  return `${pad2(date.getHours())}h${date.getMinutes() ? pad2(date.getMinutes()) : ''}`;
-}
-
-function formatDay(date: Date) {
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
-function formatMonth(date: Date) {
-  return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const w = wall(date);
+  return `${pad2(w.hour)}h${w.minute ? pad2(w.minute) : ''}`;
 }
 
 export type TimeTick = { offsetMs: number; label: string };
@@ -103,51 +111,59 @@ export function tightenBoundsToCatches(
   };
 }
 
+function chooseStep(durationMs: number): number {
+  if (durationMs <= 2 * HOUR) return 15 * MIN;
+  if (durationMs <= 10 * HOUR) return HOUR;
+  if (durationMs <= 22 * HOUR) return 2 * HOUR;
+  if (durationMs <= 3 * DAY) return 3 * HOUR;
+  if (durationMs <= 10 * DAY) return 6 * HOUR;
+  if (durationMs <= 60 * DAY) return 7 * DAY;
+  return 30 * DAY;
+}
+
+function labelFor(date: Date, prevDayKey: string | null, showDays: boolean, step: number): string {
+  if (step >= DAY) {
+    const w = wall(date);
+    return step >= 20 * DAY ? w.monthLabel : w.dayLabel;
+  }
+  const w = wall(date);
+  const hour = step < HOUR ? formatClock(date) : formatHour(date);
+  if (showDays && w.dayKey !== prevDayKey) {
+    return `${w.dayLabel}\n${hour}`;
+  }
+  return hour;
+}
+
 /**
- * Graduations selon la durée affichée (journée courte → 1 h, journée cadrée → 2 h).
+ * Graduations horaires. Le jour n’apparaît qu’au premier tick de chaque journée.
  */
 export function buildTimeTicks(start: Date, durationMs: number, maxTicks = 10): TimeTick[] {
-  let step: number;
-  let labelFn: (d: Date) => string;
-
-  if (durationMs <= 2 * HOUR) {
-    step = 15 * MIN;
-    labelFn = formatClock;
-  } else if (durationMs <= 10 * HOUR) {
-    step = HOUR;
-    labelFn = (d) => `${pad2(d.getHours())}h`;
-  } else if (durationMs <= 22 * HOUR) {
-    step = 2 * HOUR;
-    labelFn = (d) => `${pad2(d.getHours())}h`;
-  } else if (durationMs <= 36 * HOUR) {
-    step = 3 * HOUR;
-    labelFn = (d) => `${formatDay(d)} ${pad2(d.getHours())}h`;
-  } else if (durationMs <= 10 * DAY) {
-    step = DAY;
-    labelFn = formatDay;
-  } else if (durationMs <= 60 * DAY) {
-    step = 7 * DAY;
-    labelFn = formatDay;
-  } else {
-    step = 30 * DAY;
-    labelFn = formatMonth;
-  }
-
+  const step = chooseStep(durationMs);
+  const showDays = durationMs > 20 * HOUR && step < DAY;
   const ticks: TimeTick[] = [];
   const startMs = start.getTime();
-  ticks.push({ offsetMs: 0, label: labelFn(start) });
+  const endMs = startMs + durationMs;
+
+  let prevDay: string | null = null;
+  const pushTick = (offsetMs: number, date: Date) => {
+    const label = labelFor(date, prevDay, showDays, step);
+    prevDay = wall(date).dayKey;
+    ticks.push({ offsetMs, label });
+  };
+
+  pushTick(0, start);
 
   let t = Math.ceil((startMs + step * 0.35) / step) * step;
-  const endMs = startMs + durationMs;
   while (t < endMs - step * 0.2 && ticks.length < maxTicks - 1) {
     const offsetMs = t - startMs;
     if (offsetMs > durationMs * 0.04) {
-      ticks.push({ offsetMs, label: labelFn(new Date(t)) });
+      pushTick(offsetMs, new Date(t));
     }
     t += step;
   }
 
-  const endLabel = labelFn(new Date(endMs));
+  const endDate = new Date(endMs);
+  const endLabel = labelFor(endDate, prevDay, showDays, step);
   const last = ticks[ticks.length - 1];
   if (!last || last.label !== endLabel) {
     ticks.push({ offsetMs: durationMs, label: endLabel });

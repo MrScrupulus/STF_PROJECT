@@ -605,6 +605,22 @@
     color: $color-gray-500;
   }
 
+  &__catch_size_label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: $font-size-sm;
+    color: $color-gray-700;
+  }
+
+  &__catch_size_input {
+    width: 5.5rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid $color-gray-300;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+  }
+
   &__catch_date {
     margin: $spacing-sm 0 0 0;
     font-size: 0.75rem;
@@ -969,6 +985,43 @@
     background-color: var(--role-user-bg);
     color: var(--role-user-text);
   }
+
+  &--organizer {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  &--science {
+    background-color: #d1fae5;
+    color: #047857;
+  }
+
+  &--commissaire {
+    background-color: #fef3c7;
+    color: #b45309;
+  }
+}
+
+.role_badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.role_checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.role_checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
 // Classes pour le switch de rôle (utilisées dans dashboard/page.js)

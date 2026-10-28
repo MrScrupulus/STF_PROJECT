@@ -10,6 +10,7 @@ const CHART_HEIGHT = 200;
 const POINT_SIZE = 10;
 const PLOT_LEFT = 12;
 const PLOT_WIDTH = CHART_WIDTH - 24;
+const LABEL_WIDTH = 64;
 
 interface CatchItem {
   id?: number;
@@ -126,12 +127,12 @@ export default function CatchesTimelineChart({
         </View>
         <View style={[styles.xLabels, { width: CHART_WIDTH }]}>
           {xTicks.map((tick, i) => {
-            const left = PLOT_LEFT + (tick.offsetMs / durationMs) * PLOT_WIDTH;
+            const pos = PLOT_LEFT + (tick.offsetMs / durationMs) * PLOT_WIDTH;
             return (
               <Text
                 key={`h-${i}`}
-                style={[styles.xLabel, { left: Math.max(0, left - 22) }]}
-                numberOfLines={1}
+                style={[styles.xLabel, { left: pos - LABEL_WIDTH / 2 }]}
+                numberOfLines={2}
               >
                 {tick.label}
               </Text>
@@ -171,6 +172,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   chartWrapper: {
     alignItems: 'center',
+    overflow: 'visible',
   },
   chartArea: {
     backgroundColor: theme.surfaceRaised,
@@ -190,16 +192,17 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.8)',
   },
   xLabels: {
-    height: 28,
+    height: 36,
     marginTop: 8,
     position: 'relative',
+    overflow: 'visible',
   },
   xLabel: {
     position: 'absolute',
     fontSize: 10,
     fontWeight: '500',
     color: theme.text,
-    width: 52,
+    width: LABEL_WIDTH,
     textAlign: 'center',
   },
   legend: {

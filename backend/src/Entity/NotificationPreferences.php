@@ -304,6 +304,7 @@ class NotificationPreferences
             'catch_validated' => $this->catchValidated,
             'catch_rejected' => $this->catchRejected,
             'team_invitation' => $this->teamInvitation,
+            'staff_invitation' => $this->teamInvitation,
             'competition_created' => $this->competitionCreated,
             'competition_registered' => $this->competitionRegistered,
             'competition_started' => $this->competitionStarted,

@@ -197,7 +197,7 @@ class TeamController extends AbstractController
                     'photoUrl' => $catch->getPhotoUrl(),
                     'comment' => $catch->getComment(),
                     'isValidated' => $catch->isValidated(),
-                    'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
+                    'createdAt' => $catch->getCreatedAt() ? DateTimeHelper::formatParis($catch->getCreatedAt()) : null,
                     'latitude' => $catch->getLatitude(),
                     'longitude' => $catch->getLongitude(),
                     'caughtBy' => $catch->getCaughtBy() ? [
@@ -205,6 +205,7 @@ class TeamController extends AbstractController
                         'firstname' => $catch->getCaughtBy()->getFirstname(),
                         'lastname' => $catch->getCaughtBy()->getLastname(),
                     ] : null,
+                    'recordedBy' => $catch->serializeRecordedBy(),
                     'team' => [
                         'id' => $catch->getTeam()->getId(),
                         'name' => $catch->getTeam()->getName(),
@@ -762,7 +763,7 @@ class TeamController extends AbstractController
                         'isValidated' => $catch->isValidated(),
                         'rejectionReason' => $catch->getRejectionReason(),
                         'penalties' => $penaltiesByCatchId[$catch->getId()] ?? [],
-                        'createdAt' => $catch->getCreatedAt()?->format('Y-m-d H:i:s'),
+                        'createdAt' => $catch->getCreatedAt() ? DateTimeHelper::formatParis($catch->getCreatedAt()) : null,
                         'latitude' => $catch->getLatitude(),
                         'longitude' => $catch->getLongitude(),
                         'caughtBy' => $catch->getCaughtBy() ? [
@@ -770,6 +771,7 @@ class TeamController extends AbstractController
                             'firstname' => $catch->getCaughtBy()->getFirstname(),
                             'lastname' => $catch->getCaughtBy()->getLastname(),
                         ] : null,
+                        'recordedBy' => $catch->serializeRecordedBy(),
                         'competition' => $catch->getCompetition() ? [
                             'id' => $catch->getCompetition()->getId(),
                             'name' => $catch->getCompetition()->getName(),

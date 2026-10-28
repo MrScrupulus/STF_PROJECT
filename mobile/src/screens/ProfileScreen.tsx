@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import FaIcon, { type AppIconName } from '../components/FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
+import { canOrganizeEvents } from '../utils/roles';
 import { type ThemeColors } from '../theme';
 
 export default function ProfileScreen() {
@@ -127,6 +128,16 @@ export default function ProfileScreen() {
       icon: 'envelope',
       onPress: () => go('Invitations'),
     },
+    ...(canOrganizeEvents(user?.roles)
+      ? [
+          {
+            label: 'Gestion des compétitions',
+            hint: 'Créer, prises, pénalités',
+            icon: 'flag' as const,
+            onPress: () => go('AdminDashboard'),
+          },
+        ]
+      : []),
   ];
 
   const rows: { label: string; hint: string; icon: AppIconName; onPress: () => void }[] = [

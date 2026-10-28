@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { adminService } from '../services/adminService';
 import { competitionsService } from '../services/competitionsService';
 import { speciesService } from '../services/speciesService';
@@ -37,8 +37,13 @@ export default function AdminAddCatchScreen() {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const queryClient = useQueryClient();
-  const [selectedCompetition, setSelectedCompetition] = useState<number | null>(null);
+  const presetCompetitionId =
+    route.params?.competitionId != null ? Number(route.params.competitionId) : null;
+  const [selectedCompetition, setSelectedCompetition] = useState<number | null>(
+    Number.isFinite(presetCompetitionId) ? presetCompetitionId : null
+  );
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedMember, setSelectedMember] = useState<number | null>(null);
   const [selectedSpecies, setSelectedSpecies] = useState<number | null>(null);
@@ -48,21 +53,37 @@ export default function AdminAddCatchScreen() {
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
 
   // Charger les compétitions (en cours + terminées, pour permettre l'ajout de prise en correction)
+  const sortCompetitions = (allCompetitions: any[]) => {
+    const now = new Date();
+    return allCompetitions
+      .map((comp: any) => ({
+        ...comp,
+        isEnded: new Date(comp.endDate) < now,
+      }))
+      .sort((a: any, b: any) => {
+        if (a.isEnded !== b.isEnded) return a.isEnded ? 1 : -1;
+        return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
+      });
+  };
+
   const { data: competitions, isLoading: loadingCompetitions } = useQuery({
-    queryKey: ['admin-competitions-all'],
+    queryKey: ['admin-competitions-all', presetCompetitionId],
     queryFn: async () => {
-      const allCompetitions = await adminService.getCompetitions();
-      const now = new Date();
-      return allCompetitions
-        .map((comp: any) => ({
-          ...comp,
-          isEnded: new Date(comp.endDate) < now,
-        }))
-        .sort((a: any, b: any) => {
-          // En cours d'abord, puis terminées
-          if (a.isEnded !== b.isEnded) return a.isEnded ? 1 : -1;
-          return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
-        });
+      try {
+        const allCompetitions = await adminService.getCompetitions();
+        return sortCompetitions(allCompetitions);
+      } catch (error) {
+        if (!presetCompetitionId) {
+          throw error;
+        }
+        const one = await competitionsService.getOne(presetCompetitionId);
+        const raw: any = one;
+        const comp = raw?.id ? raw : raw?.competition || raw;
+        if (!comp?.id) {
+          throw error;
+        }
+        return sortCompetitions([comp]);
+      }
     },
   });
 
@@ -249,8 +270,10 @@ export default function AdminAddCatchScreen() {
             <FaIcon name="camera" size={22} color={theme.onAccent} />
           </View>
           <View style={styles.identityText}>
-            <Text style={styles.displayName}>Saisie admin</Text>
-            <Text style={styles.identityHint}>Ajouter une prise validée pour une équipe</Text>
+            <Text style={styles.displayName}>Saisie officielle</Text>
+            <Text style={styles.identityHint}>
+              La prise est validée tout de suite et indiquera qu’elle a été ajoutée par vous (créateur, commissaire ou admin).
+            </Text>
           </View>
         </View>
         {/* Sélection de la compétition */}

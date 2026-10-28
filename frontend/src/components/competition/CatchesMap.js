@@ -243,6 +243,12 @@ export default function CatchesMap({ catches, perimeters = [], speciesStats = []
                         <strong>Pêché par:</strong> {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
                       </p>
                     )}
+                    {catchItem.recordedBy && (
+                      <p style={{ margin: '4px 0', fontSize: '0.9rem' }}>
+                        Ajoutée par {catchItem.recordedBy.firstname} {catchItem.recordedBy.lastname}
+                        {catchItem.recordedBy.roleLabel ? ` (${catchItem.recordedBy.roleLabel})` : ''}
+                      </p>
+                    )}
                     <p style={{ margin: '4px 0', fontSize: '0.9rem' }}>
                       <strong>Points:</strong> {catchItem.points || 0}
                     </p>

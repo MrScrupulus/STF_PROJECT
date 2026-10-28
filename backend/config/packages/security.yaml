@@ -37,6 +37,12 @@ security:
       stateless: true
       jwt: ~
 
+  role_hierarchy:
+    ROLE_ADMIN: [ROLE_ORGANIZER, ROLE_SCIENCE, ROLE_COMMISSAIRE, ROLE_USER]
+    ROLE_ORGANIZER: [ROLE_USER]
+    ROLE_SCIENCE: [ROLE_USER]
+    ROLE_COMMISSAIRE: [ROLE_USER]
+
   access_control:
     # - { path: ^/admin, roles: ROLE_ADMIN }
     # - { path: ^/profile, roles: ROLE_USER }
@@ -56,7 +62,11 @@ security:
     - { path: ^/api/teams/\d+, roles: PUBLIC_ACCESS }
     - { path: ^/auth/me, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/auth/me, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/admin/teams, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/admin, roles: ROLE_ADMIN }
+    - { path: ^/api/admin/catches, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/admin/competitions, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/api/admin/species, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/api/admin, roles: ROLE_ADMIN }
     - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
     - { path: ^/users/update/password, roles: IS_AUTHENTICATED_FULLY }

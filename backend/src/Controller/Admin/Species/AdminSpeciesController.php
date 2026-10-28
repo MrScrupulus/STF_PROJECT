@@ -4,10 +4,12 @@ namespace App\Controller\Admin\Species;
 
 use App\Entity\Species\Species;
 use App\Repository\Species\SpeciesRepository;
+use App\Service\CompetitionAccessService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/api/admin/species')]
@@ -16,6 +18,7 @@ class AdminSpeciesController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private SpeciesRepository $speciesRepository,
+        private CompetitionAccessService $access,
     ) {
     }
 
@@ -23,6 +26,7 @@ class AdminSpeciesController extends AbstractController
     public function create(Request $request): JsonResponse
     {
         try {
+            $this->access->denyUnlessOrganizer($this->getUser());
             $data = json_decode($request->getContent(), true);
 
             if (!isset($data['name']) || '' === trim((string) $data['name'])) {
@@ -81,6 +85,8 @@ class AdminSpeciesController extends AbstractController
                     'basePoints' => $species->getBasePoints(),
                 ]
             ]);
+        } catch (AccessDeniedHttpException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->json([
                 'message' => 'Erreur lors de la création de l\'espèce',
@@ -93,6 +99,7 @@ class AdminSpeciesController extends AbstractController
     public function update(Request $request, Species $species): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $data = json_decode($request->getContent(), true);
 
             // Mettre à jour le nom si fourni
@@ -143,6 +150,7 @@ class AdminSpeciesController extends AbstractController
     public function delete(Species $species): JsonResponse
     {
         try {
+            $this->denyAccessUnlessGranted('ROLE_ADMIN');
             $this->entityManager->remove($species);
             $this->entityManager->flush();
 

@@ -65,6 +65,17 @@ class FishCatch
     #[Groups(['catch:read'])]
     private ?User $caughtBy = null;
 
+    /** Officiel qui a saisi la prise (créateur / commissaire / admin). Null = saisie par le pêcheur. */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    #[Groups(['catch:read'])]
+    private ?User $recordedBy = null;
+
+    /** createur | commissaire | admin */
+    #[ORM\Column(length: 20, nullable: true)]
+    #[Groups(['catch:read'])]
+    private ?string $recordedByRole = null;
+
     /**
      * Latitude de la position GPS où la prise a été effectuée
      */
@@ -212,6 +223,50 @@ class FishCatch
     {
         $this->caughtBy = $caughtBy;
         return $this;
+    }
+
+    public function getRecordedBy(): ?User
+    {
+        return $this->recordedBy;
+    }
+
+    public function setRecordedBy(?User $recordedBy): self
+    {
+        $this->recordedBy = $recordedBy;
+        return $this;
+    }
+
+    public function getRecordedByRole(): ?string
+    {
+        return $this->recordedByRole;
+    }
+
+    public function setRecordedByRole(?string $recordedByRole): self
+    {
+        $this->recordedByRole = $recordedByRole;
+        return $this;
+    }
+
+    /** @return array{id: int|null, firstname: ?string, lastname: ?string, role: string, roleLabel: string}|null */
+    public function serializeRecordedBy(): ?array
+    {
+        if (!$this->recordedBy) {
+            return null;
+        }
+        $role = $this->recordedByRole ?: 'admin';
+        $labels = [
+            'createur' => 'créateur',
+            'commissaire' => 'commissaire',
+            'admin' => 'admin',
+        ];
+
+        return [
+            'id' => $this->recordedBy->getId(),
+            'firstname' => $this->recordedBy->getFirstname(),
+            'lastname' => $this->recordedBy->getLastname(),
+            'role' => $role,
+            'roleLabel' => $labels[$role] ?? $role,
+        ];
     }
 
     public function getRejectionReason(): ?string

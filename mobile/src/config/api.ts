@@ -65,6 +65,13 @@ export const API_ENDPOINTS = {
       accept: (id: number) => `/api/teams/invitations/${id}/accept`,
       reject: (id: number) => `/api/teams/invitations/${id}/reject`,
       team: (teamId: number) => `/api/teams/${teamId}/invitations`,
+      staffMy: '/api/staff-invitations/my',
+      staffAccept: (id: number) => `/api/staff-invitations/${id}/accept`,
+      staffReject: (id: number) => `/api/staff-invitations/${id}/reject`,
+      staffAcceptByToken: (token: string) =>
+        `/api/staff-invitations/by-token/${encodeURIComponent(token)}/accept`,
+      staffRejectByToken: (token: string) =>
+        `/api/staff-invitations/by-token/${encodeURIComponent(token)}/reject`,
     },
   },
   competitions: {
@@ -77,6 +84,8 @@ export const API_ENDPOINTS = {
     /** Stats perso (authentifié) : prises validées dont l'utilisateur est l'auteur */
     myStats: (id: number) => `/api/competitions/${id}/me/stats`,
     myTeamStats: (id: number) => `/api/competitions/${id}/me/team/stats`,
+    staff: (id: number) => `/api/competitions/${id}/staff`,
+    staffInvite: (id: number) => `/api/competitions/${id}/staff-invitations`,
     registerTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/register`,
     unregisterTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/unregister`,
   },

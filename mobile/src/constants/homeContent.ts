@@ -28,9 +28,9 @@ export const homeContent = {
   ],
 
   adminTutorialTitle: 'Créer une compétition',
-  adminBadge: 'Admin',
+  adminBadge: 'Créateur',
   competitionAdminSteps: [
-    'Menu burger → Dashboard Admin → Créer une compétition',
+    'Accueil ou menu → Gestion des compétitions → Créer',
     'Renseignez nom, dates, taille d’équipe et espèces',
     'Ajoutez zones, pauses et options de classement si besoin',
   ],

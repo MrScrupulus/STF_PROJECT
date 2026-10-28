@@ -120,6 +120,31 @@ export const teamService = {
     return response.data;
   },
 
+  getMyStaffInvitations: async (): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.teams.invitations.staffMy);
+    return response.data;
+  },
+
+  acceptStaffInvitation: async (invitationId: number): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.invitations.staffAccept(invitationId));
+    return response.data;
+  },
+
+  rejectStaffInvitation: async (invitationId: number): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.invitations.staffReject(invitationId));
+    return response.data;
+  },
+
+  acceptStaffInvitationByToken: async (token: string): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.invitations.staffAcceptByToken(token));
+    return response.data;
+  },
+
+  rejectStaffInvitationByToken: async (token: string): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.teams.invitations.staffRejectByToken(token));
+    return response.data;
+  },
+
   update: async (teamId: number, data: { name?: string; memberIds?: number[] }): Promise<any> => {
     const response = await apiClient.put(API_ENDPOINTS.teams.detail(teamId), data);
     return response.data;

@@ -58,6 +58,7 @@ export default function CreateCompetitionScreen() {
     description: '',
     reglement: '',
     isRankingPublic: false,
+    notifyUsers: false,
     isBonusEnabled: false,
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: '',
@@ -326,6 +327,7 @@ export default function CreateCompetitionScreen() {
       description: formData.description.trim() || null,
       reglement: formData.reglement.trim() || null,
       isRankingPublic: formData.isRankingPublic,
+      notifyUsers: formData.notifyUsers,
       isBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusPoints: newSpeciesBonusPointsVal,
@@ -762,6 +764,21 @@ export default function CreateCompetitionScreen() {
               textAlignVertical="top"
               placeholderTextColor={theme.textMuted}
             />
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Notifier tous les utilisateurs</Text>
+              </View>
+              <Switch
+                value={formData.notifyUsers}
+                onValueChange={(value) => setFormData({ ...formData, notifyUsers: value })}
+              />
+            </View>
+            <Text style={styles.helpText}>
+              Si activé, chaque compte reçoit une notification (et un push) à l’ouverture. Laissez désactivé pour un test.
+            </Text>
           </View>
 
           {/* Classement public */}

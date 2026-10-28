@@ -141,6 +141,7 @@ export default function EditCompetitionScreen() {
   const [selectedSpeciesIndex, setSelectedSpeciesIndex] = useState<number | null>(null);
   const [pauseModalVisible, setPauseModalVisible] = useState(false);
   const [editingPause, setEditingPause] = useState<ScheduledPause | null>(null);
+  const [screenScrollEnabled, setScreenScrollEnabled] = useState(true);
   const [mapRegion, setMapRegion] = useState({
     latitude: 50.6927,
     longitude: 3.1742,
@@ -635,6 +636,7 @@ export default function EditCompetitionScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={screenScrollEnabled}
         >
           {error ? (
             <View style={styles.errorBox}>
@@ -1132,7 +1134,12 @@ export default function EditCompetitionScreen() {
             </Text>
             {perimeters.length > 0 && (
               <View style={styles.perimeterList}>
-                <PerimeterMapView perimeters={perimeters} height={200} />
+                <PerimeterMapView
+                  perimeters={perimeters}
+                  height={200}
+                  onGestureStart={() => setScreenScrollEnabled(false)}
+                  onGestureEnd={() => setScreenScrollEnabled(true)}
+                />
                 {perimeters.map((p: any) => (
                   <View key={p.id} style={styles.perimeterRow}>
                     <View style={styles.perimeterRowMain}>

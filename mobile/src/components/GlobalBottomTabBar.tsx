@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authService } from '../services/authService';
 import { adminService } from '../services/adminService';
 import { useAuth } from '../contexts/AuthContext';
+import { isCatchReviewActive, setCatchReviewActive, subscribeCatchReview } from '../navigation/catchReviewNav';
 import FaIcon from './FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
@@ -26,7 +27,21 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [judgeOnCompetition, setJudgeOnCompetition] = React.useState(isCatchReviewActive());
   const { isAuthenticated } = useAuth();
+
+  React.useEffect(() => {
+    return subscribeCatchReview(() => setJudgeOnCompetition(isCatchReviewActive()));
+  }, []);
+
+  React.useEffect(() => {
+    if (!currentRoute) {
+      return;
+    }
+    if (['Competitions', 'History', 'Home', 'AddCatch', 'Profile'].includes(currentRoute)) {
+      setCatchReviewActive(false);
+    }
+  }, [currentRoute]);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -34,7 +49,8 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
         try {
           const response = await authService.getCurrentUser();
           const user = response.user || response;
-          setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
+          const roles = user.roles || [];
+          setIsAdmin(roles.includes('ROLE_ADMIN'));
         } catch (error) {
           setIsAdmin(false);
         }
@@ -42,14 +58,17 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
       checkAdmin();
     } else {
       setIsAdmin(false);
+      setCatchReviewActive(false);
     }
   }, [isAuthenticated]);
+
+  const canReviewCatches = isAuthenticated && (isAdmin || judgeOnCompetition);
 
   const { data: pendingToValidate = 0 } = useQuery({
     queryKey: ['admin-pending-catches', 'tab-count'],
     queryFn: () => adminService.getPendingCatches(1, 1),
     select: (d) => Number(d?.total) || 0,
-    enabled: isAuthenticated && isAdmin,
+    enabled: isAuthenticated && canReviewCatches,
     refetchInterval: 20000,
     retry: false,
   });
@@ -93,10 +112,10 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
   const isHistoryActive = currentRoute === 'History';
   const isAdminValidationActive = currentRoute === 'AdminCatchValidation' || currentRoute === 'AdminDashboard';
 
-  const teamsTabName = isAuthenticated && isAdmin ? 'AdminCatchValidation' : 'History';
-  const teamsTabLabel = isAuthenticated && isAdmin ? 'Prises à valider' : 'Carnet de prises';
-  const teamsTabIcon: 'check' | 'history' = isAuthenticated && isAdmin ? 'check' : 'history';
-  const teamsTabActive = isAuthenticated && isAdmin ? isAdminValidationActive : isHistoryActive;
+  const teamsTabName = isAuthenticated && canReviewCatches ? 'AdminCatchValidation' : 'History';
+  const teamsTabLabel = isAuthenticated && canReviewCatches ? 'Prises à valider' : 'Carnet de prises';
+  const teamsTabIcon: 'check' | 'history' = isAuthenticated && canReviewCatches ? 'check' : 'history';
+  const teamsTabActive = isAuthenticated && canReviewCatches ? isAdminValidationActive : isHistoryActive;
 
   return (
     <View style={styles.safeArea}>
@@ -137,7 +156,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
               name={teamsTabIcon}
               size={22}
               color={
-                isAuthenticated && isAdmin
+                isAuthenticated && canReviewCatches
                   ? teamsTabActive
                     ? theme.successDim
                     : theme.success
@@ -146,7 +165,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
                     : theme.textMuted
               }
             />
-            {isAuthenticated && isAdmin && pendingToValidate > 0 ? (
+            {isAuthenticated && canReviewCatches && pendingToValidate > 0 ? (
               <View style={styles.countBadge} pointerEvents="none">
                 <Text style={styles.countBadgeText}>
                   {pendingToValidate > 99 ? '99+' : pendingToValidate}
@@ -158,7 +177,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
             style={[
               styles.tabLabel,
               teamsTabActive && styles.tabLabelActive,
-              isAuthenticated && isAdmin && styles.tabLabelAdmin,
+              isAuthenticated && canReviewCatches && styles.tabLabelAdmin,
             ]}
             numberOfLines={2}
           >

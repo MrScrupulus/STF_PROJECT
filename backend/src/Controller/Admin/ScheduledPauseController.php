@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Competition\ScheduledPause;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Repository\Competition\CompetitionRepository;
+use App\Service\CompetitionAccessService;
 use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,7 +19,8 @@ class ScheduledPauseController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ScheduledPauseRepository $scheduledPauseRepository,
-        private CompetitionRepository $competitionRepository
+        private CompetitionRepository $competitionRepository,
+        private CompetitionAccessService $access,
     ) {
     }
 
@@ -41,8 +43,6 @@ class ScheduledPauseController extends AbstractController
     #[Route('', name: 'admin_scheduled_pauses_list', methods: ['GET'])]
     public function list(int $competitionId): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $competition = $this->competitionRepository->find($competitionId);
         if (!$competition) {
             return $this->json([
@@ -50,6 +50,7 @@ class ScheduledPauseController extends AbstractController
                 'message' => 'Compétition non trouvée'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $competition);
 
         $pauses = $this->scheduledPauseRepository->findActiveByCompetition($competitionId);
 
@@ -76,8 +77,6 @@ class ScheduledPauseController extends AbstractController
     #[Route('', name: 'admin_scheduled_pause_create', methods: ['POST'])]
     public function create(int $competitionId, Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $competition = $this->competitionRepository->find($competitionId);
         if (!$competition) {
             return $this->json([
@@ -85,6 +84,7 @@ class ScheduledPauseController extends AbstractController
                 'message' => 'Compétition non trouvée'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $competition);
 
         $data = json_decode($request->getContent(), true);
 
@@ -151,8 +151,6 @@ class ScheduledPauseController extends AbstractController
     #[Route('/{id}', name: 'admin_scheduled_pause_update', methods: ['PUT'])]
     public function update(int $competitionId, int $id, Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $pause = $this->scheduledPauseRepository->find($id);
         if (!$pause || $pause->getCompetition()->getId() !== $competitionId) {
             return $this->json([
@@ -160,6 +158,7 @@ class ScheduledPauseController extends AbstractController
                 'message' => 'Pause programmée non trouvée'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $pause->getCompetition());
 
         $data = json_decode($request->getContent(), true);
 
@@ -226,8 +225,6 @@ class ScheduledPauseController extends AbstractController
     #[Route('/{id}', name: 'admin_scheduled_pause_delete', methods: ['DELETE'])]
     public function delete(int $competitionId, int $id): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $pause = $this->scheduledPauseRepository->find($id);
         if (!$pause || $pause->getCompetition()->getId() !== $competitionId) {
             return $this->json([
@@ -235,6 +232,7 @@ class ScheduledPauseController extends AbstractController
                 'message' => 'Pause programmée non trouvée'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $pause->getCompetition());
 
         $this->entityManager->remove($pause);
         $this->entityManager->flush();

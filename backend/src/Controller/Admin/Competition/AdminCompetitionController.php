@@ -25,6 +25,10 @@ class AdminCompetitionController extends AbstractController
         $timezoneParis = new \DateTimeZone('Europe/Paris');
         $timezoneUtc = new \DateTimeZone('UTC');
         $competition = new Competition();
+        $creator = $this->getUser();
+        if ($creator instanceof \App\Entity\Security\User) {
+            $competition->setCreatedBy($creator);
+        }
         $competition->setName($data['title']);
         $startDt = new \DateTime($data['startAt'], $timezoneParis);
         $startDt->setTimezone($timezoneUtc);

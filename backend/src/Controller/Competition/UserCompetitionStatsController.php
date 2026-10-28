@@ -10,6 +10,7 @@ use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\FishCatchRepository;
 use App\Repository\Competition\TeamRepository;
 use App\Service\CatchPhotoStorageService;
+use App\Service\DateTimeHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -243,7 +244,7 @@ class UserCompetitionStatsController extends AbstractController
                 $byMember[$key]['points'] += $points;
             }
 
-            $createdAt = $catch->getCreatedAt()->format('Y-m-d H:i:s');
+            $createdAt = DateTimeHelper::formatParis($catch->getCreatedAt());
             $row = [
                 'id' => $catch->getId(),
                 'createdAt' => $createdAt,
@@ -265,6 +266,7 @@ class UserCompetitionStatsController extends AbstractController
                     'firstname' => $cb->getFirstname(),
                     'lastname' => $cb->getLastname(),
                 ] : null;
+                $row['recordedBy'] = $catch->serializeRecordedBy();
             }
             $timeline[] = $row;
 
@@ -288,6 +290,7 @@ class UserCompetitionStatsController extends AbstractController
                         'firstname' => $cb->getFirstname(),
                         'lastname' => $cb->getLastname(),
                     ] : null;
+                    $mapRow['recordedBy'] = $catch->serializeRecordedBy();
                 }
                 $catchesForMap[] = $mapRow;
             }

@@ -7,6 +7,7 @@ use App\Entity\Security\User;
 use App\Repository\Species\SpeciesRepository;
 use App\Service\CatchPhotoStorageService;
 use App\Service\PersonalJournalTeamService;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -103,7 +104,7 @@ class PersonalJournalCatchController extends AbstractController
                 'photoUrl' => $photoStorage->resolvePhotoUrl($catch->getPhotoUrl()),
                 'comment' => $catch->getComment(),
                 'isValidated' => $catch->isValidated(),
-                'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
             ],
         ], 201);
     }

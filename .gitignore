@@ -55,6 +55,9 @@ mysql-data/
 frontend/certificates/*.pem
 frontend/certificates/*.key
 
+# Notes internes (architecture, Stripe, métier) — pas dans le dépôt
+aDoc/
+
 # Temporary files
 *.swp
 *.swo

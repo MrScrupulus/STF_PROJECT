@@ -113,6 +113,9 @@ function AppNavigator() {
   const { isAuthenticated, setIsAuthenticated } = useAuth();
   const theme = useThemeColors();
   const linkingRef = useRef<any>(null);
+  const pendingStaffInvite = useRef<{ action: 'accept' | 'reject'; token: string } | null>(null);
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  isAuthenticatedRef.current = isAuthenticated;
   const [currentRoute, setCurrentRoute] = useState<string | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
 
@@ -200,7 +203,35 @@ function AppNavigator() {
         rootNavigationRef.navigate('CompetitionDetail' as never, { id } as never);
       }
     }
+
+    const staffMatch = url.match(/^stf:\/\/staff-invitations\/(accept|reject)\/([^/?#]+)/i);
+    if (staffMatch) {
+      const action = staffMatch[1].toLowerCase() as 'accept' | 'reject';
+      const token = decodeURIComponent(staffMatch[2]);
+      pendingStaffInvite.current = { action, token };
+      if (isAuthenticatedRef.current && rootNavigationRef.isReady()) {
+        rootNavigationRef.navigate(
+          'Invitations' as never,
+          (action === 'reject' ? { rejectStaff: token } : { acceptStaff: token }) as never
+        );
+        pendingStaffInvite.current = null;
+      }
+    }
   };
+
+  useEffect(() => {
+    const pending = pendingStaffInvite.current;
+    if (!isAuthenticated || !pending || !rootNavigationRef.isReady()) {
+      return;
+    }
+    rootNavigationRef.navigate(
+      'Invitations' as never,
+      (pending.action === 'reject'
+        ? { rejectStaff: pending.token }
+        : { acceptStaff: pending.token }) as never
+    );
+    pendingStaffInvite.current = null;
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -236,6 +267,16 @@ function AppNavigator() {
         linkingRef.current = rootNavigationRef;
         const state = rootNavigationRef.getRootState?.();
         if (state) setCurrentRoute(getActiveRouteName(state));
+        const pending = pendingStaffInvite.current;
+        if (isAuthenticated && pending) {
+          rootNavigationRef.navigate(
+            'Invitations' as never,
+            (pending.action === 'reject'
+              ? { rejectStaff: pending.token }
+              : { acceptStaff: pending.token }) as never
+          );
+          pendingStaffInvite.current = null;
+        }
       }}
       onStateChange={() => {
         const state = rootNavigationRef.getRootState?.();

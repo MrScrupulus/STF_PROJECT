@@ -114,5 +114,18 @@ export const competitionsService = {
     const response = await apiClient.post(API_ENDPOINTS.competitions.unregisterTeam(competitionId));
     return response.data;
   },
+
+  getStaff: async (id: number): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.competitions.staff(id));
+    return response.data;
+  },
+
+  inviteCommissaire: async (id: number, email: string): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.competitions.staffInvite(id), {
+      email,
+      role: 'judge',
+    });
+    return response.data;
+  },
 };
 

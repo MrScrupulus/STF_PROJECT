@@ -20,6 +20,7 @@ import Link from "next/link";
 import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { formatCompetitionDateTime } from "../../../utils/dateUtils";
+import { recordedByLine } from "../../../utils/recordedBy";
 
 export default function CompetitionDetailPage() {
   const params = useParams();
@@ -37,6 +38,7 @@ export default function CompetitionDetailPage() {
   const [showAllRanking, setShowAllRanking] = useState(false);
   const [showMoreStats, setShowMoreStats] = useState(false);
   const [showTop3, setShowTop3] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
 
   const { data: competitionResponse, isLoading: competitionLoading, error: competitionError } = useQuery({
     queryKey: ["competition", id],
@@ -49,6 +51,31 @@ export default function CompetitionDetailPage() {
   const competition = competitionResponse?.success !== undefined
     ? (competitionResponse.success ? { ...competitionResponse, success: undefined } : null)
     : competitionResponse;
+  const canManage = !!(competition?.canManage || isAdmin);
+  const canJudge = !!(competition?.canJudge || isAdmin);
+  const isOfficial = !!competition?.isOfficial;
+
+  const { data: staffData } = useQuery({
+    queryKey: ["competition-staff", id],
+    queryFn: () => competitionsService.getStaff(id),
+    enabled: Number.isFinite(id) && canManage,
+  });
+
+  const inviteCommissaireMutation = useMutation({
+    mutationFn: (email) => competitionsService.inviteCommissaire(id, email),
+    onSuccess: (data) => {
+      setInviteEmail("");
+      queryClient.invalidateQueries({ queryKey: ["competition-staff", id] });
+      if (data?.emailSent === false) {
+        toast.error("Invitation enregistrée, mais l'e-mail n'a pas pu partir. Réessayez.");
+      } else {
+        toast.success("Invitation commissaire envoyée par e-mail.");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || error.message || "Impossible d'envoyer l'invitation.");
+    },
+  });
 
   const { data: myTeamsData, isLoading: teamsLoading } = useQuery({
     queryKey: ["my-teams"],
@@ -94,8 +121,7 @@ export default function CompetitionDetailPage() {
       return;
     }
 
-    // Ne charger que si le classement est public ou si l'utilisateur est admin
-    if (!competition.isRankingPublic && !isAdmin) {
+    if (!competition.isRankingPublic && !isAdmin && !canManage && !canJudge) {
       return;
     }
 
@@ -123,7 +149,7 @@ export default function CompetitionDetailPage() {
 
     loadStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competition?.isRankingPublic, isAdmin, id]);
+  }, [competition?.isRankingPublic, isAdmin, canManage, canJudge, id]);
 
   const unregisterMutation = useMutation({
     mutationFn: () => competitionsService.unregisterFromCompetition(id),
@@ -268,7 +294,15 @@ export default function CompetitionDetailPage() {
   // Vérifier si c'est une compétition individuelle (teamSize === 1)
   const isIndividualCompetition = competition?.teamSize === 1;
   
+  const requiredTeamSize = Number(competition?.teamSize) || 0;
   const myTeams = allMyTeams.filter(team => {
+    if (team.isPersonalJournal) {
+      return false;
+    }
+    const memberCount = team.members?.length ?? 0;
+    if (requiredTeamSize > 0 && memberCount !== requiredTeamSize) {
+      return false;
+    }
     if (!team.competition) {
       // Équipe sans compétition - disponible
       return true;
@@ -531,6 +565,37 @@ export default function CompetitionDetailPage() {
             </div>
           ) : (
             <>
+              {canManage && (
+                <div className={styles.competitions__info} style={{ marginBottom: 16 }}>
+                  <h2 className={styles.competitions__section_title}>Commissaires</h2>
+                  <p>Invitez un commissaire par e-mail. Il accepte ou refuse dans Invitations.</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="email@exemple.com"
+                      style={{ flex: 1, minWidth: 220, padding: 8, borderRadius: 8 }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.competitions__register_btn}
+                      disabled={inviteCommissaireMutation.isPending || !inviteEmail.trim()}
+                      onClick={() => inviteCommissaireMutation.mutate(inviteEmail.trim())}
+                    >
+                      {inviteCommissaireMutation.isPending ? "..." : "Inviter un commissaire"}
+                    </button>
+                  </div>
+                  {(staffData?.staff || []).map((row) => (
+                    <p key={`staff-${row.id}`}>
+                      {row.user?.firstname} {row.user?.lastname} — commissaire
+                    </p>
+                  ))}
+                  {(staffData?.invitations || []).map((row) => (
+                    <p key={`inv-${row.id}`}>{row.email} — invitation en attente</p>
+                  ))}
+                </div>
+              )}
               <div className={styles.competitions__info}>
                 <div>
                   <strong>Taille d'équipe: </strong>
@@ -557,7 +622,22 @@ export default function CompetitionDetailPage() {
         </div>
 
         {/* Actions admin */}
-        {isAdmin && (
+        {canJudge && (
+          <div className={styles.competitions__admin_actions}>
+            {canJudge && !canManage && (
+              <p>En tant que commissaire, validez les prises dans l’application (Prises à valider).</p>
+            )}
+            <Link
+              href={`/catch/official?competitionId=${id}`}
+              className={`${styles.competitions__pause_btn} ${styles.competitions__resume_btn}`}
+              style={{ display: "inline-block", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}
+            >
+              Ajouter une prise pour une équipe
+            </Link>
+          </div>
+        )}
+
+        {canManage && (
           <div className={styles.competitions__admin_actions}>
             <button
               className={`${styles.competitions__pause_btn} ${
@@ -578,11 +658,15 @@ export default function CompetitionDetailPage() {
         )}
 
         {/* Gestion des pauses programmées (admin uniquement) - masqué si compétition terminée */}
-        {isAdmin && competition && !isCompetitionEnded && (
+        {canManage && competition && !isCompetitionEnded && (
           <ScheduledPausesManager competitionId={competition.id} />
         )}
 
-        {!showRegisterForm ? (
+        {isOfficial ? (
+          <div className={styles.competitions__actions}>
+            <p>Vous organisez ou officiez cette compétition : vous ne pouvez pas vous y inscrire.</p>
+          </div>
+        ) : !showRegisterForm ? (
           <div className={styles.competitions__actions}>
             {!isAuthenticated && !authLoading ? (
               <div className={styles.competitions__no_auth}>
@@ -791,12 +875,12 @@ export default function CompetitionDetailPage() {
                 ? "Classement final" 
                 : competition.isRankingPublic
                 ? "Classement"
-                : isAdmin 
-                ? "Classement (visible uniquement par les administrateurs)" 
+                : isAdmin || canManage || canJudge
+                ? "Classement (visible uniquement par les officiels)" 
                 : "Votre équipe"}
             </h2>
             
-            {!competition.isRankingPublic && !isAdmin && (
+            {!competition.isRankingPublic && !isAdmin && !canManage && !canJudge && (
               <div className={styles.competitions__ranking_info}>
                 <p>
                   🔒 Le classement n'a pas encore été publié par l'administrateur.
@@ -860,7 +944,7 @@ export default function CompetitionDetailPage() {
                       <>
                         {displayedEntries.map(({ team, rank }) => {
                           const isUserTeam = currentUser && team.members?.some((m) => m.id === currentUser.id);
-                          const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
+                          const showScore = competition.isRankingPublic || isAdmin || canManage || canJudge || isUserTeam;
                           return (
                             <tr
                               key={team.id}
@@ -1020,6 +1104,11 @@ export default function CompetitionDetailPage() {
                                   {catchItem.caughtBy && (
                                     <div className={styles.competitions__top3_caught_by}>
                                       Pêché par : {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+                                    </div>
+                                  )}
+                                  {recordedByLine(catchItem.recordedBy) && (
+                                    <div className={styles.competitions__top3_caught_by}>
+                                      {recordedByLine(catchItem.recordedBy)}
                                     </div>
                                   )}
                                 </div>

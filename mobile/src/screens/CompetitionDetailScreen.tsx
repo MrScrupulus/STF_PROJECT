@@ -29,6 +29,8 @@ import ImageView from 'react-native-image-viewing';
 import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
 import { resolvePhotoUri } from '../utils/photoUrl';
 import { useThemeColors } from '../contexts/ThemeContext';
+import { setCatchReviewActive } from '../navigation/catchReviewNav';
+import { recordedByLine } from '../utils/recordedBy';
 import { type ThemeColors } from '../theme';
 
 export default function CompetitionDetailScreen({ route }: any) {
@@ -55,6 +57,8 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [reglementImageViewerIndex, setReglementImageViewerIndex] = useState(0);
   const [pdfDownloading, setPdfDownloading] = useState(false);
   const [myTeamPhoto, setMyTeamPhoto] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [screenScrollEnabled, setScreenScrollEnabled] = useState(true);
 
   const { data: competitionResponse, isLoading, isError, error } = useQuery({
     queryKey: ['competition', competitionId],
@@ -66,6 +70,9 @@ export default function CompetitionDetailScreen({ route }: any) {
   const competition = (competitionResponse as any)?.success !== undefined
     ? ((competitionResponse as any).success ? { ...(competitionResponse as any), success: undefined } : null)
     : competitionResponse;
+  const canManage = !!(competition as any)?.canManage || isAdmin;
+  const canJudge = !!(competition as any)?.canJudge || isAdmin;
+  const isOfficial = !!(competition as any)?.isOfficial;
 
   const { data: myTeamsData } = useQuery({
     queryKey: ['my-teams'],
@@ -90,6 +97,12 @@ export default function CompetitionDetailScreen({ route }: any) {
     enabled: !!myCompetitionTeamId,
   });
   const myTeamDetail = myTeamResponse?.team;
+
+  const { data: staffData } = useQuery({
+    queryKey: ['competition-staff', competitionId],
+    queryFn: () => competitionsService.getStaff(competitionId),
+    enabled: Number.isFinite(competitionId) && canManage,
+  });
 
   const speciesData = competition?.species && competition.species.length > 0
     ? competition.species
@@ -120,7 +133,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     if (!competition) return;
     // Le classement est visible si : classement public OU admin
     // (Si l'admin publie le classement, il est visible même si la compétition n'est pas terminée)
-    const rankingVisible = competition.isRankingPublic || isAdmin;
+    const rankingVisible = competition.isRankingPublic || isAdmin || canManage || canJudge;
     if (!rankingVisible) return;
     if (loadingStats) return; // Éviter les appels multiples simultanés
 
@@ -131,11 +144,9 @@ export default function CompetitionDetailScreen({ route }: any) {
         if (response.success && response.stats) {
           setStats(response.stats);
         }
-      } catch (error) {
-        console.error('Error loading stats:', error);
-        // Ne pas afficher d'erreur si c'est juste que les stats ne sont pas disponibles
-        if ((error as any)?.response?.status !== 403) {
-          // Seulement logger les autres erreurs
+      } catch (error: any) {
+        if (error?.response?.status !== 403 && error?.message !== 'Network Error') {
+          console.error('Error loading stats:', error);
         }
       } finally {
         setLoadingStats(false);
@@ -143,7 +154,7 @@ export default function CompetitionDetailScreen({ route }: any) {
     };
 
     loadStats();
-  }, [competition?.isRankingPublic, competition?.endDate, isAdmin, competitionId]);
+  }, [competition?.isRankingPublic, competition?.endDate, isAdmin, canManage, canJudge, competitionId]);
 
   // Recharger les stats quand l'écran est focus (quand on revient dessus)
   // Utiliser un ref pour éviter les appels multiples
@@ -158,7 +169,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   useFocusEffect(
     React.useCallback(() => {
       if (!competition) return;
-      const rankingVisible = competition.isRankingPublic || isAdmin;
+      const rankingVisible = competition.isRankingPublic || isAdmin || canManage || canJudge;
       if (!rankingVisible) return;
       if (isLoadingRef.current) return; // Éviter les appels multiples simultanés
       
@@ -194,7 +205,15 @@ export default function CompetitionDetailScreen({ route }: any) {
 
         loadStats();
       }
-    }, [competitionId, competition?.isRankingPublic, isAdmin, queryClient])
+    }, [competitionId, competition?.isRankingPublic, isAdmin, canManage, canJudge, queryClient])
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (canJudge) {
+        setCatchReviewActive(true);
+      }
+    }, [canJudge])
   );
 
 
@@ -252,6 +271,23 @@ export default function CompetitionDetailScreen({ route }: any) {
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la création de l\'équipe. Veuillez réessayer.';
       Alert.alert('Erreur', message);
+    },
+  });
+
+  const inviteCommissaireMutation = useMutation({
+    mutationFn: (email: string) => competitionsService.inviteCommissaire(competitionId, email),
+    onSuccess: (data: any) => {
+      setInviteEmail('');
+      queryClient.invalidateQueries({ queryKey: ['competition-staff', competitionId] });
+      Alert.alert(
+        data?.emailSent === false ? 'Invitation enregistrée' : 'Invitation envoyée',
+        data?.emailSent === false
+          ? "L'e-mail n'a pas pu partir. La personne peut quand même accepter dans Invitations."
+          : 'Un e-mail avec Accepter / Refuser a été envoyé. La personne peut aussi ouvrir Invitations dans l’app.'
+      );
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || error.message || "Impossible d'envoyer l'invitation.");
     },
   });
 
@@ -354,7 +390,10 @@ export default function CompetitionDetailScreen({ route }: any) {
   const now = new Date();
   
   // Équipes libres, ou dont la manche précédente est terminée (réutilisables)
+  const requiredTeamSize = Number((competition as any)?.teamSize) || 0;
   const availableTeams = myTeams.filter((team: any) => {
+    const memberCount = team.members?.length ?? 0;
+    if (requiredTeamSize > 0 && memberCount !== requiredTeamSize) return false;
     if (!team.competition) return true;
     const end = parseApiDate(team.competition.endDate);
     return end !== null && end < now;
@@ -401,7 +440,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   // - On n'est pas déjà inscrit à cette compétition
   // - On n'a pas d'autre compétition active (sauf si c'est une compétition individuelle)
   // - On a des équipes disponibles OU c'est une compétition individuelle
-  const canRegister = !isEnded && !isAlreadyRegistered && !hasActiveCompetition && (hasAvailableTeams || isIndividualCompetition);
+  const canRegister = !isOfficial && !isEnded && !isAlreadyRegistered && !hasActiveCompetition && (hasAvailableTeams || isIndividualCompetition);
   
   // Fonction pour déterminer le statut de la compétition
   const getCompetitionStatus = () => {
@@ -446,7 +485,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   const userTeamIndex = currentUser
     ? sortedTeams.findIndex((t: any) => t.members?.some((m: any) => m.id === currentUser.id))
     : -1;
-  const rankingVisible = competition.isRankingPublic || isAdmin;
+  const rankingVisible = competition.isRankingPublic || isAdmin || canManage || canJudge;
   const displayedTeams = (() => {
     if (!rankingVisible) {
       if (userTeamIndex >= 0) {
@@ -465,7 +504,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   return (
     <>
       <Header title={competition.name} showBack={true} showMenu={true} />
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} scrollEnabled={screenScrollEnabled}>
         <View style={styles.content}>
           <View style={styles.headerRow}>
             <Text style={styles.date}>
@@ -768,6 +807,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                         {c.size != null ? `${c.size} cm` : ''}
                         {c.points != null ? ` · ${c.points} pts` : ''}
                         {c.caughtBy ? ` · ${c.caughtBy.firstname}` : ''}
+                        {recordedByLine(c.recordedBy) ? ` · ${recordedByLine(c.recordedBy)}` : ''}
                       </Text>
                       {c.createdAt ? (
                         <Text style={styles.myTeamCatchMeta}>{formatDateTime(c.createdAt)}</Text>
@@ -789,6 +829,43 @@ export default function CompetitionDetailScreen({ route }: any) {
           </View>
         ) : (
           <View>
+        {canManage && (
+          <View style={styles.adminActions}>
+            <Text style={styles.sectionTitle}>Commissaires</Text>
+            <Text style={styles.inviteHint}>
+              Invitez un commissaire par e-mail. Il accepte ou refuse dans Invitations.
+            </Text>
+            <TextInput
+              style={styles.inviteInput}
+              placeholder="email@exemple.com"
+              placeholderTextColor={theme.textMuted}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+            />
+            <TouchableOpacity
+              style={[styles.adminButton, styles.editButton]}
+              disabled={inviteCommissaireMutation.isPending || !inviteEmail.trim()}
+              onPress={() => inviteCommissaireMutation.mutate(inviteEmail.trim())}
+            >
+              <Text style={styles.adminButtonText}>
+                {inviteCommissaireMutation.isPending ? '...' : 'Inviter un commissaire'}
+              </Text>
+            </TouchableOpacity>
+            {(staffData?.staff || []).map((row: any) => (
+              <Text key={`staff-${row.id}`} style={styles.staffLine}>
+                {row.user?.firstname} {row.user?.lastname} — commissaire
+              </Text>
+            ))}
+            {(staffData?.invitations || []).map((row: any) => (
+              <Text key={`inv-${row.id}`} style={styles.staffLine}>
+                {row.email} — invitation en attente
+              </Text>
+            ))}
+          </View>
+        )}
+
             <View style={styles.infoSection}>
           <Text style={styles.infoText}>
             Taille d'équipe: {(competition as any).teamSize} membre(s)
@@ -808,12 +885,35 @@ export default function CompetitionDetailScreen({ route }: any) {
         {/* Affichage des périmètres */}
         {competition.perimeters && competition.perimeters.length > 0 && (
           <View style={styles.perimeterSection}>
-            <PerimeterMapView perimeters={competition.perimeters} height={250} />
+            <PerimeterMapView
+              perimeters={competition.perimeters}
+              height={250}
+              onGestureStart={() => setScreenScrollEnabled(false)}
+              onGestureEnd={() => setScreenScrollEnabled(true)}
+            />
           </View>
         )}
 
-        {/* Actions admin */}
-        {isAdmin && (
+        {canJudge && (
+          <View style={styles.adminActions}>
+            <TouchableOpacity
+              style={[styles.adminButton, styles.resumeButton]}
+              onPress={() => (navigation as any).navigate('MainTabs', { screen: 'AdminCatchValidation' })}
+            >
+              <Text style={styles.adminButtonText}>Prises à valider</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.adminButton, styles.editButton]}
+              onPress={() =>
+                (navigation as any).navigate('AdminAddCatch', { competitionId: competition.id })
+              }
+            >
+              <Text style={styles.adminButtonText}>Ajouter une prise</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {canManage && (
           <View style={styles.adminActions}>
             {/* Tant que la manche n'est pas terminée : accès édition (y compris zones), pas seulement avant le coup d'envoi */}
             {!isEnded && (
@@ -941,8 +1041,14 @@ export default function CompetitionDetailScreen({ route }: any) {
           </View>
         )}
 
-        {/* Inscription */}
-        {!showRegisterForm ? (
+        {/* Inscription : fermée pour le créateur et les commissaires de cette épreuve */}
+        {isOfficial ? (
+          <View style={styles.alreadyRegistered}>
+            <Text style={styles.alreadyRegisteredText}>
+              Vous organisez ou officiez cette compétition : vous ne pouvez pas vous y inscrire.
+            </Text>
+          </View>
+        ) : !showRegisterForm ? (
           <View style={styles.actionsSection}>
             {isAlreadyRegistered ? (
               <View style={styles.alreadyRegistered}>
@@ -1132,7 +1238,7 @@ export default function CompetitionDetailScreen({ route }: any) {
               {isEnded && rankingVisible
                 ? 'Classement final'
                 : rankingVisible
-                ? isAdmin && !competition.isRankingPublic
+                ? (isAdmin || canManage || canJudge) && !competition.isRankingPublic
                   ? 'Classement (masqué aux participants)'
                   : 'Classement'
                 : 'Votre équipe'}
@@ -1148,7 +1254,7 @@ export default function CompetitionDetailScreen({ route }: any) {
               </Text>
             )}
 
-            {!competition.isRankingPublic && !isAdmin && (
+            {!competition.isRankingPublic && !isAdmin && !canManage && !canJudge && (
               <View style={styles.rankingInfo}>
                 <FaIcon name="lock" size={16} color={theme.accent} />
                 <Text style={styles.rankingInfoText}>
@@ -1161,7 +1267,7 @@ export default function CompetitionDetailScreen({ route }: any) {
               const isUserTeam = currentUser && team.members?.some(
                 (member: any) => member.id === currentUser.id
               );
-              const showScore = competition.isRankingPublic || isAdmin || isUserTeam;
+              const showScore = competition.isRankingPublic || isAdmin || canManage || canJudge || isUserTeam;
 
               return (
                 <TouchableOpacity
@@ -1289,6 +1395,9 @@ export default function CompetitionDetailScreen({ route }: any) {
                                     Pêché par: {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
                                   </Text>
                                 )}
+                                {recordedByLine(catchItem.recordedBy) ? (
+                                  <Text style={styles.top3CaughtBy}>{recordedByLine(catchItem.recordedBy)}</Text>
+                                ) : null}
                               </View>
                             </View>
                           ))}
@@ -1784,6 +1893,27 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   },
   adminActions: {
     marginBottom: 24,
+  },
+  inviteHint: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  inviteInput: {
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: theme.text,
+    marginBottom: 12,
+  },
+  staffLine: {
+    fontSize: 14,
+    color: theme.text,
+    marginBottom: 6,
   },
   adminButton: {
     padding: 16,

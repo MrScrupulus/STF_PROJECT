@@ -12,7 +12,9 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use App\Entity\Security\User;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionStaffInvitation;
 use App\Repository\NotificationPreferencesRepository;
+use Psr\Log\LoggerInterface;
 
 final class EmailService
 {
@@ -25,6 +27,7 @@ final class EmailService
         private string $mailerFromEmail,
         ParameterBagInterface $params,
         private readonly NotificationPreferencesRepository $preferencesRepository,
+        private readonly LoggerInterface $logger,
     ) {
         $this->fromEmail = $mailerFromEmail;
         $this->frontendUrl = $params->get('app.frontend_url');
@@ -359,6 +362,47 @@ HTML;
         } catch (\Exception $e) {
             error_log("ERREUR GENERALE lors de l'envoi de l'email d'invitation d'équipe: " . $e->getMessage());
             // Ne pas faire planter l'application si l'email échoue
+        }
+    }
+
+    public function sendStaffInvitationEmail(CompetitionStaffInvitation $invitation): void
+    {
+        $to = $invitation->getEmail();
+        $competitionName = htmlspecialchars($invitation->getCompetition()?->getName() ?? 'une compétition');
+        $inviter = $invitation->getInvitedBy();
+        $inviterName = htmlspecialchars(trim(($inviter?->getFirstname() ?? '') . ' ' . ($inviter?->getLastname() ?? '')) ?: 'Un organisateur');
+        $token = rawurlencode($invitation->getToken());
+        $redirectBase = rtrim($this->backendUrl, '/') . '/redirect/staff-invitations/' . $token;
+        $acceptUrl = htmlspecialchars($redirectBase . '/accept', \ENT_QUOTES, 'UTF-8');
+        $rejectUrl = htmlspecialchars($redirectBase . '/reject', \ENT_QUOTES, 'UTF-8');
+        $firstName = htmlspecialchars($invitation->getInvitedUser()?->getFirstname() ?? '');
+        $hello = $firstName !== '' ? "Bonjour {$firstName}," : 'Bonjour,';
+
+        try {
+            // Mail transactionnel : toujours envoyé (pas de préférence « notifications par email »).
+            $email = (new Email())
+                ->from($this->brandedFrom())
+                ->to($to)
+                ->subject("Invitation commissaire — {$competitionName}")
+                ->html($this->wrapEmailHtml(
+                    "<h1>Invitation commissaire</h1>
+                    <p>{$hello}</p>
+                    <p><strong>{$inviterName}</strong> vous invite comme <strong>commissaire</strong> sur la compétition <strong>{$competitionName}</strong>.</p>
+                    <p style=\"margin:24px 0;\">
+                      <a href=\"{$acceptUrl}\" style=\"display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;margin-right:8px;\">Accepter</a>
+                      <a href=\"{$rejectUrl}\" style=\"display:inline-block;background:#e5e7eb;color:#111;text-decoration:none;padding:12px 18px;border-radius:8px;\">Refuser</a>
+                    </p>
+                    <p>Le clic sur Accepter ou Refuser enregistre votre choix tout de suite. Ouvrez ensuite l’application Street Fishing avec le compte <strong>{$to}</strong>.</p>
+                    <p>L'équipe Street Fishing</p>"
+                ));
+            $this->mailer->send($email);
+            $this->logger->info('Email invitation commissaire envoyé', ['to' => $to]);
+        } catch (\Throwable $e) {
+            $this->logger->error('ERREUR invitation commissaire', [
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
         }
     }
 

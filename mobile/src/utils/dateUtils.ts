@@ -16,10 +16,31 @@ export function parseApiDate(dateString: string | null | undefined): Date | null
       const date = new Date(s);
       return isNaN(date.getTime()) ? null : date;
     }
-    // Doctrine envoie souvent Y-m-d H:i:s en UTC, sans fuseau.
-    // Sans « Z », JS le lit comme heure locale → 1 h ou 2 h de trop en France.
+    // Sans fuseau : heure de Paris (comme DateTimeHelper côté API).
     const iso = s.includes('T') ? s : s.replace(' ', 'T');
-    const date = new Date(`${iso}Z`);
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (m) {
+      const asUtc = Date.UTC(
+        Number(m[1]),
+        Number(m[2]) - 1,
+        Number(m[3]),
+        Number(m[4]),
+        Number(m[5]),
+        Number(m[6] || 0)
+      );
+      const probe = new Date(asUtc);
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        hourCycle: 'h23',
+        minute: '2-digit',
+      }).formatToParts(probe);
+      const ph = Number(parts.find((p) => p.type === 'hour')?.value ?? '0');
+      const pm = Number(parts.find((p) => p.type === 'minute')?.value ?? '0');
+      const deltaMin = (Number(m[4]) - ph) * 60 + (Number(m[5]) - pm);
+      return new Date(asUtc + deltaMin * 60 * 1000);
+    }
+    const date = new Date(iso);
     return isNaN(date.getTime()) ? null : date;
   } catch {
     return null;
@@ -45,8 +66,6 @@ function extractTimeFromApiDate(dateString: string | null | undefined): string |
 
 /**
  * Formate une date en heure de Paris.
- * ISO avec fuseau (compétitions) : tel quel.
- * Y-m-d H:i:s sans fuseau (prises) : UTC côté API.
  */
 export function formatDateTime(dateString: string | null | undefined): string {
   if (!dateString) {

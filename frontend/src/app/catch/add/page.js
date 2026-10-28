@@ -277,7 +277,7 @@ export default function AddCatchPage() {
   }
 
   return (
-    <ProtectedRoute requiredRole="ROLE_ADMIN">
+    <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
       <div className={classNames(layoutStyles.main, styles.catch_add__container)}>
         <h1 className={styles.catch_add__title}>Ajouter une prise</h1>
 

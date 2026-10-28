@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { rootNavigationRef } from '../navigation/rootNavigationRef';
 import FaIcon, { type AppIconName } from './FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
+import { canOrganizeEvents } from '../utils/roles';
 import { type ThemeColors } from '../theme';
 
 interface HeaderProps {
@@ -33,7 +34,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
   const navigation = useNavigation();
   const route = useRoute();
   const [menuVisible, setMenuVisible] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [canOrganize, setCanOrganize] = useState(false);
   const { setIsAuthenticated, isAuthenticated } = useAuth();
 
   const canGoBack = navigation.canGoBack();
@@ -45,14 +46,14 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         try {
           const response = await authService.getCurrentUser();
           const user = response.user || response;
-          setIsAdmin(user.roles?.includes('ROLE_ADMIN') || false);
+          setCanOrganize(canOrganizeEvents(user.roles));
         } catch (error) {
-          setIsAdmin(false);
+          setCanOrganize(false);
         }
       };
       checkAdmin();
     } else {
-      setIsAdmin(false);
+      setCanOrganize(false);
     }
   }, [isAuthenticated]);
 
@@ -62,7 +63,7 @@ export default function Header({ title, showBack = true, showMenu = true, showPr
         { name: 'Home', label: 'Accueil', icon: 'home' },
         { name: 'Profile', label: 'Mon compte', icon: 'user' },
         { name: 'Competitions', label: 'Compétitions', icon: 'trophy' },
-        ...(isAdmin ? [{ name: 'AdminDashboard', label: 'Dashboard Admin', icon: 'key' as const }] : []),
+        ...(canOrganize ? [{ name: 'AdminDashboard', label: 'Gestion des compétitions', icon: 'flag' as const }] : []),
         { name: 'Teams', label: 'Mon équipe', icon: 'users' },
         { name: 'History', label: 'Carnet de prises', icon: 'history' },
         { name: 'Notifications', label: 'Notifications', icon: 'bell' },

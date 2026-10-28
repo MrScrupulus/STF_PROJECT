@@ -4,16 +4,27 @@ import Constants from 'expo-constants';
 import { notificationPreferencesService } from '../services/notificationPreferencesService';
 import { getSecureItem } from './secureStore';
 
-// Configuration des notifications
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+let notificationHandlerReady = false;
+
+/** À appeler après le premier rendu. Un appel au chargement du module fait planter Expo Go 57. */
+export function configureNotificationHandler(): void {
+  if (notificationHandlerReady) {
+    return;
+  }
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    notificationHandlerReady = true;
+  } catch (error) {
+    console.warn('Notifications indisponibles dans cet environnement:', error);
+  }
+}
 
 /**
  * Demande les permissions de notification

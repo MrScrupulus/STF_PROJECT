@@ -7,12 +7,15 @@ use App\Repository\Competition\FishCatchRepository;
 use App\Service\CatchPhotoStorageService;
 use App\Service\CompetitionSnapshotService;
 use App\Service\EmailService;
+use App\Service\CompetitionAccessService;
 use App\Service\NotificationService;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/api/admin/catches')]
@@ -25,6 +28,7 @@ class AdminFishCatchController extends AbstractController
         private EmailService $emailService,
         private NotificationService $notificationService,
         private LoggerInterface $logger,
+        private CompetitionAccessService $access,
     ) {
     }
 
@@ -35,7 +39,7 @@ class AdminFishCatchController extends AbstractController
     public function update(FishCatch $catch, Request $request, EntityManagerInterface $em): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $this->access->denyUnlessJudgeCatch($this->getUser(), $catch);
 
             $data = json_decode($request->getContent(), true) ?: [];
             if (!array_key_exists('size', $data)) {
@@ -105,7 +109,18 @@ class AdminFishCatchController extends AbstractController
     public function listPending(FishCatchRepository $repository, Request $request): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $judgeableIds = $this->access->getJudgeableCompetitionIds($this->getUser());
+            if ($judgeableIds === []) {
+                return $this->json([
+                    'success' => true,
+                    'catches' => [],
+                    'count' => 0,
+                    'total' => 0,
+                    'page' => 1,
+                    'pages' => 0,
+                    'limit' => 10,
+                ]);
+            }
 
             // Pagination: page et limit en query string, avec valeurs par défaut
             $page = max(1, (int) $request->query->get('page', 1));
@@ -126,6 +141,10 @@ class AdminFishCatchController extends AbstractController
                 ->where('c.isValidated = :validated')
                 ->andWhere('c.rejectionReason IS NULL')
                 ->setParameter('validated', false);
+            if ($judgeableIds !== null) {
+                $qb->andWhere('c.competition IN (:cids) OR t.competition IN (:cids)')
+                    ->setParameter('cids', $judgeableIds);
+            }
 
             // Cloner le QueryBuilder pour le total
             $qbCount = clone $qb;
@@ -156,13 +175,14 @@ class AdminFishCatchController extends AbstractController
                     'photoUrl' => $catch->getPhotoUrl(),
                     'comment' => $catch->getComment(),
                     'rejectionReason' => $catch->getRejectionReason(),
-                    'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
                     'caughtBy' => $catch->getCaughtBy() ? [
                         'id' => $catch->getCaughtBy()->getId(),
                         'firstname' => $catch->getCaughtBy()->getFirstname(),
                         'lastname' => $catch->getCaughtBy()->getLastname(),
                         'email' => $catch->getCaughtBy()->getEmail(),
                     ] : null,
+                    'recordedBy' => $catch->serializeRecordedBy(),
                     'team' => [
                         'id' => $catch->getTeam()->getId(),
                         'name' => $catch->getTeam()->getName(),
@@ -204,7 +224,7 @@ class AdminFishCatchController extends AbstractController
     public function validate(FishCatch $catch, EntityManagerInterface $em): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $this->access->denyUnlessJudgeCatch($this->getUser(), $catch);
 
             if ($catch->isValidated()) {
                 return $this->json([
@@ -278,7 +298,7 @@ class AdminFishCatchController extends AbstractController
     public function reject(FishCatch $catch, Request $request, EntityManagerInterface $em): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $this->access->denyUnlessJudgeCatch($this->getUser(), $catch);
 
             $data = json_decode($request->getContent(), true);
             $rejectionReason = $data['reason'] ?? null;
@@ -390,8 +410,6 @@ class AdminFishCatchController extends AbstractController
     public function createCatch(Request $request, EntityManagerInterface $em, \App\Repository\Competition\CompetitionRepository $competitionRepository, \App\Repository\Competition\TeamRepository $teamRepository, \App\Repository\Species\SpeciesRepository $speciesRepository, \App\Repository\Security\UserRepository $userRepository): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $data = json_decode($request->getContent(), true);
 
             // Validation des données
@@ -410,6 +428,7 @@ class AdminFishCatchController extends AbstractController
                     'message' => 'Compétition non trouvée'
                 ], 404);
             }
+            $this->access->denyUnlessJudge($this->getUser(), $competition);
 
             // Vérifier que la compétition n'est pas en pause
             if ($competition->getIsPaused()) {
@@ -451,7 +470,12 @@ class AdminFishCatchController extends AbstractController
             $catch->setSpecies($species);
             $catch->setSize((float) $data['size']);
             $catch->setComment($data['comment'] ?? null);
-            $catch->setIsValidated(true); // Les prises créées par admin sont automatiquement validées
+            $catch->setIsValidated(true);
+            $recorder = $this->getUser();
+            if ($recorder instanceof \App\Entity\Security\User) {
+                $catch->setRecordedBy($recorder);
+                $catch->setRecordedByRole($this->access->officialRecordedByRole($recorder, $competition));
+            }
             if (!empty($data['photoUrl'])) {
                 $catch->setPhotoUrl($this->photoStorage->save($data['photoUrl'], $competition->getId()));
             }
@@ -502,8 +526,11 @@ class AdminFishCatchController extends AbstractController
                         'firstname' => $catch->getCaughtBy()->getFirstname(),
                         'lastname' => $catch->getCaughtBy()->getLastname(),
                     ] : null,
+                    'recordedBy' => $catch->serializeRecordedBy(),
                 ]
             ], 201);
+        } catch (AccessDeniedHttpException $e) {
+            throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la création de la prise (admin)', [
                 'error' => $e->getMessage(),

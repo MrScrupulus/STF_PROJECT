@@ -44,6 +44,11 @@ export const adminService = {
     }
   },
 
+  setUserRoles: async (userId, roles) => {
+    const response = await api.put(`/admin/users/${userId}/roles`, { roles });
+    return response;
+  },
+
   deleteUser: async (userId) => {
     try {
       const response = await api.delete(`/admin/users/${userId}`);
@@ -126,6 +131,11 @@ export const adminService = {
 
   deleteTeamPenalty: async (teamId, penaltyId) => {
     const response = await api.delete(`/admin/teams/${teamId}/penalties/${penaltyId}`);
+    return response;
+  },
+
+  createCatch: async (data) => {
+    const response = await api.post("/api/admin/catches/create", data);
     return response;
   },
 

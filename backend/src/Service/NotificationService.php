@@ -92,6 +92,19 @@ class NotificationService
     /**
      * Notifie une invitation d'équipe
      */
+    public function notifyStaffInvitation(User $user, string $competitionName, int $competitionId): void
+    {
+        $this->createNotification(
+            $user,
+            'staff_invitation',
+            "Vous êtes invité comme commissaire sur {$competitionName}",
+            [
+                'competitionId' => $competitionId,
+                'competitionName' => $competitionName,
+            ]
+        );
+    }
+
     public function notifyTeamInvitation(User $user, string $teamName, int $teamId): void
     {
         $this->createNotification(

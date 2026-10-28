@@ -49,16 +49,11 @@ export const api = {
         "Content-Type": "application/json",
       };
 
-      // Ne pas envoyer le token pour les routes publiques
-      const isPublicRoute = 
+      const skipAuth =
         endpoint.includes("/api/auth/login") ||
         endpoint.includes("/api/auth/register") ||
-        endpoint.includes("/password-reset") ||
-        /^\/api\/competitions\/\d+\/stats$/.test(endpoint) || // Routes GET pour les statistiques publiques
-        /^\/api\/teams\/\d+$/.test(endpoint); // Routes GET pour les détails d'équipe
-      
-      // Pour /api/competitions, envoyer le token si disponible pour avoir isRegistered
-      if (!isPublicRoute) {
+        endpoint.includes("/password-reset");
+      if (!skipAuth) {
         const token = localStorage.getItem("token");
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;

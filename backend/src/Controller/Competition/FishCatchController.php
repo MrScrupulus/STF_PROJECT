@@ -8,6 +8,7 @@ use App\Repository\Competition\TeamRepository;
 use App\Repository\Security\UserRepository;
 use App\Service\NotificationService;
 use App\Service\GeolocationService;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -95,11 +96,17 @@ class FishCatchController extends AbstractController
                     'photoUrl' => $catch->getPhotoUrl(),
                     'comment' => $catch->getComment(),
                     'isValidated' => $catch->isValidated(),
-                    'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
                     'team' => [
                         'id' => $catch->getTeam()->getId(),
                         'name' => $catch->getTeam()->getName(),
                     ],
+                    'caughtBy' => $catch->getCaughtBy() ? [
+                        'id' => $catch->getCaughtBy()->getId(),
+                        'firstname' => $catch->getCaughtBy()->getFirstname(),
+                        'lastname' => $catch->getCaughtBy()->getLastname(),
+                    ] : null,
+                    'recordedBy' => $catch->serializeRecordedBy(),
                     'competition' => $catch->getCompetition() ? [
                         'id' => $catch->getCompetition()->getId(),
                         'name' => $catch->getCompetition()->getName(),

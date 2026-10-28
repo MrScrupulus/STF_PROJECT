@@ -24,8 +24,12 @@ export default function ProtectedRoute({ children, requiredRole = null }) {
           throw new Error("Session expirée");
         }
 
-        if (requiredRole && !userData.user.roles.includes(requiredRole)) {
-          throw new Error("Accès non autorisé");
+        if (requiredRole) {
+          const needed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+          const roles = userData.user.roles || [];
+          if (!needed.some((role) => roles.includes(role))) {
+            throw new Error("Accès non autorisé");
+          }
         }
 
         setIsLoading(false);

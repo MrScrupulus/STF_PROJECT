@@ -25,6 +25,7 @@ export default function CreateCompetition() {
     hasNoLimit: false,
     description: "",
     isRankingPublic: false,
+    notifyUsers: false,
     isBonusEnabled: false,
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: "",
@@ -56,6 +57,45 @@ export default function CreateCompetition() {
     };
     fetchSpecies();
   }, []);
+
+  const [newSpeciesName, setNewSpeciesName] = useState("");
+  const [newSpeciesCoef, setNewSpeciesCoef] = useState("1");
+  const [creatingSpecies, setCreatingSpecies] = useState(false);
+
+  const handleCreateNewSpecies = async () => {
+    const n = newSpeciesName.trim();
+    const coef = parseFloat(String(newSpeciesCoef).replace(",", "."));
+    if (!n || Number.isNaN(coef) || coef <= 0) {
+      setError("Indiquez un nom et un coefficient positif pour la nouvelle espèce.");
+      return;
+    }
+    setCreatingSpecies(true);
+    setError("");
+    try {
+      const res = await speciesService.create({ name: n, coefficient: coef, isBonus: false });
+      const sp = res.species;
+      if (!sp?.id) {
+        throw new Error("Réponse invalide");
+      }
+      setAvailableSpecies((prev) => (prev.some((s) => s.id === sp.id) ? prev : [...prev, sp]));
+      setCompetitionSpecies((prev) => [
+        ...prev,
+        {
+          speciesId: sp.id,
+          coefficient: sp.coefficient || coef,
+          basePoints: formData.isBonusEnabled ? (sp.basePoints || 50) : null,
+          quota: "",
+          quotaBonusPoints: "",
+        },
+      ]);
+      setNewSpeciesName("");
+      setNewSpeciesCoef("1");
+    } catch (err) {
+      setError(err.message || "Impossible de créer l'espèce.");
+    } finally {
+      setCreatingSpecies(false);
+    }
+  };
 
   const handleAddSpecies = () => {
     if (availableSpecies.length === 0) return;
@@ -187,7 +227,7 @@ export default function CreateCompetition() {
   };
 
   return (
-    <ProtectedRoute requiredRole="ROLE_ADMIN">
+    <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
       <div className={styles["competition-create__container"]}>
         <h1 className={styles["competition-create__title"]}>
           Créer une compétition
@@ -397,6 +437,28 @@ export default function CreateCompetition() {
             <div className={styles["competition-create__checkbox-wrapper"]}>
               <input
                 type="checkbox"
+                checked={formData.notifyUsers}
+                onChange={(e) =>
+                  setFormData({ ...formData, notifyUsers: e.target.checked })
+                }
+                id="notifyUsers"
+              />
+              <label
+                htmlFor="notifyUsers"
+                className={styles["competition-create__label"]}
+              >
+                Notifier tous les utilisateurs (nouvelle compétition ouverte)
+              </label>
+            </div>
+            <p className={styles["competition-create__help_text"]}>
+              Décochez pour un test : personne ne reçoit de notification. Cochez uniquement pour une épreuve réelle.
+            </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
                 checked={formData.isRankingPublic}
                 onChange={(e) =>
                   setFormData({ ...formData, isRankingPublic: e.target.checked })
@@ -489,6 +551,32 @@ export default function CreateCompetition() {
             >
               + Ajouter une espèce
             </button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
+              <input
+                type="text"
+                value={newSpeciesName}
+                onChange={(e) => setNewSpeciesName(e.target.value)}
+                placeholder="Nom (ex. Brochet)"
+                className={styles["competition-create__input"]}
+                style={{ minWidth: 160 }}
+              />
+              <input
+                type="text"
+                value={newSpeciesCoef}
+                onChange={(e) => setNewSpeciesCoef(e.target.value)}
+                placeholder="Coef."
+                className={styles["competition-create__input"]}
+                style={{ width: 80 }}
+              />
+              <button
+                type="button"
+                onClick={handleCreateNewSpecies}
+                className={styles["competition-create__add_species_btn"]}
+                disabled={creatingSpecies}
+              >
+                {creatingSpecies ? "..." : "+ Nouvelle espèce"}
+              </button>
+            </div>
             <p className={styles["competition-create__help_text"]}>
               Définissez les espèces, leurs coefficients ; pour le bonus quota, remplissez aussi le bonus sur chaque ligne ayant un quota.
             </p>

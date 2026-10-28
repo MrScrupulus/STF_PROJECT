@@ -23,6 +23,7 @@ import { perimeterService } from "../../services/perimeterService";
 import { logger } from "../../utils/logger";
 import { resolvePhotoUri } from "../../utils/photoUrl";
 import { formatCompetitionDateTime } from "../../utils/dateUtils";
+import { APP_ROLES, formatRoleLabels, isPlatformAdmin, roleSearchHaystack, visibleRoles } from "../../utils/roles";
 
 /** Normalisation pour recherche sans accents */
 function normalizeForSearch(str) {
@@ -87,7 +88,9 @@ export default function Dashboard() {
   });
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [userToModify, setUserToModify] = useState(null);
+  const [selectedRoles, setSelectedRoles] = useState([]);
   const [pendingCatches, setPendingCatches] = useState([]);
+  const [catchSizeDrafts, setCatchSizeDrafts] = useState({});
   const [pendingCatchesPage, setPendingCatchesPage] = useState(1);
   const [pendingCatchesPages, setPendingCatchesPages] = useState(1);
   const [pendingCatchesTotal, setPendingCatchesTotal] = useState(0);
@@ -111,6 +114,7 @@ export default function Dashboard() {
   const [penaltySubmitBusy, setPenaltySubmitBusy] = useState(false);
   const [penaltyCompetitionId, setPenaltyCompetitionId] = useState("");
   const [penaltyTeamSearch, setPenaltyTeamSearch] = useState("");
+  const [isAdminUser, setIsAdminUser] = useState(false);
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
@@ -138,9 +142,13 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       logger.debug("Starting to fetch admin data...");
+      const me = await authService.getCurrentUser();
+      const roles = me?.user?.roles || [];
+      const admin = isPlatformAdmin(roles);
+      setIsAdminUser(admin);
       const [usersData, competitionsData, speciesData, teamsData, pendingCatchesData] =
         await Promise.all([
-          adminService.getUsers(),
+          admin ? adminService.getUsers() : Promise.resolve([]),
           competitionService.getAllAdmin(),
           speciesService.getAll(),
           adminService.getTeams(),
@@ -314,14 +322,14 @@ export default function Dashboard() {
           case "number":
             return user.subscriberNumber.toLowerCase().includes(term);
           case "role":
-            return user.roles.some((role) => role.toLowerCase().includes(term));
+            return roleSearchHaystack(user.roles).includes(term);
           default:
             return (
               user.email.toLowerCase().includes(term) ||
               user.firstname.toLowerCase().includes(term) ||
               user.lastname.toLowerCase().includes(term) ||
               user.subscriberNumber.toLowerCase().includes(term) ||
-              user.roles.some((role) => role.toLowerCase().includes(term))
+              roleSearchHaystack(user.roles).includes(term)
             );
         }
       });
@@ -343,16 +351,19 @@ export default function Dashboard() {
 
   const handleToggleRole = (user) => {
     setUserToModify(user);
+    setSelectedRoles(visibleRoles(user.roles).map((role) => role.id));
     setShowRoleModal(true);
   };
 
   const confirmRoleChange = async () => {
     try {
-      await adminService.toggleUserRole(userToModify.id);
+      await adminService.setUserRoles(userToModify.id, selectedRoles);
       await fetchData();
       setShowRoleModal(false);
+      toast.success("Rôles mis à jour.");
     } catch (error) {
       logger.error("Erreur lors du changement de rôle:", error);
+      toast.error(error.message || "Impossible de mettre à jour les rôles.");
     }
   };
 
@@ -414,25 +425,6 @@ export default function Dashboard() {
     }
   };
 
-  const RoleSwitch = ({ isAdmin, onToggle }) => {
-    return createElement(
-      "div",
-      { className: styles.switch__container },
-      createElement("button", {
-        className: `${styles.switch__toggle} ${
-          isAdmin ? styles["switch__toggle--admin"] : ""
-        }`,
-        onClick: onToggle,
-        "aria-label": "Toggle role",
-      }),
-      createElement(
-        "span",
-        { className: styles.switch__label },
-        isAdmin ? "Admin" : "User"
-      )
-    );
-  };
-
   const ConfirmModal = ({ message, onConfirm, onCancel }) => {
     return createElement(
       "div",
@@ -480,29 +472,10 @@ export default function Dashboard() {
   };
 
   const UserDetailsModal = ({ user, onClose, onDelete, onUpdate }) => {
-    const [isAdminLocal, setIsAdminLocal] = useState(
-      user.roles?.includes("ROLE_ADMIN")
-    );
-    const [showConfirm, setShowConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    const handleRoleToggle = () => {
-      setShowConfirm(true);
-    };
 
     const handleDelete = () => {
       setShowDeleteConfirm(true);
-    };
-
-    const handleConfirmToggle = async () => {
-      try {
-        await handleToggleRole(user);
-        setIsAdminLocal(!isAdminLocal);
-        setShowConfirm(false);
-        onClose();
-      } catch (error) {
-        logger.error("Error toggling role:", error);
-      }
     };
 
     const handleConfirmDelete = async () => {
@@ -515,15 +488,11 @@ export default function Dashboard() {
       }
     };
 
-    useEffect(() => {
-      setIsAdminLocal(user.roles?.includes("ROLE_ADMIN"));
-    }, [user]);
-
     const userFields = [
       { label: "Prénom", value: user.firstname },
       { label: "Nom", value: user.lastname },
       { label: "Email", value: user.email },
-      { label: "Rôles", value: user.roles?.join(", ") },
+      { label: "Rôles", value: formatRoleLabels(user.roles) },
       { label: "Téléphone", value: user.phoneNumber },
       { label: "Statut", value: user.isVerified ? "Vérifié" : "Non vérifié" },
     ];
@@ -571,10 +540,17 @@ export default function Dashboard() {
         createElement(
           "div",
           { className: modalStyles.modal__actions },
-          createElement(RoleSwitch, {
-            isAdmin: isAdminLocal,
-            onToggle: handleRoleToggle,
-          }),
+          createElement(
+            "button",
+            {
+              onClick: () => {
+                onClose();
+                handleToggleRole(user);
+              },
+              className: `${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`,
+            },
+            "Modifier les rôles"
+          ),
           createElement(
             "div",
             { className: modalStyles.modal__buttons },
@@ -597,14 +573,6 @@ export default function Dashboard() {
           )
         )
       ),
-      showConfirm &&
-        createElement(ConfirmModal, {
-          message: `Êtes-vous sûr de vouloir ${
-            isAdminLocal ? "retirer" : "ajouter"
-          } les droits administrateur pour cet utilisateur ?`,
-          onConfirm: handleConfirmToggle,
-          onCancel: () => setShowConfirm(false),
-        }),
       showDeleteConfirm &&
         createElement(ConfirmModal, {
           message: "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
@@ -1390,42 +1358,39 @@ export default function Dashboard() {
         return "";
       case "size":
         return item.members?.length || "0";
-      case "role":
-        const isAdmin = item.roles?.includes("ROLE_ADMIN");
-        const isMobileView =
-          typeof window !== "undefined" && window.innerWidth <= 600;
-
-        if (isMobileView) {
-          return createElement(
-            "span",
-            {
-              className: `${styles.role_text} ${
-                isAdmin ? styles["role_text--admin"] : styles["role_text--user"]
-              }`,
-            },
-            isAdmin ? "Admin" : "User"
-          );
-        }
-
+      case "role": {
+        const badges = visibleRoles(item.roles);
         return createElement(
           "div",
           {
-            onClick: (e) => e.stopPropagation(),
-            style: { display: "inline-block" },
-          },
-          createElement("button", {
-            className: `${styles["role-switch"]} ${
-              isAdmin
-                ? styles["role-switch--admin"]
-                : styles["role-switch--user"]
-            }`,
+            className: styles.role_badges,
             onClick: (e) => {
               e.stopPropagation();
               handleToggleRole(item);
             },
-            title: isAdmin ? "Changer en User" : "Changer en Admin",
-          })
+            title: "Modifier les rôles",
+            role: "button",
+          },
+          badges.length
+            ? badges.map((role) =>
+                createElement(
+                  "span",
+                  {
+                    key: role.id,
+                    className: `${styles.role_text} ${
+                      styles[`role_text--${role.css}`] || styles["role_text--user"]
+                    }`,
+                  },
+                  role.label
+                )
+              )
+            : createElement(
+                "span",
+                { className: `${styles.role_text} ${styles["role_text--user"]}` },
+                "Utilisateur"
+              )
         );
+      }
       case "verified":
         return item.isVerified ? (
           <span className={styles.verified}>Vérifié ✓</span>
@@ -1621,12 +1586,12 @@ export default function Dashboard() {
   }
 
   return (
-    <ProtectedRoute requiredRole="ROLE_ADMIN">
+    <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
       <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
       <div className={styles.dashboard__container}>
         <div className={styles.dashboard__header}>
           <div className={styles.dashboard__header_content}>
-            <h1 className={styles.dashboard__title}>Tableau de bord</h1>
+            <h1 className={styles.dashboard__title}>Gestion des compétitions</h1>
           </div>
         </div>
         <div className={styles.dashboard__search}>
@@ -1647,6 +1612,7 @@ export default function Dashboard() {
           }`}
         >
           {/* Section Utilisateurs */}
+          {isAdminUser ? (
           <div
             className={`${styles.dashboard__card} ${
               searchTerm && filteredData.users.length === 0
@@ -1669,6 +1635,7 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          ) : null}
 
           {/* Section Compétitions */}
           <div
@@ -1691,6 +1658,12 @@ export default function Dashboard() {
                 onClick={() => router.push("/dashboard/competitions/create")}
               >
                 Créer une compétition
+              </button>
+              <button
+                className={styles.dashboard__create_button}
+                onClick={() => router.push("/dashboard/species/create")}
+              >
+                Nouvelle espèce
               </button>
             </div>
             <div className={styles.dashboard__users_list}>
@@ -1727,7 +1700,8 @@ export default function Dashboard() {
           </div>
 
           {/* Section Species */}
-          <div
+          {isAdminUser ? (
+          <div>
             className={`${styles.dashboard__card} ${
               searchTerm && filteredData.species.length === 0
                 ? styles["fade-out"]
@@ -1757,6 +1731,7 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          ) : null}
 
           {/* Section Prises en attente de validation */}
           <div className={styles.dashboard__card}>
@@ -1795,7 +1770,26 @@ export default function Dashboard() {
                         <div>
                           <h3>{catchItem.species.name}</h3>
                           <p className={styles.dashboard__catch_info}>
-                            {catchItem.size} cm - {catchItem.points} pts
+                            <label className={styles.dashboard__catch_size_label}>
+                              Taille (cm)
+                              <input
+                                className={styles.dashboard__catch_size_input}
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  catchSizeDrafts[catchItem.id] ??
+                                  (catchItem.size != null ? String(catchItem.size) : "")
+                                }
+                                onChange={(e) =>
+                                  setCatchSizeDrafts((prev) => ({
+                                    ...prev,
+                                    [catchItem.id]: e.target.value,
+                                  }))
+                                }
+                              />
+                            </label>
+                            {" — "}
+                            {catchItem.points} pts
                           </p>
                           <p className={styles.dashboard__catch_info}>
                             Équipe: <strong>{catchItem.team.name}</strong>
@@ -1843,10 +1837,28 @@ export default function Dashboard() {
                         <button
                           className={`${styles.dashboard__button} ${styles["dashboard__button--validate"]}`}
                           onClick={async () => {
+                            const raw =
+                              catchSizeDrafts[catchItem.id] ??
+                              (catchItem.size != null ? String(catchItem.size) : "");
+                            const size = Number.parseFloat(
+                              String(raw).replace(/\s/g, "").replace(",", ".")
+                            );
+                            if (!Number.isFinite(size) || size <= 0) {
+                              toast.error("Entrez une taille valide (ex. 32 ou 25,5).");
+                              return;
+                            }
                             setIsProcessing(true);
                             try {
+                              if (size !== Number(catchItem.size)) {
+                                await adminService.updateCatchSize(catchItem.id, size);
+                              }
                               await adminService.validateCatch(catchItem.id);
                               toast.success("Prise validée avec succès.");
+                              setCatchSizeDrafts((prev) => {
+                                const next = { ...prev };
+                                delete next[catchItem.id];
+                                return next;
+                              });
                               fetchData();
                             } catch (error) {
                               toast.error(error.message || "Erreur lors de la validation");
@@ -1933,16 +1945,30 @@ export default function Dashboard() {
           <div className={modalStyles.modal__overlay}>
             <div className={modalStyles.modal__content}>
               <h3 className={modalStyles.modal__title}>
-                Modifier le rôle de {userToModify.firstname}{" "}
-                {userToModify.lastname}
+                Rôles de {userToModify.firstname} {userToModify.lastname}
               </h3>
               <p className={modalStyles.modal__text}>
-                Êtes-vous sûr de vouloir{" "}
-                {userToModify.roles?.includes("ROLE_ADMIN")
-                  ? "retirer"
-                  : "ajouter"}{" "}
-                les droits administrateur ?
+                Un utilisateur peut cumuler plusieurs rôles. Le commissaire
+                n&apos;agit que sur les compétitions où il est affecté.
               </p>
+              <div className={styles.role_checkboxes}>
+                {APP_ROLES.map((role) => (
+                  <label key={role.id} className={styles.role_checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles.includes(role.id)}
+                      onChange={() => {
+                        setSelectedRoles((prev) =>
+                          prev.includes(role.id)
+                            ? prev.filter((id) => id !== role.id)
+                            : [...prev, role.id]
+                        );
+                      }}
+                    />
+                    <span>{role.label}</span>
+                  </label>
+                ))}
+              </div>
               <div className={modalStyles.modal__actions}>
                 <button
                   className={`${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`}

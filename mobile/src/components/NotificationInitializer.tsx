@@ -2,7 +2,12 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { registerPushToken, setupNotificationListeners, syncAppIconBadge } from '../utils/notifications';
+import {
+  configureNotificationHandler,
+  registerPushToken,
+  setupNotificationListeners,
+  syncAppIconBadge,
+} from '../utils/notifications';
 import { navigateFromNotificationData } from '../utils/notificationNavigation';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '../services/notificationService';
@@ -22,6 +27,10 @@ export default function NotificationInitializer() {
   useEffect(() => {
     void syncAppIconBadge(isAuthenticated ? unreadCount : 0);
   }, [isAuthenticated, unreadCount]);
+
+  useEffect(() => {
+    configureNotificationHandler();
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {

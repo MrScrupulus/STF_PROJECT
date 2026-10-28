@@ -15,6 +15,7 @@ import { competitionsService } from "../../../services/competitions";
 import CatchesMap from "../../../components/competition/CatchesMap";
 import CatchesTimelineChart from "../../../components/competition/CatchesTimelineChart";
 import { boundsFromCatchTimes, parseCatchDate } from "../../../utils/timelineScale";
+import { recordedByLine } from "../../../utils/recordedBy";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -557,6 +558,11 @@ export default function HistoryPage() {
                         <div>
                           <strong>Pêché par :</strong> {catchItem.caughtBy.firstname}{" "}
                           {catchItem.caughtBy.lastname}
+                        </div>
+                      )}
+                      {recordedByLine(catchItem.recordedBy) && (
+                        <div>
+                          <strong>Saisie :</strong> {recordedByLine(catchItem.recordedBy)}
                         </div>
                       )}
                       <div>

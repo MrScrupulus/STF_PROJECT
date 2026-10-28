@@ -155,4 +155,13 @@ export const teamService = {
       throw error;
     }
   },
+  getMyStaffInvitations: async () => api.get("/api/staff-invitations/my"),
+  acceptStaffInvitation: async (invitationId) =>
+    api.post(`/api/staff-invitations/${invitationId}/accept`),
+  rejectStaffInvitation: async (invitationId) =>
+    api.post(`/api/staff-invitations/${invitationId}/reject`),
+  acceptStaffInvitationByToken: async (token) =>
+    api.post(`/api/staff-invitations/by-token/${encodeURIComponent(token)}/accept`),
+  rejectStaffInvitationByToken: async (token) =>
+    api.post(`/api/staff-invitations/by-token/${encodeURIComponent(token)}/reject`),
 };

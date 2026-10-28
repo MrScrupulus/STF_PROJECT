@@ -14,9 +14,16 @@ interface Perimeter {
 interface PerimeterMapViewProps {
   perimeters: Perimeter[];
   height?: number;
+  onGestureStart?: () => void;
+  onGestureEnd?: () => void;
 }
 
-export default function PerimeterMapView({ perimeters, height = 250 }: PerimeterMapViewProps) {
+export default function PerimeterMapView({
+  perimeters,
+  height = 250,
+  onGestureStart,
+  onGestureEnd,
+}: PerimeterMapViewProps) {
   const theme = useThemeColors();
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
@@ -71,7 +78,14 @@ export default function PerimeterMapView({ perimeters, height = 250 }: Perimeter
             initialRegion={region}
             mapType="standard"
             {...androidGoogleMapProps()}
-            liteMode={Platform.OS === 'android'}
+            zoomEnabled
+            scrollEnabled
+            zoomTapEnabled
+            zoomControlEnabled={Platform.OS === 'android'}
+            liteMode={false}
+            onTouchStart={onGestureStart}
+            onTouchEnd={onGestureEnd}
+            onTouchCancel={onGestureEnd}
           >
             {perimeters.map((perimeter, index) => {
               const coords = perimeter.coordinates.map((c) => ({

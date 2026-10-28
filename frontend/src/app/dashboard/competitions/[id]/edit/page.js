@@ -166,7 +166,7 @@ export default function EditCompetition() {
 
   if (isLoadingData) {
     return (
-      <ProtectedRoute requiredRole="ROLE_ADMIN">
+      <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
         <div className={styles["competition-create__container"]}>
           <div>Chargement...</div>
         </div>
@@ -175,7 +175,7 @@ export default function EditCompetition() {
   }
 
   return (
-    <ProtectedRoute requiredRole="ROLE_ADMIN">
+    <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
       <div className={styles["competition-create__container"]}>
         <h1 className={styles["competition-create__title"]}>
           Modifier la compétition

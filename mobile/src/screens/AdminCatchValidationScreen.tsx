@@ -19,6 +19,11 @@ import Header from '../components/Header';
 import ZoomablePhotoViewer from '../components/ZoomablePhotoViewer';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
+import {
+  fishSizeKeyboardType,
+  parseFishSizeCm,
+  sanitizeFishSizeInput,
+} from '../utils/fishMeasurementInput';
 
 export default function AdminCatchValidationScreen() {
   const theme = useThemeColors();
@@ -33,6 +38,7 @@ export default function AdminCatchValidationScreen() {
 
   const [rejectionReason, setRejectionReason] = useState('');
   const [showImageModal, setShowImageModal] = useState(false);
+  const [sizeInput, setSizeInput] = useState('');
 
   // Mettre à jour l'action quand les paramètres de route changent
   useEffect(() => {
@@ -47,8 +53,27 @@ export default function AdminCatchValidationScreen() {
     enabled: !!catchId,
   });
 
+  useEffect(() => {
+    if (catchData?.size != null) {
+      setSizeInput(String(catchData.size));
+    }
+  }, [catchData?.size]);
+
+  const parsedSize = parseFishSizeCm(sizeInput);
+  const sizeChanged =
+    catchData?.size != null && Number.isFinite(parsedSize) && parsedSize !== Number(catchData.size);
+
   const validateMutation = useMutation({
-    mutationFn: () => adminService.validateCatch(catchId),
+    mutationFn: async () => {
+      const size = parseFishSizeCm(sizeInput);
+      if (!Number.isFinite(size) || size <= 0) {
+        throw new Error('Entrez une taille valide (ex. 32 ou 25,5).');
+      }
+      if (catchData?.size == null || size !== Number(catchData.size)) {
+        await adminService.updateCatchSize(catchId, size);
+      }
+      return adminService.validateCatch(catchId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-catch', catchId] });
@@ -57,7 +82,11 @@ export default function AdminCatchValidationScreen() {
       ]);
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || 'Une erreur est survenue lors de la validation. Veuillez réessayer.';
+      const message =
+        error?.message && !error.response
+          ? error.message
+          : error.response?.data?.message ||
+            'Une erreur est survenue lors de la validation. Veuillez réessayer.';
       Alert.alert('Erreur', message);
     },
   });
@@ -78,9 +107,16 @@ export default function AdminCatchValidationScreen() {
   });
 
   const handleValidate = () => {
+    const size = parseFishSizeCm(sizeInput);
+    if (!Number.isFinite(size) || size <= 0) {
+      Alert.alert('Erreur', 'Entrez une taille valide (ex. 32 ou 25,5).');
+      return;
+    }
     Alert.alert(
       'Valider la prise',
-      'Êtes-vous sûr de vouloir valider cette prise ?',
+      sizeChanged
+        ? `Valider cette prise avec la taille ${size} cm ?`
+        : 'Êtes-vous sûr de vouloir valider cette prise ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -157,11 +193,25 @@ export default function AdminCatchValidationScreen() {
             <Text style={styles.label}>Espèce</Text>
             <Text style={styles.value}>{catchData.species?.name || 'N/A'}</Text>
 
-            <Text style={styles.label}>Taille</Text>
-            <Text style={styles.value}>{catchData.size} cm</Text>
+            <Text style={styles.label}>Taille (cm)</Text>
+            <TextInput
+              style={styles.sizeInput}
+              value={sizeInput}
+              onChangeText={(t) => setSizeInput((prev) => sanitizeFishSizeInput(prev, t))}
+              keyboardType={fishSizeKeyboardType}
+              placeholder="Ex. 32 ou 25,5"
+              placeholderTextColor={theme.textMuted}
+            />
+            {sizeChanged ? (
+              <Text style={styles.hint}>La taille sera enregistrée au moment de la validation.</Text>
+            ) : null}
 
             <Text style={styles.label}>Points</Text>
-            <Text style={styles.value}>{catchData.points} pts</Text>
+            <Text style={styles.value}>
+              {Number.isFinite(parsedSize) && catchData.species?.coefficient != null
+                ? `${Math.trunc(parsedSize * Number(catchData.species.coefficient))} pts`
+                : `${catchData.points} pts`}
+            </Text>
 
             <Text style={styles.label}>Équipe</Text>
             <Text style={styles.value}>{catchData.team?.name || 'N/A'}</Text>
@@ -309,6 +359,21 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   value: {
     fontSize: 16,
     color: theme.text,
+  },
+  sizeInput: {
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: theme.text,
+    backgroundColor: theme.surfaceRaised,
+  },
+  hint: {
+    fontSize: 13,
+    color: theme.textMuted,
+    marginTop: 6,
   },
   thumbnail: {
     width: '100%',

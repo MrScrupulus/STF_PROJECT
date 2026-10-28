@@ -10,6 +10,7 @@ import classNames from "classnames";
 import layoutStyles from "../../../styles/components/layout/layout.module.scss";
 import { toast } from "react-hot-toast";
 import { resolvePhotoUri } from "../../../utils/photoUrl";
+import { recordedByLine } from "../../../utils/recordedBy";
 
 
 function CatchPenalties({ catchItem, styles }) {
@@ -59,6 +60,14 @@ function ScoringCountedCatchCard({ catchItem, rank, styles, setSelectedImage }) 
             <span className={styles.teams__catch_label}>Pêché par :</span>
             <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
               {catchItem.caughtBy.firstname} {catchItem.caughtBy.lastname}
+            </span>
+          </div>
+        )}
+        {recordedByLine(catchItem.recordedBy) && (
+          <div className={styles.teams__catch_detail_row}>
+            <span className={styles.teams__catch_label}>Saisie :</span>
+            <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+              {recordedByLine(catchItem.recordedBy)}
             </span>
           </div>
         )}
@@ -631,6 +640,14 @@ export default function TeamDetailPage() {
                               </span>
                             </div>
                           )}
+                          {recordedByLine(catchItem.recordedBy) && (
+                            <div className={styles.teams__catch_detail_row}>
+                              <span className={styles.teams__catch_label}>Saisie :</span>
+                              <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+                                {recordedByLine(catchItem.recordedBy)}
+                              </span>
+                            </div>
+                          )}
                           {catchItem.comment && (
                             <div className={styles.teams__catch_comment}>
                               <span className={styles.teams__catch_label}>
@@ -734,6 +751,14 @@ export default function TeamDetailPage() {
                               <span className={styles.teams__catch_value} style={{ fontWeight: '900' }}>
                                 {catchItem.caughtBy.firstname}{" "}
                                 {catchItem.caughtBy.lastname}
+                              </span>
+                            </div>
+                          )}
+                          {recordedByLine(catchItem.recordedBy) && (
+                            <div className={styles.teams__catch_detail_row}>
+                              <span className={styles.teams__catch_label}>Saisie :</span>
+                              <span className={styles.teams__catch_value} style={{ fontWeight: "900" }}>
+                                {recordedByLine(catchItem.recordedBy)}
                               </span>
                             </div>
                           )}

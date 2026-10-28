@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Competition\FishCatch;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\TeamPenalty;
+use App\Service\CompetitionAccessService;
 use App\Service\CompetitionSnapshotService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,6 +19,7 @@ class AdminTeamPenaltyController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private CompetitionSnapshotService $snapshotService,
+        private CompetitionAccessService $access,
     ) {
     }
 
@@ -27,7 +29,7 @@ class AdminTeamPenaltyController extends AbstractController
     #[Route('/{id}/penalty-eligible-catches', name: 'admin_team_penalty_eligible_catches', methods: ['GET'])]
     public function penaltyEligibleCatches(Team $team): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->access->denyUnlessManageTeam($this->getUser(), $team);
         if ($team->isPersonalJournal()) {
             return $this->json([
                 'success' => false,
@@ -100,7 +102,7 @@ class AdminTeamPenaltyController extends AbstractController
     #[Route('/{id}/penalties', name: 'admin_team_penalties_list', methods: ['GET'])]
     public function list(Team $team): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->access->denyUnlessManageTeam($this->getUser(), $team);
         $items = [];
         foreach ($team->getPenalties() as $p) {
             $c = $p->getFishCatch();
@@ -124,7 +126,7 @@ class AdminTeamPenaltyController extends AbstractController
     #[Route('/{id}/penalties', name: 'admin_team_penalties_create', methods: ['POST'])]
     public function create(Team $team, Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->access->denyUnlessManageTeam($this->getUser(), $team);
         $data = json_decode($request->getContent(), true) ?: [];
         $points = isset($data['points']) ? (int) $data['points'] : 0;
 
@@ -179,7 +181,7 @@ class AdminTeamPenaltyController extends AbstractController
     #[Route('/{id}/penalties/{penaltyId}', name: 'admin_team_penalties_delete', methods: ['DELETE'])]
     public function delete(Team $team, int $penaltyId): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        $this->access->denyUnlessManageTeam($this->getUser(), $team);
         $penalty = $this->em->getRepository(TeamPenalty::class)->find($penaltyId);
         if (!$penalty || $penalty->getTeam()?->getId() !== $team->getId()) {
             return $this->json(['success' => false, 'message' => 'Pénalité introuvable pour cette équipe.'], 404);

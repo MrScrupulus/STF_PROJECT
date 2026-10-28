@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { teamService } from '../services/teamService';
 import Header from '../components/Header';
 import { formatDateTime } from '../utils/dateUtils';
@@ -38,13 +38,78 @@ export default function InvitationsScreen() {
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const queryClient = useQueryClient();
+  const tokenHandled = React.useRef(false);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['my-invitations'],
     queryFn: async () => {
-      const response = await teamService.getMyInvitations();
-      return response;
+      const [teams, staff] = await Promise.all([
+        teamService.getMyInvitations(),
+        teamService.getMyStaffInvitations(),
+      ]);
+      return {
+        invitations: teams?.invitations || [],
+        staffInvitations: staff?.invitations || [],
+      };
+    },
+  });
+
+  const acceptStaffMutation = useMutation({
+    mutationFn: (invitationId: number) => teamService.acceptStaffInvitation(invitationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['competition-staff'] });
+      Alert.alert('Succès', 'Vous êtes commissaire sur cette compétition.');
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || "Impossible d'accepter l'invitation.");
+    },
+  });
+
+  React.useEffect(() => {
+    if (tokenHandled.current) {
+      return;
+    }
+    const acceptToken = route.params?.acceptStaff as string | undefined;
+    const rejectToken = route.params?.rejectStaff as string | undefined;
+    if (!acceptToken && !rejectToken) {
+      return;
+    }
+    tokenHandled.current = true;
+    const run = async () => {
+      try {
+        if (acceptToken) {
+          await teamService.acceptStaffInvitationByToken(acceptToken);
+          queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
+          queryClient.invalidateQueries({ queryKey: ['competition-staff'] });
+          Alert.alert('Succès', 'Vous êtes commissaire sur cette compétition.');
+        } else if (rejectToken) {
+          await teamService.rejectStaffInvitationByToken(rejectToken);
+          queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
+          Alert.alert('Succès', 'Invitation commissaire refusée.');
+        }
+      } catch (error: any) {
+        Alert.alert(
+          'Erreur',
+          error.response?.data?.message || error.message || "Impossible de traiter le lien d'invitation."
+        );
+      } finally {
+        navigation.setParams({ acceptStaff: undefined, rejectStaff: undefined } as never);
+      }
+    };
+    run();
+  }, [route.params, queryClient, navigation]);
+
+  const rejectStaffMutation = useMutation({
+    mutationFn: (invitationId: number) => teamService.rejectStaffInvitation(invitationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-invitations'] });
+      Alert.alert('Succès', 'Invitation commissaire refusée.');
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || "Impossible de refuser l'invitation.");
     },
   });
 
@@ -137,6 +202,7 @@ export default function InvitationsScreen() {
   }
 
   const invitations: Invitation[] = data?.invitations || [];
+  const staffInvitations = data?.staffInvitations || [];
 
   return (
     <>
@@ -146,7 +212,7 @@ export default function InvitationsScreen() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
       >
         <View style={styles.content}>
-          {invitations.length === 0 ? (
+          {invitations.length === 0 && staffInvitations.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>Aucune invitation en attente</Text>
               <Text style={styles.emptySubtext}>
@@ -154,7 +220,59 @@ export default function InvitationsScreen() {
               </Text>
             </View>
           ) : (
-            invitations.map((invitation) => (
+            <>
+            {staffInvitations.map((invitation: any) => (
+              <View key={`staff-${invitation.id}`} style={styles.invitationCard}>
+                <View style={styles.invitationHeader}>
+                  <Text style={styles.teamName}>{invitation.competition?.name}</Text>
+                  <Text style={styles.invitationDate}>
+                    {formatDateTime(invitation.createdAt)}
+                  </Text>
+                </View>
+                <View style={styles.invitationBody}>
+                  <Text style={styles.invitationText}>
+                    <Text style={styles.invitedByText}>
+                      {invitation.invitedBy?.firstname} {invitation.invitedBy?.lastname}
+                    </Text>
+                    {' vous invite comme commissaire'}
+                  </Text>
+                </View>
+                <View style={styles.invitationActions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.rejectButton]}
+                    onPress={() =>
+                      Alert.alert('Refuser', 'Refuser d’être commissaire ?', [
+                        { text: 'Annuler', style: 'cancel' },
+                        {
+                          text: 'Refuser',
+                          style: 'destructive',
+                          onPress: () => rejectStaffMutation.mutate(invitation.id),
+                        },
+                      ])
+                    }
+                    disabled={rejectStaffMutation.isPending}
+                  >
+                    <Text style={styles.rejectButtonText}>Refuser</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.acceptButton]}
+                    onPress={() =>
+                      Alert.alert('Accepter', `Devenir commissaire sur « ${invitation.competition?.name} » ?`, [
+                        { text: 'Annuler', style: 'cancel' },
+                        {
+                          text: 'Accepter',
+                          onPress: () => acceptStaffMutation.mutate(invitation.id),
+                        },
+                      ])
+                    }
+                    disabled={acceptStaffMutation.isPending}
+                  >
+                    <Text style={styles.acceptButtonText}>Accepter</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+            {invitations.map((invitation) => (
               <View key={invitation.id} style={styles.invitationCard}>
                 <View style={styles.invitationHeader}>
                   <Text style={styles.teamName}>{invitation.team.name}</Text>
@@ -190,7 +308,8 @@ export default function InvitationsScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            ))
+            ))}
+            </>
           )}
         </View>
       </ScrollView>

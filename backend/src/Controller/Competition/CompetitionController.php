@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use App\Service\DateTimeHelper;
 use App\Service\EmailService;
 use App\Service\CompetitionSnapshotService;
+use App\Service\CompetitionAccessService;
 use App\Service\NotificationService;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Entity\Competition\ScheduledPause;
@@ -26,6 +27,7 @@ use App\Repository\Competition\CompetitionSpeciesRepository;
 use App\Service\ReglementImageStorageService;
 use App\Repository\CompetitionTeamSnapshotRepository;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
@@ -35,6 +37,7 @@ class CompetitionController extends AbstractController
         private readonly ReglementImageStorageService $reglementStorage,
         private readonly CompetitionTeamSnapshotRepository $snapshotRepository,
         private readonly CompetitionSnapshotService $snapshotService,
+        private readonly CompetitionAccessService $competitionAccess,
     ) {
     }
 
@@ -79,12 +82,14 @@ class CompetitionController extends AbstractController
     public function adminList(CompetitionRepository $repository): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $user = $this->getUser();
+            $this->competitionAccess->denyUnlessOrganizer($user);
 
-            $competitions = $repository->createQueryBuilder('c')
-                ->select('c')
-                ->getQuery()
-                ->getResult();
+            $qb = $repository->createQueryBuilder('c')->select('c');
+            if (!$this->competitionAccess->isAdmin($user)) {
+                $qb->andWhere('c.createdBy = :creator')->setParameter('creator', $user);
+            }
+            $competitions = $qb->getQuery()->getResult();
 
             // Transformer les données pour éviter les références circulaires
             $data = array_map(function ($competition) {
@@ -105,6 +110,8 @@ class CompetitionController extends AbstractController
             return $this->json([
                 'competitions' => $data
             ]);
+        } catch (AccessDeniedHttpException $e) {
+            throw $e;
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la récupération des compétitions (admin)', [
                 'error' => $e->getMessage(),
@@ -308,6 +315,8 @@ class CompetitionController extends AbstractController
         
         $user = $this->getUser();
         $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
+        $canManage = $user && $this->competitionAccess->canManageCompetition($user, $competition);
+        $canJudge = $user && $this->competitionAccess->canJudgeCompetition($user, $competition);
         
         // Aperçu : les visiteurs non connectés peuvent lire la fiche (règlement, espèces, dates).
         // Le classement / scores reste filtré ci-dessous (équipes vides si classement non public).
@@ -322,7 +331,7 @@ class CompetitionController extends AbstractController
         // La visibilité du classement dépend de isRankingPublic
         // Si l'admin publie le classement (isRankingPublic = true), tout le monde peut voir, même si la compétition n'est pas terminée
         // Sinon, seuls les admins peuvent voir le classement complet
-        $rankingVisible = $competition->getIsRankingPublic() || $isAdmin;
+        $rankingVisible = $competition->getIsRankingPublic() || $isAdmin || $canManage || $canJudge;
         
         if ($rankingVisible) {
             // Pour les compétitions terminées, utiliser les snapshots (état figé)
@@ -464,6 +473,9 @@ class CompetitionController extends AbstractController
             'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
             'maxFishCounted' => $competition->getMaxFishCounted(),
             'isRegistered' => $isRegistered,
+            'canManage' => (bool) $canManage,
+            'canJudge' => (bool) $canJudge,
+            'isOfficial' => $user && $this->competitionAccess->isOfficialOnCompetition($user, $competition),
             'myTeamId' => $myTeamId,
             'enrolledTeamsCount' => ($isEnded && $snapshotService->hasSnapshots($competition))
                 ? count($snapshotService->getSnapshotsForCompetition($competition))
@@ -513,8 +525,6 @@ class CompetitionController extends AbstractController
     public function update(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager, CompetitionSnapshotService $snapshotService, NotificationService $notificationService): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $repository->find($id);
             if (!$competition) {
                 return $this->json([
@@ -522,6 +532,7 @@ class CompetitionController extends AbstractController
                     'message' => 'Compétition non trouvée'
                 ], 404);
             }
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             $data = json_decode($request->getContent(), true);
 
@@ -726,12 +737,11 @@ class CompetitionController extends AbstractController
     public function uploadReglementImage(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $repository->find($id);
             if (!$competition) {
                 return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
             }
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             $source = $this->getUploadedImageSource($request);
             if ($source === null) {
@@ -768,12 +778,11 @@ class CompetitionController extends AbstractController
     public function deleteReglementImage(int $id, int $index, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $repository->find($id);
             if (!$competition) {
                 return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
             }
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             $paths = $competition->getReglementImagePaths() ?? [];
             if (!isset($paths[$index])) {
@@ -803,12 +812,11 @@ class CompetitionController extends AbstractController
     public function uploadCoverImage(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $repository->find($id);
             if (!$competition) {
                 return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
             }
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             $source = $this->getUploadedImageSource($request);
             if ($source === null) {
@@ -844,12 +852,11 @@ class CompetitionController extends AbstractController
     public function deleteCoverImage(int $id, CompetitionRepository $repository, EntityManagerInterface $entityManager): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $repository->find($id);
             if (!$competition) {
                 return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
             }
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             $pathToDelete = $competition->getCoverImagePath();
             $competition->setCoverImagePath(null);
@@ -870,7 +877,7 @@ class CompetitionController extends AbstractController
     public function delete(Competition $competition, EntityManagerInterface $entityManager): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             // Vérifier s'il y a des équipes liées
             if (!$competition->getTeams()->isEmpty()) {
@@ -904,11 +911,15 @@ class CompetitionController extends AbstractController
     public function create(Request $request, EntityManagerInterface $entityManager, NotificationService $notificationService): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
+            $this->competitionAccess->denyUnlessCreate($this->getUser());
 
             $data = json_decode($request->getContent(), true);
 
             $competition = new Competition();
+            $creator = $this->getUser();
+            if ($creator instanceof \App\Entity\Security\User) {
+                $competition->setCreatedBy($creator);
+            }
             $competition->setName($data['name']);
             $competition->setType($data['type']);
             $competition->setStartDate(DateTimeHelper::parseParisToUtc((string) $data['startDate']));
@@ -1045,16 +1056,19 @@ class CompetitionController extends AbstractController
                 $entityManager->flush();
             }
 
-            try {
-                $notificationService->notifyCompetitionCreated(
-                    $competition->getName(),
-                    (int) $competition->getId()
-                );
-            } catch (\Throwable $e) {
-                $this->logger->error('Erreur lors de la notification de nouvelle compétition', [
-                    'competitionId' => $competition->getId(),
-                    'error' => $e->getMessage(),
-                ]);
+            $notifyUsers = filter_var($data['notifyUsers'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($notifyUsers) {
+                try {
+                    $notificationService->notifyCompetitionCreated(
+                        $competition->getName(),
+                        (int) $competition->getId()
+                    );
+                } catch (\Throwable $e) {
+                    $this->logger->error('Erreur lors de la notification de nouvelle compétition', [
+                        'competitionId' => $competition->getId(),
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return $this->json([
@@ -1121,6 +1135,13 @@ class CompetitionController extends AbstractController
                     'success' => false,
                     'message' => 'Compétition non trouvée'
                 ], 404);
+            }
+
+            if ($this->competitionAccess->isOfficialOnCompetition($user, $competition)) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le créateur et les commissaires de cette compétition ne peuvent pas s\'y inscrire.',
+                ], 403);
             }
 
             // Définir la date actuelle une seule fois
@@ -1380,12 +1401,12 @@ class CompetitionController extends AbstractController
                 ], 404);
             }
 
-            // Vérifier les permissions : admin OU classement public
+            // Classement public, ou créateur / commissaire / admin de cette compétition
             $user = $this->getUser();
-            $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
             $isRankingPublic = $competition->getIsRankingPublic();
-            
-            if (!$isAdmin && !$isRankingPublic) {
+            $canSeePrivateStats = $this->competitionAccess->canJudgeCompetition($user, $competition);
+
+            if (!$isRankingPublic && !$canSeePrivateStats) {
                 return $this->json([
                     'success' => false,
                     'message' => 'Les statistiques ne sont pas encore disponibles'
@@ -1466,8 +1487,9 @@ class CompetitionController extends AbstractController
                         'firstname' => $catch->getCaughtBy()->getFirstname(),
                         'lastname' => $catch->getCaughtBy()->getLastname(),
                     ] : null,
+                    'recordedBy' => $catch->serializeRecordedBy(),
                     'points' => $catch->calculatePoints(),
-                    'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
                     'latitude' => $catch->getLatitude(),
                     'longitude' => $catch->getLongitude(),
                 ];
@@ -1505,8 +1527,9 @@ class CompetitionController extends AbstractController
                             'firstname' => $catch->getCaughtBy()->getFirstname(),
                             'lastname' => $catch->getCaughtBy()->getLastname(),
                         ] : null,
+                        'recordedBy' => $catch->serializeRecordedBy(),
                         'points' => $catch->calculatePoints(),
-                        'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                        'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
                         'latitude' => $catch->getLatitude(),
                         'longitude' => $catch->getLongitude(),
                     ];
@@ -1546,8 +1569,6 @@ class CompetitionController extends AbstractController
     public function togglePause(int $id, Request $request, CompetitionRepository $repository, EntityManagerInterface $entityManager, NotificationService $notificationService): JsonResponse
     {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $repository->find($id);
             if (!$competition) {
                 return $this->json([
@@ -1555,6 +1576,7 @@ class CompetitionController extends AbstractController
                     'message' => 'Compétition non trouvée'
                 ], 404);
             }
+            $this->competitionAccess->denyUnlessManage($this->getUser(), $competition);
 
             $data = json_decode($request->getContent(), true);
             $isPaused = $data['isPaused'] ?? !$competition->getIsPaused();

@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const appJson = require('./app.json');
 
 function readMapsKeyFromGoogleServices() {
   try {
@@ -19,8 +18,8 @@ function readMapsKeyFromGoogleServices() {
  * Clé Maps lue au build (EAS GOOGLE_MAPS_API_KEY, sinon clé Android firebase).
  * Sans clé, l’APK Android affiche un fond vide avec seulement les pins.
  */
-module.exports = () => {
-  const expo = JSON.parse(JSON.stringify(appJson.expo));
+module.exports = ({ config }) => {
+  const expo = JSON.parse(JSON.stringify(config));
   const mapsKey = String(
     process.env.GOOGLE_MAPS_API_KEY ||
       process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ||
@@ -59,5 +58,5 @@ module.exports = () => {
 
   expo.plugins = [...(expo.plugins || []), './plugins/withGoogleMapsApiKey'];
 
-  return { expo };
+  return expo;
 };

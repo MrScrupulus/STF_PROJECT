@@ -5,6 +5,7 @@ namespace App\Controller\Competition;
 use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\TeamRepository;
 use App\Repository\Competition\FishCatchRepository;
+use App\Service\CompetitionAccessService;
 use App\Service\CompetitionSnapshotService;
 use App\Service\PdfChartImageService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,6 +20,7 @@ class CompetitionPdfController extends AbstractController
     public function __construct(
         private Environment $twig,
         private PdfChartImageService $chartImageService,
+        private CompetitionAccessService $access,
     ) {
     }
     #[Route('/{id}/pdf', name: 'app_admin_competition_pdf', methods: ['GET'])]
@@ -30,12 +32,11 @@ class CompetitionPdfController extends AbstractController
         CompetitionSnapshotService $snapshotService
     ): Response {
         try {
-            $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
             $competition = $competitionRepo->find($id);
             if (!$competition) {
                 throw $this->createNotFoundException('Compétition non trouvée');
             }
+            $this->access->denyUnlessManage($this->getUser(), $competition);
 
         // Récupérer toutes les équipes triées par score
         // Pour les compétitions terminées, utiliser les snapshots (état figé)

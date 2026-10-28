@@ -2,6 +2,7 @@
 
 namespace App\Entity\Competition;
 
+use App\Entity\Security\User;
 use App\Repository\Competition\CompetitionRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -90,6 +91,13 @@ class Competition
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $maxFishCounted = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $createdBy = null;
+
+    #[ORM\OneToMany(mappedBy: 'competition', targetEntity: CompetitionStaff::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $staff;
+
     #[ORM\OneToMany(mappedBy: 'competition', targetEntity: Team::class)]
     private Collection $teams;
 
@@ -104,6 +112,7 @@ class Competition
         $this->teams = new ArrayCollection();
         $this->perimeters = new ArrayCollection();
         $this->competitionSpecies = new ArrayCollection();
+        $this->staff = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -420,6 +429,44 @@ class Competition
         if ($this->competitionSpecies->removeElement($competitionSpecies)) {
             if ($competitionSpecies->getCompetition() === $this) {
                 $competitionSpecies->setCompetition(null);
+            }
+        }
+        return $this;
+    }
+
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CompetitionStaff>
+     */
+    public function getStaff(): Collection
+    {
+        return $this->staff;
+    }
+
+    public function addStaff(CompetitionStaff $staff): static
+    {
+        if (!$this->staff->contains($staff)) {
+            $this->staff->add($staff);
+            $staff->setCompetition($this);
+        }
+        return $this;
+    }
+
+    public function removeStaff(CompetitionStaff $staff): static
+    {
+        if ($this->staff->removeElement($staff)) {
+            if ($staff->getCompetition() === $this) {
+                $staff->setCompetition(null);
             }
         }
         return $this;

@@ -97,7 +97,7 @@ export default function AdminDashboardScreen() {
   if (loadingCatches || loadingCompetitions) {
     return (
       <>
-        <Header title="Dashboard Admin" showBack={true} showMenu={true} />
+        <Header title="Gestion des compétitions" showBack={true} showMenu={true} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={theme.accent} />
         </View>
@@ -123,7 +123,7 @@ export default function AdminDashboardScreen() {
   const tiles: { label: string; hint: string; icon: AppIconName; onPress: () => void }[] = [
     {
       label: 'Compétitions',
-      hint: 'Toutes les manches',
+      hint: 'Vos manches',
       icon: 'trophy',
       onPress: () => (navigation as any).navigate('CompetitionsList'),
     },
@@ -149,15 +149,15 @@ export default function AdminDashboardScreen() {
 
   return (
     <>
-      <Header title="Dashboard Admin" showBack={true} showMenu={true} />
+      <Header title="Gestion des compétitions" showBack={true} showMenu={true} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.identityCard}>
           <View style={styles.avatar}>
             <FaIcon name="key" size={22} color={theme.onAccent} />
           </View>
           <View style={styles.identityText}>
-            <Text style={styles.displayName}>Administration</Text>
-            <Text style={styles.identityHint}>Validation, compétitions et exports PDF</Text>
+            <Text style={styles.displayName}>Gestion des compétitions</Text>
+            <Text style={styles.identityHint}>Création, validation, pénalités et exports PDF</Text>
           </View>
         </View>
 

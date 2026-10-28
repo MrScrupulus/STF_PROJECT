@@ -58,4 +58,9 @@ export const competitionsService = {
     const response = await api.post(`/api/competitions/${competitionId}/teams/unregister`);
     return response;
   },
+
+  getStaff: (id) => api.get(`/api/competitions/${id}/staff`),
+
+  inviteCommissaire: (id, email) =>
+    api.post(`/api/competitions/${id}/staff-invitations`, { email, role: "judge" }),
 };

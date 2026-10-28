@@ -18,6 +18,7 @@ import { adminService } from '../services/adminService';
 import { authService } from '../services/authService';
 import { formatDateTime } from '../utils/dateUtils';
 import { resolvePhotoUri } from '../utils/photoUrl';
+import { recordedByLine } from '../utils/recordedBy';
 import {
   fishSizeKeyboardType,
   parseFishSizeCm,
@@ -1070,6 +1071,12 @@ function CatchCard({
             </Text>
           </View>
         )}
+        {recordedByLine(catchItem.recordedBy) ? (
+          <View style={styles.catchDetailRow}>
+            <Text style={styles.catchLabel}>Saisie :</Text>
+            <Text style={styles.catchValue}>{recordedByLine(catchItem.recordedBy)}</Text>
+          </View>
+        ) : null}
         {catchItem.comment && (
           <View style={styles.catchComment}>
             <Text style={styles.catchLabel}>Commentaire :</Text>

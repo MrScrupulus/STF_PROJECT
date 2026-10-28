@@ -6,6 +6,7 @@ namespace App\Controller\Security;
 
 use App\Repository\Security\UserRepository;
 use App\Repository\Security\PasswordResetTokenRepository;
+use App\Service\CompetitionStaffInvitationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -21,6 +22,7 @@ final class RedirectController extends AbstractController
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly PasswordResetTokenRepository $passwordResetTokenRepository,
+        private readonly CompetitionStaffInvitationService $staffInvitations,
     ) {}
 
     /**
@@ -236,6 +238,44 @@ HTML;
         return new RedirectResponse($frontendUrl);
     }
 
+    #[Route('/redirect/staff-invitations/{token}/accept', name: 'redirect_staff_invitation_accept', methods: ['GET'])]
+    public function redirectStaffInvitationAccept(string $token, Request $request): Response
+    {
+        return $this->redirectStaffInvitation($token, 'accept', $request);
+    }
+
+    #[Route('/redirect/staff-invitations/{token}/reject', name: 'redirect_staff_invitation_reject', methods: ['GET'])]
+    public function redirectStaffInvitationReject(string $token, Request $request): Response
+    {
+        return $this->redirectStaffInvitation($token, 'reject', $request);
+    }
+
+    private function redirectStaffInvitation(string $token, string $action, Request $request): Response
+    {
+        $result = $action === 'reject'
+            ? $this->staffInvitations->rejectByToken($token)
+            : $this->staffInvitations->acceptByToken($token);
+
+        $tokenEncoded = rawurlencode($token);
+        $deepLink = 'stf://staff-invitations/' . $action . '/' . $tokenEncoded;
+        $title = $result['ok']
+            ? ($action === 'reject' ? 'Invitation refusée' : 'Vous êtes commissaire')
+            : 'Invitation commissaire';
+
+        if ($this->isMobileDevice($request->headers->get('User-Agent', ''))) {
+            return $this->mobileRedirectPage(
+                $title,
+                $result['message'] . ($result['ok'] ? ' Ouvrez l’application Street Fishing pour continuer.' : ''),
+                $deepLink,
+                '',
+                'Ouvrir l’application',
+                ''
+            );
+        }
+
+        return $this->htmlResponse($title, $result['message'], $result['ok']);
+    }
+
     /**
      * Page HTML pour mobile : ouvre l’app (stf://) + repli navigateur.
      */
@@ -253,7 +293,10 @@ HTML;
         $titleEsc = htmlspecialchars($title, \ENT_QUOTES, 'UTF-8');
         $messageEsc = htmlspecialchars($message, \ENT_QUOTES, 'UTF-8');
         $linkWebEsc = htmlspecialchars($linkWeb, \ENT_QUOTES, 'UTF-8');
-        $deepLinkJs = json_encode($deepLink, \JSON_UNESCAPED_SLASHES | \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_THROW_ON_ERROR);
+        $webHiddenClass = $webUrl === '' ? ' hidden' : '';
+        $autoOpenScript = $webUrl === ''
+            ? ''
+            : '<script>setTimeout(function () { window.location.href = ' . json_encode($deepLink, \JSON_UNESCAPED_SLASHES | \JSON_HEX_TAG | \JSON_HEX_AMP | \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_THROW_ON_ERROR) . '; }, 400);</script>';
 
         $html = <<<HTML
 <!DOCTYPE html>
@@ -270,6 +313,7 @@ HTML;
         a { display: block; text-align: center; padding: 14px 20px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-bottom: 12px; }
         .btn-app { background: #000; color: #fff; }
         .btn-web { background: transparent; color: #007AFF; border: 2px solid #007AFF; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -277,11 +321,9 @@ HTML;
         <h1>{$titleEsc}</h1>
         <p>{$messageEsc}</p>
         <a href="{$deepLinkEsc}" class="btn-app" id="open-app">{$buttonAppEsc}</a>
-        <a href="{$webUrlEsc}" class="btn-web">{$linkWebEsc}</a>
+        <a href="{$webUrlEsc}" class="btn-web{$webHiddenClass}">{$linkWebEsc}</a>
     </div>
-    <script>
-        setTimeout(function () { window.location.href = {$deepLinkJs}; }, 400);
-    </script>
+    {$autoOpenScript}
 </body>
 </html>
 HTML;

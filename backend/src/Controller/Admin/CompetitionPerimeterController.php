@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Competition\CompetitionPerimeter;
 use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\CompetitionPerimeterRepository;
+use App\Service\CompetitionAccessService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,7 +18,8 @@ class CompetitionPerimeterController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly CompetitionPerimeterRepository $perimeterRepository,
-        private readonly CompetitionRepository $competitionRepository
+        private readonly CompetitionRepository $competitionRepository,
+        private readonly CompetitionAccessService $access,
     ) {
     }
 
@@ -27,8 +29,6 @@ class CompetitionPerimeterController extends AbstractController
     #[Route('', name: 'admin_perimeters_list', methods: ['GET'])]
     public function list(int $competitionId): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $competition = $this->competitionRepository->find($competitionId);
         if (!$competition) {
             return $this->json([
@@ -36,6 +36,7 @@ class CompetitionPerimeterController extends AbstractController
                 'message' => 'Compétition non trouvée'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $competition);
 
         $perimeters = $this->perimeterRepository->findBy(
             ['competition' => $competition],
@@ -63,8 +64,6 @@ class CompetitionPerimeterController extends AbstractController
     #[Route('', name: 'admin_perimeters_create', methods: ['POST'])]
     public function create(int $competitionId, Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $competition = $this->competitionRepository->find($competitionId);
         if (!$competition) {
             return $this->json([
@@ -72,6 +71,7 @@ class CompetitionPerimeterController extends AbstractController
                 'message' => 'Compétition non trouvée'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $competition);
 
         $data = json_decode($request->getContent(), true);
 
@@ -142,8 +142,6 @@ class CompetitionPerimeterController extends AbstractController
     #[Route('/{id}', name: 'admin_perimeters_update', methods: ['PUT'])]
     public function update(int $competitionId, int $id, Request $request): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $perimeter = $this->perimeterRepository->find($id);
         if (!$perimeter || $perimeter->getCompetition()->getId() !== $competitionId) {
             return $this->json([
@@ -151,6 +149,7 @@ class CompetitionPerimeterController extends AbstractController
                 'message' => 'Périmètre non trouvé'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $perimeter->getCompetition());
 
         $data = json_decode($request->getContent(), true);
 
@@ -192,8 +191,6 @@ class CompetitionPerimeterController extends AbstractController
     #[Route('/{id}', name: 'admin_perimeters_delete', methods: ['DELETE'])]
     public function delete(int $competitionId, int $id): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
         $perimeter = $this->perimeterRepository->find($id);
         if (!$perimeter || $perimeter->getCompetition()->getId() !== $competitionId) {
             return $this->json([
@@ -201,6 +198,7 @@ class CompetitionPerimeterController extends AbstractController
                 'message' => 'Périmètre non trouvé'
             ], 404);
         }
+        $this->access->denyUnlessManage($this->getUser(), $perimeter->getCompetition());
 
         $this->entityManager->remove($perimeter);
         $this->entityManager->flush();

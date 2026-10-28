@@ -11,6 +11,7 @@ use App\Service\CatchPhotoStorageService;
 use App\Service\CompetitionSnapshotService;
 use App\Service\NotificationService;
 use App\Service\GeolocationService;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -70,7 +71,7 @@ class CompetitionFishCatchController extends AbstractController
                 'comment' => $catch->getComment(),
                 'isValidated' => $catch->isValidated(),
                 'rejectionReason' => $catch->getRejectionReason(),
-                'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
                 'latitude' => $catch->getLatitude(),
                 'longitude' => $catch->getLongitude(),
                 'team' => [
@@ -82,6 +83,7 @@ class CompetitionFishCatchController extends AbstractController
                     'firstname' => $catch->getCaughtBy()->getFirstname(),
                     'lastname' => $catch->getCaughtBy()->getLastname(),
                 ] : null,
+                'recordedBy' => $catch->serializeRecordedBy(),
                 'competition' => $catch->getCompetition() ? [
                     'id' => $catch->getCompetition()->getId(),
                     'name' => $catch->getCompetition()->getName(),
@@ -272,7 +274,7 @@ class CompetitionFishCatchController extends AbstractController
                     'photoUrl' => $photoStorage->resolvePhotoUrl($catch->getPhotoUrl()),
                     'comment' => $catch->getComment(),
                     'isValidated' => $catch->isValidated(),
-                    'createdAt' => $catch->getCreatedAt()->format('Y-m-d H:i:s'),
+                    'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
                 ]
             ], 201);
         } catch (\Exception $e) {

@@ -6,6 +6,7 @@ use App\Entity\Competition\FishCatch;
 use App\Entity\Security\User;
 use App\Repository\Competition\FishCatchRepository;
 use App\Service\CatchPhotoStorageService;
+use App\Service\DateTimeHelper;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -64,7 +65,7 @@ class MeStatsController extends AbstractController
                 $speciesStats[$speciesId]['count']++;
                 $speciesStats[$speciesId]['points'] += $points;
 
-                $createdAt = $catch->getCreatedAt()->format('Y-m-d H:i:s');
+                $createdAt = DateTimeHelper::formatParis($catch->getCreatedAt());
                 $competitionPayload = $competition ? [
                     'id' => $competition->getId(),
                     'name' => $competition->getName(),
