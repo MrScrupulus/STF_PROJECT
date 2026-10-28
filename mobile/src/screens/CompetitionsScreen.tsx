@@ -15,6 +15,7 @@ import { competitionsService, Competition } from '../services/competitionsServic
 import { formatCompetitionDateRange } from '../utils/dateUtils';
 import { getCompetitionLifecycleStatus } from '../utils/competitionStatus';
 import Header from '../components/Header';
+import FaIcon from '../components/FaIcon';
 import { useThemeColors } from '../contexts/ThemeContext';
 import { type ThemeColors } from '../theme';
 
@@ -100,8 +101,11 @@ export default function CompetitionsScreen() {
 
 
   const renderCompetition = ({ item }: { item: Competition }) => {
-    const status = getCompetitionStatus(item.startDate, item.endDate, item.isPaused);
-    const isEnded = status.isEnded;
+    const locked = !!(item as any).isPrivateLocked;
+    const status = item.startDate && item.endDate
+      ? getCompetitionStatus(item.startDate, item.endDate, item.isPaused)
+      : null;
+    const isEnded = !!status?.isEnded;
     const handlePress = () => {
       (navigation as any).navigate('CompetitionDetail', { id: item.id });
     };
@@ -124,29 +128,41 @@ export default function CompetitionsScreen() {
           <View style={styles.cardTitleBlock}>
             <Text style={styles.cardTitle} numberOfLines={2}>{item.name}</Text>
             <View style={styles.badgesContainer}>
-              {item.isRegistered && !isEnded && (
+              {(item as any).isPrivate ? (
+                <View style={styles.privateBadge}>
+                  <FaIcon name="lock" size={11} color={theme.onAccent} />
+                  <Text style={styles.privateBadgeText}>Privée</Text>
+                </View>
+              ) : null}
+              {!locked && item.isRegistered && !isEnded && (
                 <View style={styles.registeredBadge}>
                   <Text style={styles.registeredBadgeText}>Inscrit</Text>
                 </View>
               )}
-              {item.isRegistered && isEnded && (
+              {!locked && item.isRegistered && isEnded && (
                 <View style={styles.participatedBadge}>
                   <Text style={styles.participatedBadgeText}>Participé</Text>
                 </View>
               )}
-              <View style={[styles.statusBadge, status.style]}>
-                <Text style={styles.statusBadgeText}>{status.text}</Text>
-              </View>
+              {!locked && status ? (
+                <View style={[styles.statusBadge, status.style]}>
+                  <Text style={styles.statusBadgeText}>{status.text}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </View>
-        <View style={styles.cardMetaRow}>
-          <Text style={styles.cardDate}>
-            {formatCompetitionDateRange(item.startDate, item.endDate)}
-          </Text>
-          <Text style={styles.moreInfoText}>+ d'infos</Text>
-        </View>
-        {item.teams && item.teams.length > 0 ? (
+        {!locked ? (
+          <View style={styles.cardMetaRow}>
+            <Text style={styles.cardDate}>
+              {formatCompetitionDateRange(item.startDate, item.endDate)}
+            </Text>
+            <Text style={styles.moreInfoText}>+ d'infos</Text>
+          </View>
+        ) : (
+          <Text style={styles.privateHint}>Sur invitation</Text>
+        )}
+        {!locked && item.teams && item.teams.length > 0 ? (
           <Text style={styles.cardTeams}>{item.teams.length} équipe(s)</Text>
         ) : null}
       </TouchableOpacity>
@@ -440,6 +456,25 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#92400e',
+  },
+  privateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: '#4b5563',
+  },
+  privateBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.onAccent,
+  },
+  privateHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: theme.textMuted,
   },
   cardMetaRow: {
     flexDirection: 'row',

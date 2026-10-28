@@ -22,8 +22,10 @@ export default function EditCompetition() {
     endDate: "",
     teamSize: "",
     type: "street",
-    maxParticipants: "",
+    maxParticipants: "16",
     hasNoLimit: false,
+    isPaid: false,
+    isPrivate: false,
     description: "",
     reglement: "",
     maxFishCounted: "",
@@ -39,6 +41,7 @@ export default function EditCompetition() {
   const [coverImageUrl, setCoverImageUrl] = useState(null);
   const [coverUploading, setCoverUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
 
   useEffect(() => {
     const fetchCompetition = async () => {
@@ -73,8 +76,10 @@ export default function EditCompetition() {
           endDate: formatDateForInput(compData.endDate),
           teamSize: compData.teamSize?.toString() || "",
           type: compData.type || "street",
-          maxParticipants: compData.maxParticipants?.toString() || "",
+          maxParticipants: compData.hasNoLimit ? "" : (compData.maxParticipants?.toString() || "16"),
           hasNoLimit: compData.hasNoLimit || false,
+          isPaid: !!compData.isPaid,
+          isPrivate: !!compData.isPrivate,
           description: compData.description || "",
           reglement: compData.reglement || "",
           isRankingPublic: compData.isRankingPublic || false,
@@ -87,6 +92,7 @@ export default function EditCompetition() {
             : "",
           quotaBonusEnabled: compData.quotaBonusEnabled || false,
         });
+        setAccessCode(compData.accessCode || "");
         setReglementImageUrls(Array.isArray(compData.reglementImageUrls) ? compData.reglementImageUrls : (compData.reglementImageUrl ? [compData.reglementImageUrl] : []));
         setCoverImageUrl(compData.coverImageUrl || null);
       } catch (error) {
@@ -129,7 +135,12 @@ export default function EditCompetition() {
         startDate: toBackendDate(formData.startDate),
         endDate: toBackendDate(formData.endDate),
         teamSize: parseInt(formData.teamSize),
-        maxParticipants: formData.hasNoLimit ? null : parseInt(formData.maxParticipants),
+        maxParticipants: formData.isPaid
+          ? (formData.hasNoLimit ? null : parseInt(formData.maxParticipants, 10))
+          : Math.min(16, parseInt(formData.maxParticipants || "16", 10)),
+        hasNoLimit: formData.isPaid ? formData.hasNoLimit : false,
+        isPaid: formData.isPaid,
+        isPrivate: formData.isPrivate,
         maxFishCounted,
         reglement: formData.reglement?.trim() || null,
         newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
@@ -320,26 +331,78 @@ export default function EditCompetition() {
             <div className={styles["competition-create__checkbox-wrapper"]}>
               <input
                 type="checkbox"
-                checked={formData.hasNoLimit}
+                checked={formData.isPaid}
                 onChange={(e) =>
-                  setFormData({ ...formData, hasNoLimit: e.target.checked })
+                  setFormData({
+                    ...formData,
+                    isPaid: e.target.checked,
+                    hasNoLimit: e.target.checked,
+                    maxParticipants: e.target.checked ? formData.maxParticipants : "16",
+                  })
                 }
-                id="hasNoLimit"
+                id="isPaid"
               />
               <label
-                htmlFor="hasNoLimit"
+                htmlFor="isPaid"
                 className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
-                Pas de limite de participants
-                <HelpIcon text={COMPETITION_HELP.hasNoLimit} />
+                Manche payante
+                <HelpIcon text={COMPETITION_HELP.isPaid} />
               </label>
             </div>
           </div>
 
-          {!formData.hasNoLimit && (
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
+                checked={formData.isPrivate}
+                onChange={(e) =>
+                  setFormData({ ...formData, isPrivate: e.target.checked })
+                }
+                id="isPrivate"
+              />
+              <label
+                htmlFor="isPrivate"
+                className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
+              >
+                Manche privée
+                <HelpIcon text={COMPETITION_HELP.isPrivate} />
+              </label>
+            </div>
+            {formData.isPrivate ? (
+              <p className={styles["competition-create__help_text"]}>
+                Invitez chaque pêcheur par e-mail depuis la fiche. Le code est lié à l’adresse, pas partageable.
+              </p>
+            ) : null}
+          </div>
+
+          {formData.isPaid ? (
+            <div className={styles["competition-create__group"]}>
+              <div className={styles["competition-create__checkbox-wrapper"]}>
+                <input
+                  type="checkbox"
+                  checked={formData.hasNoLimit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, hasNoLimit: e.target.checked })
+                  }
+                  id="hasNoLimit"
+                />
+                <label
+                  htmlFor="hasNoLimit"
+                  className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
+                >
+                  Pas de limite de pêcheurs
+                  <HelpIcon text={COMPETITION_HELP.hasNoLimit} />
+                </label>
+              </div>
+            </div>
+          ) : null}
+
+          {(!formData.isPaid || !formData.hasNoLimit) && (
             <div className={styles["competition-create__group"]}>
               <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
-                Nombre maximum de participants
+                {formData.isPaid ? "Nombre maximum de pêcheurs" : "Plafond de pêcheurs (max 16)"}
                 <HelpIcon text={COMPETITION_HELP.maxParticipants} />
               </label>
               <input
@@ -350,6 +413,7 @@ export default function EditCompetition() {
                 }
                 className={styles["competition-create__input"]}
                 min="1"
+                max={formData.isPaid ? undefined : 16}
               />
             </div>
           )}

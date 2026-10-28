@@ -17,7 +17,8 @@ export const teamService = {
   },
   getById: async (competitionId, id) => {
     try {
-      const response = await api.get(`/api/teams/${id}`);
+      const q = competitionId ? `?competitionId=${encodeURIComponent(competitionId)}` : "";
+      const response = await api.get(`/api/teams/${id}${q}`);
       return response;
     } catch (error) {
       console.error("Error getting team:", error);
@@ -68,12 +69,13 @@ export const teamService = {
       throw error;
     }
   },
-  registerToCompetition: async (teamId, competitionId) => {
+  registerToCompetition: async (teamId, competitionId, accessCode) => {
     try {
       const response = await api.post(
         `/api/competitions/${competitionId}/teams/register`,
         {
           teamId: teamId,
+          accessCode: accessCode || undefined,
         }
       );
       return response;

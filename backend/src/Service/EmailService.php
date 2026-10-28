@@ -13,6 +13,7 @@ use App\Entity\Security\User;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\CompetitionStaffInvitation;
+use App\Entity\Competition\CompetitionParticipantInvitation;
 use App\Entity\Competition\CreationCredit;
 use App\Repository\NotificationPreferencesRepository;
 use Psr\Log\LoggerInterface;
@@ -320,6 +321,43 @@ HTML;
             $this->logger->info('Email invitation commissaire envoyé', ['to' => $to]);
         } catch (\Throwable $e) {
             $this->logger->error('ERREUR invitation commissaire', [
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    public function sendParticipantInvitationEmail(CompetitionParticipantInvitation $invitation): void
+    {
+        $to = $invitation->getEmail();
+        $competition = $invitation->getCompetition();
+        $competitionName = htmlspecialchars($competition?->getName() ?? 'une manche privée');
+        $code = htmlspecialchars($invitation->getCode());
+        $id = (int) $competition?->getId();
+        $query = $invitation->getCode() !== '' ? '?code=' . rawurlencode($invitation->getCode()) : '';
+        $url = $this->appRedirect('competitions/' . $id . $query);
+        $invitee = $invitation->getInvitedUser();
+        $hello = $invitee ? $this->hello($invitee) : 'Bonjour,';
+        $inviter = $invitation->getInvitedBy();
+        $inviterName = htmlspecialchars(trim(($inviter?->getFirstname() ?? '') . ' ' . ($inviter?->getLastname() ?? '')) ?: 'Un organisateur');
+
+        try {
+            $email = (new Email())
+                ->from($this->brandedFrom())
+                ->to($to)
+                ->subject("Invitation — {$competition?->getName()}")
+                ->html($this->wrapEmailHtml(
+                    "<h1>Manche privée</h1>
+                    <p>{$hello}</p>
+                    <p><strong>{$inviterName}</strong> vous invite à vous inscrire à <strong>{$competitionName}</strong>.</p>
+                    <p>Ce code est personnel et lié à cette adresse e-mail. Le partager ne permet pas à quelqu’un d’autre de s’inscrire.</p>
+                    " . ($code !== '' ? "<p>Votre code : <strong>{$code}</strong></p>" : '') . "
+                    {$this->cta($url, 'Ouvrir l’application')}"
+                ));
+            $this->mailer->send($email);
+        } catch (\Throwable $e) {
+            $this->logger->error('ERREUR invitation pêcheur', [
                 'to' => $to,
                 'error' => $e->getMessage(),
             ]);

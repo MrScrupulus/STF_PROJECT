@@ -18,6 +18,7 @@ use App\Service\EmailService;
 use App\Service\CompetitionSnapshotService;
 use App\Service\CompetitionAccessService;
 use App\Service\CreationCreditService;
+use App\Service\CompetitionFormatService;
 use App\Service\NotificationService;
 use App\Repository\Competition\ScheduledPauseRepository;
 use App\Entity\Competition\ScheduledPause;
@@ -29,6 +30,7 @@ use App\Service\ReglementImageStorageService;
 use App\Repository\CompetitionTeamSnapshotRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 #[Route('/api')]
 class CompetitionController extends AbstractController
@@ -40,6 +42,7 @@ class CompetitionController extends AbstractController
         private readonly CompetitionSnapshotService $snapshotService,
         private readonly CompetitionAccessService $competitionAccess,
         private readonly CreationCreditService $creationCredits,
+        private readonly CompetitionFormatService $competitionFormat,
     ) {
     }
 
@@ -51,6 +54,51 @@ class CompetitionController extends AbstractController
         $path = $competition->getCoverImagePath();
 
         return $path ? $this->reglementStorage->getPublicUrl($path) : null;
+    }
+
+    /** @return array<string, mixed> */
+    private function accessFields(Competition $competition, bool $includeSecretCode): array
+    {
+        $max = $competition->getEffectiveMaxParticipants();
+
+        return [
+            'isPaid' => $competition->isPaid(),
+            'isPrivate' => $competition->isPrivate(),
+            'isPrivateLocked' => false,
+            'accessCode' => null,
+            'maxParticipants' => $max,
+            'hasNoLimit' => $max === null,
+            'enrolledParticipants' => $competition->countEnrolledParticipants(),
+            'freeParticipantCap' => Competition::FREE_PARTICIPANT_CAP,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function listCompetitionCard(Competition $competition, $user, array $extra = []): array
+    {
+        $full = $this->competitionAccess->canViewCompetition($user, $competition);
+        $locked = $competition->isPrivate() && !$full;
+        $card = [
+            'id' => $competition->getId(),
+            'name' => $competition->getName(),
+            'type' => $locked ? null : $competition->getType(),
+            'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+            'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
+            'description' => $locked ? null : $competition->getDescription(),
+            'teamSize' => $locked ? null : $competition->getTeamSize(),
+            'isPaused' => $competition->getIsPaused(),
+            'coverImageUrl' => $this->coverImageUrl($competition),
+            'isPrivate' => $competition->isPrivate(),
+            'isPrivateLocked' => $locked,
+        ];
+        if ($locked) {
+            return array_merge($card, $extra);
+        }
+
+        return array_merge($card, [
+            'isRankingPublic' => $competition->getIsRankingPublic(),
+            ...$this->accessFields($competition, false),
+        ], $extra);
     }
 
     /**
@@ -102,8 +150,8 @@ class CompetitionController extends AbstractController
                     'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
                     'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
-                    'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
+                    ...$this->accessFields($competition, true),
                     'isPaused' => $competition->getIsPaused(),
                     'coverImageUrl' => $this->coverImageUrl($competition),
                 ];
@@ -212,27 +260,13 @@ class CompetitionController extends AbstractController
                 ->getResult();
 
             // Transformer les données comme dans la route admin
-            $data = array_map(function ($competition) use ($userTeamIds, $userParticipatedCompetitionIds) {
+            $data = array_map(function ($competition) use ($user, $userTeamIds, $userParticipatedCompetitionIds) {
                 $now = new \DateTime();
                 $isEnded = $competition->getEndDate() < $now;
-                // Vérifier si l'utilisateur est inscrit (équipe active) ou a participé (équipe inactive ou prises)
-                $isRegistered = in_array($competition->getId(), $userTeamIds) || 
+                $isRegistered = in_array($competition->getId(), $userTeamIds) ||
                                 ($isEnded && in_array($competition->getId(), $userParticipatedCompetitionIds));
-                return [
-                    'id' => $competition->getId(),
-                    'name' => $competition->getName(),
-                    'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
-                    'description' => $competition->getDescription(),
-                    'maxParticipants' => $competition->getMaxParticipants(),
-                    'teamSize' => $competition->getTeamSize(),
-                    'hasNoLimit' => $competition->getHasNoLimit(),
-                    'isRankingPublic' => $competition->getIsRankingPublic(),
-                    'isRegistered' => $isRegistered,
-                    'isPaused' => $competition->getIsPaused(),
-                    'coverImageUrl' => $this->coverImageUrl($competition),
-                ];
+
+                return $this->listCompetitionCard($competition, $user, ['isRegistered' => $isRegistered]);
             }, $competitions);
 
             return $this->json([
@@ -264,26 +298,17 @@ class CompetitionController extends AbstractController
         try {
             $now = new \DateTime();
             
-            $competitions = $repository->createQueryBuilder('c')
+            $user = $this->getUser();
+            $qbOngoing = $repository->createQueryBuilder('c')
                 ->where('c.startDate <= :now')
                 ->andWhere('c.endDate >= :now')
-                ->setParameter('now', $now)
-                ->getQuery()
-                ->getResult();
+                ->setParameter('now', $now);
+            $competitions = $qbOngoing->getQuery()->getResult();
 
-            $data = array_map(function ($competition) {
-                return [
-                    'id' => $competition->getId(),
-                    'name' => $competition->getName(),
-                    'type' => $competition->getType(),
-                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
-                    'description' => $competition->getDescription(),
-                    'teamSize' => $competition->getTeamSize(),
-                    'isPaused' => $competition->getIsPaused(),
-                    'coverImageUrl' => $this->coverImageUrl($competition),
-                ];
-            }, $competitions);
+            $data = array_map(
+                fn ($competition) => $this->listCompetitionCard($competition, $user),
+                $competitions
+            );
 
             return $this->json([
                 'success' => true,
@@ -302,7 +327,7 @@ class CompetitionController extends AbstractController
     }
 
     #[Route('/competitions/{id}', name: 'get_competition', methods: ['GET'])]
-    public function getCompetition(int $id, CompetitionRepository $repository, TeamRepository $teamRepository, FishCatchRepository $catchRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository, CompetitionPerimeterRepository $perimeterRepository): JsonResponse
+    public function getCompetition(int $id, Request $request, CompetitionRepository $repository, TeamRepository $teamRepository, FishCatchRepository $catchRepository, CompetitionSnapshotService $snapshotService, ScheduledPauseRepository $scheduledPauseRepository, CompetitionPerimeterRepository $perimeterRepository): JsonResponse
     {
         // Ne pas faire de JOIN FETCH + getOneOrNullResult() avec équipes/membres : plusieurs lignes SQL
         // → NonUniqueResultException (500). Charger la compétition puis laisser le lazy-loading hydrater au besoin.
@@ -316,6 +341,19 @@ class CompetitionController extends AbstractController
         }
         
         $user = $this->getUser();
+        $accessCode = $request->query->get('accessCode') ?? $request->query->get('code');
+        $accessCode = \is_string($accessCode) ? $accessCode : null;
+        if (!$this->competitionAccess->canViewCompetition($user, $competition, $accessCode)) {
+            return $this->json([
+                'success' => true,
+                'isPrivateLocked' => true,
+                'isPrivate' => true,
+                'id' => $competition->getId(),
+                'name' => $competition->getName(),
+                'coverImageUrl' => $this->coverImageUrl($competition),
+                'message' => 'Cette compétition est privée et sur invitation.',
+            ]);
+        }
         $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
         $canManage = $user && $this->competitionAccess->canManageCompetition($user, $competition);
         $canJudge = $user && $this->competitionAccess->canJudgeCompetition($user, $competition);
@@ -469,8 +507,6 @@ class CompetitionController extends AbstractController
                 $competition->getReglementImagePaths() ?? []
             ),
             'teamSize' => $competition->getTeamSize(),
-            'maxParticipants' => $competition->getMaxParticipants(),
-            'hasNoLimit' => $competition->getHasNoLimit(),
             'isEnded' => $isEnded,
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
@@ -483,6 +519,7 @@ class CompetitionController extends AbstractController
             'canManage' => (bool) $canManage,
             'canJudge' => (bool) $canJudge,
             'isOfficial' => $user && $this->competitionAccess->isOfficialOnCompetition($user, $competition),
+            ...$this->accessFields($competition, (bool) $canManage),
             'myTeamId' => $myTeamId,
             'enrolledTeamsCount' => ($isEnded && $snapshotService->hasSnapshots($competition))
                 ? count($snapshotService->getSnapshotsForCompetition($competition))
@@ -567,12 +604,7 @@ class CompetitionController extends AbstractController
             if (isset($data['teamSize'])) {
                 $competition->setTeamSize((int) $data['teamSize']);
             }
-            if (isset($data['hasNoLimit'])) {
-                $competition->setHasNoLimit($data['hasNoLimit']);
-            }
-            if (isset($data['maxParticipants']) && !($data['hasNoLimit'] ?? false)) {
-                $competition->setMaxParticipants((int) $data['maxParticipants']);
-            }
+            $this->competitionFormat->applyAccessAndCapacity($competition, $data, false);
             $rankingJustPublished = false;
             if (isset($data['isRankingPublic'])) {
                 $wasPublic = $competition->getIsRankingPublic();
@@ -719,16 +751,21 @@ class CompetitionController extends AbstractController
                     'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
-                    'hasNoLimit' => $competition->getHasNoLimit(),
-                    'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
                     'isPaused' => $competition->getIsPaused(),
+                    ...$this->accessFields($competition, true),
                     'maxFishCounted' => $competition->getMaxFishCounted(),
                     'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
                     'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
                     'quotaBonusEnabled' => $competition->getQuotaBonusEnabled(),
                 ]
             ]);
+        } catch (BadRequestHttpException $e) {
+            return $this->json([
+                'success' => false,
+                'error' => 'Validation',
+                'message' => $e->getMessage(),
+            ], 400);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la mise à jour de la compétition', [
                 'error' => $e->getMessage(),
@@ -936,7 +973,7 @@ class CompetitionController extends AbstractController
             $competition->setDescription($data['description'] ?? null);
             $competition->setReglement($data['reglement'] ?? null);
             $competition->setTeamSize((int) $data['teamSize']);
-            $competition->setHasNoLimit($data['hasNoLimit'] ?? false);
+            $this->competitionFormat->applyAccessAndCapacity($competition, $data, true);
             $competition->setIsRankingPublic($data['isRankingPublic'] ?? false);
             $competition->setIsBonusEnabled($data['isBonusEnabled'] ?? false);
             $competition->setNewSpeciesBonusEnabled($data['newSpeciesBonusEnabled'] ?? false);
@@ -950,10 +987,6 @@ class CompetitionController extends AbstractController
                 $competition->setMaxFishCounted(($v === null || $v === '' || $v === 'all') ? null : (int) $v);
             } else {
                 $competition->setMaxFishCounted(5);
-            }
-
-            if (!$data['hasNoLimit'] && isset($data['maxParticipants'])) {
-                $competition->setMaxParticipants((int) $data['maxParticipants']);
             }
 
             if ($competition->getQuotaBonusEnabled() && isset($data['species']) && \is_array($data['species'])) {
@@ -1076,6 +1109,9 @@ class CompetitionController extends AbstractController
             }
 
             $notifyUsers = filter_var($data['notifyUsers'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($notifyUsers && $competition->isPrivate()) {
+                $notifyUsers = false;
+            }
             if ($notifyUsers) {
                 try {
                     $notificationService->notifyCompetitionCreated(
@@ -1100,9 +1136,8 @@ class CompetitionController extends AbstractController
                     'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                     'description' => $competition->getDescription(),
                     'teamSize' => $competition->getTeamSize(),
-                    'hasNoLimit' => $competition->getHasNoLimit(),
-                    'maxParticipants' => $competition->getMaxParticipants(),
                     'isRankingPublic' => $competition->getIsRankingPublic(),
+                    ...$this->accessFields($competition, true),
                     'maxFishCounted' => $competition->getMaxFishCounted(),
                     'newSpeciesBonusEnabled' => $competition->getNewSpeciesBonusEnabled(),
                     'newSpeciesBonusPoints' => $competition->getNewSpeciesBonusPoints(),
@@ -1111,6 +1146,11 @@ class CompetitionController extends AbstractController
             ], 201);
         } catch (AccessDeniedHttpException $e) {
             throw $e;
+        } catch (BadRequestHttpException $e) {
+            return $this->json([
+                'error' => 'Validation',
+                'message' => $e->getMessage(),
+            ], 400);
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la création de la compétition', [
                 'error' => $e->getMessage(),
@@ -1248,17 +1288,26 @@ class CompetitionController extends AbstractController
                 ], 400);
             }
 
-            // Vérifier les limites de participants si la compétition a une limite
-            if (!$competition->getHasNoLimit()) {
-                $currentTeamCount = $competition->getTeams()->count();
-                $maxTeams = $competition->getMaxParticipants() / $competition->getTeamSize();
-                
-                if ($currentTeamCount >= $maxTeams) {
+            if ($competition->isPrivate()) {
+                $code = $data['accessCode'] ?? $data['code'] ?? null;
+                $code = \is_string($code) ? $code : null;
+                if (!$this->competitionAccess->canViewCompetition($user, $competition, $code)) {
                     return $this->json([
                         'success' => false,
-                        'message' => 'La compétition a atteint le nombre maximum d\'équipes autorisées'
-                    ], 400);
+                        'message' => 'Cette manche est privée : l’invitation est liée à votre adresse e-mail.',
+                    ], 403);
                 }
+            }
+
+            if (!$competition->canAcceptAdditionalParticipants($teamMemberCount)) {
+                $max = $competition->getEffectiveMaxParticipants();
+                $enrolled = $competition->countEnrolledParticipants();
+                return $this->json([
+                    'success' => false,
+                    'message' => $max === null
+                        ? 'Inscription impossible.'
+                        : "Plus de places : {$enrolled}/{$max} pêcheurs inscrits (le plafond compte les participants, pas les équipes).",
+                ], 400);
             }
 
             // Attribuer le numéro d'inscription

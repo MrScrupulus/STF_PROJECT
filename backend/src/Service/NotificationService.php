@@ -118,6 +118,20 @@ class NotificationService
         );
     }
 
+    public function notifyCompetitionInvitation(User $user, string $competitionName, int $competitionId, ?string $accessCode): void
+    {
+        $this->createNotification(
+            $user,
+            'competition_invitation',
+            "Vous êtes invité à vous inscrire à {$competitionName}",
+            [
+                'competitionId' => $competitionId,
+                'competitionName' => $competitionName,
+                'accessCode' => $accessCode,
+            ]
+        );
+    }
+
     public function notifyCompetitionCreatedForUser(User $user, string $competitionName, int $competitionId): void
     {
         $this->createNotification(

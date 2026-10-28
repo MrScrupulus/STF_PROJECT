@@ -86,6 +86,7 @@ export const API_ENDPOINTS = {
     myTeamStats: (id: number) => `/api/competitions/${id}/me/team/stats`,
     staff: (id: number) => `/api/competitions/${id}/staff`,
     staffInvite: (id: number) => `/api/competitions/${id}/staff-invitations`,
+    participantInvitations: (id: number) => `/api/competitions/${id}/participant-invitations`,
     registerTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/register`,
     unregisterTeam: (competitionId: number) => `/api/competitions/${competitionId}/teams/unregister`,
   },

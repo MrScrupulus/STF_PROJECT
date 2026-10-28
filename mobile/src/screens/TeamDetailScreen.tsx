@@ -52,7 +52,13 @@ export default function TeamDetailScreen({ route }: any) {
 
   const navigation = useNavigation();
   const queryClient = useQueryClient();
-  const { id, highlightCatchId } = route.params || {};
+  const { id, highlightCatchId, competitionId } = route.params || {};
+  const viewCompetitionId =
+    competitionId == null || competitionId === ''
+      ? undefined
+      : typeof competitionId === 'number'
+        ? competitionId
+        : parseInt(String(competitionId), 10);
   const teamIdNum =
     id == null || id === ''
       ? NaN
@@ -74,8 +80,8 @@ export default function TeamDetailScreen({ route }: any) {
   const [statsTab, setStatsTab] = useState<'team' | number>('team');
 
   const { data: teamData, isLoading, error } = useQuery({
-    queryKey: ['team', teamIdNum],
-    queryFn: () => teamService.getOne(teamIdNum),
+    queryKey: ['team', teamIdNum, viewCompetitionId],
+    queryFn: () => teamService.getOne(teamIdNum, Number.isFinite(viewCompetitionId as number) ? (viewCompetitionId as number) : undefined),
     enabled: teamIdValid,
   });
 
@@ -405,7 +411,7 @@ export default function TeamDetailScreen({ route }: any) {
       : topCatches.reduce((sum: number, catchItem: any) => sum + catchItem.points, 0);
 
   const maxTeamSize = team.competition?.teamSize || 2;
-  const canInvite = team.members && team.members.length < maxTeamSize;
+  const canInvite = !team.isHistoricalView && team.members && team.members.length < maxTeamSize;
 
   const validatedOfficialCatches = (team.catches || []).filter(
     (c: any) => c.isValidated && !c.rejectionReason
@@ -547,7 +553,7 @@ export default function TeamDetailScreen({ route }: any) {
                 return competitionEndDate >= now;
               })();
               
-              if (isMemberOfTeam && !isInActiveCompetition) {
+              if (isMemberOfTeam && !isInActiveCompetition && !team.isHistoricalView) {
                 return (
                   <TouchableOpacity
                     style={styles.editButton}

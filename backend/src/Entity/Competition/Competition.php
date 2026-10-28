@@ -38,6 +38,17 @@ class Competition
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $hasNoLimit = false;
 
+    /** Inscription payante (Stripe plus tard). Gratuit = plafond 16 pêcheurs. */
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isPaid = false;
+
+    /** Manche non listée publiquement : inscription avec code. */
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isPrivate = false;
+
+    #[ORM\Column(length: 16, nullable: true)]
+    private ?string $accessCode = null;
+
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
@@ -222,6 +233,86 @@ class Competition
     {
         $this->hasNoLimit = $hasNoLimit;
         return $this;
+    }
+
+    public const FREE_PARTICIPANT_CAP = 16;
+
+    public function isPaid(): bool
+    {
+        return $this->isPaid;
+    }
+
+    public function setIsPaid(bool $isPaid): self
+    {
+        $this->isPaid = $isPaid;
+        return $this;
+    }
+
+    public function isPrivate(): bool
+    {
+        return $this->isPrivate;
+    }
+
+    public function setIsPrivate(bool $isPrivate): self
+    {
+        $this->isPrivate = $isPrivate;
+        return $this;
+    }
+
+    public function getAccessCode(): ?string
+    {
+        return $this->accessCode;
+    }
+
+    public function setAccessCode(?string $accessCode): self
+    {
+        $this->accessCode = $accessCode;
+        return $this;
+    }
+
+    /** Pêcheurs inscrits (membres d’équipes actives, hors journal perso). */
+    public function countEnrolledParticipants(): int
+    {
+        $n = 0;
+        foreach ($this->teams as $team) {
+            if ($team->isPersonalJournal() || !$team->getIsActive()) {
+                continue;
+            }
+            $n += $team->getMembers()->count();
+        }
+
+        return $n;
+    }
+
+    /**
+     * Plafond effectif de pêcheurs. null = pas de plafond.
+     * Gratuit (et gratuit/privé) : 16 max, éventuellement moins si le créateur le demande.
+     */
+    public function getEffectiveMaxParticipants(): ?int
+    {
+        if (!$this->isPaid) {
+            $cap = self::FREE_PARTICIPANT_CAP;
+            if ($this->maxParticipants !== null && $this->maxParticipants > 0) {
+                return min($cap, $this->maxParticipants);
+            }
+
+            return $cap;
+        }
+        if ($this->hasNoLimit || $this->maxParticipants === null || $this->maxParticipants < 1) {
+            return null;
+        }
+
+        return $this->maxParticipants;
+    }
+
+    public function canAcceptAdditionalParticipants(int $incoming): bool
+    {
+        $max = $this->getEffectiveMaxParticipants();
+        if ($max === null) {
+            return true;
+        }
+
+        return $this->countEnrolledParticipants() + $incoming <= $max;
     }
 
     public function getDescription(): ?string

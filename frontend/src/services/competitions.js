@@ -17,7 +17,10 @@ export const competitionsService = {
     }
   },
 
-  getOne: (id) => api.get(ENDPOINTS.competitions.detail(id)),
+  getOne: (id, accessCode) =>
+    api.get(
+      `${ENDPOINTS.competitions.detail(id)}${accessCode ? `?accessCode=${encodeURIComponent(accessCode)}` : ""}`
+    ),
 
   create: (data) => api.post("/api/admin/competitions", data),
 
@@ -63,4 +66,9 @@ export const competitionsService = {
 
   inviteCommissaire: (id, email) =>
     api.post(`/api/competitions/${id}/staff-invitations`, { email, role: "judge" }),
+
+  getParticipantInvitations: (id) => api.get(`/api/competitions/${id}/participant-invitations`),
+
+  inviteParticipant: (id, emails) =>
+    api.post(`/api/competitions/${id}/participant-invitations`, { emails }),
 };

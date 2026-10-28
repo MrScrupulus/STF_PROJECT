@@ -59,11 +59,14 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [pdfDownloading, setPdfDownloading] = useState(false);
   const [myTeamPhoto, setMyTeamPhoto] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [participantInviteEmail, setParticipantInviteEmail] = useState('');
   const [screenScrollEnabled, setScreenScrollEnabled] = useState(true);
+  const accessCodeFromRoute = (route.params as any)?.accessCode || (route.params as any)?.code;
+  const [joinCode, setJoinCode] = useState(String(accessCodeFromRoute || ''));
 
   const { data: competitionResponse, isLoading, isError, error } = useQuery({
-    queryKey: ['competition', competitionId],
-    queryFn: () => competitionsService.getOne(competitionId),
+    queryKey: ['competition', competitionId, joinCode],
+    queryFn: () => competitionsService.getOne(competitionId, joinCode || undefined),
     enabled: Number.isFinite(competitionId) && competitionId > 0,
     refetchInterval: 20000,
   });
@@ -93,8 +96,8 @@ export default function CompetitionDetailScreen({ route }: any) {
   }, [(competition as any)?.myTeamId, (competition as any)?.teams, currentUser?.id]);
 
   const { data: myTeamResponse, isLoading: loadingMyTeam } = useQuery({
-    queryKey: ['team', myCompetitionTeamId],
-    queryFn: () => teamService.getOne(myCompetitionTeamId as number),
+    queryKey: ['team', myCompetitionTeamId, competitionId],
+    queryFn: () => teamService.getOne(myCompetitionTeamId as number, competitionId),
     enabled: !!myCompetitionTeamId,
   });
   const myTeamDetail = myTeamResponse?.team;
@@ -103,6 +106,12 @@ export default function CompetitionDetailScreen({ route }: any) {
     queryKey: ['competition-staff', competitionId],
     queryFn: () => competitionsService.getStaff(competitionId),
     enabled: Number.isFinite(competitionId) && canManage,
+  });
+
+  const { data: participantInvitesData } = useQuery({
+    queryKey: ['competition-participant-invites', competitionId],
+    queryFn: () => competitionsService.getParticipantInvitations(competitionId),
+    enabled: Number.isFinite(competitionId) && canManage && !!(competition as any)?.isPrivate,
   });
 
   const speciesData = competition?.species && competition.species.length > 0
@@ -234,7 +243,7 @@ export default function CompetitionDetailScreen({ route }: any) {
 
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }: { teamId: number; competitionId: number }) =>
-      teamService.registerToCompetition(teamId, competitionId),
+      teamService.registerToCompetition(teamId, competitionId, joinCode || undefined),
     onSuccess: () => {
       // Invalider toutes les requêtes liées pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['competition', competitionId] });
@@ -272,6 +281,21 @@ export default function CompetitionDetailScreen({ route }: any) {
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la création de l\'équipe. Veuillez réessayer.';
       Alert.alert('Erreur', message);
+    },
+  });
+
+  const inviteParticipantMutation = useMutation({
+    mutationFn: (emails: string) => competitionsService.inviteParticipant(competitionId, emails),
+    onSuccess: (data: any) => {
+      setParticipantInviteEmail('');
+      queryClient.invalidateQueries({ queryKey: ['competition-participant-invites', competitionId] });
+      Alert.alert(
+        data?.emailSent === false ? 'Invitations' : 'Invitations envoyées',
+        data?.message || 'Invitations enregistrées.'
+      );
+    },
+    onError: (error: any) => {
+      Alert.alert('Erreur', error.response?.data?.message || error.message || "Impossible d'envoyer l'invitation.");
     },
   });
 
@@ -382,6 +406,25 @@ export default function CompetitionDetailScreen({ route }: any) {
       <View style={styles.center}>
         <Text style={styles.errorText}>Compétition non trouvée</Text>
       </View>
+    );
+  }
+
+  if ((competition as any).isPrivateLocked) {
+    return (
+      <>
+        <Header title="Compétition" showBack={true} />
+        <View style={styles.privateLocked}>
+          <FaIcon name="lock" size={32} color={theme.accent} />
+          <View style={styles.privateBadge}>
+            <Text style={styles.privateBadgeText}>Privée</Text>
+          </View>
+          <Text style={styles.privateLockedTitle}>{(competition as any).name}</Text>
+          <Text style={styles.privateLockedText}>
+            {(competition as any).message ||
+              'Cette compétition est privée et sur invitation.'}
+          </Text>
+        </View>
+      </>
     );
   }
 
@@ -510,6 +553,12 @@ export default function CompetitionDetailScreen({ route }: any) {
               {formatCompetitionDateRange(competition.startDate, competition.endDate)}
             </Text>
             <View style={styles.badgesContainer}>
+              {(competition as any).isPrivate ? (
+                <View style={styles.privateBadge}>
+                  <FaIcon name="lock" size={11} color={theme.onAccent} />
+                  <Text style={styles.privateBadgeText}>Privée</Text>
+                </View>
+              ) : null}
               {competition.isRegistered && !status.isEnded && (
                 <View style={styles.registeredBadge}>
                   <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
@@ -621,9 +670,16 @@ export default function CompetitionDetailScreen({ route }: any) {
               <View style={styles.ruleRow}>
                 <Text style={styles.ruleLabel}>Participants</Text>
                 <Text style={styles.ruleValue}>
+                  {(competition as any).isPaid ? 'Payante' : 'Gratuite'}
+                  {(competition as any).isPrivate ? ' · Privée' : ''}
+                </Text>
+              </View>
+              <View style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>Pêcheurs</Text>
+                <Text style={styles.ruleValue}>
                   {(competition as any).hasNoLimit
-                    ? 'Pas de limite d’équipes / inscriptions'
-                    : `Maximum ${(competition as any).maxParticipants ?? '—'} participants (équipes)`}
+                    ? `${(competition as any).enrolledParticipants ?? 0} inscrits · pas de plafond`
+                    : `${(competition as any).enrolledParticipants ?? 0} / ${(competition as any).maxParticipants ?? '—'} pêcheurs`}
                 </Text>
               </View>
               <View style={styles.ruleRow}>
@@ -828,6 +884,43 @@ export default function CompetitionDetailScreen({ route }: any) {
           </View>
         ) : (
           <View>
+        {canManage && (competition as any)?.isPrivate ? (
+          <View style={styles.adminActions}>
+            <Text style={styles.sectionTitle}>Inviter des pêcheurs</Text>
+            <Text style={styles.inviteHint}>
+              Une ou plusieurs adresses (virgule, point-virgule ou une par ligne). Code nominatif par e-mail.
+            </Text>
+            <TextInput
+              style={[styles.inviteInput, styles.inviteInputMultiline]}
+              placeholder={'a@club.fr, b@club.fr\nc@club.fr'}
+              placeholderTextColor={theme.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              multiline
+              textAlignVertical="top"
+              value={participantInviteEmail}
+              onChangeText={setParticipantInviteEmail}
+            />
+            <TouchableOpacity
+              style={[styles.adminButton, styles.editButton]}
+              disabled={inviteParticipantMutation.isPending || !participantInviteEmail.trim()}
+              onPress={() => inviteParticipantMutation.mutate(participantInviteEmail.trim())}
+            >
+              <Text style={styles.adminButtonText}>
+                {inviteParticipantMutation.isPending ? '...' : 'Inviter'}
+              </Text>
+            </TouchableOpacity>
+            {(participantInvitesData?.invitations || []).map((row: any) => (
+              <Text key={`pinv-${row.id}`} style={styles.staffLine}>
+                {row.email}
+                {row.code ? ` · ${row.code}` : ''}
+                {row.hasAccount ? ' — notifié' : ' — e-mail'}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
         {canManage && (
           <View style={styles.adminActions}>
             <Text style={styles.sectionTitle}>Commissaires</Text>
@@ -1092,6 +1185,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 </Text>
               </View>
             ) : canRegister ? (
+              <>
               <TouchableOpacity
                 style={styles.registerButton}
                 onPress={handleRegisterClick}
@@ -1103,6 +1197,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                     : isIndividualCompetition ? "S'inscrire" : 'Inscrire mon équipe'}
                 </Text>
               </TouchableOpacity>
+              </>
             ) : !hasAvailableTeams && !isEnded ? (
               <View style={styles.noTeams}>
                 {isIndividualCompetition ? (
@@ -1272,7 +1367,12 @@ export default function CompetitionDetailScreen({ route }: any) {
                 <TouchableOpacity
                   key={team.id}
                   style={[styles.teamRow, isUserTeam && styles.teamRowUser]}
-                  onPress={() => (navigation as any).navigate('TeamDetail', { id: team.id })}
+                  onPress={() =>
+                    (navigation as any).navigate('TeamDetail', {
+                      id: team.id,
+                      competitionId,
+                    })
+                  }
                 >
                   {(isEnded || rankingVisible) && rankingVisible && (
                     <Text style={[styles.teamRank, team.isDisqualified && styles.teamRankDsq]}>
@@ -1918,6 +2018,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     color: theme.text,
     marginBottom: 12,
   },
+  inviteInputMultiline: {
+    minHeight: 96,
+  },
   staffLine: {
     fontSize: 14,
     color: theme.text,
@@ -2317,5 +2420,39 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   myStatsViz: {
     marginTop: 8,
     marginBottom: 8,
+  },
+  privateLocked: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: theme.bg,
+    gap: 12,
+  },
+  privateLockedTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.text,
+    textAlign: 'center',
+  },
+  privateLockedText: {
+    fontSize: 16,
+    color: theme.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  privateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: '#4b5563',
+  },
+  privateBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.onAccent,
   },
 });

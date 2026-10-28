@@ -41,6 +41,7 @@ export interface Team {
   quotaBonus?: number;
   penaltyPoints?: number;
   isDisqualified?: boolean;
+  isHistoricalView?: boolean;
   disqualificationReason?: string | null;
   penalties?: Array<{
     id: number;
@@ -64,8 +65,10 @@ export const teamService = {
     return response.data;
   },
 
-  getOne: async (id: number): Promise<{ success: boolean; team: Team }> => {
-    const response = await apiClient.get(API_ENDPOINTS.teams.detail(id));
+  getOne: async (id: number, competitionId?: number): Promise<{ success: boolean; team: Team }> => {
+    const response = await apiClient.get(API_ENDPOINTS.teams.detail(id), {
+      params: competitionId ? { competitionId } : undefined,
+    });
     return response.data;
   },
 
@@ -94,9 +97,14 @@ export const teamService = {
     return response.data;
   },
 
-  registerToCompetition: async (teamId: number, competitionId: number): Promise<any> => {
+  registerToCompetition: async (
+    teamId: number,
+    competitionId: number,
+    accessCode?: string
+  ): Promise<any> => {
     const response = await apiClient.post(`/api/competitions/${competitionId}/teams/register`, {
       teamId: teamId,
+      accessCode: accessCode || undefined,
     });
     return response.data;
   },

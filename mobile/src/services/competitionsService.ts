@@ -54,8 +54,10 @@ export const competitionsService = {
     return collected;
   },
 
-  getOne: async (id: number): Promise<Competition> => {
-    const response = await apiClient.get(API_ENDPOINTS.competitions.detail(id));
+  getOne: async (id: number, accessCode?: string): Promise<Competition> => {
+    const response = await apiClient.get(API_ENDPOINTS.competitions.detail(id), {
+      params: accessCode ? { accessCode } : undefined,
+    });
     return response.data;
   },
 
@@ -125,6 +127,16 @@ export const competitionsService = {
       email,
       role: 'judge',
     });
+    return response.data;
+  },
+
+  getParticipantInvitations: async (id: number): Promise<any> => {
+    const response = await apiClient.get(API_ENDPOINTS.competitions.participantInvitations(id));
+    return response.data;
+  },
+
+  inviteParticipant: async (id: number, emails: string): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.competitions.participantInvitations(id), { emails });
     return response.data;
   },
 };

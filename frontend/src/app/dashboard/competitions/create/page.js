@@ -22,8 +22,10 @@ export default function CreateCompetition() {
     endDate: "",
     teamSize: "",
     type: "street",
-    maxParticipants: "",
+    maxParticipants: "16",
     hasNoLimit: false,
+    isPaid: false,
+    isPrivate: false,
     description: "",
     isRankingPublic: false,
     notifyUsers: false,
@@ -370,26 +372,78 @@ export default function CreateCompetition() {
             <div className={styles["competition-create__checkbox-wrapper"]}>
               <input
                 type="checkbox"
-                checked={formData.hasNoLimit}
+                checked={formData.isPaid}
                 onChange={(e) =>
-                  setFormData({ ...formData, hasNoLimit: e.target.checked })
+                  setFormData({
+                    ...formData,
+                    isPaid: e.target.checked,
+                    hasNoLimit: e.target.checked,
+                    maxParticipants: e.target.checked ? "" : "16",
+                  })
                 }
-                id="hasNoLimit"
+                id="isPaid"
               />
               <label
-                htmlFor="hasNoLimit"
+                htmlFor="isPaid"
                 className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
-                Pas de limite de participants
-                <HelpIcon text={COMPETITION_HELP.hasNoLimit} />
+                Manche payante
+                <HelpIcon text={COMPETITION_HELP.isPaid} />
+              </label>
+            </div>
+            <p className={styles["competition-create__help_text"]}>
+              {formData.isPaid
+                ? "Pas de plafond sauf si vous en posez un. Stripe viendra ensuite."
+                : "Gratuit : 16 pêcheurs max (pas 16 équipes)."}
+            </p>
+          </div>
+
+          <div className={styles["competition-create__group"]}>
+            <div className={styles["competition-create__checkbox-wrapper"]}>
+              <input
+                type="checkbox"
+                checked={formData.isPrivate}
+                onChange={(e) =>
+                  setFormData({ ...formData, isPrivate: e.target.checked })
+                }
+                id="isPrivate"
+              />
+              <label
+                htmlFor="isPrivate"
+                className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
+              >
+                Manche privée
+                <HelpIcon text={COMPETITION_HELP.isPrivate} />
               </label>
             </div>
           </div>
 
-          {!formData.hasNoLimit && (
+          {formData.isPaid ? (
+            <div className={styles["competition-create__group"]}>
+              <div className={styles["competition-create__checkbox-wrapper"]}>
+                <input
+                  type="checkbox"
+                  checked={formData.hasNoLimit}
+                  onChange={(e) =>
+                    setFormData({ ...formData, hasNoLimit: e.target.checked })
+                  }
+                  id="hasNoLimit"
+                />
+                <label
+                  htmlFor="hasNoLimit"
+                  className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
+                >
+                  Pas de limite de pêcheurs
+                  <HelpIcon text={COMPETITION_HELP.hasNoLimit} />
+                </label>
+              </div>
+            </div>
+          ) : null}
+
+          {(!formData.isPaid || !formData.hasNoLimit) && (
             <div className={styles["competition-create__group"]}>
               <label className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}>
-                Nombre maximum de participants
+                {formData.isPaid ? "Nombre maximum de pêcheurs" : "Plafond de pêcheurs (max 16)"}
                 <HelpIcon text={COMPETITION_HELP.maxParticipants} />
               </label>
               <input
@@ -400,6 +454,7 @@ export default function CreateCompetition() {
                 }
                 className={styles["competition-create__input"]}
                 min="1"
+                max={formData.isPaid ? undefined : 16}
               />
             </div>
           )}

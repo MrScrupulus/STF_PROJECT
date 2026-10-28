@@ -50,6 +50,18 @@
   font-weight: 600;
 }
 
+.statusPrivate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  background-color: #4b5563;
+  color: #fff;
+  font-weight: 600;
+}
+
 .date_range {
   display: flex;
   flex-direction: column;

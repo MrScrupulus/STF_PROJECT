@@ -114,7 +114,9 @@ export default function EditCompetitionScreen() {
     description: '',
     reglement: '',
     hasNoLimit: false,
-    maxParticipants: '',
+    maxParticipants: '16',
+    isPaid: false,
+    isPrivate: false,
     isRankingPublic: false,
     newSpeciesBonusEnabled: false,
     newSpeciesBonusPoints: '',
@@ -196,7 +198,9 @@ export default function EditCompetitionScreen() {
         description: competition.description || '',
         reglement: (competition as any).reglement || '',
         hasNoLimit: (competition as any).hasNoLimit ?? false,
-        maxParticipants: (competition as any).hasNoLimit ? '' : String(competition.maxParticipants ?? ''),
+        maxParticipants: (competition as any).hasNoLimit ? '' : String(competition.maxParticipants ?? '16'),
+        isPaid: !!(competition as any).isPaid,
+        isPrivate: !!(competition as any).isPrivate,
         isRankingPublic: (competition as any).isRankingPublic ?? false,
         newSpeciesBonusEnabled: (competition as any).newSpeciesBonusEnabled ?? false,
         newSpeciesBonusPoints: (competition as any).hasOwnProperty('newSpeciesBonusPoints') && (competition as any).newSpeciesBonusPoints != null
@@ -488,8 +492,14 @@ export default function EditCompetitionScreen() {
       setError('La date de fin doit être après la date de début');
       return;
     }
-    if (!formData.hasNoLimit && (!formData.maxParticipants || parseInt(formData.maxParticipants) < 1)) {
-      setError('Nombre max de participants requis');
+    if (!formData.isPaid) {
+      const cap = parseInt(formData.maxParticipants || '16', 10);
+      if (!Number.isFinite(cap) || cap < 1 || cap > 16) {
+        setError('En gratuit, le plafond est de 1 à 16 pêcheurs.');
+        return;
+      }
+    } else if (!formData.hasNoLimit && (!formData.maxParticipants || parseInt(formData.maxParticipants) < 1)) {
+      setError('Indiquez un plafond de pêcheurs, ou cochez sans limite.');
       return;
     }
 
@@ -553,7 +563,9 @@ export default function EditCompetitionScreen() {
       teamSize: parseInt(formData.teamSize),
       description: formData.description.trim() || null,
       reglement: formData.reglement.trim() || null,
-      hasNoLimit: formData.hasNoLimit,
+      hasNoLimit: formData.isPaid ? formData.hasNoLimit : false,
+      isPaid: formData.isPaid,
+      isPrivate: formData.isPrivate,
       isRankingPublic: formData.isRankingPublic,
       isBonusEnabled: formData.newSpeciesBonusEnabled,
       newSpeciesBonusEnabled: formData.newSpeciesBonusEnabled,
@@ -567,8 +579,10 @@ export default function EditCompetitionScreen() {
       })(),
       species: speciesPayload,
     };
-    if (!formData.hasNoLimit) {
-      data.maxParticipants = parseInt(formData.maxParticipants);
+    if (!formData.isPaid) {
+      data.maxParticipants = Math.min(16, parseInt(formData.maxParticipants || '16', 10));
+    } else if (!formData.hasNoLimit) {
+      data.maxParticipants = parseInt(formData.maxParticipants, 10);
     }
     updateMutation.mutate(data);
   };
@@ -791,17 +805,53 @@ export default function EditCompetitionScreen() {
           <View style={styles.section}>
             <View style={styles.switchRow}>
               <View style={[styles.labelRow, styles.labelRowInSwitch]}>
-                <Text style={styles.label}>Pas de limite de participants</Text>
-                <HelpButton text={COMPETITION_HELP.hasNoLimit} />
+                <Text style={styles.label}>Manche payante</Text>
+                <HelpButton text={COMPETITION_HELP.isPaid} />
               </View>
-              <Switch value={formData.hasNoLimit} onValueChange={(v) => setFormData({ ...formData, hasNoLimit: v })} />
+              <Switch
+                value={formData.isPaid}
+                onValueChange={(v) =>
+                  setFormData({
+                    ...formData,
+                    isPaid: v,
+                    hasNoLimit: v,
+                    maxParticipants: v ? formData.maxParticipants : '16',
+                  })
+                }
+              />
             </View>
           </View>
-
-          {!formData.hasNoLimit && (
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Manche privée</Text>
+                <HelpButton text={COMPETITION_HELP.isPrivate} />
+              </View>
+              <Switch value={formData.isPrivate} onValueChange={(v) => setFormData({ ...formData, isPrivate: v })} />
+            </View>
+            {formData.isPrivate ? (
+              <Text style={styles.helpText}>
+                Invitez chaque pêcheur par e-mail depuis la fiche. Le code est lié à l’adresse, pas partageable.
+              </Text>
+            ) : null}
+          </View>
+          {formData.isPaid ? (
+            <View style={styles.section}>
+              <View style={styles.switchRow}>
+                <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                  <Text style={styles.label}>Pas de limite de pêcheurs</Text>
+                  <HelpButton text={COMPETITION_HELP.hasNoLimit} />
+                </View>
+                <Switch value={formData.hasNoLimit} onValueChange={(v) => setFormData({ ...formData, hasNoLimit: v })} />
+              </View>
+            </View>
+          ) : null}
+          {(!formData.isPaid || !formData.hasNoLimit) && (
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Nombre max de participants *</Text>
+                <Text style={styles.label}>
+                  {formData.isPaid ? 'Nombre max de pêcheurs *' : 'Plafond de pêcheurs (max 16) *'}
+                </Text>
                 <HelpButton text={COMPETITION_HELP.maxParticipants} />
               </View>
               <TextInput

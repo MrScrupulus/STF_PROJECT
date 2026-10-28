@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\Competition\Competition;
 use App\Entity\Competition\FishCatch;
 use App\Entity\Security\User;
+use App\Repository\Competition\CompetitionParticipantInvitationRepository;
 use App\Repository\Competition\CompetitionRepository;
 use App\Repository\Competition\CompetitionStaffRepository;
 use App\Repository\Competition\CreationCreditRepository;
@@ -18,6 +19,7 @@ class CompetitionAccessService
         private readonly CompetitionStaffRepository $staffRepository,
         private readonly CompetitionRepository $competitionRepository,
         private readonly CreationCreditRepository $creationCredits,
+        private readonly CompetitionParticipantInvitationRepository $participantInvitations,
     ) {
     }
 
@@ -83,6 +85,41 @@ class CompetitionAccessService
         }
 
         return $this->staffRepository->findOneFor($competition, $user) !== null;
+    }
+
+    public function canViewCompetition(?UserInterface $user, Competition $competition, ?string $accessCode = null): bool
+    {
+        if (!$competition->isPrivate()) {
+            return true;
+        }
+        if ($this->canManageCompetition($user, $competition) || $this->canJudgeCompetition($user, $competition)) {
+            return true;
+        }
+        if ($user instanceof User) {
+            foreach ($competition->getTeams() as $team) {
+                if ($team->isPersonalJournal()) {
+                    continue;
+                }
+                if ($team->getMembers()->contains($user)) {
+                    return true;
+                }
+            }
+            if ($this->participantInvitations->isUserInvited($competition, $user)) {
+                return true;
+            }
+        }
+        if ($user instanceof User && $accessCode) {
+            $invitation = $this->participantInvitations->findByCode($accessCode);
+            if (
+                $invitation
+                && $invitation->getCompetition()?->getId() === $competition->getId()
+                && $invitation->isForUser($user)
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function canJudgeCompetition(?UserInterface $user, Competition $competition): bool
@@ -198,6 +235,16 @@ class CompetitionAccessService
         }
 
         return array_values($ids);
+    }
+
+    /** @return list<int> */
+    public function getInvitedCompetitionIds(?UserInterface $user): array
+    {
+        if (!$user instanceof User) {
+            return [];
+        }
+
+        return $this->participantInvitations->findCompetitionIdsForUser($user);
     }
 
     private function hasRole(?UserInterface $user, string $role): bool

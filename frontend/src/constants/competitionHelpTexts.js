@@ -32,7 +32,14 @@ export const COMPETITION_HELP = {
   reglement:
     "Texte du règlement affiché aux participants. Des images peuvent être ajoutées depuis la page de modification.",
 
-  hasNoLimit: "Aucune limite sur le nombre d'équipes pouvant s'inscrire.",
+  hasNoLimit: "Uniquement en payant : pas de plafond de pêcheurs, sauf si vous en saisissez un.",
 
-  maxParticipants: "Nombre maximum de participants (tous membres d'équipes confondus).",
+  maxParticipants:
+    "Plafond de pêcheurs (membres d’équipes), pas d’équipes. Gratuit : 16 max. Payant : libre, ou sans limite.",
+
+  isPaid:
+    "Payant : pas de plafond par défaut (Stripe plus tard). Gratuit : 16 pêcheurs maximum, même en privé.",
+
+  isPrivate:
+    "Privé : visible dans la liste (badge), détails et inscription uniquement pour les e-mails invités. Le code reçu est nominatif.",
 };

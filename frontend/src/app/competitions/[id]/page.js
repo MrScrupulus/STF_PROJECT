@@ -39,10 +39,12 @@ export default function CompetitionDetailPage() {
   const [showMoreStats, setShowMoreStats] = useState(false);
   const [showTop3, setShowTop3] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [participantInviteEmail, setParticipantInviteEmail] = useState("");
+  const [joinCode, setJoinCode] = useState("");
 
   const { data: competitionResponse, isLoading: competitionLoading, error: competitionError } = useQuery({
-    queryKey: ["competition", id],
-    queryFn: () => competitionsService.getOne(id),
+    queryKey: ["competition", id, joinCode],
+    queryFn: () => competitionsService.getOne(id, joinCode || undefined),
     retry: false, // Ne pas réessayer en cas d'erreur 403
   });
 
@@ -59,6 +61,29 @@ export default function CompetitionDetailPage() {
     queryKey: ["competition-staff", id],
     queryFn: () => competitionsService.getStaff(id),
     enabled: Number.isFinite(id) && canManage,
+  });
+
+  const { data: participantInvitesData } = useQuery({
+    queryKey: ["competition-participant-invites", id],
+    queryFn: () => competitionsService.getParticipantInvitations(id),
+    enabled: Number.isFinite(id) && canManage && !!competition?.isPrivate,
+  });
+
+  const inviteParticipantMutation = useMutation({
+    mutationFn: (emails) => competitionsService.inviteParticipant(id, emails),
+    onSuccess: (data) => {
+      setParticipantInviteEmail("");
+      queryClient.invalidateQueries({ queryKey: ["competition-participant-invites", id] });
+      const msg = data?.message || "Invitations enregistrées.";
+      if (data?.emailSent === false || (data?.invalid && data.invalid.length)) {
+        toast.error(msg);
+      } else {
+        toast.success(msg);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || error.message || "Impossible d'envoyer l'invitation.");
+    },
   });
 
   const inviteCommissaireMutation = useMutation({
@@ -167,7 +192,7 @@ export default function CompetitionDetailPage() {
 
   const registerMutation = useMutation({
     mutationFn: ({ teamId, competitionId }) =>
-      teamService.registerToCompetition(teamId, competitionId),
+      teamService.registerToCompetition(teamId, competitionId, joinCode),
     onSuccess: () => {
       toast.success("Équipe inscrite à la compétition avec succès.");
       queryClient.invalidateQueries(["competition", id]);
@@ -357,6 +382,23 @@ export default function CompetitionDetailPage() {
     unregisterMutation.mutate();
   };
 
+  if (competition?.isPrivateLocked) {
+    return (
+      <div className={classNames(layoutStyles.main, styles.competitions__container)}>
+        <div className={styles.competitions__header}>
+          <h1 className={styles.competitions__title}>{competition.name}</h1>
+          <span className={styles.statusPrivate}>🔒 Privée</span>
+        </div>
+        <div className={styles.competitions__card} style={{ textAlign: "center", padding: 32 }}>
+          <p style={{ fontSize: 18, marginBottom: 8 }}>Cette compétition est privée et sur invitation.</p>
+          <p style={{ color: "#666" }}>
+            Seul un compte correspondant à l’e-mail invité peut voir les détails et s’inscrire.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Gérer l'erreur 403 (compétition non publiée)
   if (competitionError && (competitionError?.status === 403 || (competitionError?.message && competitionError.message.includes("403")))) {
     return (
@@ -470,6 +512,9 @@ export default function CompetitionDetailPage() {
         <div className={styles.competitions__header}>
           <h1 className={styles.competitions__title}>{competition.name}</h1>
           <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+            {competition.isPrivate && (
+              <span className={styles.statusPrivate}>🔒 Privée</span>
+            )}
             {competition.startDate && competition.endDate && (
               <span className={getCompetitionStatus(competition.startDate, competition.endDate).className}>
                 {getCompetitionStatus(competition.startDate, competition.endDate).text}
@@ -565,6 +610,38 @@ export default function CompetitionDetailPage() {
             </div>
           ) : (
             <>
+              {canManage && competition?.isPrivate && (
+                <div className={styles.competitions__info} style={{ marginBottom: 16 }}>
+                  <h2 className={styles.competitions__section_title}>Inviter des pêcheurs</h2>
+                  <p>
+                    Plusieurs adresses d’un coup (virgule, point-virgule ou une par ligne). Code nominatif par e-mail.
+                  </p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8, alignItems: "flex-start" }}>
+                    <textarea
+                      value={participantInviteEmail}
+                      onChange={(e) => setParticipantInviteEmail(e.target.value)}
+                      placeholder={"a@club.fr, b@club.fr\nc@club.fr"}
+                      rows={4}
+                      style={{ flex: 1, minWidth: 220, padding: 8, borderRadius: 8, fontFamily: "inherit" }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.competitions__register_btn}
+                      disabled={inviteParticipantMutation.isPending || !participantInviteEmail.trim()}
+                      onClick={() => inviteParticipantMutation.mutate(participantInviteEmail.trim())}
+                    >
+                      {inviteParticipantMutation.isPending ? "..." : "Inviter"}
+                    </button>
+                  </div>
+                  {(participantInvitesData?.invitations || []).map((row) => (
+                    <p key={`pinv-${row.id}`}>
+                      {row.email}
+                      {row.code ? ` · ${row.code}` : ""}
+                      {row.hasAccount ? " — notifié" : " — e-mail"}
+                    </p>
+                  ))}
+                </div>
+              )}
               {canManage && (
                 <div className={styles.competitions__info} style={{ marginBottom: 16 }}>
                   <h2 className={styles.competitions__section_title}>Commissaires</h2>
@@ -961,7 +1038,7 @@ export default function CompetitionDetailPage() {
                             <tr
                               key={team.id}
                               className={classNames(styles.competitions__table_row, isUserTeam && styles.competitions__table_row_user)}
-                              onClick={() => router.push(`/teams/${team.id}`)}
+                              onClick={() => router.push(`/teams/${team.id}?competitionId=${id}`)}
                               style={{ cursor: "pointer" }}
                             >
                               {competition.isRankingPublic && (

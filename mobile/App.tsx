@@ -200,9 +200,16 @@ function AppNavigator() {
     }
 
     if (url.startsWith('stf://competitions/')) {
-      const id = Number(url.replace('stf://competitions/', '').split('?')[0]);
+      const rest = url.replace('stf://competitions/', '');
+      const [idPart, query] = rest.split('?');
+      const id = Number(idPart);
+      const params = new URLSearchParams(query || '');
+      const code = params.get('code') || params.get('accessCode') || undefined;
       if (id && rootNavigationRef.isReady()) {
-        rootNavigationRef.navigate('CompetitionDetail' as never, { id } as never);
+        rootNavigationRef.navigate(
+          'CompetitionDetail' as never,
+          (code ? { id, accessCode: code, code } : { id }) as never
+        );
       }
     }
 

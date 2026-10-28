@@ -221,8 +221,11 @@ function CompetitionsPageContent() {
           },
       [
         ...sortedCompetitions.map((competition) => {
-        const competitionStatus = getCompetitionStatus(competition.startDate, competition.endDate);
-        const isEnded = competitionStatus.text === "Terminée";
+        const locked = !!competition.isPrivateLocked;
+        const competitionStatus = !locked && competition.startDate && competition.endDate
+          ? getCompetitionStatus(competition.startDate, competition.endDate)
+          : null;
+        const isEnded = competitionStatus?.text === "Terminée";
         return createElement(
           "div",
           {
@@ -269,21 +272,26 @@ function CompetitionsPageContent() {
               {
                 style: { display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" },
               },
-              competition.startDate && competition.endDate && createElement(
+              competition.isPrivate && createElement(
+                "span",
+                { className: styles.statusPrivate },
+                "🔒 Privée"
+              ),
+              !locked && competitionStatus && createElement(
                 "span",
                 {
-                  className: getCompetitionStatus(competition.startDate, competition.endDate).className,
+                  className: competitionStatus.className,
                 },
-                getCompetitionStatus(competition.startDate, competition.endDate).text
+                competitionStatus.text
               ),
-              competition.isRegistered && !isEnded && createElement(
+              !locked && competition.isRegistered && !isEnded && createElement(
                 "span",
                 {
                   className: styles.statusRegistered,
                 },
                 "✓ Inscrit"
               ),
-              competition.isRegistered && isEnded && createElement(
+              !locked && competition.isRegistered && isEnded && createElement(
                 "span",
                 {
                   className: styles.statusParticipated,
@@ -292,7 +300,7 @@ function CompetitionsPageContent() {
               )
             )
           ),
-          createElement(
+          !locked && createElement(
             "div",
             {
               className: styles.competitions__details,
@@ -325,14 +333,16 @@ function CompetitionsPageContent() {
               competition.type || "Standard"
             )
           ),
-          competition.description && createElement(
+          !locked && competition.description && createElement(
             "div",
             {
               className: styles.competitions__description,
             },
             competition.description
           ),
-          createElement(
+          locked
+            ? createElement("div", { className: styles.competitions__info }, "Sur invitation")
+            : createElement(
             "div",
             {
               className: styles.competitions__info,

@@ -54,8 +54,10 @@ export default function CreateCompetitionScreen() {
     endDate: new Date(),
     teamSize: '2',
     type: 'street',
-    maxParticipants: '',
+    maxParticipants: '16',
     hasNoLimit: false,
+    isPaid: false,
+    isPrivate: false,
     description: '',
     reglement: '',
     isRankingPublic: false,
@@ -119,15 +121,16 @@ export default function CreateCompetitionScreen() {
       }
       return res;
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['admin-competitions'] });
       queryClient.invalidateQueries({ queryKey: ['competitions'] });
-      Alert.alert('Succès', 'Compétition créée avec succès.', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      Alert.alert(
+        'Succès',
+        res?.competition?.isPrivate
+          ? 'Compétition créée. Invitez les pêcheurs par e-mail depuis la fiche : le code est nominatif.'
+          : 'Compétition créée avec succès.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors de la création. Veuillez réessayer.';
@@ -300,8 +303,14 @@ export default function CreateCompetitionScreen() {
       return;
     }
 
-    if (!formData.hasNoLimit && (!formData.maxParticipants || parseInt(formData.maxParticipants) < 1)) {
-      setError('Le nombre maximum de participants est requis');
+    if (!formData.isPaid) {
+      const cap = parseInt(formData.maxParticipants || '16', 10);
+      if (!Number.isFinite(cap) || cap < 1 || cap > 16) {
+        setError('En gratuit, le plafond est de 1 à 16 pêcheurs.');
+        return;
+      }
+    } else if (!formData.hasNoLimit && (!formData.maxParticipants || parseInt(formData.maxParticipants) < 1)) {
+      setError('Indiquez un plafond de pêcheurs, ou cochez sans limite.');
       return;
     }
 
@@ -344,7 +353,9 @@ export default function CreateCompetitionScreen() {
       endDate: formatDateTime(formData.endDate),
       teamSize: parseInt(formData.teamSize),
       type: formData.type,
-      hasNoLimit: formData.hasNoLimit,
+      hasNoLimit: formData.isPaid ? formData.hasNoLimit : false,
+      isPaid: formData.isPaid,
+      isPrivate: formData.isPrivate,
       description: formData.description.trim() || null,
       reglement: formData.reglement.trim() || null,
       isRankingPublic: formData.isRankingPublic,
@@ -361,8 +372,10 @@ export default function CreateCompetitionScreen() {
       })(),
     };
 
-    if (!formData.hasNoLimit) {
-      competitionData.maxParticipants = parseInt(formData.maxParticipants);
+    if (!formData.isPaid) {
+      competitionData.maxParticipants = Math.min(16, parseInt(formData.maxParticipants || '16', 10));
+    } else if (!formData.hasNoLimit) {
+      competitionData.maxParticipants = parseInt(formData.maxParticipants, 10);
     }
 
     // Préparer les espèces
@@ -722,32 +735,72 @@ export default function CreateCompetitionScreen() {
             </View>
           </View>
 
-          {/* Pas de limite */}
           <View style={styles.section}>
             <View style={styles.switchRow}>
               <View style={[styles.labelRow, styles.labelRowInSwitch]}>
-                <Text style={styles.label}>Pas de limite de participants</Text>
-                <HelpButton text={COMPETITION_HELP.hasNoLimit} />
+                <Text style={styles.label}>Manche payante</Text>
+                <HelpButton text={COMPETITION_HELP.isPaid} />
               </View>
               <Switch
-                value={formData.hasNoLimit}
-                onValueChange={(value) => setFormData({ ...formData, hasNoLimit: value })}
+                value={formData.isPaid}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    isPaid: value,
+                    hasNoLimit: value,
+                    maxParticipants: value ? '' : '16',
+                  })
+                }
+              />
+            </View>
+            <Text style={styles.helpText}>
+              {formData.isPaid
+                ? 'Pas de plafond sauf si vous en posez un. Stripe viendra ensuite.'
+                : 'Gratuit : 16 pêcheurs max (pas 16 équipes).'}
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.switchRow}>
+              <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                <Text style={styles.label}>Manche privée</Text>
+                <HelpButton text={COMPETITION_HELP.isPrivate} />
+              </View>
+              <Switch
+                value={formData.isPrivate}
+                onValueChange={(value) => setFormData({ ...formData, isPrivate: value })}
               />
             </View>
           </View>
 
-          {/* Max participants */}
-          {!formData.hasNoLimit && (
+          {formData.isPaid ? (
+            <View style={styles.section}>
+              <View style={styles.switchRow}>
+                <View style={[styles.labelRow, styles.labelRowInSwitch]}>
+                  <Text style={styles.label}>Pas de limite de pêcheurs</Text>
+                  <HelpButton text={COMPETITION_HELP.hasNoLimit} />
+                </View>
+                <Switch
+                  value={formData.hasNoLimit}
+                  onValueChange={(value) => setFormData({ ...formData, hasNoLimit: value })}
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {(!formData.isPaid || !formData.hasNoLimit) && (
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Nombre maximum de participants *</Text>
+                <Text style={styles.label}>
+                  {formData.isPaid ? 'Nombre max de pêcheurs *' : 'Plafond de pêcheurs (max 16) *'}
+                </Text>
                 <HelpButton text={COMPETITION_HELP.maxParticipants} />
               </View>
               <TextInput
                 style={styles.input}
                 value={formData.maxParticipants}
                 onChangeText={(text) => setFormData({ ...formData, maxParticipants: text })}
-                placeholder="100"
+                placeholder={formData.isPaid ? '100' : '16'}
                 keyboardType="number-pad"
                 placeholderTextColor={theme.textMuted}
               />

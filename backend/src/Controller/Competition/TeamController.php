@@ -2,6 +2,7 @@
 
 namespace App\Controller\Competition;
 
+use App\Entity\Competition\Competition;
 use App\Entity\Competition\Team;
 use App\Entity\Competition\TeamInvitation;
 use App\Repository\Competition\TeamRepository;
@@ -540,11 +541,21 @@ class TeamController extends AbstractController
                 $maxTeamSize = $team->getCompetition()->getTeamSize();
             }
             
-            // Vérifier que l'équipe n'est pas complète
             if ($team->getMembers()->count() >= $maxTeamSize) {
                 return $this->json([
                     'success' => false,
                     'message' => "L'équipe est déjà complète ({$maxTeamSize} membre(s) maximum)"
+                ], 400);
+            }
+
+            $liveCompetition = $team->getCompetition();
+            if ($liveCompetition && !$liveCompetition->canAcceptAdditionalParticipants(1)) {
+                $max = $liveCompetition->getEffectiveMaxParticipants();
+                return $this->json([
+                    'success' => false,
+                    'message' => $max
+                        ? "Plus de places sur la manche ({$liveCompetition->countEnrolledParticipants()}/{$max} pêcheurs)."
+                        : 'Plus de places sur cette manche.',
                 ], 400);
             }
 
@@ -637,17 +648,29 @@ class TeamController extends AbstractController
     }
 
     #[Route('/{id}', name: 'competition_team_show', methods: ['GET'])]
-    public function show(Team $team, CompetitionSpeciesRepository $competitionSpeciesRepo): JsonResponse
-    {
-        // Filtrer les prises par compétition si l'équipe a une compétition.
-        // Inclure aussi les prises sans compétition persistée sur la ligne (historique / données héritées),
-        // sinon les clients (ex. pénalités admin) peuvent voir une liste vide avec des points pourtant comptabilisés.
+    public function show(Team $team, Request $request): JsonResponse {
+        $liveCompetition = $team->getCompetition();
+        $requestedId = $request->query->get('competitionId');
+        $competition = $liveCompetition;
+        if ($requestedId !== null && $requestedId !== '') {
+            $found = $this->entityManager->getRepository(Competition::class)->find((int) $requestedId);
+            if (!$found) {
+                return $this->json(['success' => false, 'message' => 'Compétition non trouvée'], 404);
+            }
+            $competition = $found;
+        }
+        $isLiveView = $liveCompetition && $competition && $liveCompetition->getId() === $competition->getId();
+        $snapshot = $competition ? $this->snapshotService->findSnapshotForTeam($competition, $team) : null;
+
         $competitionCatches = [];
-        if ($team->getCompetition()) {
-            $competitionId = $team->getCompetition()->getId();
+        if ($competition) {
             foreach ($team->getCatches() as $catch) {
                 $catchComp = $catch->getCompetition();
-                if ($catchComp === null || $catchComp->getId() === $competitionId) {
+                if ($catchComp && $catchComp->getId() === $competition->getId()) {
+                    $competitionCatches[] = $catch;
+                    continue;
+                }
+                if ($isLiveView && $catchComp === null) {
                     $competitionCatches[] = $catch;
                 }
             }
@@ -655,10 +678,9 @@ class TeamController extends AbstractController
             $competitionCatches = $team->getCatches()->toArray();
         }
 
-        // Créer un mapping des espèces vers leurs coefficients de compétition si l'équipe a une compétition
         $competitionSpeciesMap = [];
-        if ($team->getCompetition()) {
-            foreach ($team->getCompetition()->getCompetitionSpecies() as $compSpecies) {
+        if ($competition) {
+            foreach ($competition->getCompetitionSpecies() as $compSpecies) {
                 $sp = $compSpecies->getSpecies();
                 if ($sp === null) {
                     continue;
@@ -667,25 +689,31 @@ class TeamController extends AbstractController
             }
         }
 
-        // Utiliser le détail du score (respecte newSpeciesBonusEnabled, quotaBonusEnabled)
-        $teamScore = $team->getCompetition()
-            ? $team->getScoreForCompetition($team->getCompetition())
-            : $team->getTotalScore();
-
-        $scoreBreakdown = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0, 'penaltyPoints' => $team->getTotalPenaltyPoints()];
-        if ($team->getCompetition()) {
-            $scoreBreakdown = $team->getScoreBreakdownForCompetition($team->getCompetition());
+        $scoreBreakdown = ['baseScore' => 0, 'newSpeciesBonus' => 0, 'quotaBonus' => 0, 'bonus' => 0, 'penaltyPoints' => 0];
+        if ($competition) {
+            $scoreBreakdown = $team->getScoreBreakdownForCompetition($competition);
         } else {
-            // Fallback legacy : bonus = totalScore - baseScore des top 5
-            $validatedCatches = array_filter($competitionCatches, fn($c) => $c->isValidated());
+            $teamScore = $team->getTotalScore();
+            $validatedCatches = array_filter($competitionCatches, fn ($c) => $c->isValidated());
             $sorted = $validatedCatches;
-            usort($sorted, fn($a, $b) => $b->calculatePoints() <=> $a->calculatePoints());
+            usort($sorted, fn ($a, $b) => $b->calculatePoints() <=> $a->calculatePoints());
             $top5 = array_slice($sorted, 0, 5);
-            $scoreBreakdown['baseScore'] = array_sum(array_map(fn($c) => $c->calculatePoints(), $top5));
+            $scoreBreakdown['baseScore'] = array_sum(array_map(fn ($c) => $c->calculatePoints(), $top5));
             $scoreBreakdown['bonus'] = max(0, $teamScore - $scoreBreakdown['baseScore']);
+            $scoreBreakdown['penaltyPoints'] = $team->getTotalPenaltyPoints();
         }
 
-        $penaltiesPayload = $team->getPenaltiesForApi();
+        $penaltiesPayload = $this->penaltiesForCompetition($team, $competitionCatches, $isLiveView);
+        $penaltyPoints = array_sum(array_map(static fn (array $row) => (int) ($row['points'] ?? 0), $penaltiesPayload));
+        $scoreBreakdown['penaltyPoints'] = $penaltyPoints;
+
+        if ($snapshot && !$isLiveView) {
+            $teamScore = $snapshot->getTotalScore() ?? 0;
+        } elseif ($competition) {
+            $teamScore = max(0, ($scoreBreakdown['baseScore'] ?? 0) + ($scoreBreakdown['bonus'] ?? 0) - $penaltyPoints);
+        } else {
+            $teamScore = $team->getTotalScore();
+        }
         $penaltiesByCatchId = [];
         foreach ($penaltiesPayload as $penaltyRow) {
             $catchId = $penaltyRow['fishCatchId'] ?? null;
@@ -704,7 +732,6 @@ class TeamController extends AbstractController
             'success' => true,
             'team' => [
                 'id' => $team->getId(),
-                'name' => $team->getName(),
                 'totalScore' => $teamScore,
                 'hasBonus' => $team->getHasBonus(),
                 'bonus' => $scoreBreakdown['bonus'],
@@ -713,9 +740,13 @@ class TeamController extends AbstractController
                 'baseScore' => $scoreBreakdown['baseScore'],
                 'penaltyPoints' => $scoreBreakdown['penaltyPoints'] ?? 0,
                 'penalties' => $penaltiesPayload,
-                'isDisqualified' => $team->isDisqualified(),
-                'disqualificationReason' => $team->getDisqualificationReason(),
-                'registrationNumber' => $team->getRegistrationNumber(),
+                'name' => (!$isLiveView && $snapshot?->getTeamName()) ? $snapshot->getTeamName() : $team->getName(),
+                'isDisqualified' => $snapshot && !$isLiveView ? $snapshot->isDisqualified() : $team->isDisqualified(),
+                'disqualificationReason' => $isLiveView ? $team->getDisqualificationReason() : null,
+                'registrationNumber' => $snapshot && !$isLiveView
+                    ? $snapshot->getRegistrationNumber()
+                    : $team->getRegistrationNumber(),
+                'isHistoricalView' => !$isLiveView && $competition !== null,
                 'members' => array_map(function ($member) {
                     return [
                         'id' => $member->getId(),
@@ -724,20 +755,19 @@ class TeamController extends AbstractController
                         'email' => $member->getEmail(),
                     ];
                 }, $team->getMembers()->toArray()),
-                'archivedMembers' => $team->getCompetition()
-                    ? ($this->snapshotService->findSnapshotForTeam($team->getCompetition(), $team)?->getMembers()
-                        ?: $this->snapshotService->collectMembers($team, $team->getCompetition()))
+                'archivedMembers' => $competition
+                    ? ($snapshot?->getMembers() ?: $this->snapshotService->collectMembers($team, $competition))
                     : [],
-                'competition' => $team->getCompetition() ? [
-                    'id' => $team->getCompetition()->getId(),
-                    'name' => $team->getCompetition()->getName(),
-                    'teamSize' => $team->getCompetition()->getTeamSize(),
-                    'maxFishCounted' => $team->getCompetition()->getMaxFishCounted(),
-                    'startDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getStartDate()),
-                    'endDate' => DateTimeHelper::formatParisOrNull($team->getCompetition()->getEndDate()),
+                'competition' => $competition ? [
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                    'teamSize' => $competition->getTeamSize(),
+                    'maxFishCounted' => $competition->getMaxFishCounted(),
+                    'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
+                    'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
                 ] : null,
-                'scoringPresentation' => $team->getCompetition()
-                    ? $team->getScoringPresentationForCompetition($team->getCompetition())
+                'scoringPresentation' => $competition
+                    ? $team->getScoringPresentationForCompetition($competition)
                     : null,
                 'catches' => array_values(array_filter(array_map(function ($catch) use ($competitionSpeciesMap, $penaltiesByCatchId) {
                     $species = $catch->getSpecies();
@@ -782,6 +812,34 @@ class TeamController extends AbstractController
                 }, $competitionCatches), static fn ($row) => $row !== null)),
             ]
         ]);
+    }
+
+    /**
+     * @param list<\App\Entity\Competition\FishCatch> $competitionCatches
+     * @return list<array{id: int|null, points: int, reason: string|null, createdAt: string|null, fishCatchId: int|null, speciesName: string|null}>
+     */
+    private function penaltiesForCompetition(Team $team, array $competitionCatches, bool $isLiveView): array
+    {
+        $catchIds = [];
+        foreach ($competitionCatches as $catch) {
+            $id = $catch->getId();
+            if ($id) {
+                $catchIds[$id] = true;
+            }
+        }
+        $items = [];
+        foreach ($team->getPenaltiesForApi() as $row) {
+            $catchId = $row['fishCatchId'] ?? null;
+            if ($catchId) {
+                if (isset($catchIds[$catchId])) {
+                    $items[] = $row;
+                }
+            } elseif ($isLiveView) {
+                $items[] = $row;
+            }
+        }
+
+        return $items;
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
@@ -1229,6 +1287,17 @@ class TeamController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => "L'équipe est déjà complète ({$maxTeamSize} membre(s) maximum)"
+                ], 400);
+            }
+
+            $liveCompetition = $team->getCompetition();
+            if ($liveCompetition && !$liveCompetition->canAcceptAdditionalParticipants(1)) {
+                $max = $liveCompetition->getEffectiveMaxParticipants();
+                return $this->json([
+                    'success' => false,
+                    'message' => $max
+                        ? "Plus de places sur la manche ({$liveCompetition->countEnrolledParticipants()}/{$max} pêcheurs)."
+                        : 'Plus de places sur cette manche.',
                 ], 400);
             }
 

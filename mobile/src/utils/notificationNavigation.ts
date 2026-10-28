@@ -5,6 +5,8 @@ type NotifData = {
   teamId?: number | string;
   catchId?: number | string;
   competitionId?: number | string;
+  accessCode?: string;
+  code?: string;
 };
 
 function toInt(value: number | string | undefined): number | null {
@@ -40,6 +42,10 @@ export function navigateFromNotificationData(raw: NotifData | null | undefined):
     return;
   }
   if (competitionId) {
-    rootNavigationRef.navigate('CompetitionDetail' as never, { id: competitionId } as never);
+    const accessCode = raw.accessCode || raw.code;
+    rootNavigationRef.navigate(
+      'CompetitionDetail' as never,
+      (accessCode ? { id: competitionId, accessCode } : { id: competitionId }) as never
+    );
   }
 }

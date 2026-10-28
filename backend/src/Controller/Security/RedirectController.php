@@ -185,10 +185,16 @@ HTML;
     #[Route('/redirect/competitions/{id}', name: 'redirect_competition', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function redirectCompetition(int $id, Request $request): Response
     {
+        $code = $request->query->get('code') ?? $request->query->get('accessCode');
+        $deepLink = 'stf://competitions/' . $id;
+        if (\is_string($code) && $code !== '') {
+            $deepLink .= '?code=' . rawurlencode($code);
+        }
+
         return $this->openAppPage(
             'Ouvrir la compétition',
             'Ouvrez Street Fishing pour voir la compétition.',
-            'stf://competitions/' . $id
+            $deepLink
         );
     }
 

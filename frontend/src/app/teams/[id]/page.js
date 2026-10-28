@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { teamService } from "../../../services/teamService";
 import styles from "../../../styles/pages/teams.module.scss";
 import { useAuth } from "../../../components/auth/ConditionalAuth";
@@ -124,6 +124,8 @@ function ScoringCountedCatchCard({ catchItem, rank, styles, setSelectedImage }) 
 
 export default function TeamDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const competitionId = searchParams.get("competitionId");
   const router = useRouter();
   const { isAuthenticated, currentUser: authUser, isLoading: authLoading } = useAuth();
   const isAdmin = authUser?.roles?.includes("ROLE_ADMIN");
@@ -138,7 +140,7 @@ export default function TeamDetailPage() {
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const response = await teamService.getById(undefined, params.id);
+        const response = await teamService.getById(competitionId || undefined, params.id);
         if (response.success && response.team) {
           setTeam(response.team);
         } else {
@@ -161,7 +163,7 @@ export default function TeamDetailPage() {
     if (params.id) {
       fetchTeam();
     }
-  }, [params.id]);
+  }, [params.id, competitionId]);
 
   // Gérer le body overflow quand la modal est ouverte
   useEffect(() => {
@@ -437,9 +439,9 @@ export default function TeamDetailPage() {
           
           {/* Formulaire d'invitation si l'équipe n'est pas complète */}
           {(() => {
-            // Déterminer la taille maximale de l'équipe
-            // Si l'équipe est inscrite à une compétition, utiliser la taille requise par la compétition
-            // Sinon, permettre jusqu'à 2 membres minimum
+            if (team.isHistoricalView) {
+              return false;
+            }
             const maxTeamSize = team.competition?.teamSize || 2;
             return team.members && team.members.length < maxTeamSize;
           })() && isAuthenticated && (
@@ -492,7 +494,7 @@ export default function TeamDetailPage() {
                               setInviteEmail("");
                               setShowInviteForm(false);
                               // Recharger les données de l'équipe
-                              const updatedResponse = await teamService.getById(undefined, params.id);
+                              const updatedResponse = await teamService.getById(competitionId || undefined, params.id);
                               if (updatedResponse.success && updatedResponse.team) {
                                 setTeam(updatedResponse.team);
                               }

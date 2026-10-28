@@ -67,10 +67,8 @@ class CorsListener
         // Ajouter les headers CORS pour les erreurs sur les routes API
         if (str_starts_with($request->getPathInfo(), '/api')) {
             $response = $event->getResponse();
-            // Si aucune réponse n'existe encore, créer une réponse d'erreur générique
             if (!$response) {
-                $response = new Response('', 500);
-                $event->setResponse($response);
+                return;
             }
             $this->addCorsHeaders($request, $response);
         }
