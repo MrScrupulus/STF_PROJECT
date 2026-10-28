@@ -60,6 +60,7 @@ export default function CompetitionDetailScreen({ route }: any) {
   const [myTeamPhoto, setMyTeamPhoto] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [participantInviteEmail, setParticipantInviteEmail] = useState('');
+  const [showParticipantInvites, setShowParticipantInvites] = useState(false);
   const [screenScrollEnabled, setScreenScrollEnabled] = useState(true);
   const accessCodeFromRoute = (route.params as any)?.accessCode || (route.params as any)?.code;
   const [joinCode, setJoinCode] = useState(String(accessCodeFromRoute || ''));
@@ -412,17 +413,28 @@ export default function CompetitionDetailScreen({ route }: any) {
   if ((competition as any).isPrivateLocked) {
     return (
       <>
-        <Header title="Compétition" showBack={true} />
-        <View style={styles.privateLocked}>
-          <FaIcon name="lock" size={32} color={theme.accent} />
-          <View style={styles.privateBadge}>
-            <Text style={styles.privateBadgeText}>Privée</Text>
+        <Header title={(competition as any).name} showBack={true} showMenu={true} />
+        <View style={styles.container}>
+          <View style={styles.content}>
+            <View style={styles.headerStack}>
+              <Text style={styles.date}>
+                {formatCompetitionDateRange(
+                  (competition as any).startDate,
+                  (competition as any).endDate
+                )}
+              </Text>
+              <View style={[styles.badgesContainer, styles.badgesBelow]}>
+                <View style={styles.privateBadge}>
+                  <FaIcon name="lock" size={11} color={theme.onAccent} />
+                  <Text style={styles.privateBadgeText}>Privée</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.privateLockedText}>
+              {(competition as any).message ||
+                'Cette compétition est privée et sur invitation.'}
+            </Text>
           </View>
-          <Text style={styles.privateLockedTitle}>{(competition as any).name}</Text>
-          <Text style={styles.privateLockedText}>
-            {(competition as any).message ||
-              'Cette compétition est privée et sur invitation.'}
-          </Text>
         </View>
       </>
     );
@@ -548,11 +560,11 @@ export default function CompetitionDetailScreen({ route }: any) {
       <Header title={competition.name} showBack={true} showMenu={true} />
       <ScrollView style={styles.container} scrollEnabled={screenScrollEnabled}>
         <View style={styles.content}>
-          <View style={styles.headerRow}>
+          <View style={(competition as any).isPrivate ? styles.headerStack : styles.headerRow}>
             <Text style={styles.date}>
               {formatCompetitionDateRange(competition.startDate, competition.endDate)}
             </Text>
-            <View style={styles.badgesContainer}>
+            <View style={[styles.badgesContainer, (competition as any).isPrivate && styles.badgesBelow]}>
               {(competition as any).isPrivate ? (
                 <View style={styles.privateBadge}>
                   <FaIcon name="lock" size={11} color={theme.onAccent} />
@@ -561,12 +573,12 @@ export default function CompetitionDetailScreen({ route }: any) {
               ) : null}
               {competition.isRegistered && !status.isEnded && (
                 <View style={styles.registeredBadge}>
-                  <Text style={styles.registeredBadgeText}>✓ Inscrit</Text>
+                  <Text style={styles.registeredBadgeText}>Inscrit</Text>
                 </View>
               )}
               {competition.isRegistered && status.isEnded && (
                 <View style={styles.participatedBadge}>
-                  <Text style={styles.participatedBadgeText}>✓ Participé</Text>
+                  <Text style={styles.participatedBadgeText}>Participé</Text>
                 </View>
               )}
               <View style={[styles.statusBadge, status.style]}>
@@ -695,7 +707,7 @@ export default function CompetitionDetailScreen({ route }: any) {
                 <Text style={styles.ruleLabel}>Bonus « nouvelle espèce »</Text>
                 <Text style={styles.ruleValue}>
                   {(competition as any).newSpeciesBonusEnabled
-                    ? `Oui — +${(competition as any).newSpeciesBonusPoints ?? '—'} pts par nouvelle espèce dans la manche`
+                    ? `Oui — +${(competition as any).newSpeciesBonusPoints ?? '—'} pts par nouvelle espèce dans la compétition`
                     : 'Non'}
                 </Text>
               </View>
@@ -911,13 +923,23 @@ export default function CompetitionDetailScreen({ route }: any) {
                 {inviteParticipantMutation.isPending ? '...' : 'Inviter'}
               </Text>
             </TouchableOpacity>
-            {(participantInvitesData?.invitations || []).map((row: any) => (
-              <Text key={`pinv-${row.id}`} style={styles.staffLine}>
-                {row.email}
-                {row.code ? ` · ${row.code}` : ''}
-                {row.hasAccount ? ' — notifié' : ' — e-mail'}
+            <TouchableOpacity
+              style={[styles.showMoreStatsBtn, { marginTop: 12 }]}
+              onPress={() => setShowParticipantInvites((v) => !v)}
+            >
+              <Text style={styles.showMoreStatsText}>
+                {showParticipantInvites ? 'Masquer les invités' : 'Afficher les invités'}
               </Text>
-            ))}
+            </TouchableOpacity>
+            {showParticipantInvites
+              ? (participantInvitesData?.invitations || []).map((row: any) => (
+                  <Text key={`pinv-${row.id}`} style={styles.staffLine}>
+                    {row.email}
+                    {row.code ? ` · ${row.code}` : ''}
+                    {row.hasAccount ? ' — notifié' : ' — e-mail'}
+                  </Text>
+                ))
+              : null}
           </View>
         ) : null}
 
@@ -1548,6 +1570,12 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     marginBottom: 16,
     flexWrap: 'wrap',
   },
+  headerStack: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 16,
+  },
   date: {
     fontSize: 16,
     color: theme.textMuted,
@@ -1560,20 +1588,23 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     flexWrap: 'wrap',
     marginLeft: 12,
   },
+  badgesBelow: {
+    marginLeft: 0,
+  },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   statusBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.onAccent,
   },
   registeredBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
     backgroundColor: theme.accentMuted,
     borderWidth: 1,
     borderColor: theme.accent,
@@ -1584,9 +1615,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     color: theme.accent,
   },
   participatedBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
     backgroundColor: '#fef3c7',
   },
   participatedBadgeText: {

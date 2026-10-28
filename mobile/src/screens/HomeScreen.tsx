@@ -140,8 +140,8 @@ export default function HomeScreen() {
               <Text style={styles.actionTitle}>Gestion des compétitions</Text>
               <Text style={styles.actionHint}>
                 {isAdmin
-                  ? 'Toutes les manches, validations, pénalités'
-                  : 'Création, vos manches, prises et pénalités'}
+                  ? 'Toutes les compétitions, validations, pénalités'
+                  : 'Création, vos compétitions, prises et pénalités'}
               </Text>
             </View>
             <Text style={styles.chevron}>›</Text>

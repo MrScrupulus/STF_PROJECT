@@ -83,9 +83,12 @@ export function formatRelativeTime(dateString) {
   }
 
   try {
-    const date = new Date(dateString + "Z");
+    const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
+    if (diffMs < 90000) {
+      return "À l'instant";
+    }
     const diffSeconds = Math.floor(diffMs / 1000);
     const diffMinutes = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMinutes / 60);

@@ -32,6 +32,12 @@ export default function AdminCatchValidationListScreen() {
     refetchInterval: 15000,
   });
 
+  const { data: reviewedCatchesData } = useQuery({
+    queryKey: ['admin-reviewed-catches'],
+    queryFn: () => adminService.getReviewedCatches(1, 20),
+    refetchInterval: 20000,
+  });
+
   // Mettre à jour les prises
   useEffect(() => {
     if (pendingCatchesData) {
@@ -83,7 +89,7 @@ export default function AdminCatchValidationListScreen() {
     <>
         <Header title="Prises à valider" showBack={false} showMenu={true}  />
       <View style={styles.container}>
-        {pendingCount === 0 ? (
+        {pendingCount === 0 && !(reviewedCatchesData?.catches || []).length ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Aucune prise en attente</Text>
             <Text style={styles.emptySubtext}>
@@ -122,12 +128,41 @@ export default function AdminCatchValidationListScreen() {
             onEndReached={loadMoreCatches}
             onEndReachedThreshold={0.5}
             ListFooterComponent={
-              isLoadingMore ? (
-                <View style={styles.loadingMore}>
-                  <ActivityIndicator size="small" color={theme.accent} />
-                  <Text style={styles.loadingMoreText}>Chargement...</Text>
-                </View>
-              ) : null
+              <>
+                {isLoadingMore ? (
+                  <View style={styles.loadingMore}>
+                    <ActivityIndicator size="small" color={theme.accent} />
+                    <Text style={styles.loadingMoreText}>Chargement...</Text>
+                  </View>
+                ) : null}
+                {(reviewedCatchesData?.catches || []).length > 0 ? (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={[styles.catchTitle, { marginBottom: 12 }]}>Déjà traitées</Text>
+                    {(reviewedCatchesData.catches || []).map((catchItem: any) => (
+                      <TouchableOpacity
+                        key={`rev-${catchItem.id}`}
+                        style={styles.catchCard}
+                        onPress={() => handleViewCatch(catchItem.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.catchHeader}>
+                          <Text style={styles.catchTitle}>
+                            {catchItem.species?.name || 'Espèce inconnue'}
+                          </Text>
+                          <Text style={styles.catchSize}>{catchItem.size} cm</Text>
+                        </View>
+                        <Text style={styles.catchTeam}>
+                          {catchItem.isValidated ? 'Validée' : 'Rejetée'}
+                          {catchItem.team?.name ? ` · ${catchItem.team.name}` : ''}
+                        </Text>
+                        <Text style={styles.catchDate}>
+                          {formatDateTime(catchItem.createdAt)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </>
             }
             contentContainerStyle={styles.listContent}
           />

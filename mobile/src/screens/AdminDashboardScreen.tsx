@@ -135,7 +135,7 @@ export default function AdminDashboardScreen() {
   const tiles: { label: string; hint: string; icon: AppIconName; onPress: () => void }[] = [
     {
       label: 'Compétitions',
-      hint: 'Vos manches',
+      hint: 'Vos compétitions',
       icon: 'trophy',
       onPress: () => (navigation as any).navigate('CompetitionsList'),
     },
@@ -143,7 +143,7 @@ export default function AdminDashboardScreen() {
       ? [
           {
             label: 'Créer',
-            hint: 'Nouvelle manche',
+            hint: 'Nouvelle compétition',
             icon: 'plus' as AppIconName,
             onPress: () => (navigation as any).navigate('CreateCompetition'),
           },

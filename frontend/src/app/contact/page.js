@@ -12,7 +12,7 @@ export default function ContactPage() {
             TestFlight) :
           </p>
           <p>
-            <a href="mailto:noreply@scrupy.com">noreply@scrupy.com</a>
+            <a href="mailto:streetfishing.scrupy@gmail.com">streetfishing.scrupy@gmail.com</a>
           </p>
           <p>
             <a href="/legal/privacy">Politique de confidentialité</a>

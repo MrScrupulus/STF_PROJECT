@@ -213,6 +213,9 @@ export function formatRelativeTime(dateString: string | null | undefined): strin
     if (!date) return 'Date inconnue';
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 90_000) {
+      return "À l'instant";
+    }
     const diffSeconds = Math.floor(diffMs / 1000);
     const diffMinutes = Math.floor(diffSeconds / 60);
     const diffHours = Math.floor(diffMinutes / 60);

@@ -27,12 +27,12 @@ const STEPS = [
   {
     icon: 'users' as AppIconName,
     title: 'Équipe',
-    text: 'Créez une équipe ou rejoignez-en une avant de vous inscrire à une manche.',
+    text: 'Créez une équipe ou rejoignez-en une avant de vous inscrire à une compétition.',
   },
   {
     icon: 'trophy' as AppIconName,
     title: 'Compétition',
-    text: 'Inscrivez votre équipe, puis enregistrez vos prises pendant la manche.',
+    text: 'Inscrivez votre équipe, puis enregistrez vos prises pendant la compétition.',
   },
   {
     icon: 'gear' as AppIconName,
@@ -128,7 +128,7 @@ export default function OnboardingScreen({ navigation, route, onFinished }: any)
             <Text style={styles.title}>Bienvenue sur Street Fishing</Text>
             <Text style={styles.lead}>
               Deux usages, un même bouton photo : votre carnet personnel, et les
-              manches de compétition avec votre équipe.
+              compétitions avec votre équipe.
             </Text>
           </>
         ) : null}

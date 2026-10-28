@@ -281,7 +281,7 @@ export default function TeamDetailScreen({ route }: any) {
     Alert.alert(
       'Quitter l\'équipe',
       team?.competition
-        ? 'Vous pourrez rejoindre une autre équipe pour une nouvelle manche. Votre participation à cette compétition restera dans l’archive.'
+        ? 'Vous pourrez rejoindre une autre équipe pour une nouvelle compétition. Votre participation à cette compétition restera dans l’archive.'
         : 'Êtes-vous sûr de vouloir quitter cette équipe ? Cette action est irréversible.',
       [
         {

@@ -251,17 +251,8 @@ class CompetitionFishCatchController extends AbstractController
             $team->updateTotalScore();
             $em->flush();
 
-            // Notifier tous les admins qu'une nouvelle prise est en attente de validation
             try {
-                $caughtBy = $catch->getCaughtBy();
-                $caughtByName = $caughtBy ? ($caughtBy->getFirstname() . ' ' . $caughtBy->getLastname()) : 'Inconnu';
-                $notificationService->notifyAdminsPendingCatch(
-                    $catch->getId(),
-                    $team->getName(),
-                    $species->getName(),
-                    $catch->getSize(),
-                    $caughtByName
-                );
+                $notificationService->notifyPendingCatch($catch);
             } catch (\Exception $e) {
                 // Ne pas faire échouer la création de la prise si la notification échoue
                 error_log('Erreur lors de l\'envoi de la notification: ' . $e->getMessage());

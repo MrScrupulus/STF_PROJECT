@@ -40,6 +40,7 @@ export default function CompetitionDetailPage() {
   const [showTop3, setShowTop3] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [participantInviteEmail, setParticipantInviteEmail] = useState("");
+  const [showParticipantInvites, setShowParticipantInvites] = useState(false);
   const [joinCode, setJoinCode] = useState("");
 
   const { data: competitionResponse, isLoading: competitionLoading, error: competitionError } = useQuery({
@@ -387,10 +388,24 @@ export default function CompetitionDetailPage() {
       <div className={classNames(layoutStyles.main, styles.competitions__container)}>
         <div className={styles.competitions__header}>
           <h1 className={styles.competitions__title}>{competition.name}</h1>
-          <span className={styles.statusPrivate}>🔒 Privée</span>
         </div>
-        <div className={styles.competitions__card} style={{ textAlign: "center", padding: 32 }}>
-          <p style={{ fontSize: 18, marginBottom: 8 }}>Cette compétition est privée et sur invitation.</p>
+        <div className={styles.competitions__card}>
+          {competition.startDate && competition.endDate ? (
+            <>
+              <div className={styles.competitions__date}>
+                <strong>Date de début: </strong>
+                {formatCompetitionDateTime(competition.startDate)}
+              </div>
+              <div className={styles.competitions__date}>
+                <strong>Date de fin: </strong>
+                {formatCompetitionDateTime(competition.endDate)}
+              </div>
+            </>
+          ) : null}
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", margin: "8px 0 16px" }}>
+            <span className={styles.statusPrivate}>🔒 Privée</span>
+          </div>
+          <p>Cette compétition est privée et sur invitation.</p>
           <p style={{ color: "#666" }}>
             Seul un compte correspondant à l’e-mail invité peut voir les détails et s’inscrire.
           </p>
@@ -511,10 +526,8 @@ export default function CompetitionDetailPage() {
         <>
         <div className={styles.competitions__header}>
           <h1 className={styles.competitions__title}>{competition.name}</h1>
+          {!competition.isPrivate ? (
           <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-            {competition.isPrivate && (
-              <span className={styles.statusPrivate}>🔒 Privée</span>
-            )}
             {competition.startDate && competition.endDate && (
               <span className={getCompetitionStatus(competition.startDate, competition.endDate).className}>
                 {getCompetitionStatus(competition.startDate, competition.endDate).text}
@@ -531,6 +544,7 @@ export default function CompetitionDetailPage() {
               </span>
             )}
           </div>
+          ) : null}
         </div>
 
         <div className={styles.competitions__card}>
@@ -546,6 +560,26 @@ export default function CompetitionDetailPage() {
               ? formatCompetitionDateTime(competition.endDate)
               : "Non définie"}
           </div>
+          {competition.isPrivate ? (
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", margin: "8px 0 12px" }}>
+            <span className={styles.statusPrivate}>🔒 Privée</span>
+            {competition.startDate && competition.endDate && (
+              <span className={getCompetitionStatus(competition.startDate, competition.endDate).className}>
+                {getCompetitionStatus(competition.startDate, competition.endDate).text}
+              </span>
+            )}
+            {competition.isRegistered && !competition.isEnded && (
+              <span className={styles.statusRegistered}>
+                ✓ Inscrit
+              </span>
+            )}
+            {competition.isRegistered && competition.isEnded && (
+              <span className={styles.statusParticipated}>
+                ✓ Participé
+              </span>
+            )}
+          </div>
+          ) : null}
           {competition.description && (
             <div className={styles.competitions__description}>
               <strong>Description: </strong>
@@ -633,13 +667,23 @@ export default function CompetitionDetailPage() {
                       {inviteParticipantMutation.isPending ? "..." : "Inviter"}
                     </button>
                   </div>
-                  {(participantInvitesData?.invitations || []).map((row) => (
-                    <p key={`pinv-${row.id}`}>
-                      {row.email}
-                      {row.code ? ` · ${row.code}` : ""}
-                      {row.hasAccount ? " — notifié" : " — e-mail"}
-                    </p>
-                  ))}
+                  <button
+                    type="button"
+                    className={styles.competitions__show_more_stats}
+                    style={{ marginTop: 8 }}
+                    onClick={() => setShowParticipantInvites((v) => !v)}
+                  >
+                    {showParticipantInvites ? "Masquer les invités" : "Afficher les invités"}
+                  </button>
+                  {showParticipantInvites
+                    ? (participantInvitesData?.invitations || []).map((row) => (
+                        <p key={`pinv-${row.id}`}>
+                          {row.email}
+                          {row.code ? ` · ${row.code}` : ""}
+                          {row.hasAccount ? " — notifié" : " — e-mail"}
+                        </p>
+                      ))
+                    : null}
                 </div>
               )}
               {canManage && (

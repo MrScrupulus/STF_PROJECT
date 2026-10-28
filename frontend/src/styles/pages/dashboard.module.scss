@@ -6,9 +6,9 @@
 
   &__container {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: $spacing-xl;
+    padding: $spacing-lg $spacing-xl $spacing-xl;
     position: relative;
 
     @include mobile {
@@ -17,31 +17,103 @@
   }
 
   &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: $spacing-lg;
     margin-bottom: $spacing-lg;
-    padding: 0 $spacing-xs;
-    text-align: center;
+    padding: 0;
+
+    @include mobile {
+      flex-direction: column;
+      align-items: stretch;
+      gap: $spacing-base;
+    }
 
     &_content {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: $spacing-xs;
+      min-width: 0;
     }
   }
 
+  &__kicker {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-blue-600;
+  }
+
   &__title {
-    font-size: $font-size-lg;
-    font-weight: 600;
-    color: $color-gray-800;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: $color-gray-900;
     margin: 0;
     padding: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 
     @include desktop {
-      font-size: $font-size-xl;
-      font-weight: bold;
+      font-size: 1.75rem;
     }
+  }
+
+  &__subtitle {
+    margin: 0;
+    max-width: 36rem;
+    font-size: $font-size-sm;
+    color: $color-gray-500;
+    line-height: 1.45;
+  }
+
+  &__kpis {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $spacing-sm;
+    margin-bottom: $spacing-lg;
+
+    @include desktop-large {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: $spacing-base;
+    }
+  }
+
+  &__kpi {
+    background: $color-white;
+    border: 1px solid $color-gray-200;
+    border-radius: 12px;
+    padding: $spacing-base $spacing-lg;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: $shadow-sm;
+
+    &_value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: $color-gray-900;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+
+    &_label {
+      font-size: $font-size-sm;
+      color: $color-gray-500;
+      font-weight: 500;
+    }
+
+    &--alert {
+      border-color: rgba($color-red-500, 0.35);
+      background: linear-gradient(180deg, #fff7f7 0%, $color-white 100%);
+    }
+  }
+
+  &__kpi--alert &__kpi_value {
+    color: $color-red-600;
   }
 
   &__theme_toggle {
@@ -68,49 +140,57 @@
 
   &__grid {
     display: grid;
-    gap: $spacing-lg;
-    grid-template-columns: repeat(2, 1fr);
-    transition: all 0.3s ease;
+    gap: $spacing-base;
+    grid-template-columns: 1fr;
+    align-items: start;
 
-    // Quand il y a une recherche ajouter une classe .searching au conteneur)
-    &.searching {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    @include desktop-large {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: $spacing-lg;
     }
 
-    @include mobile {
+    &.searching {
       grid-template-columns: 1fr;
+
+      @include desktop-large {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
     }
   }
 
   &__section_title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: $color-gray-800;
-    margin-bottom: $spacing-xl;
-    position: relative;
-    display: inline-block;
-    padding-bottom: $spacing-sm;
+    font-size: 1.05rem;
+    font-weight: 650;
+    color: $color-gray-900;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-sm;
+    letter-spacing: -0.01em;
+  }
 
-    &::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, #60a5fa 0%, $color-blue-500 100%);
-      border-radius: 2px;
-    }
+  &__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 9999px;
+    background: $color-gray-100;
+    color: $color-gray-700;
+    font-size: 0.75rem;
+    font-weight: 700;
   }
 
   &__card {
     background: $color-white;
-    border-radius: $radius-lg;
-    padding: $spacing-xs;
+    border: 1px solid $color-gray-200;
+    border-radius: 14px;
+    padding: $spacing-base;
     box-shadow: $shadow-sm;
     box-sizing: border-box;
     overflow: hidden;
-    transition: all 0.3s ease;
 
     &:empty,
     &.hidden {
@@ -124,10 +204,15 @@
       padding: 0;
       margin: 0;
       overflow: hidden;
+      border: 0;
+    }
+
+    &--wide {
+      grid-column: 1 / -1;
     }
 
     @include mobile {
-      margin-bottom: $spacing-base;
+      margin-bottom: 0;
 
       &__stats {
         grid-template-columns: 1fr;
@@ -208,12 +293,6 @@
 
     @include desktop {
       padding: $spacing-lg;
-      transition: transform 0.2s, box-shadow 0.2s;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: $shadow-md;
-      }
     }
   }
 
@@ -221,34 +300,57 @@
     position: relative;
     width: 100%;
     overflow-x: auto;
-    margin: 0 -#{$spacing-xs};
-    padding: 0 $spacing-xs;
+    max-height: 28rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid $color-gray-200;
+    border-radius: 10px;
   }
 
   &__users_table {
     width: 100%;
     border-collapse: collapse;
 
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: $color-gray-50;
+      color: $color-gray-600;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-bottom: 1px solid $color-gray-200;
+    }
+
     th,
     td {
-      padding: 0.75rem;
+      padding: 0.7rem 0.85rem;
       text-align: left;
       font-size: $font-size-sm;
+      border-bottom: 1px solid $color-gray-100;
 
       @include desktop {
-        font-size: 0.9375rem;
+        font-size: 0.9rem;
       }
     }
 
     tbody tr {
-      transition: all 0.2s ease;
+      transition: background-color 0.15s ease;
+
+      &:nth-child(even) {
+        background-color: rgba($color-gray-50, 0.7);
+      }
+
+      &:last-child td {
+        border-bottom: none;
+      }
 
       @include desktop {
         &:hover {
-          background-color: rgba($color-white, 0.05);
-          box-shadow: $shadow-md;
+          background-color: #eff6ff;
           cursor: pointer;
-          transform: translateY(-1px);
         }
       }
     }
@@ -338,12 +440,12 @@
   &__section_header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: $spacing-sm;
     flex-wrap: wrap;
     margin-bottom: $spacing-base;
     padding-bottom: $spacing-sm;
-    border-bottom: 1px solid $color-gray-200;
+    border-bottom: 1px solid $color-gray-100;
   }
 
   &__section_actions {
@@ -489,40 +591,44 @@
   }
 
   &__penalty_button {
-    padding: $spacing-xs $spacing-sm;
-    background-color: #d97706;
-    color: $color-white;
-    border: none;
-    border-radius: $radius-md;
+    padding: 0.45rem 0.85rem;
+    background-color: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+    border-radius: 9999px;
     font-size: $font-size-sm;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
+    gap: 0.35rem;
 
     &:hover {
-      background-color: #b45309;
-      color: $color-white;
+      background-color: #ffedd5;
+      color: #7c2d12;
     }
   }
 
   &__create_button {
-    padding: $spacing-xs $spacing-sm;
-    background-color: $color-blue-600;
+    padding: 0.45rem 0.9rem;
+    background-color: $color-gray-900;
     color: $color-white;
     border: none;
-    border-radius: $radius-md;
+    border-radius: 9999px;
     font-size: $font-size-sm;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
+    transition: background-color 0.15s, transform 0.15s;
+    display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
+    text-decoration: none;
+    white-space: nowrap;
 
     &:hover {
-      background-color: $color-blue-700;
+      background-color: $color-gray-800;
+      color: $color-white;
     }
 
     svg {
@@ -531,57 +637,73 @@
     }
   }
 
+  &__hint {
+    font-size: $font-size-sm;
+    color: $color-gray-500;
+    max-width: 16rem;
+    line-height: 1.35;
+  }
+
   &__search {
     position: relative;
-    margin-bottom: $spacing-lg;
     width: 100%;
-    max-width: 600px;
-    margin: 0 auto $spacing-xl;
+    max-width: 22rem;
+    margin: 0;
+    flex: 1;
 
     &_input {
       width: 100%;
-      padding: $spacing-base $spacing-xl;
+      padding: 0.7rem 1rem 0.7rem 2.5rem;
       border: 1px solid $color-gray-200;
       border-radius: 9999px;
-      font-size: $font-size-base;
+      font-size: $font-size-sm;
       background-color: $color-white;
-      transition: all 0.2s;
+      box-shadow: $shadow-sm;
+      transition: border-color 0.15s, box-shadow 0.15s;
 
       &:focus {
         outline: none;
-        border-color: #60a5fa; // Light blue variant, keeping as is for gradient consistency
-        box-shadow: 0 0 0 3px rgba($color-blue-500, 0.2);
+        border-color: $color-blue-500;
+        box-shadow: 0 0 0 3px rgba($color-blue-500, 0.15);
       }
     }
 
     &_icon {
       position: absolute;
-      left: $spacing-sm;
+      left: 0.85rem;
       top: 50%;
       transform: translateY(-50%);
       color: $color-gray-400;
-      font-size: $font-size-lg;
+      font-size: 0.95rem;
+      pointer-events: none;
     }
   }
 
   // Classes pour les prises en attente de validation
   &__catches_list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-height: 600px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: $spacing-sm;
+    max-height: 640px;
     overflow-y: auto;
+    padding-right: 2px;
+
+    @include desktop-large {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   &__catch_card {
-    background-color: $color-gray-50;
+    background-color: $color-white;
     border: 1px solid $color-gray-200;
-    border-radius: $radius-lg;
+    border-radius: 12px;
     padding: $spacing-base;
-    transition: box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
 
     &:hover {
-      box-shadow: $shadow-sm;
+      border-color: $color-gray-300;
     }
   }
 
@@ -692,18 +814,69 @@
 
   &__empty_state {
     text-align: center;
-    padding: 2rem;
+    padding: 2.25rem 1rem;
     color: $color-gray-500;
+    background: $color-gray-50;
+    border-radius: 10px;
+    border: 1px dashed $color-gray-200;
+
+    p {
+      margin: 0;
+      font-size: $font-size-sm;
+    }
   }
 
   &__catch_photo {
     flex-shrink: 0;
-    transition: transform 0.2s, opacity 0.2s;
+    width: 7.5rem;
+    height: 7.5rem;
+    overflow: hidden;
+    border-radius: 10px;
+    background: $color-gray-100;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
 
     &:hover {
-      transform: scale(1.05);
-      opacity: 0.9;
+      opacity: 0.92;
     }
+  }
+
+  &__load_more {
+    display: flex;
+    justify-content: center;
+    margin-top: $spacing-base;
+  }
+
+  &__load_more_button {
+    padding: 0.55rem 1.1rem;
+    border: 1px solid $color-gray-200;
+    border-radius: 9999px;
+    background: $color-white;
+    color: $color-gray-800;
+    font-weight: 600;
+    font-size: $font-size-sm;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: $color-gray-50;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+
+  &__loading {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: $color-gray-500;
+    font-weight: 500;
   }
 
   &__image_modal_overlay {

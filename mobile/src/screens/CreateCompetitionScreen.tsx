@@ -484,7 +484,7 @@ export default function CreateCompetitionScreen() {
               <FaIcon name="trophy" size={22} color={theme.onAccent} />
             </View>
             <View style={styles.identityText}>
-              <Text style={styles.displayName}>Nouvelle manche</Text>
+              <Text style={styles.displayName}>Nouvelle compétition</Text>
               <Text style={styles.identityHint}>Dates, espèces, règlement et jaquette</Text>
             </View>
           </View>
@@ -1041,17 +1041,17 @@ export default function CreateCompetitionScreen() {
             })}
             <View style={styles.speciesHeaderButtons}>
               <TouchableOpacity
-                style={styles.newSpeciesButton}
-                onPress={() => setShowCreateSpeciesModal(true)}
-              >
-                <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={styles.addSpeciesButton}
                 onPress={handleAddSpecies}
                 disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
               >
                 <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.newSpeciesButton}
+                onPress={() => setShowCreateSpeciesModal(true)}
+              >
+                <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
               </TouchableOpacity>
             </View>
           </View>

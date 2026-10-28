@@ -40,7 +40,7 @@ const TABLE_HEADERS = {
     { id: "firstname", label: "Prénom" },
     { id: "email", label: "Email" },
     { id: "role", label: "Rôle" },
-    { id: "credits", label: "Crédit création", desktopOnly: true },
+    { id: "credits", label: "Bon de création", desktopOnly: true },
     { id: "verified", label: "Statut Email", desktopOnly: true },
   ],
   competitions: [
@@ -312,28 +312,28 @@ export default function Dashboard() {
       return;
     }
 
-    const term = searchTerm.toLowerCase();
+    const term = normalizeForSearch(searchTerm);
 
     if (searchCategory === "all" || searchCategory === "users") {
       const filteredUsers = users.filter((user) => {
         switch (searchBy) {
           case "email":
-            return user.email.toLowerCase().includes(term);
+            return normalizeForSearch(user.email).includes(term);
           case "name":
             return (
-              user.firstname.toLowerCase().includes(term) ||
-              user.lastname.toLowerCase().includes(term)
+              normalizeForSearch(user.firstname).includes(term) ||
+              normalizeForSearch(user.lastname).includes(term)
             );
           case "number":
-            return user.subscriberNumber.toLowerCase().includes(term);
+            return normalizeForSearch(user.subscriberNumber).includes(term);
           case "role":
             return roleSearchHaystack(user.roles).includes(term);
           default:
             return (
-              user.email.toLowerCase().includes(term) ||
-              user.firstname.toLowerCase().includes(term) ||
-              user.lastname.toLowerCase().includes(term) ||
-              user.subscriberNumber.toLowerCase().includes(term) ||
+              normalizeForSearch(user.email).includes(term) ||
+              normalizeForSearch(user.firstname).includes(term) ||
+              normalizeForSearch(user.lastname).includes(term) ||
+              normalizeForSearch(user.subscriberNumber).includes(term) ||
               roleSearchHaystack(user.roles).includes(term)
             );
         }
@@ -345,8 +345,8 @@ export default function Dashboard() {
       const filteredComps = Array.isArray(competitions)
         ? competitions.filter((comp) => {
             return (
-              comp.name.toLowerCase().includes(term) ||
-              comp.type.toLowerCase().includes(term)
+              normalizeForSearch(comp.name).includes(term) ||
+              normalizeForSearch(comp.type).includes(term)
             );
           })
         : [];
@@ -496,20 +496,20 @@ export default function Dashboard() {
     const rights = user.creationRights || {};
     const unused = rights.credits || [];
     const creditLabel = isPlatformAdmin(user.roles)
-      ? "Admin : création sans crédit"
+      ? "Admin : création sans bon"
       : unused.length
         ? `${unused.length} disponible${unused.length > 1 ? "s" : ""}${
             rights.nextExpiresAt
               ? ` · expire ${formatCompetitionDateTime(rights.nextExpiresAt)}`
               : ""
           }`
-        : "Aucun crédit disponible";
+        : "Aucun bon disponible";
     const userFields = [
       { label: "Prénom", value: user.firstname },
       { label: "Nom", value: user.lastname },
       { label: "Email", value: user.email },
       { label: "Rôles", value: formatRoleLabels(user.roles) },
-      { label: "Crédit de création", value: creditLabel },
+      { label: "Bon de création", value: creditLabel },
       { label: "Téléphone", value: user.phoneNumber },
       { label: "Statut", value: user.isVerified ? "Vérifié" : "Non vérifié" },
     ];
@@ -575,16 +575,16 @@ export default function Dashboard() {
                   onClick: async () => {
                     try {
                       await adminService.grantCreationCredit(user.id, { days: 90 });
-                      toast.success("Crédit de 90 jours attribué.");
+                      toast.success("Bon de création (90 jours) attribué.");
                       onClose();
                       fetchData();
                     } catch (err) {
-                      toast.error(err.message || "Impossible d’attribuer le crédit.");
+                      toast.error(err.message || "Impossible d’attribuer le bon de création.");
                     }
                   },
                   className: `${modalStyles.modal__button} ${modalStyles["modal__button--confirm"]}`,
                 },
-                "Attribuer 1 crédit (90 jours)"
+                "Attribuer 1 bon (90 jours)"
               )
             : null,
           unused[0]
@@ -594,16 +594,16 @@ export default function Dashboard() {
                   onClick: async () => {
                     try {
                       await adminService.cancelCreationCredit(unused[0].id);
-                      toast.success("Crédit annulé.");
+                      toast.success("Bon de création annulé.");
                       onClose();
                       fetchData();
                     } catch (err) {
-                      toast.error(err.message || "Impossible d’annuler le crédit.");
+                      toast.error(err.message || "Impossible d’annuler le bon de création.");
                     }
                   },
                   className: `${modalStyles.modal__button} ${modalStyles["modal__button--danger"]}`,
                 },
-                "Annuler le crédit non utilisé"
+                "Annuler le bon non utilisé"
               )
             : null,
           createElement(
@@ -1651,8 +1651,24 @@ export default function Dashboard() {
     setShowPenaltyModal(true);
   };
 
+  const cardFadeClass = (list) =>
+    searchTerm && list.length === 0 ? styles["fade-out"] : "";
+
+  const usersCount = (searchTerm ? filteredData.users : users).length;
+  const competitionsCount = (searchTerm ? filteredData.competitions : competitions).length;
+  const teamsCount = (searchTerm ? filteredData.teams : teams).length;
+  const speciesCount = (searchTerm ? filteredData.species : species).length;
+
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <ProtectedRoute requiredRole={["ROLE_ADMIN", "ROLE_ORGANIZER"]}>
+        <div className={classNames(layoutStyles.main, layoutStyles.dashboard_page)}>
+          <div className={styles.dashboard__container}>
+            <div className={styles.dashboard__loading}>Chargement du tableau de bord…</div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
   }
 
   return (
@@ -1661,175 +1677,80 @@ export default function Dashboard() {
       <div className={styles.dashboard__container}>
         <div className={styles.dashboard__header}>
           <div className={styles.dashboard__header_content}>
+            <p className={styles.dashboard__kicker}>Espace organisateur</p>
             <h1 className={styles.dashboard__title}>Gestion des compétitions</h1>
+            <p className={styles.dashboard__subtitle}>
+              Validez les prises, gérez les compétitions, les équipes et les accès.
+            </p>
+          </div>
+          <div className={styles.dashboard__search}>
+            <div className={styles.dashboard__search_icon}>
+              <FaSearch />
+            </div>
+            <input
+              type="text"
+              placeholder="Rechercher utilisateurs, compétitions, équipes…"
+              className={styles.dashboard__search_input}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
-        <div className={styles.dashboard__search}>
-          <div className={styles.dashboard__search_icon}>
-            <FaSearch />
+        <div className={styles.dashboard__kpis}>
+          <div
+            className={`${styles.dashboard__kpi} ${
+              pendingCatchesTotal > 0 ? styles["dashboard__kpi--alert"] : ""
+            }`}
+          >
+            <span className={styles.dashboard__kpi_value}>{pendingCatchesTotal}</span>
+            <span className={styles.dashboard__kpi_label}>Prises à valider</span>
           </div>
-          <input
-            type="text"
-            placeholder="Rechercher dans tous les tableaux..."
-            className={styles.dashboard__search_input}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className={styles.dashboard__kpi}>
+            <span className={styles.dashboard__kpi_value}>{competitions.length}</span>
+            <span className={styles.dashboard__kpi_label}>Compétitions</span>
+          </div>
+          <div className={styles.dashboard__kpi}>
+            <span className={styles.dashboard__kpi_value}>{teams.length}</span>
+            <span className={styles.dashboard__kpi_label}>Équipes</span>
+          </div>
+          {isAdminUser ? (
+            <div className={styles.dashboard__kpi}>
+              <span className={styles.dashboard__kpi_value}>{users.length}</span>
+              <span className={styles.dashboard__kpi_label}>Utilisateurs</span>
+            </div>
+          ) : (
+            <div className={styles.dashboard__kpi}>
+              <span className={styles.dashboard__kpi_value}>{species.length}</span>
+              <span className={styles.dashboard__kpi_label}>Espèces</span>
+            </div>
+          )}
         </div>
         <div
           className={`${styles.dashboard__grid} ${
             searchTerm ? styles.searching : ""
           }`}
         >
-          {/* Section Utilisateurs */}
-          {isAdminUser ? (
-          <div
-            className={`${styles.dashboard__card} ${
-              searchTerm && filteredData.users.length === 0
-                ? styles["fade-out"]
-                : ""
-            }`}
-            style={{
-              display:
-                searchTerm && filteredData.users.length === 0
-                  ? "none"
-                  : "block",
-            }}
-          >
-            <h2 className={styles.dashboard__section_title}>Utilisateurs</h2>
-            <div className={styles.dashboard__users_list}>
-              {renderTable(
-                searchTerm ? filteredData.users : users,
-                TABLE_HEADERS.users,
-                "users"
-              )}
-            </div>
-          </div>
-          ) : null}
-
-          {/* Section Compétitions */}
-          <div
-            className={`${styles.dashboard__card} ${
-              searchTerm && filteredData.competitions.length === 0
-                ? styles["fade-out"]
-                : ""
-            }`}
-            style={{
-              display:
-                searchTerm && filteredData.competitions.length === 0
-                  ? "none"
-                  : "block",
-            }}
-          >
-            <div className={styles.dashboard__section_header}>
-              <h2 className={styles.dashboard__section_title}>Compétitions</h2>
-              {canCreateCompetition ? (
-              <button
-                className={styles.dashboard__create_button}
-                onClick={() => router.push("/dashboard/competitions/create")}
-              >
-                Créer une compétition
-              </button>
-              ) : (
-                <span className={styles.dashboard__catch_info}>
-                  Aucun crédit de création. Un admin peut vous en attribuer un.
-                </span>
-              )}
-              <button
-                className={styles.dashboard__create_button}
-                onClick={() => router.push("/dashboard/species/create")}
-              >
-                Nouvelle espèce
-              </button>
-            </div>
-            <div className={styles.dashboard__users_list}>
-              {renderTable(
-                searchTerm ? filteredData.competitions : competitions,
-                TABLE_HEADERS.competitions,
-                "competitions"
-              )}
-            </div>
-          </div>
-
-          {/* Section Teams */}
-          <div
-            className={`${styles.dashboard__card} ${
-              searchTerm && filteredData.teams.length === 0
-                ? styles["fade-out"]
-                : ""
-            }`}
-            style={{
-              display:
-                searchTerm && filteredData.teams.length === 0
-                  ? "none"
-                  : "block",
-            }}
-          >
-            <h2 className={styles.dashboard__section_title}>Équipes</h2>
-            <div className={styles.dashboard__users_list}>
-              {renderTable(
-                searchTerm ? filteredData.teams : teams,
-                TABLE_HEADERS.teams,
-                "teams"
-              )}
-            </div>
-          </div>
-
-          {/* Section Species */}
-          {isAdminUser ? (
-          <div>
-            className={`${styles.dashboard__card} ${
-              searchTerm && filteredData.species.length === 0
-                ? styles["fade-out"]
-                : ""
-            }`}
-            style={{
-              display:
-                searchTerm && filteredData.species.length === 0
-                  ? "none"
-                  : "block",
-            }}
-          >
-            <div className={styles.dashboard__section_header}>
-              <h2 className={styles.dashboard__section_title}>Espèces</h2>
-              <button
-                className={styles.dashboard__create_button}
-                onClick={() => router.push("/dashboard/species/create")}
-              >
-                Créer une espèce
-              </button>
-            </div>
-            <div className={styles.dashboard__users_list}>
-              {renderTable(
-                searchTerm ? filteredData.species : species,
-                TABLE_HEADERS.species,
-                "species"
-              )}
-            </div>
-          </div>
-          ) : null}
-
           {/* Section Prises en attente de validation */}
-          <div className={styles.dashboard__card}>
+          <div className={`${styles.dashboard__card} ${styles["dashboard__card--wide"]}`}>
             <div className={styles.dashboard__section_header}>
-              <h2 className={styles.dashboard__section_title} style={{ flex: "1 1 auto" }}>
-                Prises en attente de validation
-                {pendingCatches.length > 0 && (
+              <h2 className={styles.dashboard__section_title}>
+                Prises à valider
+                {pendingCatchesTotal > 0 && (
                   <span className={styles.dashboard__badge}>
-                    {pendingCatches.length}
+                    {pendingCatchesTotal}
                   </span>
                 )}
               </h2>
               <div className={styles.dashboard__section_actions}>
                 <Link href="/catch/add" className={styles.dashboard__create_button}>
-                  ➕ Ajouter une prise
+                  Ajouter une prise
                 </Link>
                 <button
                   type="button"
                   className={styles.dashboard__penalty_button}
                   onClick={openPenaltyModal}
                 >
-                  ⚖️ Pénalités
+                  Pénalités
                 </button>
               </div>
             </div>
@@ -1883,7 +1804,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         {catchItem.photoUrl && (
-                          <div 
+                          <div
                             className={styles.dashboard__catch_photo}
                             onClick={() => {
                               setSelectedImage(resolvePhotoUri(catchItem.photoUrl) ?? catchItem.photoUrl);
@@ -1894,12 +1815,6 @@ export default function Dashboard() {
                             <img
                               src={resolvePhotoUri(catchItem.photoUrl) ?? ""}
                               alt={`${catchItem.species.name} de ${catchItem.size}cm`}
-                              style={{
-                                maxWidth: "150px",
-                                maxHeight: "150px",
-                                objectFit: "cover",
-                                borderRadius: "8px",
-                              }}
                             />
                           </div>
                         )}
@@ -1972,15 +1887,141 @@ export default function Dashboard() {
                     </button>
                   </div>
                 )}
-                {/* Debug info */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div style={{ padding: '10px', fontSize: '12px', color: '#666' }}>
-                    Debug: Page {pendingCatchesPage} / {pendingCatchesPages} | Total: {pendingCatchesTotal} | Affichées: {pendingCatches.length}
-                  </div>
-                )}
               </div>
             )}
           </div>
+
+          {/* Section Utilisateurs */}
+          {isAdminUser ? (
+          <div
+            className={`${styles.dashboard__card} ${cardFadeClass(filteredData.users)}`}
+            style={{
+              display:
+                searchTerm && filteredData.users.length === 0
+                  ? "none"
+                  : "block",
+            }}
+          >
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>
+                Utilisateurs
+                <span className={styles.dashboard__count}>{usersCount}</span>
+              </h2>
+            </div>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.users : users,
+                TABLE_HEADERS.users,
+                "users"
+              )}
+            </div>
+          </div>
+          ) : null}
+
+          {/* Section Compétitions */}
+          <div
+            className={`${styles.dashboard__card} ${cardFadeClass(filteredData.competitions)}`}
+            style={{
+              display:
+                searchTerm && filteredData.competitions.length === 0
+                  ? "none"
+                  : "block",
+            }}
+          >
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>
+                Compétitions
+                <span className={styles.dashboard__count}>{competitionsCount}</span>
+              </h2>
+              <div className={styles.dashboard__section_actions}>
+                {canCreateCompetition ? (
+                <button
+                  className={styles.dashboard__create_button}
+                  onClick={() => router.push("/dashboard/competitions/create")}
+                >
+                  Créer une compétition
+                </button>
+                ) : (
+                  <span className={styles.dashboard__hint}>
+                    Aucun bon de création. Un admin peut vous en attribuer un.
+                  </span>
+                )}
+                {!isAdminUser ? (
+                <button
+                  className={styles.dashboard__create_button}
+                  onClick={() => router.push("/dashboard/species/create")}
+                >
+                  Nouvelle espèce
+                </button>
+                ) : null}
+              </div>
+            </div>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.competitions : competitions,
+                TABLE_HEADERS.competitions,
+                "competitions"
+              )}
+            </div>
+          </div>
+
+          {/* Section Teams */}
+          <div
+            className={`${styles.dashboard__card} ${cardFadeClass(filteredData.teams)}`}
+            style={{
+              display:
+                searchTerm && filteredData.teams.length === 0
+                  ? "none"
+                  : "block",
+            }}
+          >
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>
+                Équipes
+                <span className={styles.dashboard__count}>{teamsCount}</span>
+              </h2>
+            </div>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.teams : teams,
+                TABLE_HEADERS.teams,
+                "teams"
+              )}
+            </div>
+          </div>
+
+          {/* Section Species */}
+          {isAdminUser ? (
+          <div
+            className={`${styles.dashboard__card} ${cardFadeClass(filteredData.species)}`}
+            style={{
+              display:
+                searchTerm && filteredData.species.length === 0
+                  ? "none"
+                  : "block",
+            }}
+          >
+            <div className={styles.dashboard__section_header}>
+              <h2 className={styles.dashboard__section_title}>
+                Espèces
+                <span className={styles.dashboard__count}>{speciesCount}</span>
+              </h2>
+              <button
+                className={styles.dashboard__create_button}
+                onClick={() => router.push("/dashboard/species/create")}
+              >
+                Créer une espèce
+              </button>
+            </div>
+            <div className={styles.dashboard__users_list}>
+              {renderTable(
+                searchTerm ? filteredData.species : species,
+                TABLE_HEADERS.species,
+                "species"
+              )}
+            </div>
+          </div>
+          ) : null}
         </div>
 
         {/* Ajout des modals */}

@@ -269,11 +269,12 @@ final class AuthController extends AbstractController
             }
 
             $creationRights = null;
+            $canReviewCatches = false;
             if ($user instanceof User) {
-                $creationRights = $this->creationCredits->rightsFor(
-                    $user,
-                    $this->competitionAccess->isAdmin($user)
-                );
+                $isAdmin = $this->competitionAccess->isAdmin($user);
+                $creationRights = $this->creationCredits->rightsFor($user, $isAdmin);
+                $judgeable = $this->competitionAccess->getJudgeableCompetitionIds($user);
+                $canReviewCatches = $judgeable === null || $judgeable !== [];
             }
 
             return $this->json([
@@ -287,6 +288,7 @@ final class AuthController extends AbstractController
                     'lastname' => $user->getLastname(),
                     'phone_number' => $user->getPhoneNumber() ?? null,
                     'creationRights' => $creationRights,
+                    'canReviewCatches' => $canReviewCatches,
                 ]
             ]);
         } catch (\Throwable $e) {

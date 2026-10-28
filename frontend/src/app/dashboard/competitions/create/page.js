@@ -51,7 +51,7 @@ export default function CreateCompetition() {
       try {
         const me = await authService.getCurrentUser();
         if (!me?.user?.creationRights?.canCreate) {
-          setError("Vous n’avez pas de crédit de création valide. Un administrateur doit vous en attribuer un.");
+          setError("Vous n’avez pas de bon de création valide. Un administrateur peut vous en attribuer un.");
         }
         const response = await speciesService.getAll();
         setAvailableSpecies(response || []);

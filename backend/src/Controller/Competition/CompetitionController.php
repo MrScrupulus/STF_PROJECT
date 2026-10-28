@@ -455,7 +455,7 @@ class CompetitionController extends AbstractController
             $endDate = clone $pause->getEndDate();
             $endDate->setTimezone($timezone);
             
-            return [
+                return [
                 'id' => $pause->getId(),
                 'startDate' => $startDate->format('Y-m-d\TH:i:sP'),
                 'endDate' => $endDate->format('Y-m-d\TH:i:sP'),
@@ -493,12 +493,12 @@ class CompetitionController extends AbstractController
         
         return $this->json([
             'success' => true,
-            'id' => $competition->getId(),
-            'name' => $competition->getName(),
-            'type' => $competition->getType(),
+                    'id' => $competition->getId(),
+                    'name' => $competition->getName(),
+                    'type' => $competition->getType(),
             'startDate' => DateTimeHelper::formatParisOrNull($competition->getStartDate()),
             'endDate' => DateTimeHelper::formatParisOrNull($competition->getEndDate()),
-            'description' => $competition->getDescription(),
+                    'description' => $competition->getDescription(),
             'reglement' => $competition->getReglement(),
             'coverImageUrl' => $this->coverImageUrl($competition),
             'reglementImagePaths' => $competition->getReglementImagePaths(),
@@ -506,7 +506,7 @@ class CompetitionController extends AbstractController
                 fn($p) => $this->reglementStorage->getPublicUrl($p),
                 $competition->getReglementImagePaths() ?? []
             ),
-            'teamSize' => $competition->getTeamSize(),
+                    'teamSize' => $competition->getTeamSize(),
             'isEnded' => $isEnded,
             'isRankingPublic' => $competition->getIsRankingPublic(),
             'isPaused' => $competition->getIsPaused(),
@@ -791,7 +791,7 @@ class CompetitionController extends AbstractController
 
             $source = $this->getUploadedImageSource($request);
             if ($source === null) {
-                return $this->json([
+        return $this->json([
                     'success' => false,
                     'message' => 'Fichier image requis (image ou file). Formats : jpg, png, webp.',
                 ], 400);
@@ -1258,7 +1258,7 @@ class CompetitionController extends AbstractController
                     $oldName = $currentCompetition->getName();
                     return $this->json([
                         'success' => false,
-                        'message' => "Cette équipe est déjà inscrite à « {$oldName} ». Un membre ne peut participer qu’à une manche à la fois."
+                        'message' => "Cette équipe est déjà inscrite à « {$oldName} ». Un membre ne peut participer qu’à une compétition à la fois."
                     ], 400);
                 }
                 $this->snapshotService->createSnapshotsForCompetition($currentCompetition);
@@ -1274,7 +1274,7 @@ class CompetitionController extends AbstractController
                 ) {
                     return $this->json([
                         'success' => false,
-                        'message' => 'Vous êtes déjà inscrit à une compétition en cours ou à venir. Un membre ne peut participer qu’à une manche à la fois.'
+                        'message' => 'Vous êtes déjà inscrit à une compétition en cours ou à venir. Un membre ne peut participer qu’à une compétition à la fois.'
                     ], 400);
                 }
             }
@@ -1294,7 +1294,7 @@ class CompetitionController extends AbstractController
                 if (!$this->competitionAccess->canViewCompetition($user, $competition, $code)) {
                     return $this->json([
                         'success' => false,
-                        'message' => 'Cette manche est privée : l’invitation est liée à votre adresse e-mail.',
+                        'message' => 'Cette compétition est privée : l’invitation est liée à votre adresse e-mail.',
                     ], 403);
                 }
             }

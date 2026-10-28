@@ -2,9 +2,13 @@
 
 namespace App\Service;
 
+use App\Entity\Competition\Competition;
+use App\Entity\Competition\CompetitionStaff;
+use App\Entity\Competition\FishCatch;
 use App\Entity\Notification;
 use App\Entity\NotificationPreferences;
 use App\Entity\Security\User;
+use App\Repository\Competition\CompetitionStaffRepository;
 use App\Repository\NotificationPreferencesRepository;
 use App\Repository\Security\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,7 +19,8 @@ class NotificationService
         private readonly EntityManagerInterface $entityManager,
         private readonly UserRepository $userRepository,
         private readonly NotificationPreferencesRepository $preferencesRepository,
-        private readonly ExpoPushNotificationService $expoPushService
+        private readonly ExpoPushNotificationService $expoPushService,
+        private readonly CompetitionStaffRepository $staffRepository,
     ) {
     }
 
@@ -292,26 +297,76 @@ class NotificationService
 
     public function notifyAdminsPendingCatch(int $catchId, string $teamName, string $speciesName, float $size, string $caughtByName): void
     {
-        $admins = $this->userRepository->findByRole('ROLE_ADMIN');
-        $adminPreferences = [];
-        
-        foreach ($admins as $admin) {
-            $preferences = $this->preferencesRepository->findOrCreateForUser($admin);
-            // Vérifier que l'admin a activé les notifications catch_pending
-            if ($preferences->isCatchPending()) {
-                $this->createNotification(
-                    $admin,
-                    'catch_pending',
-                    "Nouvelle prise en attente de validation : {$speciesName} ({$size} cm) par {$caughtByName} de l'équipe {$teamName}",
-                    [
-                        'catchId' => $catchId,
-                        'teamName' => $teamName,
-                        'speciesName' => $speciesName,
-                        'size' => $size,
-                        'caughtByName' => $caughtByName,
-                    ]
-                );
+        $this->notifyReviewersPendingCatchMessage($catchId, $teamName, $speciesName, $size, $caughtByName, null, null);
+    }
+
+    public function notifyPendingCatch(FishCatch $catch): void
+    {
+        $team = $catch->getTeam();
+        $caughtBy = $catch->getCaughtBy();
+        $caughtByName = $caughtBy
+            ? trim($caughtBy->getFirstname() . ' ' . $caughtBy->getLastname())
+            : 'Inconnu';
+        $this->notifyReviewersPendingCatchMessage(
+            (int) $catch->getId(),
+            $team?->getName() ?? 'Équipe',
+            $catch->getSpecies()?->getName() ?? 'Espèce',
+            (float) $catch->getSize(),
+            $caughtByName !== '' ? $caughtByName : 'Inconnu',
+            $catch->getCompetition() ?? $team?->getCompetition(),
+            $caughtBy
+        );
+    }
+
+    private function notifyReviewersPendingCatchMessage(
+        int $catchId,
+        string $teamName,
+        string $speciesName,
+        float $size,
+        string $caughtByName,
+        ?Competition $competition,
+        ?User $caughtBy,
+    ): void {
+        /** @var array<int, User> $recipients */
+        $recipients = [];
+        foreach ($this->userRepository->findByRole('ROLE_ADMIN') as $admin) {
+            $recipients[(int) $admin->getId()] = $admin;
+        }
+        if ($competition) {
+            $creator = $competition->getCreatedBy();
+            if ($creator instanceof User && $creator->getId()) {
+                $recipients[(int) $creator->getId()] = $creator;
             }
+            /** @var CompetitionStaff $staff */
+            foreach ($this->staffRepository->findBy(['competition' => $competition]) as $staff) {
+                $staffUser = $staff->getUser();
+                if ($staffUser instanceof User && $staffUser->getId()) {
+                    $recipients[(int) $staffUser->getId()] = $staffUser;
+                }
+            }
+        }
+
+        $skipId = $caughtBy?->getId();
+        foreach ($recipients as $user) {
+            if ($skipId && $user->getId() === $skipId) {
+                continue;
+            }
+            $preferences = $this->preferencesRepository->findOrCreateForUser($user);
+            if (!$preferences->isCatchPending()) {
+                continue;
+            }
+            $this->createNotification(
+                $user,
+                'catch_pending',
+                "Nouvelle prise en attente de validation : {$speciesName} ({$size} cm) par {$caughtByName} de l'équipe {$teamName}",
+                [
+                    'catchId' => $catchId,
+                    'teamName' => $teamName,
+                    'speciesName' => $speciesName,
+                    'size' => $size,
+                    'caughtByName' => $caughtByName,
+                ]
+            );
         }
     }
 }

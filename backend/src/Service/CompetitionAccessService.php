@@ -158,7 +158,7 @@ class CompetitionAccessService
     {
         if (!$this->canCreateCompetition($user)) {
             throw new AccessDeniedHttpException(
-                'Vous n’avez pas de crédit de création valide. Un administrateur doit vous en attribuer un.'
+                'Vous n’avez pas de bon de création valide. Un administrateur peut vous en attribuer un.'
             );
         }
     }

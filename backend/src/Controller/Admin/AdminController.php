@@ -85,7 +85,7 @@ class AdminController extends AbstractController
     public function grantCreationCredit(Request $request, User $user): JsonResponse
     {
         if (\in_array(AppRoles::ADMIN, $user->getRoles(), true)) {
-            return $this->json(['message' => 'Un administrateur n’a pas besoin de crédit de création.'], 400);
+            return $this->json(['message' => 'Un administrateur n’a pas besoin de bon de création.'], 400);
         }
 
         $data = json_decode($request->getContent(), true) ?? [];
@@ -96,7 +96,7 @@ class AdminController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'message' => 'Crédit de création attribué. Un e-mail a été envoyé au créateur.',
+            'message' => 'Bon de création attribué. Un e-mail a été envoyé au créateur.',
             'credit' => $this->creationCredits->serialize($credit),
             'creationRights' => $this->creationCredits->rightsFor(
                 $user,
@@ -113,7 +113,7 @@ class AdminController extends AbstractController
 
         return $this->json([
             'success' => true,
-            'message' => 'Crédit annulé.',
+            'message' => 'Bon de création annulé.',
             'creationRights' => $user ? $this->creationCredits->rightsFor(
                 $user,
                 \in_array(AppRoles::ADMIN, $user->getRoles(), true)

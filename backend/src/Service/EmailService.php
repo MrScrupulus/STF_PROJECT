@@ -332,7 +332,7 @@ HTML;
     {
         $to = $invitation->getEmail();
         $competition = $invitation->getCompetition();
-        $competitionName = htmlspecialchars($competition?->getName() ?? 'une manche privée');
+        $competitionName = htmlspecialchars($competition?->getName() ?? 'une compétition privée');
         $code = htmlspecialchars($invitation->getCode());
         $id = (int) $competition?->getId();
         $query = $invitation->getCode() !== '' ? '?code=' . rawurlencode($invitation->getCode()) : '';
@@ -375,19 +375,35 @@ HTML;
         $expires = \DateTime::createFromInterface($credit->getExpiresAt())->setTimezone(new \DateTimeZone('Europe/Paris'));
         $expiresLabel = htmlspecialchars($expires->format('d/m/Y à H\\hi'));
         $createUrl = $this->appRedirect('create-competition');
+        $support = 'streetfishing.scrupy@gmail.com';
 
         $email = (new Email())
             ->from($this->brandedFrom())
             ->to($user->getEmail())
-            ->subject('Crédit pour créer une compétition')
+            ->subject('Votre bon de création de compétition')
             ->html($this->wrapEmailHtml(
-                "<h1>Crédit de création</h1>
+                "<h1 style=\"font-size:20px;margin:0 0 12px\">Votre bon de création</h1>
                 <p>{$this->hello($user)}</p>
-                <p><strong>1 crédit</strong> jusqu’au <strong>{$expiresLabel}</strong> (Paris). Une création le consomme.</p>
-                {$this->cta($createUrl, 'Ouvrir l’application')}"
+                <p>Vous avez un <strong>bon de création de compétition</strong> : il vous permet d’ouvrir <strong>une compétition</strong> sur Street Fishing. C’est le même bon que celui que l’on pourra acheter plus tard.</p>
+                <p>Il est valable jusqu’au <strong>{$expiresLabel}</strong> (heure de Paris). Créer une compétition le consomme.</p>
+                <p style=\"margin:16px 0 8px\"><strong>Comment lancer une compétition</strong></p>
+                <ol style=\"padding-left:18px;margin:0 0 16px\">
+                  <li>Ouvrez l’application (ou le site) avec ce compte.</li>
+                  <li>Créez une compétition : titre, dates, lieu, espèces.</li>
+                  <li>Choisissez le mode d’accès, puis invitez les pêcheurs si besoin.</li>
+                </ol>
+                <p style=\"margin:0 0 8px\"><strong>Modes d’accès</strong></p>
+                <ul style=\"padding-left:18px;margin:0 0 16px\">
+                  <li><strong>Gratuit</strong> — jusqu’à 16 pêcheurs.</li>
+                  <li><strong>Payant</strong> — inscriptions payantes (encaissement à venir) ; plafond au choix.</li>
+                  <li><strong>Privé</strong> — sur invitation e-mail nominative (le code ne se partage pas).</li>
+                  <li><strong>Privé et payant</strong> — invitation + inscription payante.</li>
+                </ul>
+                {$this->cta($createUrl, 'Créer une compétition')}
+                <p style=\"font-size:13px;color:#555;margin:20px 0 0\">En cas de difficulté, écrivez-nous à <a href=\"mailto:{$support}\">{$support}</a>.</p>"
             ));
         $this->mailer->send($email);
-        $this->logger->info('Email crédit de création envoyé', ['to' => $user->getEmail()]);
+        $this->logger->info('Email bon de création envoyé', ['to' => $user->getEmail()]);
     }
 
     public function sendCatchValidationEmail(\App\Entity\Competition\FishCatch $catch, bool $validated, ?string $rejectionReason = null): void

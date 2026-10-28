@@ -217,6 +217,94 @@ class AdminFishCatchController extends AbstractController
         }
     }
 
+    #[Route('/reviewed', name: 'admin_catches_reviewed', methods: ['GET'])]
+    public function listReviewed(FishCatchRepository $repository, Request $request): JsonResponse
+    {
+        try {
+            $judgeableIds = $this->access->getJudgeableCompetitionIds($this->getUser());
+            if ($judgeableIds === []) {
+                return $this->json([
+                    'success' => true,
+                    'catches' => [],
+                    'count' => 0,
+                    'total' => 0,
+                    'page' => 1,
+                    'pages' => 0,
+                    'limit' => 10,
+                ]);
+            }
+
+            $page = max(1, (int) $request->query->get('page', 1));
+            $limit = (int) $request->query->get('limit', 10);
+            if ($limit < 1) {
+                $limit = 10;
+            }
+            if ($limit > 50) {
+                $limit = 50;
+            }
+
+            $qb = $repository->createQueryBuilder('c')
+                ->leftJoin('c.team', 't')
+                ->leftJoin('c.species', 's')
+                ->leftJoin('c.caughtBy', 'u')
+                ->leftJoin('t.competition', 'comp')
+                ->where('c.isValidated = :validated OR c.rejectionReason IS NOT NULL')
+                ->setParameter('validated', true);
+            if ($judgeableIds !== null) {
+                $qb->andWhere('c.competition IN (:cids) OR t.competition IN (:cids)')
+                    ->setParameter('cids', $judgeableIds);
+            }
+
+            $qbCount = clone $qb;
+            $total = (int) $qbCount
+                ->select('COUNT(c.id)')
+                ->getQuery()
+                ->getSingleScalarResult();
+
+            $catches = $qb
+                ->select('c', 't', 's', 'u', 'comp')
+                ->orderBy('c.createdAt', 'DESC')
+                ->setFirstResult(($page - 1) * $limit)
+                ->setMaxResults($limit)
+                ->getQuery()
+                ->getResult();
+
+            $catchesData = array_map(fn ($catch) => $this->serializeAdminCatch($catch), $catches);
+            $pages = $limit > 0 ? (int) ceil($total / $limit) : 1;
+
+            return $this->json([
+                'success' => true,
+                'catches' => $catchesData,
+                'count' => count($catchesData),
+                'total' => $total,
+                'page' => $page,
+                'pages' => $pages,
+                'limit' => $limit,
+            ]);
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des prises traitées', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors de la récupération des prises.',
+            ], 500);
+        }
+    }
+
+    #[Route('/{id}', name: 'admin_catch_show', methods: ['GET'])]
+    public function show(FishCatch $catch): JsonResponse
+    {
+        $this->access->denyUnlessJudgeCatch($this->getUser(), $catch);
+
+        return $this->json([
+            'success' => true,
+            'catch' => $this->serializeAdminCatch($catch),
+        ]);
+    }
+
     /**
      * Valide une prise
      */
@@ -225,13 +313,6 @@ class AdminFishCatchController extends AbstractController
     {
         try {
             $this->access->denyUnlessJudgeCatch($this->getUser(), $catch);
-
-            if ($catch->isValidated()) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Cette prise est déjà validée'
-                ], 400);
-            }
 
             $catch->setIsValidated(true);
             $catch->setRejectionReason(null); // Effacer le motif de rejet si présent
@@ -548,5 +629,39 @@ class AdminFishCatchController extends AbstractController
                 'message' => 'Une erreur est survenue lors de la création de la prise. Veuillez réessayer plus tard.'
             ], 500);
         }
+    }
+
+    private function serializeAdminCatch(FishCatch $catch): array
+    {
+        return [
+            'id' => $catch->getId(),
+            'species' => [
+                'id' => $catch->getSpecies()->getId(),
+                'name' => $catch->getSpecies()->getName(),
+                'coefficient' => $catch->getSpecies()->getCoefficient(),
+            ],
+            'size' => $catch->getSize(),
+            'points' => $catch->calculatePoints(),
+            'photoUrl' => $catch->getPhotoUrl(),
+            'comment' => $catch->getComment(),
+            'isValidated' => $catch->isValidated(),
+            'rejectionReason' => $catch->getRejectionReason(),
+            'createdAt' => DateTimeHelper::formatParis($catch->getCreatedAt()),
+            'caughtBy' => $catch->getCaughtBy() ? [
+                'id' => $catch->getCaughtBy()->getId(),
+                'firstname' => $catch->getCaughtBy()->getFirstname(),
+                'lastname' => $catch->getCaughtBy()->getLastname(),
+                'email' => $catch->getCaughtBy()->getEmail(),
+            ] : null,
+            'recordedBy' => $catch->serializeRecordedBy(),
+            'team' => [
+                'id' => $catch->getTeam()->getId(),
+                'name' => $catch->getTeam()->getName(),
+            ],
+            'competition' => $catch->getTeam()->getCompetition() ? [
+                'id' => $catch->getTeam()->getCompetition()->getId(),
+                'name' => $catch->getTeam()->getCompetition()->getName(),
+            ] : null,
+        ];
     }
 }

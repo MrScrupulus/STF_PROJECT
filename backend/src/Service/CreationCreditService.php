@@ -30,7 +30,7 @@ class CreationCreditService
         bool $complimentary = true,
     ): CreationCredit {
         if ($days < 1 || $days > 730) {
-            throw new BadRequestHttpException('La durée du crédit doit être entre 1 et 730 jours.');
+            throw new BadRequestHttpException('La durée du bon de création doit être entre 1 et 730 jours.');
         }
 
         $now = new \DateTimeImmutable();
@@ -52,7 +52,7 @@ class CreationCreditService
         $this->notificationService->createNotification(
             $user,
             'creation_credit',
-            'Vous avez un crédit pour créer une compétition, valable jusqu’au ' . $expiresParis->format('d/m/Y') . '.',
+            'Vous avez un bon de création de compétition, valable jusqu’au ' . $expiresParis->format('d/m/Y') . '.',
             [
                 'creditId' => $credit->getId(),
                 'expiresAt' => DateTimeHelper::formatParis($credit->getExpiresAt()),
@@ -71,10 +71,10 @@ class CreationCreditService
     public function cancel(CreationCredit $credit): void
     {
         if ($credit->getConsumedAt() !== null) {
-            throw new BadRequestHttpException('Ce crédit a déjà été utilisé.');
+            throw new BadRequestHttpException('Ce bon de création a déjà été utilisé.');
         }
         if ($credit->getCancelledAt() !== null) {
-            throw new BadRequestHttpException('Ce crédit est déjà annulé.');
+            throw new BadRequestHttpException('Ce bon de création est déjà annulé.');
         }
         $credit->cancel();
         $this->entityManager->flush();
@@ -87,7 +87,7 @@ class CreationCreditService
             $credit = $this->credits->findOneAvailableForUpdate($user);
             if (!$credit instanceof CreationCredit) {
                 throw new AccessDeniedHttpException(
-                    'Vous n’avez pas de crédit de création valide. Un administrateur doit vous en attribuer un.'
+                    'Vous n’avez pas de bon de création valide. Un administrateur peut vous en attribuer un.'
                 );
             }
             $credit->consume($competition);

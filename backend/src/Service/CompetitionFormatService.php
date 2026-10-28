@@ -28,7 +28,7 @@ final class CompetitionFormatService
             $competition->setMaxParticipants($requested ?? Competition::FREE_PARTICIPANT_CAP);
             if ($competition->getMaxParticipants() > Competition::FREE_PARTICIPANT_CAP) {
                 throw new BadRequestHttpException(
-                    'Une manche gratuite (ou gratuite/privée) est limitée à 16 participants (pêcheurs, pas équipes).'
+                    'Une compétition gratuite (ou gratuite/privée) est limitée à 16 participants (pêcheurs, pas équipes).'
                 );
             }
             $this->assertCapacityNotBelowEnrolled($competition);

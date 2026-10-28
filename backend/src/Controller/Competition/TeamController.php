@@ -554,8 +554,8 @@ class TeamController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => $max
-                        ? "Plus de places sur la manche ({$liveCompetition->countEnrolledParticipants()}/{$max} pêcheurs)."
-                        : 'Plus de places sur cette manche.',
+                        ? "Plus de places sur la compétition ({$liveCompetition->countEnrolledParticipants()}/{$max} pêcheurs)."
+                        : 'Plus de places sur cette compétition.',
                 ], 400);
             }
 
@@ -1083,7 +1083,7 @@ class TeamController extends AbstractController
             if ($team->getCompetition()) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Cette équipe est archivée dans une compétition. Créez une nouvelle équipe pour une autre manche.'
+                    'message' => 'Cette équipe est archivée dans une compétition. Créez une nouvelle équipe pour une autre compétition.'
                 ], 400);
             }
 
@@ -1296,8 +1296,8 @@ class TeamController extends AbstractController
                 return $this->json([
                     'success' => false,
                     'message' => $max
-                        ? "Plus de places sur la manche ({$liveCompetition->countEnrolledParticipants()}/{$max} pêcheurs)."
-                        : 'Plus de places sur cette manche.',
+                        ? "Plus de places sur la compétition ({$liveCompetition->countEnrolledParticipants()}/{$max} pêcheurs)."
+                        : 'Plus de places sur cette compétition.',
                 ], 400);
             }
 

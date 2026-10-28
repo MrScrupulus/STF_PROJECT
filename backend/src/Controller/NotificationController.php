@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Security\User;
 use App\Repository\NotificationRepository;
+use App\Service\DateTimeHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -33,7 +34,7 @@ class NotificationController extends AbstractController
                 'message' => $notification->getMessage(),
                 'data' => $notification->getData(),
                 'isRead' => $notification->isRead(),
-                'createdAt' => $notification->getCreatedAt()->format('Y-m-d H:i:s'),
+                'createdAt' => DateTimeHelper::formatParis($notification->getCreatedAt()),
             ];
         }, $notifications);
 
@@ -65,7 +66,7 @@ class NotificationController extends AbstractController
                 'message' => $notification->getMessage(),
                 'data' => $notification->getData(),
                 'isRead' => $notification->isRead(),
-                'createdAt' => $notification->getCreatedAt()->format('Y-m-d H:i:s'),
+                'createdAt' => DateTimeHelper::formatParis($notification->getCreatedAt()),
             ];
         }, $notifications);
 

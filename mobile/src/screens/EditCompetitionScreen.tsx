@@ -1127,17 +1127,17 @@ export default function EditCompetitionScreen() {
             })}
             <View style={styles.speciesHeaderButtons}>
               <TouchableOpacity
-                style={styles.newSpeciesButton}
-                onPress={() => setShowCreateSpeciesModal(true)}
-              >
-                <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={styles.addSpeciesButton}
                 onPress={handleAddSpecies}
                 disabled={loadingSpecies || !availableSpecies || availableSpecies.length === 0}
               >
                 <Text style={styles.addSpeciesButtonText}>+ Ligne</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.newSpeciesButton}
+                onPress={() => setShowCreateSpeciesModal(true)}
+              >
+                <Text style={styles.newSpeciesButtonText}>+ Nouvelle espèce</Text>
               </TouchableOpacity>
             </View>
           </View>

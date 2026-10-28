@@ -234,7 +234,7 @@ HTML;
     {
         return $this->openAppPage(
             'Créer une compétition',
-            'Ouvrez Street Fishing pour utiliser votre crédit de création.',
+            'Ouvrez Street Fishing pour utiliser votre bon de création de compétition.',
             'stf://create-competition'
         );
     }

@@ -56,7 +56,7 @@ class CompetitionParticipantInvitationController extends AbstractController
         if (!$competition->isPrivate()) {
             return $this->json([
                 'success' => false,
-                'message' => 'Les invitations par e-mail concernent les manches privées.',
+                'message' => 'Les invitations par e-mail concernent les compétitions privées.',
             ], 400);
         }
 

@@ -123,14 +123,15 @@ export const adminService = {
     return response.data?.competitions || response.data || [];
   },
 
+  getReviewedCatches: async (page: number = 1, limit: number = 10): Promise<any> => {
+    const response = await apiClient.get(`/api/admin/catches/reviewed?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+
   getCatchById: async (catchId: number): Promise<PendingCatch | null> => {
     try {
-      // Récupérer toutes les prises en attente et trouver celle avec l'ID correspondant
-      const response = await apiClient.get('/api/admin/catches/pending');
-      const catches = response.data?.catches || response.data || [];
-      const found = catches.find((c: PendingCatch) => c.id === catchId);
-      // Retourner null au lieu de undefined pour éviter l'erreur React Query
-      return found || null;
+      const response = await apiClient.get(`/api/admin/catches/${catchId}`);
+      return response.data?.catch || response.data || null;
     } catch (error) {
       console.error('Error fetching catch by ID:', error);
       return null;

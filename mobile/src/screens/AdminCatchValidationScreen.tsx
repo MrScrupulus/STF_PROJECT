@@ -76,10 +76,9 @@ export default function AdminCatchValidationScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-reviewed-catches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-catch', catchId] });
-      Alert.alert('Succès', 'Prise validée avec succès.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert('Succès', 'Prise validée. Vous pouvez encore modifier la taille ou la rejeter.');
     },
     onError: (error: any) => {
       const message =
@@ -95,10 +94,10 @@ export default function AdminCatchValidationScreen() {
     mutationFn: (reason: string) => adminService.rejectCatch(catchId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-reviewed-catches'] });
       queryClient.invalidateQueries({ queryKey: ['admin-catch', catchId] });
-      Alert.alert('Succès', 'Prise rejetée avec succès.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      setCurrentAction('view');
+      Alert.alert('Succès', 'Prise rejetée. Vous pouvez encore modifier la taille ou la valider.');
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Une erreur est survenue lors du rejet. Veuillez réessayer.';
@@ -203,7 +202,30 @@ export default function AdminCatchValidationScreen() {
               placeholderTextColor={theme.textMuted}
             />
             {sizeChanged ? (
-              <Text style={styles.hint}>La taille sera enregistrée au moment de la validation.</Text>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.validateButton, { marginTop: 8 }]}
+                onPress={async () => {
+                  const size = parseFishSizeCm(sizeInput);
+                  if (!Number.isFinite(size) || size <= 0) {
+                    Alert.alert('Erreur', 'Entrez une taille valide (ex. 32 ou 25,5).');
+                    return;
+                  }
+                  try {
+                    await adminService.updateCatchSize(catchId, size);
+                    queryClient.invalidateQueries({ queryKey: ['admin-catch', catchId] });
+                    queryClient.invalidateQueries({ queryKey: ['admin-pending-catches'] });
+                    queryClient.invalidateQueries({ queryKey: ['admin-reviewed-catches'] });
+                    Alert.alert('Succès', 'Taille enregistrée.');
+                  } catch (error: any) {
+                    Alert.alert(
+                      'Erreur',
+                      error?.response?.data?.message || 'Impossible d’enregistrer la taille.'
+                    );
+                  }
+                }}
+              >
+                <Text style={styles.actionButtonText}>Enregistrer la taille</Text>
+              </TouchableOpacity>
             ) : null}
 
             <Text style={styles.label}>Points</Text>

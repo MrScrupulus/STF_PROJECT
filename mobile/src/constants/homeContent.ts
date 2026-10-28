@@ -14,16 +14,16 @@ export const homeContent = {
     'Appuyez sur le bouton bleu au centre de la barre du bas',
     'Prenez une photo (ou choisissez-en une dans la galerie)',
     'Indiquez l’espèce et la taille en cm',
-    'En compétition : sélectionnez la manche et votre équipe',
+    'En compétition : sélectionnez la compétition et votre équipe',
     'La géolocalisation doit être autorisée pour valider la position',
   ],
   catchTutorialButton: 'Ajouter une prise',
 
-  competitionTutorialTitle: 'Participer à une manche',
+  competitionTutorialTitle: 'Participer à une compétition',
   competitionTutorialSteps: [
     'Créez une équipe ou acceptez une invitation',
     'Ouvrez Compétitions et inscrivez votre équipe',
-    'Pendant la manche, enregistrez chaque prise avec le bouton bleu',
+    'Pendant la compétition, enregistrez chaque prise avec le bouton bleu',
     'Un commissaire valide ou refuse la prise',
   ],
 
@@ -51,7 +51,7 @@ export const homeActions: {
   {
     icon: 'trophy',
     title: 'Compétitions',
-    hint: 'Inscription, classement et manches',
+    hint: 'Inscription, classement et compétitions',
     screen: 'Competitions',
   },
   {

@@ -27,6 +27,7 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
   const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [canReviewFromApi, setCanReviewFromApi] = React.useState(false);
   const [judgeOnCompetition, setJudgeOnCompetition] = React.useState(isCatchReviewActive());
   const { isAuthenticated } = useAuth();
 
@@ -51,18 +52,21 @@ export default function GlobalBottomTabBar({ navigationRef, currentRoute }: Glob
           const user = response.user || response;
           const roles = user.roles || [];
           setIsAdmin(roles.includes('ROLE_ADMIN'));
+          setCanReviewFromApi(!!user.canReviewCatches || !!user.creationRights?.canManage);
         } catch (error) {
           setIsAdmin(false);
+          setCanReviewFromApi(false);
         }
       };
       checkAdmin();
     } else {
       setIsAdmin(false);
+      setCanReviewFromApi(false);
       setCatchReviewActive(false);
     }
   }, [isAuthenticated]);
 
-  const canReviewCatches = isAuthenticated && (isAdmin || judgeOnCompetition);
+  const canReviewCatches = isAuthenticated && (isAdmin || canReviewFromApi || judgeOnCompetition);
 
   const { data: pendingToValidate = 0 } = useQuery({
     queryKey: ['admin-pending-catches', 'tab-count'],

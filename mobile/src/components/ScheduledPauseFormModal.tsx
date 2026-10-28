@@ -81,9 +81,11 @@ export default function ScheduledPauseFormModal({
   /** iOS : roues datetime */
   const [iosShowStartPicker, setIosShowStartPicker] = useState(false);
   const [iosShowEndPicker, setIosShowEndPicker] = useState(false);
-  /** Android : spinner datetime inline (évite une 2e dialog native dans un RN Modal) */
-  const [androidShowStartPicker, setAndroidShowStartPicker] = useState(false);
-  const [androidShowEndPicker, setAndroidShowEndPicker] = useState(false);
+  /** Android : même enchaînement date puis heure que début/fin de compétition */
+  const [androidShowStartDate, setAndroidShowStartDate] = useState(false);
+  const [androidShowStartTime, setAndroidShowStartTime] = useState(false);
+  const [androidShowEndDate, setAndroidShowEndDate] = useState(false);
+  const [androidShowEndTime, setAndroidShowEndTime] = useState(false);
 
   /** Évite de réinitialiser les dates à chaque render du parent (objet `initial` recréé) pendant que l’utilisateur tourne les roues. */
   const initialRef = useRef(initial);
@@ -106,8 +108,10 @@ export default function ScheduledPauseFormModal({
     setReason(init?.reason ?? '');
     setIosShowStartPicker(false);
     setIosShowEndPicker(false);
-    setAndroidShowStartPicker(false);
-    setAndroidShowEndPicker(false);
+    setAndroidShowStartDate(false);
+    setAndroidShowStartTime(false);
+    setAndroidShowEndDate(false);
+    setAndroidShowEndTime(false);
   }, [visible]);
 
   const applyStart = (d: Date) => {
@@ -136,15 +140,38 @@ export default function ScheduledPauseFormModal({
     applyEnd(date);
   };
 
-  /** Android spinner : un événement par cran ; pas de fermeture automatique */
-  const onAndroidStartChange = (_: any, date?: Date) => {
-    if (!date) return;
-    applyStart(date);
+  const onAndroidStartDateChange = (event: any, date?: Date) => {
+    setAndroidShowStartDate(false);
+    if (!date || event?.type === 'dismissed') return;
+    const next = new Date(date);
+    next.setHours(startDate.getHours(), startDate.getMinutes(), 0, 0);
+    applyStart(next);
+    setAndroidShowStartTime(true);
   };
 
-  const onAndroidEndChange = (_: any, date?: Date) => {
-    if (!date) return;
-    applyEnd(date);
+  const onAndroidStartTimeChange = (event: any, date?: Date) => {
+    setAndroidShowStartTime(false);
+    if (!date || event?.type === 'dismissed') return;
+    const next = new Date(startDate);
+    next.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    applyStart(next);
+  };
+
+  const onAndroidEndDateChange = (event: any, date?: Date) => {
+    setAndroidShowEndDate(false);
+    if (!date || event?.type === 'dismissed') return;
+    const next = new Date(date);
+    next.setHours(endDate.getHours(), endDate.getMinutes(), 0, 0);
+    applyEnd(next);
+    setAndroidShowEndTime(true);
+  };
+
+  const onAndroidEndTimeChange = (event: any, date?: Date) => {
+    setAndroidShowEndTime(false);
+    if (!date || event?.type === 'dismissed') return;
+    const next = new Date(endDate);
+    next.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    applyEnd(next);
   };
 
   const validateAndSave = () => {
@@ -164,9 +191,10 @@ export default function ScheduledPauseFormModal({
 
   const openStartPicker = () => {
     setIosShowEndPicker(false);
-    setAndroidShowEndPicker(false);
+    setAndroidShowEndDate(false);
+    setAndroidShowEndTime(false);
     if (Platform.OS === 'android') {
-      setAndroidShowStartPicker(true);
+      setAndroidShowStartDate(true);
     } else {
       setIosShowStartPicker(true);
     }
@@ -174,9 +202,10 @@ export default function ScheduledPauseFormModal({
 
   const openEndPicker = () => {
     setIosShowStartPicker(false);
-    setAndroidShowStartPicker(false);
+    setAndroidShowStartDate(false);
+    setAndroidShowStartTime(false);
     if (Platform.OS === 'android') {
-      setAndroidShowEndPicker(true);
+      setAndroidShowEndDate(true);
     } else {
       setIosShowEndPicker(true);
     }
@@ -234,43 +263,49 @@ export default function ScheduledPauseFormModal({
             </TouchableOpacity>
           </ScrollView>
 
-          {Platform.OS === 'android' && androidShowStartPicker && (
-            <View style={[styles.pickerDock, styles.pickerDockAndroid]}>
-              <View style={styles.pickerToolbar}>
-                <Text style={[styles.pickerToolbarTitle, styles.pickerToolbarTitleAndroid]}>Date et heure de début</Text>
-                <TouchableOpacity style={styles.pickerOkBtn} onPress={() => setAndroidShowStartPicker(false)}>
-                  <Text style={styles.pickerOkText}>OK</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={startDate}
-                mode="datetime"
-                display="spinner"
-                onChange={onAndroidStartChange}
-                minimumDate={cs}
-                maximumDate={ce}
-                {...datePickerThemeProps(theme)}
-              />
-            </View>
+          {Platform.OS === 'android' && androidShowStartDate && (
+            <DateTimePicker
+              value={startDate}
+              mode="date"
+              display="default"
+              is24Hour
+              onChange={onAndroidStartDateChange}
+              minimumDate={cs}
+              maximumDate={ce}
+              {...pickerTheme}
+            />
           )}
-          {Platform.OS === 'android' && androidShowEndPicker && (
-            <View style={[styles.pickerDock, styles.pickerDockAndroid]}>
-              <View style={styles.pickerToolbar}>
-                <Text style={[styles.pickerToolbarTitle, styles.pickerToolbarTitleAndroid]}>Date et heure de fin</Text>
-                <TouchableOpacity style={styles.pickerOkBtn} onPress={() => setAndroidShowEndPicker(false)}>
-                  <Text style={styles.pickerOkText}>OK</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={endDate}
-                mode="datetime"
-                display="spinner"
-                onChange={onAndroidEndChange}
-                minimumDate={startDate}
-                maximumDate={ce}
-                {...pickerTheme}
-              />
-            </View>
+          {Platform.OS === 'android' && androidShowStartTime && (
+            <DateTimePicker
+              value={startDate}
+              mode="time"
+              display="default"
+              is24Hour
+              onChange={onAndroidStartTimeChange}
+              {...pickerTheme}
+            />
+          )}
+          {Platform.OS === 'android' && androidShowEndDate && (
+            <DateTimePicker
+              value={endDate}
+              mode="date"
+              display="default"
+              is24Hour
+              onChange={onAndroidEndDateChange}
+              minimumDate={startDate}
+              maximumDate={ce}
+              {...pickerTheme}
+            />
+          )}
+          {Platform.OS === 'android' && androidShowEndTime && (
+            <DateTimePicker
+              value={endDate}
+              mode="time"
+              display="default"
+              is24Hour
+              onChange={onAndroidEndTimeChange}
+              {...pickerTheme}
+            />
           )}
 
           {Platform.OS === 'ios' && iosShowStartPicker && (
