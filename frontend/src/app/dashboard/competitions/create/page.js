@@ -106,13 +106,12 @@ export default function CreateCompetition() {
 
   const handleAddSpecies = () => {
     if (availableSpecies.length === 0) return;
-    const firstSpecies = availableSpecies[0];
     setCompetitionSpecies([
       ...competitionSpecies,
       {
-        speciesId: firstSpecies.id,
-        coefficient: firstSpecies.coefficient || 1.0,
-        basePoints: formData.isBonusEnabled ? (firstSpecies.basePoints || 50) : null,
+        speciesId: "",
+        coefficient: 1.0,
+        basePoints: formData.isBonusEnabled ? 50 : null,
         quota: "",
         quotaBonusPoints: "",
       },
@@ -164,6 +163,10 @@ export default function CreateCompetition() {
 
       if (competitionSpecies.length === 0) {
         setError("Au moins une espèce doit être configurée");
+        return;
+      }
+      if (competitionSpecies.some((cs) => !cs.speciesId)) {
+        setError("Choisissez une espèce pour chaque ligne.");
         return;
       }
 
@@ -387,7 +390,7 @@ export default function CreateCompetition() {
                 htmlFor="isPaid"
                 className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
-                Manche payante
+                Compétition payante
                 <HelpIcon text={COMPETITION_HELP.isPaid} />
               </label>
             </div>
@@ -412,7 +415,7 @@ export default function CreateCompetition() {
                 htmlFor="isPrivate"
                 className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
-                Manche privée
+                Compétition privée
                 <HelpIcon text={COMPETITION_HELP.isPrivate} />
               </label>
             </div>
@@ -650,12 +653,17 @@ export default function CreateCompetition() {
                       <div className={styles["competition-create__species_select"]}>
                         <label>Espèce</label>
                         <select
-                          value={compSpecies.speciesId}
+                          value={compSpecies.speciesId || ""}
                           onChange={(e) =>
-                            handleSpeciesChange(index, "speciesId", parseInt(e.target.value))
+                            handleSpeciesChange(
+                              index,
+                              "speciesId",
+                              e.target.value ? parseInt(e.target.value, 10) : "",
+                            )
                           }
                           className={styles["competition-create__input"]}
                         >
+                          <option value="">Choisir espèce</option>
                           {availableSpecies.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.name}
@@ -666,7 +674,7 @@ export default function CreateCompetition() {
 
                       <div className={styles["competition-create__species_coefficient"]}>
                         <label className={styles["competition-create__label_with_help"]}>
-                          Coefficient <HelpIcon text={COMPETITION_HELP.speciesCoefficient} />
+                          Coeff. <HelpIcon text={COMPETITION_HELP.speciesCoefficient} />
                         </label>
                         <input
                           type="text"

@@ -348,7 +348,7 @@ HTML;
                 ->to($to)
                 ->subject("Invitation — {$competition?->getName()}")
                 ->html($this->wrapEmailHtml(
-                    "<h1>Manche privée</h1>
+                    "<h1>Compétition privée</h1>
                     <p>{$hello}</p>
                     <p><strong>{$inviterName}</strong> vous invite à vous inscrire à <strong>{$competitionName}</strong>.</p>
                     <p>Ce code est personnel et lié à cette adresse e-mail. Le partager ne permet pas à quelqu’un d’autre de s’inscrire.</p>

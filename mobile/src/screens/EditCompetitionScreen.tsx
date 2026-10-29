@@ -14,7 +14,8 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import FaIcon from '../components/FaIcon';
 import * as ImagePicker from 'expo-image-picker';
 import MapView, { Polygon, Marker, Polyline } from 'react-native-maps';
 import { androidGoogleMapProps } from '../utils/mapsConfig';
@@ -81,7 +82,7 @@ function PerimeterNameEditor({ competitionId, perimeterId, initialName, onSaved 
 }
 
 interface CompetitionSpeciesRow {
-  speciesId: number;
+  speciesId: number | null;
   coefficient: string | number;
   basePoints?: number | null;
   quota?: string | number | null;
@@ -247,10 +248,9 @@ export default function EditCompetitionScreen() {
 
   const handleAddSpecies = () => {
     if (!availableSpecies || availableSpecies.length === 0) return;
-    const first = availableSpecies[0];
     setCompetitionSpecies((prev) => [
       ...prev,
-      { speciesId: first.id, coefficient: first.coefficient || 1.0, basePoints: null, quota: '', quotaBonusPoints: '' },
+      { speciesId: null, coefficient: 1.0, basePoints: null, quota: '', quotaBonusPoints: '' },
     ]);
   };
 
@@ -505,6 +505,10 @@ export default function EditCompetitionScreen() {
 
     if (competitionSpecies.length === 0) {
       setError('Au moins une espèce doit être configurée');
+      return;
+    }
+    if (competitionSpecies.some((cs) => !cs.speciesId)) {
+      setError('Choisissez une espèce pour chaque ligne.');
       return;
     }
 
@@ -805,7 +809,7 @@ export default function EditCompetitionScreen() {
           <View style={styles.section}>
             <View style={styles.switchRow}>
               <View style={[styles.labelRow, styles.labelRowInSwitch]}>
-                <Text style={styles.label}>Manche payante</Text>
+                <Text style={styles.label}>Compétition payante</Text>
                 <HelpButton text={COMPETITION_HELP.isPaid} />
               </View>
               <Switch
@@ -824,7 +828,7 @@ export default function EditCompetitionScreen() {
           <View style={styles.section}>
             <View style={styles.switchRow}>
               <View style={[styles.labelRow, styles.labelRowInSwitch]}>
-                <Text style={styles.label}>Manche privée</Text>
+                <Text style={styles.label}>Compétition privée</Text>
                 <HelpButton text={COMPETITION_HELP.isPrivate} />
               </View>
               <Switch value={formData.isPrivate} onValueChange={(v) => setFormData({ ...formData, isPrivate: v })} />
@@ -1048,14 +1052,19 @@ export default function EditCompetitionScreen() {
                           setShowSpeciesModal(true);
                         }}
                       >
-                        <Text style={styles.speciesSelectButtonText}>
-                          {species?.name || 'Sélectionner une espèce'}
+                        <Text
+                          style={[
+                            styles.speciesSelectButtonText,
+                            !species && styles.speciesSelectPlaceholder,
+                          ]}
+                        >
+                          {species?.name || 'Choisir espèce'}
                         </Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.speciesCoefficient}>
                       <View style={[styles.labelRow, { marginBottom: 4 }]}>
-                        <Text style={styles.speciesLabel}>Coefficient</Text>
+                        <Text style={styles.speciesLabel}>Coeff.</Text>
                         <HelpButton text={COMPETITION_HELP.speciesCoefficient} />
                       </View>
                       <TextInput
@@ -1328,39 +1337,36 @@ export default function EditCompetitionScreen() {
           </View>
         </Modal>
 
-        {/* Modal dessin zone */}
+        {/* Modal dessin zone — SafeAreaProvider dans le Modal (insets iOS sinon à 0) */}
         <Modal visible={showZoneModal} animationType="slide">
+          <SafeAreaProvider>
           <SafeAreaView style={styles.modalContainer} edges={['top', 'left', 'right', 'bottom']}>
-            <KeyboardAvoidingView
-              style={styles.modalInner}
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
+            <View style={styles.modalInner}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Dessiner une zone</Text>
+              <Text style={styles.modalTitle} numberOfLines={1}>Définir une zone</Text>
               <TouchableOpacity
                 onPress={() => {
                   setShowZoneModal(false);
                   setZonePoints([]);
                   setNewZoneName('');
                 }}
+                style={styles.modalCloseButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel="Fermer"
               >
-                <Text style={styles.modalCloseText}>✕ Fermer</Text>
+                <FaIcon name="close" size={18} color={theme.accent} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalHelp}>
-              Les zones déjà enregistrées sont en bleu (bien visibles). La zone en cours se superpose en bleu plus clair,
-              avec les pastilles numérotées. Appuyez sur la carte pour placer les sommets (au moins 3 points).
+              Touchez la carte (3 points min.). Zones existantes en bleu.
             </Text>
-            <View style={styles.modalField}>
-              <Text style={styles.modalFieldLabel}>Nom de la zone (optionnel)</Text>
-              <TextInput
-                style={styles.modalNameInput}
-                value={newZoneName}
-                onChangeText={setNewZoneName}
-                placeholder="Ex. : Quai nord, Zone A…"
-                placeholderTextColor={theme.textMuted}
-              />
-            </View>
+            <TextInput
+              style={styles.modalNameInput}
+              value={newZoneName}
+              onChangeText={setNewZoneName}
+              placeholder="Nom (optionnel)"
+              placeholderTextColor={theme.textMuted}
+            />
             <View style={styles.mapContainer}>
               <MapView
                 style={styles.map}
@@ -1412,13 +1418,15 @@ export default function EditCompetitionScreen() {
                 )}
               </MapView>
             </View>
-            <Text style={styles.pointsCount}>{zonePoints.length} point(s) — minimum 3</Text>
+            <View style={styles.modalFooter}>
+            <Text style={styles.pointsCount}>{zonePoints.length} pt · min. 3</Text>
             <TouchableOpacity
               style={[styles.undoVertexButton, zonePoints.length === 0 && styles.undoVertexButtonDisabled]}
               onPress={undoLastVertex}
               disabled={zonePoints.length === 0}
             >
-              <Text style={styles.undoVertexButtonText}>↩ Annuler le dernier point</Text>
+              <FaIcon name="undo" size={14} color={theme.accent} />
+              <Text style={styles.undoVertexButtonText}>Dernier point</Text>
             </TouchableOpacity>
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -1439,12 +1447,14 @@ export default function EditCompetitionScreen() {
                 {createPerimeterMutation.isPending ? (
                   <ActivityIndicator color={theme.onAccent} size="small" />
                 ) : (
-                  <Text style={styles.saveZoneButtonText}>Enregistrer la zone</Text>
+                  <Text style={styles.saveZoneButtonText}>Enregistrer</Text>
                 )}
               </TouchableOpacity>
             </View>
-            </KeyboardAvoidingView>
+            </View>
+            </View>
           </SafeAreaView>
+          </SafeAreaProvider>
         </Modal>
     </>
   );
@@ -1524,12 +1534,12 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     backgroundColor: '#fef2f2',
   },
   deleteCompetitionButtonText: { color: '#b91c1c', fontSize: 16, fontWeight: '600' },
-  modalContainer: { flex: 1, padding: 16, backgroundColor: theme.bg },
-  modalInner: { flex: 1 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: theme.text, flex: 1, marginRight: 12 },
-  modalCloseText: { color: theme.accent, fontSize: 16 },
-  modalHelp: { fontSize: 14, color: theme.textMuted, marginBottom: 12 },
+  modalContainer: { flex: 1, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, backgroundColor: theme.bg },
+  modalInner: { flex: 1, minHeight: 0 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, minHeight: 36 },
+  modalTitle: { fontSize: 17, fontWeight: '600', color: theme.text, flex: 1, marginRight: 12 },
+  modalCloseButton: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  modalHelp: { fontSize: 13, color: theme.textMuted, marginBottom: 8 },
   modalField: { marginBottom: 12 },
   modalFieldLabel: { fontSize: 13, fontWeight: '600', color: theme.text, marginBottom: 6 },
   modalNameInput: {
@@ -1537,12 +1547,19 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     fontSize: 16,
     backgroundColor: theme.surface,
     color: theme.text,
+    marginBottom: 8,
   },
-  mapContainer: { height: 400, borderRadius: 8, overflow: Platform.OS === 'android' ? 'visible' : 'hidden', marginBottom: 12 },
+  mapContainer: {
+    flex: 1,
+    minHeight: 160,
+    borderRadius: 8,
+    overflow: Platform.OS === 'android' ? 'visible' : 'hidden',
+    marginBottom: 8,
+  },
   map: { flex: 1, width: '100%', height: '100%' },
   zoneVertexMarker: {
     width: 30,
@@ -1560,22 +1577,26 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     elevation: 4,
   },
   zoneVertexMarkerText: { color: theme.onAccent, fontSize: 13, fontWeight: '700' },
-  pointsCount: { fontSize: 14, color: theme.textMuted, marginBottom: 8 },
+  modalFooter: { flexShrink: 0, paddingTop: 4, paddingBottom: 4 },
+  pointsCount: { fontSize: 13, color: theme.textMuted, marginBottom: 6 },
   undoVertexButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     borderWidth: 1,
     borderColor: theme.accent,
     borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginBottom: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
     backgroundColor: theme.accentMuted,
   },
   undoVertexButtonDisabled: { opacity: 0.45, borderColor: theme.border, backgroundColor: theme.bg },
   undoVertexButtonText: { color: theme.accent, fontSize: 15, fontWeight: '600' },
   modalActions: { flexDirection: 'row', gap: 12 },
-  cancelZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: theme.surfaceRaised, borderRadius: 8 },
+  cancelZoneButton: { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: theme.surfaceRaised, borderRadius: 8 },
   cancelZoneButtonText: { fontSize: 16, color: theme.text, fontWeight: '600' },
-  saveZoneButton: { flex: 1, padding: 16, alignItems: 'center', backgroundColor: theme.accent, borderRadius: 8 },
+  saveZoneButton: { flex: 1, paddingVertical: 12, alignItems: 'center', backgroundColor: theme.accent, borderRadius: 8 },
   saveZoneButtonDisabled: { opacity: 0.5 },
   saveZoneButtonText: { color: theme.onAccent, fontSize: 16, fontWeight: '600' },
   speciesHeader: {
@@ -1633,6 +1654,7 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
   },
   speciesSelectButtonText: { fontSize: 14, color: theme.text },
+  speciesSelectPlaceholder: { color: theme.textMuted },
   speciesCoefficient: { flex: 1 },
   speciesLabel: { fontSize: 12, color: theme.textMuted, marginBottom: 4 },
   speciesInput: {

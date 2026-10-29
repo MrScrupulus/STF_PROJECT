@@ -47,6 +47,7 @@ import {
   faPlus,
   faRectangleList as faRectangleListSolid,
   faRightFromBracket,
+  faRotateLeft,
   faRotateRight,
   faRocket,
   faTrophy,
@@ -103,6 +104,7 @@ library.add(
   faPlus,
   faRectangleListSolid,
   faRightFromBracket,
+  faRotateLeft,
   faRotateRight,
   faRocket,
   faTrophy,
@@ -159,6 +161,7 @@ export const appIcons = {
   copy: faCopy,
   download: faDownload,
   rotate: faRotateRight,
+  undo: faRotateLeft,
   circleCheck: faCircleCheck,
   circleXmark: faCircleXmark,
   /** Regular `fa-file-pdf` n'existe pas dans le pack gratuit FA 7 — Solid. */

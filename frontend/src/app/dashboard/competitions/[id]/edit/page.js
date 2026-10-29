@@ -346,7 +346,7 @@ export default function EditCompetition() {
                 htmlFor="isPaid"
                 className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
-                Manche payante
+                Compétition payante
                 <HelpIcon text={COMPETITION_HELP.isPaid} />
               </label>
             </div>
@@ -366,7 +366,7 @@ export default function EditCompetition() {
                 htmlFor="isPrivate"
                 className={`${styles["competition-create__label"]} ${styles["competition-create__label_with_help"]}`}
               >
-                Manche privée
+                Compétition privée
                 <HelpIcon text={COMPETITION_HELP.isPrivate} />
               </label>
             </div>

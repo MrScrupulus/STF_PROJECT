@@ -34,7 +34,7 @@ import { type ThemeColors } from '../theme';
 type PauseDraft = { key: string } & ScheduledPauseFormValues;
 
 interface CompetitionSpecies {
-  speciesId: number;
+  speciesId: number | null;
   coefficient: string | number;
   basePoints?: number | null;
   quota?: string | number | null;
@@ -140,12 +140,11 @@ export default function CreateCompetitionScreen() {
 
   const handleAddSpecies = () => {
     if (!availableSpecies || availableSpecies.length === 0) return;
-    const firstSpecies = availableSpecies[0];
     setCompetitionSpecies([
       ...competitionSpecies,
       {
-        speciesId: firstSpecies.id,
-        coefficient: firstSpecies.coefficient || 1.0,
+        speciesId: null,
+        coefficient: 1.0,
         basePoints: null,
         quota: '',
         quotaBonusPoints: '',
@@ -316,6 +315,10 @@ export default function CreateCompetitionScreen() {
 
     if (competitionSpecies.length === 0) {
       setError('Au moins une espèce doit être configurée');
+      return;
+    }
+    if (competitionSpecies.some((cs) => !cs.speciesId)) {
+      setError('Choisissez une espèce pour chaque ligne.');
       return;
     }
 
@@ -738,7 +741,7 @@ export default function CreateCompetitionScreen() {
           <View style={styles.section}>
             <View style={styles.switchRow}>
               <View style={[styles.labelRow, styles.labelRowInSwitch]}>
-                <Text style={styles.label}>Manche payante</Text>
+                <Text style={styles.label}>Compétition payante</Text>
                 <HelpButton text={COMPETITION_HELP.isPaid} />
               </View>
               <Switch
@@ -763,7 +766,7 @@ export default function CreateCompetitionScreen() {
           <View style={styles.section}>
             <View style={styles.switchRow}>
               <View style={[styles.labelRow, styles.labelRowInSwitch]}>
-                <Text style={styles.label}>Manche privée</Text>
+                <Text style={styles.label}>Compétition privée</Text>
                 <HelpButton text={COMPETITION_HELP.isPrivate} />
               </View>
               <Switch
@@ -951,15 +954,20 @@ export default function CreateCompetitionScreen() {
                           setShowSpeciesModal(true);
                         }}
                       >
-                        <Text style={styles.speciesSelectButtonText}>
-                          {species?.name || 'Sélectionner une espèce'}
+                        <Text
+                          style={[
+                            styles.speciesSelectButtonText,
+                            !species && styles.speciesSelectPlaceholder,
+                          ]}
+                        >
+                          {species?.name || 'Choisir espèce'}
                         </Text>
                       </TouchableOpacity>
                     </View>
 
                     <View style={styles.speciesCoefficient}>
                       <View style={[styles.labelRow, { marginBottom: 4 }]}>
-                        <Text style={styles.speciesLabel}>Coefficient</Text>
+                        <Text style={styles.speciesLabel}>Coeff.</Text>
                         <HelpButton text={COMPETITION_HELP.speciesCoefficient} />
                       </View>
                       <TextInput
@@ -1102,7 +1110,7 @@ export default function CreateCompetitionScreen() {
           </View>
 
           <Text style={styles.zonesHint}>
-            Après la création, vous pourrez dessiner les zones de pêche autorisées depuis la page de modification de la compétition.
+            Après la création, vous pourrez définir les zones de pêche autorisées depuis la page de modification de la compétition.
           </Text>
 
           {/* Bouton submit */}
@@ -1438,6 +1446,9 @@ const createStyles = (theme: ThemeColors) => StyleSheet.create({
   speciesSelectButtonText: {
     fontSize: 14,
     color: theme.text,
+  },
+  speciesSelectPlaceholder: {
+    color: theme.textMuted,
   },
   modalOverlay: {
     flex: 1,
